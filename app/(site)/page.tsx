@@ -24,7 +24,7 @@ export default function HoldingPage() {
         </p>
 
         {/* CTA section */}
-        <div className="border-t border-stone-200 pt-12">
+        <div>
           <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 mb-4">
             {t.home.footerCta.heading}
           </h2>

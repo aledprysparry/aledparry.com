@@ -9,13 +9,12 @@ export function PongBackground() {
   const gameRef = useRef({
     ballX: 0,
     ballY: 0,
-    ballVX: 3,
-    ballVY: 2,
-    paddleY: 0,
-    aiPaddleY: 0,
+    ballVX: 2,
+    ballVY: 3,
+    paddleX: 0,
+    aiPaddleX: 0,
     playerScore: 0,
-    aiScore: 0,
-    mouseY: 0,
+    mouseX: 0,
     running: true,
   });
 
@@ -42,8 +41,8 @@ export function PongBackground() {
     if (!ctx) return;
 
     const g = gameRef.current;
-    const PADDLE_H = 80;
-    const PADDLE_W = 8;
+    const PADDLE_W = 80;
+    const PADDLE_H = 8;
     const BALL_R = 5;
     const AI_SPEED = 2.5;
 
@@ -52,17 +51,17 @@ export function PongBackground() {
       canvas!.height = window.innerHeight;
       g.ballX = canvas!.width / 2;
       g.ballY = canvas!.height / 2;
-      g.paddleY = canvas!.height / 2 - PADDLE_H / 2;
-      g.aiPaddleY = canvas!.height / 2 - PADDLE_H / 2;
+      g.paddleX = canvas!.width / 2 - PADDLE_W / 2;
+      g.aiPaddleX = canvas!.width / 2 - PADDLE_W / 2;
     }
     resize();
     window.addEventListener("resize", resize);
 
     function onMouseMove(e: MouseEvent) {
-      g.mouseY = e.clientY;
+      g.mouseX = e.clientX;
     }
     function onTouchMove(e: TouchEvent) {
-      g.mouseY = e.touches[0].clientY;
+      g.mouseX = e.touches[0].clientX;
     }
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("touchmove", onTouchMove, { passive: true });
@@ -74,79 +73,67 @@ export function PongBackground() {
       const W = canvas.width;
       const H = canvas.height;
 
-      // Clear
       ctx.clearRect(0, 0, W, H);
 
       // Score as giant background text
-      const totalScore = g.playerScore;
       ctx.save();
       ctx.font = `bold ${Math.min(W * 0.5, 400)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "rgba(0, 0, 0, 0.02)";
-      ctx.fillText(String(totalScore), W / 2, H / 2);
+      ctx.fillText(String(g.playerScore), W / 2, H / 2);
       ctx.restore();
 
-      // Dashed center line
-      ctx.setLineDash([8, 12]);
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.04)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(W / 2, 0);
-      ctx.lineTo(W / 2, H);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Player paddle (right side)
-      g.paddleY += (g.mouseY - g.paddleY - PADDLE_H / 2) * 0.1;
-      g.paddleY = Math.max(0, Math.min(H - PADDLE_H, g.paddleY));
+      // Player paddle (bottom) — follows mouse X
+      g.paddleX += (g.mouseX - g.paddleX - PADDLE_W / 2) * 0.1;
+      g.paddleX = Math.max(0, Math.min(W - PADDLE_W, g.paddleX));
 
       ctx.fillStyle = "rgba(100, 116, 139, 0.15)";
-      ctx.fillRect(W - 24 - PADDLE_W, g.paddleY, PADDLE_W, PADDLE_H);
+      ctx.fillRect(g.paddleX, H - 24 - PADDLE_H, PADDLE_W, PADDLE_H);
 
-      // AI paddle (left side)
-      const aiTarget = g.ballY - PADDLE_H / 2;
-      if (g.aiPaddleY < aiTarget - 5) g.aiPaddleY += AI_SPEED;
-      else if (g.aiPaddleY > aiTarget + 5) g.aiPaddleY -= AI_SPEED;
-      g.aiPaddleY = Math.max(0, Math.min(H - PADDLE_H, g.aiPaddleY));
+      // AI paddle (top) — follows ball X
+      const aiTarget = g.ballX - PADDLE_W / 2;
+      if (g.aiPaddleX < aiTarget - 5) g.aiPaddleX += AI_SPEED;
+      else if (g.aiPaddleX > aiTarget + 5) g.aiPaddleX -= AI_SPEED;
+      g.aiPaddleX = Math.max(0, Math.min(W - PADDLE_W, g.aiPaddleX));
 
       ctx.fillStyle = "rgba(100, 116, 139, 0.1)";
-      ctx.fillRect(24, g.aiPaddleY, PADDLE_W, PADDLE_H);
+      ctx.fillRect(g.aiPaddleX, 24, PADDLE_W, PADDLE_H);
 
-      // Ball
+      // Ball movement
       g.ballX += g.ballVX;
       g.ballY += g.ballVY;
 
-      // Top/bottom bounce
-      if (g.ballY <= BALL_R || g.ballY >= H - BALL_R) {
-        g.ballVY = -g.ballVY;
-        g.ballY = Math.max(BALL_R, Math.min(H - BALL_R, g.ballY));
+      // Left/right wall bounce
+      if (g.ballX <= BALL_R || g.ballX >= W - BALL_R) {
+        g.ballVX = -g.ballVX;
+        g.ballX = Math.max(BALL_R, Math.min(W - BALL_R, g.ballX));
       }
 
-      // Player paddle collision (right)
+      // Player paddle collision (bottom)
       if (
-        g.ballX + BALL_R >= W - 24 - PADDLE_W &&
-        g.ballX - BALL_R <= W - 24 &&
-        g.ballY >= g.paddleY &&
-        g.ballY <= g.paddleY + PADDLE_H &&
-        g.ballVX > 0
+        g.ballY + BALL_R >= H - 24 - PADDLE_H &&
+        g.ballY - BALL_R <= H - 24 &&
+        g.ballX >= g.paddleX &&
+        g.ballX <= g.paddleX + PADDLE_W &&
+        g.ballVY > 0
       ) {
-        g.ballVX = -g.ballVX * 1.02;
-        g.ballVY += (g.ballY - (g.paddleY + PADDLE_H / 2)) * 0.05;
-        g.ballX = W - 24 - PADDLE_W - BALL_R;
+        g.ballVY = -g.ballVY * 1.02;
+        g.ballVX += (g.ballX - (g.paddleX + PADDLE_W / 2)) * 0.05;
+        g.ballY = H - 24 - PADDLE_H - BALL_R;
       }
 
-      // AI paddle collision (left)
+      // AI paddle collision (top)
       if (
-        g.ballX - BALL_R <= 24 + PADDLE_W &&
-        g.ballX + BALL_R >= 24 &&
-        g.ballY >= g.aiPaddleY &&
-        g.ballY <= g.aiPaddleY + PADDLE_H &&
-        g.ballVX < 0
+        g.ballY - BALL_R <= 24 + PADDLE_H &&
+        g.ballY + BALL_R >= 24 &&
+        g.ballX >= g.aiPaddleX &&
+        g.ballX <= g.aiPaddleX + PADDLE_W &&
+        g.ballVY < 0
       ) {
-        g.ballVX = -g.ballVX * 1.02;
-        g.ballVY += (g.ballY - (g.aiPaddleY + PADDLE_H / 2)) * 0.05;
-        g.ballX = 24 + PADDLE_W + BALL_R;
+        g.ballVY = -g.ballVY * 1.02;
+        g.ballVX += (g.ballX - (g.aiPaddleX + PADDLE_W / 2)) * 0.05;
+        g.ballY = 24 + PADDLE_H + BALL_R;
       }
 
       // Clamp ball speed
@@ -157,16 +144,16 @@ export function PongBackground() {
         g.ballVY = (g.ballVY / speed) * maxSpeed;
       }
 
-      // Score — ball goes off screen
-      if (g.ballX < -BALL_R) {
-        // Player scores
+      // Ball goes off top — player scores
+      if (g.ballY < -BALL_R) {
         g.playerScore++;
         setScore(g.playerScore);
         updateBest(g.playerScore);
         resetBall(W, H, 1);
       }
-      if (g.ballX > W + BALL_R) {
-        // AI scores — reset player score
+
+      // Ball goes off bottom — AI scores, reset player score
+      if (g.ballY > H + BALL_R) {
         updateBest(g.playerScore);
         g.playerScore = 0;
         setScore(0);
@@ -187,8 +174,8 @@ export function PongBackground() {
     function resetBall(W: number, H: number, dir: number) {
       g.ballX = W / 2;
       g.ballY = H / 2;
-      g.ballVX = 3 * dir;
-      g.ballVY = (Math.random() - 0.5) * 4;
+      g.ballVY = 3 * dir;
+      g.ballVX = (Math.random() - 0.5) * 4;
     }
 
     animId = requestAnimationFrame(draw);
