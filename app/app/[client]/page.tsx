@@ -19,7 +19,7 @@ export default function ClientDemosPage({ params }: Props) {
         {demos.map((demo) => (
           <Link
             key={demo.toolSlug}
-            href={`/app/${demo.clientSlug}/${demo.toolSlug}`}
+            href={demo.href || `/app/${demo.clientSlug}/${demo.toolSlug}`}
             className="block border border-stone-200 p-6 hover:border-stone-400 transition-colors"
           >
             <h2 className="text-lg font-serif font-semibold text-stone-900">

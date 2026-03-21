@@ -19,11 +19,18 @@ const componentMap: Record<string, React.ComponentType> = {
     () => import("@/components/demos/SocialEditor"),
     { ssr: false, loading: () => <DemoLoading /> }
   ),
-  // When you add a new demo, add its componentPath here:
-  // ToolName: dynamic(
-  //   () => import("@/components/demos/ToolName"),
-  //   { ssr: false, loading: () => <DemoLoading /> }
-  // ),
+  MasteryCompanion: dynamic(
+    () => import("@/components/demos/MasteryCompanion"),
+    { ssr: false, loading: () => <DemoLoading /> }
+  ),
+  PMA: dynamic(
+    () => import("@/components/demos/PMA"),
+    { ssr: false, loading: () => <DemoLoading /> }
+  ),
+  KeepItLocal: dynamic(
+    () => import("@/components/demos/KeepItLocal"),
+    { ssr: false, loading: () => <DemoLoading /> }
+  ),
 };
 
 interface Props {

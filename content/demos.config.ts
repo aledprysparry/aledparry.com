@@ -24,6 +24,8 @@ export interface DemoEntry {
   description: string;
   /** File name in components/demos/ (without extension) */
   componentPath: string;
+  /** Optional custom URL (overrides /app/[client]/[tool] pattern) */
+  href?: string;
 }
 
 export const demos: DemoEntry[] = [
@@ -36,15 +38,36 @@ export const demos: DemoEntry[] = [
       "Visual editor for creating branded social media posts with templates, text overlays, and export to PNG.",
     componentPath: "SocialEditor",
   },
-  // To add more demos, copy this template:
-  // {
-  //   clientSlug: "clientname",
-  //   clientName: "Client Name",
-  //   toolSlug: "toolname",
-  //   toolName: "Tool Name",
-  //   description: "What the demo does.",
-  //   componentPath: "FileName",  // must match components/demos/FileName.tsx
-  // },
+  {
+    clientSlug: "aledparry",
+    clientName: "Aled Parry",
+    toolSlug: "mastery",
+    toolName: "Mastery Companion",
+    description:
+      "Learning and training companion app for structured skill development and progress tracking.",
+    componentPath: "MasteryCompanion",
+    href: "/app/mastery",
+  },
+  {
+    clientSlug: "aledparry",
+    clientName: "Aled Parry",
+    toolSlug: "pma",
+    toolName: "PMA",
+    description:
+      "Production management app for broadcast teams — scheduling, task tracking, and resource planning.",
+    componentPath: "PMA",
+    href: "/app/pma",
+  },
+  {
+    clientSlug: "aledparry",
+    clientName: "Aled Parry",
+    toolSlug: "keepitlocal",
+    toolName: "Keep it Local",
+    description:
+      "Community app connecting people with local services, businesses, and events.",
+    componentPath: "KeepItLocal",
+    href: "/app/keepitlocal",
+  },
 ];
 
 /** Get all demos */

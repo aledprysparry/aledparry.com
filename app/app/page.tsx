@@ -17,7 +17,7 @@ export default function DemosIndexPage() {
         {demos.map((demo) => (
           <Link
             key={`${demo.clientSlug}/${demo.toolSlug}`}
-            href={`/app/${demo.clientSlug}/${demo.toolSlug}`}
+            href={demo.href || `/app/${demo.clientSlug}/${demo.toolSlug}`}
             className="group block border border-stone-200 p-6 hover:border-stone-400 transition-colors"
           >
             <p className="text-xs font-sans font-medium tracking-wider uppercase text-stone-400 mb-2">
