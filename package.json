@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "add-demo": "node scripts/add-demo.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
