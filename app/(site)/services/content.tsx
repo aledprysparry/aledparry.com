@@ -20,12 +20,13 @@ export function ServicesContent() {
       </FadeIn>
 
       <div className="mb-24">
-        {t.services.items.map((item) => (
+        {t.services.items.map((item, i) => (
           <ServiceBlock
             key={item.title}
             title={item.title}
             description={item.description}
             goodFor={item.goodFor}
+            index={i}
           />
         ))}
       </div>

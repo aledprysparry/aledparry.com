@@ -2,9 +2,9 @@ import { SiteContent } from "./types";
 
 export const en: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry — Digital Producer & Creative Director",
+    siteTitle: "Aled Parry — Award-Winning Digital Producer & Creative Director",
     siteDescription:
-      "Digital producer and creative director specialising in bilingual broadcast, content strategy, and format development.",
+      "BAFTA-winning digital producer and creative director. Over 20 years creating interactive content, games, websites and apps for S4C, BBC, ITV, Sesame Street and more. Bilingual in English and Welsh.",
   },
   nav: {
     home: "Home",
@@ -17,13 +17,13 @@ export const en: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Digital Producer & Creative Director",
+      title: "Award-Winning Digital Producer & Creative Director",
       valueStatement:
-        "I help broadcasters and brands create compelling bilingual content that connects with audiences across languages and platforms.",
+        "Hello & chroeso! I produce and create video content, games, websites and apps for broadcasters and brands worldwide. BAFTA winner. Bilingual in English and Welsh.",
       cta: "Work with me",
     },
     credibility: {
-      heading: "Trusted by",
+      heading: "Worked with",
     },
     featuredWork: {
       heading: "Selected Work",
@@ -118,23 +118,26 @@ export const en: SiteContent = {
   },
   about: {
     heading: "About",
-    hero: "I'm a digital producer and creative director based in Wales, working at the intersection of broadcast, technology, and bilingual storytelling.",
+    hero: "I'm a BAFTA-winning digital producer and creative director based in Wales, with over 20 years of experience creating interactive content for broadcasters and brands worldwide.",
     bio: [
-      "With over a decade of experience in broadcast and digital production, I've worked with some of the most recognisable names in Welsh and UK media. My work spans television, digital platforms, and brand content.",
-      "I specialise in bilingual production — creating content that works authentically in both Welsh and English, not as a translation exercise, but as genuine dual-language storytelling.",
-      "Whether it's producing a broadcast series, directing a digital campaign, or developing a new format, I bring the same commitment to craft, clarity, and creative ambition.",
+      "I began my career as a print and branding designer at a time when digital was just emerging. I quickly saw the potential and adapted my skills to become a web designer and front-end developer, combining a passion for design with a love of technology.",
+      "As Creative Director at Cube Interactive, I led the team to become a leading provider of interactive digital content for major brands including S4C, BBC, Channel 4, ITV, and Microsoft. Our work won multiple BAFTAs and Broadcast Digital Awards.",
+      "I've produced and directed projects ranging from children's apps for Teletubbies and Sesame Street, to interactive game shows like Catch Phrase and Family Fortunes, to original digital formats like Ludus — the world's first interactive play-along format for kids.",
+      "Bilingual in English and Welsh, I bring genuine dual-language thinking to every project — not translation, but authentic content that connects with audiences in both languages.",
     ],
     skills: {
-      heading: "Background",
+      heading: "Skills & Experience",
       items: [
-        "Digital Production",
         "Creative Direction",
-        "Broadcast Production",
-        "Content Strategy",
-        "Format Development",
-        "Bilingual Content",
+        "Digital Production",
+        "UX & UI Design",
+        "Graphic & Web Design",
         "Project Management",
-        "Stakeholder Management",
+        "Interactive Content",
+        "App Development",
+        "Bilingual (English & Welsh)",
+        "Adobe Creative Suite",
+        "Team Leadership",
       ],
     },
     cta: {

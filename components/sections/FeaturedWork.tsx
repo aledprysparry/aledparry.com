@@ -24,9 +24,9 @@ export function FeaturedWork({ caseStudies }: FeaturedWorkProps) {
         <FadeIn>
           <SectionHeading>{t.home.featuredWork.heading}</SectionHeading>
         </FadeIn>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
-          {caseStudies.map((cs) => (
-            <FadeIn key={cs.slug}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mt-12">
+          {caseStudies.map((cs, i) => (
+            <FadeIn key={cs.slug} delay={i * 150}>
               <Card
                 title={
                   locale === "cy" && cs.frontmatter.titleCy
@@ -42,7 +42,7 @@ export function FeaturedWork({ caseStudies }: FeaturedWorkProps) {
             </FadeIn>
           ))}
         </div>
-        <FadeIn>
+        <FadeIn delay={500}>
           <div className="mt-12 text-center">
             <Button href="/work" variant="secondary">
               {t.home.featuredWork.viewAll}

@@ -14,11 +14,14 @@ export function TestimonialCarousel() {
         <FadeIn>
           <SectionHeading>{t.home.testimonials.heading}</SectionHeading>
         </FadeIn>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8 mt-12">
           {t.home.testimonials.items.map((item, i) => (
-            <FadeIn key={i}>
-              <blockquote className="bg-white p-8 h-full flex flex-col">
-                <p className="text-base text-stone-700 leading-relaxed italic flex-1">
+            <FadeIn key={i} delay={i * 150} variant="scale">
+              <blockquote className="bg-white p-8 h-full flex flex-col rounded-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-stone-200/50 relative">
+                <span className="absolute -top-3 left-6 text-6xl font-serif text-accent/10 leading-none select-none">
+                  &ldquo;
+                </span>
+                <p className="text-base text-stone-700 leading-relaxed italic flex-1 relative z-10">
                   &ldquo;{item.quote}&rdquo;
                 </p>
                 <div className="mt-6 pt-6 border-t border-stone-100">

@@ -2,9 +2,9 @@ import { SiteContent } from "./types";
 
 export const cy: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry — Cynhyrchydd Digidol a Chyfarwyddwr Creadigol",
+    siteTitle: "Aled Parry — Cynhyrchydd Digidol a Chyfarwyddwr Creadigol Arobryn",
     siteDescription:
-      "Cynhyrchydd digidol a chyfarwyddwr creadigol yn arbenigo mewn darlledu dwyieithog, strategaeth cynnwys, a datblygu fformatau.",
+      "Cynhyrchydd digidol a chyfarwyddwr creadigol arobryn BAFTA. Dros 20 mlynedd yn creu cynnwys rhyngweithiol, gemau, gwefannau ac apiau i S4C, BBC, ITV, Sesame Street a mwy. Dwyieithog.",
   },
   nav: {
     home: "Hafan",
@@ -17,13 +17,13 @@ export const cy: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Cynhyrchydd Digidol a Chyfarwyddwr Creadigol",
+      title: "Cynhyrchydd Digidol a Chyfarwyddwr Creadigol Arobryn",
       valueStatement:
-        "Rwy'n helpu darlledwyr a brandiau greu cynnwys dwyieithog gafaelgar sy'n cysylltu â chynulleidfaoedd ar draws ieithoedd a llwyfannau.",
+        "Helo a chroeso! Rwy'n cynhyrchu a chreu cynnwys fideo, gemau, gwefannau ac apiau i ddarlledwyr a brandiau ledled y byd. Enillydd BAFTA. Dwyieithog yn Gymraeg a Saesneg.",
       cta: "Gweithio gyda mi",
     },
     credibility: {
-      heading: "Ymddiriedwyd gan",
+      heading: "Wedi gweithio gyda",
     },
     featuredWork: {
       heading: "Gwaith Dethol",

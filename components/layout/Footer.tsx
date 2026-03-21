@@ -10,42 +10,34 @@ export function Footer() {
   const year = new Date().getFullYear();
   const copyright = t.footer.copyright.replace("{year}", String(year));
 
+  const links = [
+    { href: "/work", label: t.nav.work },
+    { href: "/services", label: t.nav.services },
+    { href: "/about", label: t.nav.about },
+    { href: "/contact", label: t.nav.contact },
+  ];
+
   return (
     <footer className="border-t border-stone-200 py-12 mt-24">
       <Container>
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-8">
+        <div className="flex flex-col items-center gap-8 md:flex-row md:justify-between">
+          <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:gap-8">
             <Link
               href="/"
               className="text-base font-serif font-bold text-stone-900"
             >
               Aled Parry
             </Link>
-            <nav className="flex gap-6">
-              <Link
-                href="/work"
-                className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
-              >
-                {t.nav.work}
-              </Link>
-              <Link
-                href="/services"
-                className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
-              >
-                {t.nav.services}
-              </Link>
-              <Link
-                href="/about"
-                className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
-              >
-                {t.nav.about}
-              </Link>
-              <Link
-                href="/contact"
-                className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
-              >
-                {t.nav.contact}
-              </Link>
+            <nav className="flex gap-4 md:gap-6">
+              {links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </nav>
           </div>
           <p className="text-sm text-stone-400 font-sans">{copyright}</p>
