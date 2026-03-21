@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/demos/", "/admin/"],
+        disallow: ["/app/", "/admin/"],
       },
     ],
     sitemap: "https://aledparry.com/sitemap.xml",
