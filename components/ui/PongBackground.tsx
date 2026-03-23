@@ -56,7 +56,7 @@ export function PongBackground() {
 
     // Get bounding rects of text/UI elements for collision
     function getPageObstacles(): DOMRect[] {
-      const selectors = "h1, h2, a.bg-stone-900";
+      const selectors = "a.bg-stone-900";
       const els = document.querySelectorAll(selectors);
       const rects: DOMRect[] = [];
       els.forEach((el) => {
