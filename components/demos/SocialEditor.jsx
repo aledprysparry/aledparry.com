@@ -794,13 +794,13 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setGStep("analysing");setError("");
     try{
       const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
-      const apiKey=localStorage.getItem("anthropic_api_key")||"";
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2500,system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}]})});
       const data=await res.json();
+      if(data.error)throw new Error(data.error);
       const raw=data.content?.find(b=>b.type==="text")?.text||"";
       setGraphics(JSON.parse(raw.replace(/```json|```/g,"").trim()));setGStep("review");
-    }catch(e){setError("Analysis failed: "+e.message+(e.message.includes("fetch")?" — check your API key in Settings":""));setGStep("idle");}
+    }catch(e){setError("Analysis failed: "+e.message);setGStep("idle");}
   };
 
   const doPreview=useCallback((g,i)=>{
@@ -1235,7 +1235,6 @@ function ProjectView({project,brand,updateProject,onBack}){
   const [tab,setTab]=useState("graphics");
   const [previewRatio,setPreviewRatio]=useState("16:9");
   const fileRef=useRef();
-  const {hasKey,refresh}=useApiKey();
 
   const handleSRT=f=>{
     const r=new FileReader();
@@ -1278,8 +1277,6 @@ function ProjectView({project,brand,updateProject,onBack}){
       </div>
 
       <div style={S.wrap}>
-        {/* API key banner */}
-        {!hasKey&&<ApiKeyBanner onSaved={refresh}/>}
         {/* SRT bar */}
         <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"11px 16px",marginBottom:18,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span style={{fontSize:10,fontWeight:700,opacity:0.45,letterSpacing:1,flexShrink:0}}>SRT</span>
@@ -2072,20 +2069,8 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
   const [newProjName,setNewProjName]=useState("");
   const [selBrandId,setSelBrandId]=useState(brands[0]?.id||null);
   const [confirmDialog,setConfirmDialog]=useState(null);
-  const [showApiPanel,setShowApiPanel]=useState(false);
-  const [apiKeyInput,setApiKeyInput]=useState("");
-  const [hasApiKey,setHasApiKey]=useState(!!localStorage.getItem("anthropic_api_key"));
   const confirm=(message,onConfirm)=>setConfirmDialog({message,onConfirm});
   const closeConfirm=()=>setConfirmDialog(null);
-  const saveApiKey=()=>{
-    if(!apiKeyInput.trim())return;
-    localStorage.setItem("anthropic_api_key",apiKeyInput.trim());
-    setHasApiKey(true);setShowApiPanel(false);setApiKeyInput("");
-  };
-  const clearApiKey=()=>{
-    localStorage.removeItem("anthropic_api_key");
-    setHasApiKey(false);setApiKeyInput("");
-  };
   const selBrand=brands.find(b=>b.id===selBrandId);
   const brandProjects=projects.filter(p=>p.brandId===selBrandId);
   const inp={width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,padding:"12px 14px",color:"#fff",fontSize:14,fontFamily:"Montserrat,Arial,sans-serif",boxSizing:"border-box",outline:"none"};
@@ -2100,42 +2085,8 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
           <div style={{fontSize:11,opacity:0.35,fontStyle:"italic"}}>Sign-in coming soon</div>
           <button style={{...sm,opacity:0.45,cursor:"not-allowed",background:"rgba(255,255,255,0.05)"}}>🔒 Sign in with Google</button>
-          <button style={{...sm,background:hasApiKey?"rgba(42,157,143,0.2)":"rgba(230,57,70,0.2)",border:`1px solid ${hasApiKey?"rgba(42,157,143,0.5)":"rgba(230,57,70,0.5)"}`}}
-            onClick={()=>setShowApiPanel(p=>!p)}>
-            {hasApiKey?"✓ API Key":"⚠ Set API Key"}
-          </button>
         </div>
       </div>
-
-      {/* API Key panel */}
-      {showApiPanel&&(
-        <div style={{background:"#0f1927",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"16px 26px",fontFamily:"Montserrat,Arial,sans-serif"}}>
-          <div style={{maxWidth:880,margin:"0 auto"}}>
-            <div style={{fontSize:12,fontWeight:700,opacity:0.6,marginBottom:10,letterSpacing:1}}>ANTHROPIC API KEY</div>
-            {hasApiKey
-              ?<div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                  <div style={{fontSize:13,color:"#2A9D8F",fontWeight:600}}>✓ API key is set and active</div>
-                  <button onClick={clearApiKey} style={{background:"rgba(230,57,70,0.2)",border:"1px solid rgba(230,57,70,0.4)",color:"#fff",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600}}>Remove key</button>
-                  <button onClick={()=>setShowApiPanel(false)} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✕ Close</button>
-                </div>
-              :<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  <input
-                    type="password"
-                    value={apiKeyInput}
-                    onChange={e=>setApiKeyInput(e.target.value)}
-                    onKeyDown={e=>e.key==="Enter"&&saveApiKey()}
-                    placeholder="sk-ant-api03-..."
-                    autoFocus
-                    style={{flex:1,minWidth:260,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"10px 14px",color:"#fff",fontSize:13,fontFamily:"inherit",outline:"none"}}
-                  />
-                  <button onClick={saveApiKey} disabled={!apiKeyInput.trim()} style={{background:apiKeyInput.trim()?"#2A9D8F":"rgba(255,255,255,0.1)",border:"none",color:"#fff",padding:"10px 20px",borderRadius:8,cursor:apiKeyInput.trim()?"pointer":"not-allowed",fontSize:13,fontWeight:700,fontFamily:"inherit",transition:"background 0.2s"}}>Save</button>
-                  <button onClick={()=>setShowApiPanel(false)} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"10px 14px",borderRadius:8,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>Cancel</button>
-                  <div style={{width:"100%",fontSize:11,opacity:0.45,marginTop:2}}>Get a key at <strong>console.anthropic.com</strong> → API Keys. Stored only in this browser.</div>
-                </div>
-            }
-          </div>
-        </div>
-      )}
       <div style={{maxWidth:880,margin:"0 auto",padding:"28px 18px",display:"grid",gridTemplateColumns:"260px 1fr",gap:20}}>
         {/* Brands sidebar */}
         <div>
