@@ -201,16 +201,19 @@ export function PongBackground() {
       }
 
       // Player paddle collision (bottom) — SCORE ON HIT
+      // Use sweep: if ball crossed the paddle zone this frame, catch it
+      const paddleTop = H - 24 - PADDLE_H;
+      const paddleBot = H - 24;
       if (
-        g.ballY + BALL_R >= H - 24 - PADDLE_H &&
-        g.ballY - BALL_R <= H - 24 &&
-        g.ballX >= g.paddleX &&
-        g.ballX <= g.paddleX + PADDLE_W &&
+        g.ballY + BALL_R >= paddleTop &&
+        g.ballY <= paddleBot + BALL_R &&
+        g.ballX >= g.paddleX - BALL_R &&
+        g.ballX <= g.paddleX + PADDLE_W + BALL_R &&
         g.ballVY > 0
       ) {
-        g.ballVY = -g.ballVY * 1.02;
+        g.ballVY = -Math.abs(g.ballVY) * 1.02;
         g.ballVX += (g.ballX - (g.paddleX + PADDLE_W / 2)) * 0.05;
-        g.ballY = H - 24 - PADDLE_H - BALL_R;
+        g.ballY = paddleTop - BALL_R;
         addScore();
       }
 
@@ -302,7 +305,7 @@ export function PongBackground() {
       />
       {/* Best score indicator */}
       <div className="fixed bottom-4 right-4 z-10 text-xs font-sans text-stone-400 select-none">
-        {bestScore > 0 && `Best: ${bestScore}`}
+        {bestScore > 0 && `🏆 ${bestScore}`}
       </div>
     </>
   );
