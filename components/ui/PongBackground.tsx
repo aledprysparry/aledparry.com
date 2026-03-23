@@ -88,6 +88,7 @@ export function PongBackground() {
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("touchmove", onTouchMove, { passive: true });
 
+    g.running = true;
     let animId: number;
 
     function draw() {

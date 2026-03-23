@@ -29,8 +29,13 @@ export function AboutContent() {
             ))}
           </div>
           <div className="lg:col-span-2">
-            <div className="aspect-[3/4] bg-stone-200 flex items-center justify-center">
-              <span className="text-stone-400 text-sm font-sans">Photo</span>
+            <div className="aspect-[3/4] bg-stone-200 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/aled-parry.jpg"
+                alt="Aled Parry"
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>
