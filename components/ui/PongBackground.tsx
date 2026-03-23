@@ -148,10 +148,13 @@ export function PongBackground() {
       ctx.fillStyle = "rgba(68, 64, 60, 0.35)";
       ctx.fillRect(g.paddleX, H - 24 - PADDLE_H, PADDLE_W, PADDLE_H);
 
-      // AI paddle (top) — follows ball X
-      const aiTarget = g.ballX - PADDLE_W / 2;
-      if (g.aiPaddleX < aiTarget - 5) g.aiPaddleX += aiSpeed;
-      else if (g.aiPaddleX > aiTarget + 5) g.aiPaddleX -= aiSpeed;
+      // AI paddle (top) — follows ball X with deliberate imperfection
+      // Only reacts when ball is heading towards it (upward), and tracks with offset error
+      const aiError = Math.sin(Date.now() * 0.002) * 30; // wobble ±30px
+      const aiTarget = g.ballX - PADDLE_W / 2 + aiError;
+      const aiReact = g.ballVY < 0 ? aiSpeed : aiSpeed * 0.3; // sluggish when ball going away
+      if (g.aiPaddleX < aiTarget - 8) g.aiPaddleX += aiReact;
+      else if (g.aiPaddleX > aiTarget + 8) g.aiPaddleX -= aiReact;
       g.aiPaddleX = Math.max(0, Math.min(W - PADDLE_W, g.aiPaddleX));
 
       ctx.fillStyle = "rgba(68, 64, 60, 0.28)";
