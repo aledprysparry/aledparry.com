@@ -118,12 +118,13 @@ export const en: SiteContent = {
   },
   about: {
     heading: "About",
-    hero: "I'm a BAFTA-winning digital producer and creative director based in Wales, with over 20 years of experience creating interactive content for broadcasters and brands worldwide.",
+    hero: "I'm a BAFTA-winning digital producer and creative director based in Wales, with over 25 years of experience leading interactive content for broadcasters and brands across the UK and beyond.",
     bio: [
-      "I began my career as a print and branding designer at a time when digital was just emerging. I quickly saw the potential and adapted my skills to become a web designer and front-end developer, combining a passion for design with a love of technology.",
-      "As Creative Director at Cube Interactive, I led the team to become a leading provider of interactive digital content for major brands including S4C, BBC, Channel 4, ITV, and Microsoft. Our work won multiple BAFTAs and Broadcast Digital Awards.",
-      "I've produced and directed projects ranging from children's apps for Teletubbies and Sesame Street, to interactive game shows like Catch Phrase and Family Fortunes, to original digital formats like Ludus — the world's first interactive play-along format for kids.",
-      "Bilingual in English and Welsh, I bring genuine dual-language thinking to every project — not translation, but authentic content that connects with audiences in both languages.",
+      "I started as a print and branding designer at the moment digital was emerging \u2014 and made the move early, retraining as a web designer and front-end developer. That combination of design instinct and technical fluency has defined everything I\u2019ve done since.",
+      "As Creative Director at Cube Interactive, I led the team to become a leading provider of interactive digital content for S4C, BBC, Channel 4, ITV and Microsoft. Our work won multiple BAFTAs and Broadcast Digital Awards \u2014 including projects spanning children\u2019s apps for Teletubbies and Sesame Street, interactive game shows for Catchphrase and Family Fortunes, and original formats like Ludus, one of the world\u2019s first live play-along formats for children.",
+      "More recently I\u2019ve been working with Tinint, part of the Tinopolis Group, creating digital productions and bringing stories to life as a self-shooting producer and editor \u2014 from filming through to final cut.",
+      "I also build custom production tools that combine my creative and technical background to make workflows faster and smarter.",
+      "Bilingual in English and Welsh, I bring genuine dual-language thinking to every project \u2014 not translation, but authentic content that connects with both audiences from the start.",
     ],
     skills: {
       heading: "Skills & Experience",
@@ -141,8 +142,8 @@ export const en: SiteContent = {
       ],
     },
     cta: {
-      heading: "Let's work together",
-      button: "Get in touch",
+      heading: "Got a project in mind?",
+      button: "Let\u2019s talk \u2192",
     },
   },
   contact: {
