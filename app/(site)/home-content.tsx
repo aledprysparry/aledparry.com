@@ -49,10 +49,11 @@ export function HomeContent() {
           </div>
         </div>
 
-        <div className="mt-16">
-          <LanguageToggle />
-        </div>
       </div>
+    </div>
+    {/* Language toggle — fixed bottom left */}
+    <div className="fixed bottom-4 left-4 z-10 pointer-events-auto">
+      <LanguageToggle />
     </div>
     </>
   );
