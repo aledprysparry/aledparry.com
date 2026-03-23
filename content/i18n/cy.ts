@@ -17,10 +17,10 @@ export const cy: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Cynhyrchydd Digidol a Chyfarwyddwr Creadigol Arobryn",
+      title: "Cynhyrchydd Digidol a Chyfarwyddwr Creadigol",
       valueStatement:
-        "Helo a chroeso! Rwy'n cynhyrchu a chreu cynnwys fideo, gemau, gwefannau ac apiau i ddarlledwyr a brandiau ledled y byd. Enillydd BAFTA. Dwyieithog yn Gymraeg a Saesneg.",
-      cta: "Gweithio gyda mi",
+        "Helo a chroeso! Rwy\u2019n cynhyrchu ac yn creu cynnwys fideo, gemau, gwefannau ac apiau ar gyfer darlunwyr a brandiau ledled y byd. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
+      cta: "Gweithiwch gyda mi",
     },
     credibility: {
       heading: "Wedi gweithio gyda",
@@ -53,9 +53,9 @@ export const cy: SiteContent = {
       ],
     },
     footerCta: {
-      heading: "Prosiect mewn golwg?",
-      body: "Rwy'n bob amser yn agored i drafod prosiectau newydd, syniadau creadigol, neu gyfleoedd i fod yn rhan o'ch gweledigaeth.",
-      cta: "Siaradwn ni",
+      heading: "Oes gennych chi brosiect mewn golwg?",
+      body: "Rwyf bob amser yn agored i drafod prosiectau newydd, syniadau creadigol, neu gyfleoedd i fod yn rhan o\u2019ch gweledigaeth.",
+      cta: "Gweithiwch gyda mi",
     },
   },
   work: {
