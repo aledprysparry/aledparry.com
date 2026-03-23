@@ -20,15 +20,19 @@ export function generateMetadata({ params }: Props): Metadata {
   const cs = getCaseStudy(params.slug);
   if (!cs) return {};
 
+  const { title, client, summary, heroImage, role, type } = cs.frontmatter;
+  const metaTitle = `${title} — ${client} | ${type?.charAt(0).toUpperCase()}${type?.slice(1)} Project`;
+  const metaDescription =
+    summary || `${title} for ${client} — ${role}. A ${type} project by Aled Parry.`;
+
   return {
-    title: cs.frontmatter.title,
-    description: cs.frontmatter.summary || `${cs.frontmatter.title} — ${cs.frontmatter.client}`,
+    title: metaTitle,
+    description: metaDescription,
+    alternates: { canonical: `https://aledparry.com/work/${params.slug}` },
     openGraph: {
-      title: cs.frontmatter.title,
-      description: cs.frontmatter.summary,
-      images: cs.frontmatter.heroImage
-        ? [{ url: cs.frontmatter.heroImage }]
-        : undefined,
+      title: metaTitle,
+      description: metaDescription,
+      images: heroImage ? [{ url: heroImage }] : undefined,
     },
   };
 }

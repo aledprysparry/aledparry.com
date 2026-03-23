@@ -6,7 +6,8 @@ import { WorkContent } from "./content";
 export const metadata: Metadata = {
   title: "Work",
   description:
-    "A selection of projects spanning broadcast, digital, and content strategy by Aled Parry.",
+    "Portfolio of broadcast, digital and interactive projects by Aled Parry — including BAFTA-winning formats, children's content and bilingual Welsh/English productions.",
+  alternates: { canonical: "https://aledparry.com/work" },
 };
 
 export default function WorkPage() {

@@ -1,59 +1,20 @@
-"use client";
+import { Metadata } from "next";
+import { HomeContent } from "./home-content";
+import { PersonJsonLd } from "@/components/seo/PersonJsonLd";
 
-import { useLanguage } from "@/lib/i18n/context";
-import { LanguageToggle } from "@/components/ui/LanguageToggle";
-import { PongBackground } from "@/components/ui/PongBackground";
+export const metadata: Metadata = {
+  description:
+    "Award-winning Welsh/English digital producer and creative director. I lead broadcast, interactive and bilingual content projects for commissioners, agencies and brands across the UK.",
+  alternates: {
+    canonical: "https://aledparry.com",
+  },
+};
 
 export default function HoldingPage() {
-  const { t } = useLanguage();
-
   return (
     <>
-    <PongBackground />
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 -mt-16 relative z-10 pointer-events-none">
-      <div className="text-center max-w-xl pointer-events-auto">
-        {/* Hero */}
-        <p className="text-sm font-sans font-medium tracking-widest uppercase text-accent mb-6">
-          {t.home.hero.title}
-        </p>
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-stone-900 mb-8 leading-[1.1]">
-          {t.home.hero.name}
-        </h1>
-        <p className="text-lg md:text-xl text-stone-500 leading-relaxed mb-16">
-          {t.home.hero.valueStatement}
-        </p>
-
-        {/* CTA section */}
-        <div>
-          <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-900 mb-4">
-            {t.home.footerCta.heading}
-          </h2>
-          <p className="text-base text-stone-500 leading-relaxed mb-8 max-w-md mx-auto">
-            {t.home.footerCta.body}
-          </p>
-          <div className="flex items-center justify-center gap-6">
-            <a
-              href="mailto:aled@aledparry.com"
-              className="bg-stone-900 text-white px-6 py-3 text-sm font-sans font-medium tracking-wide hover:bg-stone-800 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.97]"
-            >
-              {t.home.hero.cta}
-            </a>
-            <a
-              href="https://linkedin.com/in/aledparry"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-sans text-stone-500 hover:text-stone-900 transition-colors underline underline-offset-4 decoration-accent/40 hover:decoration-accent"
-            >
-              LinkedIn
-            </a>
-          </div>
-        </div>
-
-        <div className="mt-16">
-          <LanguageToggle />
-        </div>
-      </div>
-    </div>
+      <PersonJsonLd />
+      <HomeContent />
     </>
   );
 }

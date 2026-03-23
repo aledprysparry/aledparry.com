@@ -20,19 +20,36 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://aledparry.com"),
   title: {
     default: "Aled Parry — Digital Producer & Creative Director",
-    template: "%s — Aled Parry",
+    template: "%s | Aled Parry - Digital Producer & Creative Director",
   },
   description:
-    "Digital producer and creative director specialising in bilingual broadcast, content strategy, and format development.",
+    "Welsh/English digital producer and creative director. I lead broadcast, interactive and bilingual content projects for commissioners, agencies and brands across the UK.",
+  keywords: [
+    "digital producer Wales",
+    "creative director Wales",
+    "digital producer UK",
+    "creative director UK",
+    "Welsh English bilingual content",
+    "TV digital producer",
+    "children's digital content producer",
+    "interactive format development",
+    "S4C digital production",
+    "bilingual content strategy",
+  ],
+  authors: [{ name: "Aled Parry", url: "https://aledparry.com" }],
+  creator: "Aled Parry",
   openGraph: {
     type: "website",
     locale: "en_GB",
     url: "https://aledparry.com",
     siteName: "Aled Parry",
-    images: [{ url: "/images/og-default.png", width: 1200, height: 630 }],
+    images: [{ url: "/og-image", width: 1200, height: 630, alt: "Aled Parry — Digital Producer & Creative Director" }],
   },
   twitter: {
     card: "summary_large_image",
+  },
+  alternates: {
+    canonical: "https://aledparry.com",
   },
 };
 
