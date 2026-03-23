@@ -7,7 +7,6 @@ export function PongBackground() {
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
   const [level, setLevel] = useState(1);
-  const [levelUpText, setLevelUpText] = useState("");
   const gameRef = useRef({
     ballX: 0,
     ballY: 0,
@@ -20,6 +19,7 @@ export function PongBackground() {
     mouseX: 0,
     running: true,
     levelUpTimer: 0,
+    lastHitElement: "",
   });
 
   useEffect(() => {
@@ -49,8 +49,7 @@ export function PongBackground() {
     const PADDLE_H = 8;
     const BALL_R = 5;
 
-    // Level thresholds: score needed to reach each level
-    const LEVEL_THRESHOLDS = [0, 3, 7, 12, 18, 25, 33, 42, 52, 63];
+    const LEVEL_THRESHOLDS = [0, 5, 12, 20, 30, 42, 55, 70, 88, 108];
 
     function getLevelForScore(s: number): number {
       for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
@@ -59,13 +58,71 @@ export function PongBackground() {
       return 1;
     }
 
-    // Speed multiplier per level
     function getSpeedMultiplier(lvl: number): number {
-      return 1 + (lvl - 1) * 0.12;
+      return 1 + (lvl - 1) * 0.08;
     }
 
     function getAISpeed(lvl: number): number {
-      return 2.5 + (lvl - 1) * 0.3;
+      return 2.2 + (lvl - 1) * 0.25;
+    }
+
+    // Get bounding rects of text/UI elements on the page for collision
+    function getPageObstacles(): DOMRect[] {
+      const selectors = "h1, h2, p, a.bg-stone-900, .text-accent";
+      const els = document.querySelectorAll(selectors);
+      const rects: DOMRect[] = [];
+      els.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        // Only include elements that are visible and reasonably sized
+        if (r.width > 20 && r.height > 10 && r.top > 40 && r.bottom < window.innerHeight - 40) {
+          rects.push(r);
+        }
+      });
+      return rects;
+    }
+
+    // Bounce ball off a rect, returns true if collision happened
+    function bounceOffRect(rect: DOMRect): boolean {
+      const bx = g.ballX, by = g.ballY, r = BALL_R;
+      // Find closest point on rect to ball
+      const cx = Math.max(rect.left, Math.min(bx, rect.right));
+      const cy = Math.max(rect.top, Math.min(by, rect.bottom));
+      const dx = bx - cx, dy = by - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < r + 2) {
+        // Determine which side was hit
+        const overlapL = rect.left - (bx - r);
+        const overlapR = (bx + r) - rect.right;
+        const overlapT = rect.top - (by - r);
+        const overlapB = (by + r) - rect.bottom;
+
+        const horizontal = Math.max(overlapL, overlapR);
+        const vertical = Math.max(overlapT, overlapB);
+
+        if (horizontal > vertical) {
+          g.ballVX = -g.ballVX;
+          g.ballX += g.ballVX > 0 ? 3 : -3;
+        } else {
+          g.ballVY = -g.ballVY;
+          g.ballY += g.ballVY > 0 ? 3 : -3;
+        }
+        return true;
+      }
+      return false;
+    }
+
+    function addScore() {
+      g.playerScore++;
+      setScore(g.playerScore);
+      updateBest(g.playerScore);
+
+      const newLevel = getLevelForScore(g.playerScore);
+      if (newLevel > g.level) {
+        g.level = newLevel;
+        g.levelUpTimer = 90;
+        setLevel(newLevel);
+      }
     }
 
     function resize() {
@@ -90,6 +147,8 @@ export function PongBackground() {
 
     g.running = true;
     let animId: number;
+    let obstacleCache: DOMRect[] = [];
+    let obstacleTick = 0;
 
     function draw() {
       if (!ctx || !canvas) return;
@@ -100,6 +159,11 @@ export function PongBackground() {
 
       const speedMul = getSpeedMultiplier(g.level);
       const aiSpeed = getAISpeed(g.level);
+
+      // Refresh obstacle cache every 30 frames
+      if (obstacleTick++ % 30 === 0) {
+        obstacleCache = getPageObstacles();
+      }
 
       // Score as giant background text
       ctx.save();
@@ -148,11 +212,10 @@ export function PongBackground() {
       ctx.fillStyle = "rgba(68, 64, 60, 0.35)";
       ctx.fillRect(g.paddleX, H - 24 - PADDLE_H, PADDLE_W, PADDLE_H);
 
-      // AI paddle (top) — follows ball X with deliberate imperfection
-      // Only reacts when ball is heading towards it (upward), and tracks with offset error
-      const aiError = Math.sin(Date.now() * 0.002) * 30; // wobble ±30px
+      // AI paddle (top) — imperfect tracking
+      const aiError = Math.sin(Date.now() * 0.002) * 30;
       const aiTarget = g.ballX - PADDLE_W / 2 + aiError;
-      const aiReact = g.ballVY < 0 ? aiSpeed : aiSpeed * 0.3; // sluggish when ball going away
+      const aiReact = g.ballVY < 0 ? aiSpeed : aiSpeed * 0.3;
       if (g.aiPaddleX < aiTarget - 8) g.aiPaddleX += aiReact;
       else if (g.aiPaddleX > aiTarget + 8) g.aiPaddleX -= aiReact;
       g.aiPaddleX = Math.max(0, Math.min(W - PADDLE_W, g.aiPaddleX));
@@ -160,7 +223,7 @@ export function PongBackground() {
       ctx.fillStyle = "rgba(68, 64, 60, 0.28)";
       ctx.fillRect(g.aiPaddleX, 24, PADDLE_W, PADDLE_H);
 
-      // Ball movement (scaled by level speed)
+      // Ball movement
       g.ballX += g.ballVX * speedMul;
       g.ballY += g.ballVY * speedMul;
 
@@ -170,7 +233,7 @@ export function PongBackground() {
         g.ballX = Math.max(BALL_R, Math.min(W - BALL_R, g.ballX));
       }
 
-      // Player paddle collision (bottom)
+      // Player paddle collision (bottom) — SCORE ON HIT
       if (
         g.ballY + BALL_R >= H - 24 - PADDLE_H &&
         g.ballY - BALL_R <= H - 24 &&
@@ -181,6 +244,7 @@ export function PongBackground() {
         g.ballVY = -g.ballVY * 1.02;
         g.ballVX += (g.ballX - (g.paddleX + PADDLE_W / 2)) * 0.05;
         g.ballY = H - 24 - PADDLE_H - BALL_R;
+        addScore();
       }
 
       // AI paddle collision (top)
@@ -196,6 +260,19 @@ export function PongBackground() {
         g.ballY = 24 + PADDLE_H + BALL_R;
       }
 
+      // Ball bounces off page text/UI elements
+      for (const rect of obstacleCache) {
+        if (bounceOffRect(rect)) {
+          // Brief highlight flash on the canvas where collision happened
+          ctx.save();
+          ctx.globalAlpha = 0.15;
+          ctx.fillStyle = "#78716c";
+          ctx.fillRect(rect.left, rect.top, rect.width, rect.height);
+          ctx.restore();
+          break; // one collision per frame
+        }
+      }
+
       // Clamp ball speed
       const speed = Math.sqrt(g.ballVX * g.ballVX + g.ballVY * g.ballVY);
       const maxSpeed = 12;
@@ -204,25 +281,13 @@ export function PongBackground() {
         g.ballVY = (g.ballVY / speed) * maxSpeed;
       }
 
-      // Ball goes off top — player scores
+      // Ball goes off top — AI missed! 10 bonus points
       if (g.ballY < -BALL_R) {
-        g.playerScore++;
-        setScore(g.playerScore);
-        updateBest(g.playerScore);
-
-        // Check for level up
-        const newLevel = getLevelForScore(g.playerScore);
-        if (newLevel > g.level) {
-          g.level = newLevel;
-          g.levelUpTimer = 90; // ~1.5s at 60fps
-          setLevel(newLevel);
-          setLevelUpText(`Level ${newLevel}!`);
-        }
-
+        for (let i = 0; i < 10; i++) addScore();
         resetBall(W, H, 1);
       }
 
-      // Ball goes off bottom — AI scores, reset player score & level
+      // Ball goes off bottom — game over, reset
       if (g.ballY > H + BALL_R) {
         updateBest(g.playerScore);
         g.playerScore = 0;
@@ -230,7 +295,6 @@ export function PongBackground() {
         g.levelUpTimer = 0;
         setScore(0);
         setLevel(1);
-        setLevelUpText("");
         resetBall(W, H, -1);
       }
 
