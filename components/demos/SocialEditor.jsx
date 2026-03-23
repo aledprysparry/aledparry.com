@@ -42,7 +42,7 @@ const DEFAULT_BRAND = {
   colorPositive:"#2A9D8F", colorText:"#FFFFFF",
   fontFamily:"Montserrat",
   channelName:"", cornerRadius:18, iconStyle:"line",
-  captionPillRadius:12, captionFontSize:88,
+  captionPillRadius:12, captionFontSize:88, animationPreset:"default",
   captionFontWeight:"800", captionPosition:"lower",
   captionTextCase:"upper", captionBgOpacity:0,
   // watermark
@@ -80,8 +80,19 @@ function getCachedImage(dataUrl) {
 
 const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
+const TMPL_STORE = "infostudio_templates_v1";
 const load = k => { try { const r=localStorage.getItem(k); return r?JSON.parse(r):[]; } catch{ return []; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} };
+
+// ── Style template field list — all visual fields captured in a template ──
+const STYLE_FIELDS = [
+  "colorPrimary","colorAccent","colorPositive","colorText",
+  "fontFamily","typeScale","lineHeight","headingWeight",
+  "captionFontSize","captionFontWeight","captionLineHeight",
+  "captionPosition","captionTextCase","captionBgOpacity",
+  "captionPillRadius","cornerRadius","iconStyle",
+  "animationPreset"
+];
 
 const newBrand = name => ({ id:Date.now(), name:name||"My Brand", createdAt:new Date().toISOString(), ...DEFAULT_BRAND });
 const newProject = (brandId, name) => ({ id:Date.now()+1, brandId, name:name||"Untitled Project", createdAt:new Date().toISOString(), srt:"", subtitles:[], graphics:[], selected:[], previews:{}, captionStyle:"tiktok", titleCardOverride:null });
@@ -212,7 +223,55 @@ function drawIcon(ctx,name,cx,cy,size,color,style){
 // ═══════════════════════════════════════════════════════════════
 const easeOut  = t => 1-(1-t)**3;
 const easeBack = t => { const c=1.70158+1; return 1+c*(t-1)**3+1.70158*(t-1)**2; };
+const easeOutOnly = t => 1-(1-t)**2; // no overshoot — smooth decel only
+const easeBackTight = t => { const c=1.2+1; return 1+c*(t-1)**3+1.2*(t-1)**2; }; // tighter spring
+const easeBackBig = t => { const c=2.8+1; return 1+c*(t-1)**3+2.8*(t-1)**2; }; // exaggerated spring
 const clamp    = (v,a,b) => Math.max(a,Math.min(b,v));
+
+// ── Animation Presets ──────────────────────────────────────────
+const ANIM_PRESETS = {
+  default: { label:"Default",   icon:"▶",  entMul:2,   txtMul:2.5, txtDelay:0.15, easeFn:easeOut,     easeBackFn:easeBack,      feel:"Current behaviour" },
+  snappy:  { label:"Snappy",    icon:"⚡", entMul:3.5, txtMul:4,   txtDelay:0.08, easeFn:easeOut,     easeBackFn:easeBackTight,  feel:"Fast, punchy" },
+  gentle:  { label:"Gentle",    icon:"🌊", entMul:1.2, txtMul:1.8, txtDelay:0.20, easeFn:easeOutOnly, easeBackFn:easeOutOnly,    feel:"Smooth, elegant" },
+  punchy:  { label:"Punchy",    icon:"💥", entMul:2.8, txtMul:3.2, txtDelay:0.10, easeFn:easeOut,     easeBackFn:easeBackBig,    feel:"Bouncy, social-media" },
+};
+
+// ── Style Extraction Mappings ─────────────────────────────────
+const FONT_MAP  = { condensed:"Barlow Condensed", sans:"Montserrat", display:"Anton", serif:"Raleway" };
+const RADIUS_MAP = { sharp:0, slight:8, rounded:18, pill:32 };
+const LH_MAP     = { tight:1.15, normal:1.30, airy:1.55 };
+
+const EXTRACTION_PROMPT = `Analyse this graphic/screenshot and extract the visual style.
+Return ONLY valid JSON, no markdown:
+{
+  "colorPrimary": "#hex — the main background or card colour",
+  "colorAccent": "#hex — the strongest highlight/emphasis colour",
+  "colorPositive": "#hex — secondary accent if present, else similar to colorAccent",
+  "colorText": "#hex — the main text colour",
+  "fontStyle": "condensed|sans|serif|display — best description of the font style",
+  "fontWeight": "700|800|900 — approximate heading weight",
+  "lineHeightFeel": "tight|normal|airy",
+  "cornerRadiusFeel": "sharp|slight|rounded|pill",
+  "iconStyle": "line|filled",
+  "overallFeel": "bold|minimal|editorial|playful|corporate",
+  "animationSuggestion": "snappy|default|gentle|punchy",
+  "notes": "any other observations about the visual style"
+}`;
+
+function mapExtractedStyle(raw){
+  return {
+    colorPrimary:     raw.colorPrimary    || undefined,
+    colorAccent:      raw.colorAccent     || undefined,
+    colorPositive:    raw.colorPositive   || undefined,
+    colorText:        raw.colorText       || undefined,
+    fontFamily:       FONT_MAP[raw.fontStyle]  || "Montserrat",
+    headingWeight:    raw.fontWeight      || "800",
+    lineHeight:       LH_MAP[raw.lineHeightFeel] || 1.30,
+    cornerRadius:     RADIUS_MAP[raw.cornerRadiusFeel]!==undefined ? RADIUS_MAP[raw.cornerRadiusFeel] : 18,
+    iconStyle:        (raw.iconStyle==="filled"||raw.iconStyle==="line") ? raw.iconStyle : "line",
+    animationPreset:  ["snappy","default","gentle","punchy"].includes(raw.animationSuggestion) ? raw.animationSuggestion : "default",
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  GRAPHIC RENDERER
@@ -228,7 +287,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const{template:t,content:c={}}=g;
   const sc=Math.min(W,H)/1080,PAD=Math.round(80*sc);
   const p=clamp(progress,0,1);
-  const ENT=easeOut(clamp(p*2,0,1)),TXT=easeOut(clamp((p-0.15)*2.5,0,1));
+  const AP=ANIM_PRESETS[B.animationPreset]||ANIM_PRESETS.default;
+  const ENT=AP.easeFn(clamp(p*AP.entMul,0,1)),TXT=AP.easeFn(clamp((p-AP.txtDelay)*AP.txtMul,0,1));
   const TS=Math.max(0.5,Math.min(1.6,Number(B.typeScale)||1.0));   // type scale
   const LH=Math.max(1.0,Math.min(2.2,Number(B.lineHeight)||1.30)); // line height
   const HW=B.headingWeight||"900";                                   // heading weight
@@ -242,7 +302,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     ctx.save();ctx.globalAlpha=0.07;ctx.strokeStyle="#000";ctx.lineWidth=2;
     for(let i=-H;i<W+H;i+=44*sc){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+H,H);ctx.stroke();}ctx.restore();
-    const icR=Math.round(118*sc),icSc=easeBack(clamp(p*2.2,0,1));
+    const icR=Math.round(118*sc),icSc=AP.easeBackFn(clamp(p*AP.entMul*1.1,0,1));
     ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);
     ctx.globalAlpha=0.18;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR*1.05,"#fff",IC);ctx.restore();
@@ -296,13 +356,13 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);ctx.fillStyle=B.colorPositive;ctx.fillRect(0,0,W,Math.round(10*sc));
     if(isPortrait){
       // Portrait: icon centred above, headline + body stacked
-      const icSc=easeBack(clamp(p*2,0,1));ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(120*sc),B.colorPositive,IC);ctx.restore();
+      const icSc=AP.easeBackFn(clamp(p*AP.entMul,0,1));ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(120*sc),B.colorPositive,IC);ctx.restore();
       ctx.save();ctx.globalAlpha=TXT;ctx.translate(0,(1-TXT)*40*sc);
       DT(c.headline||"KEY POINT",W/2,H*0.38,W-PAD*2,H*0.10,Math.round(72*sc),"900","center","#fff",1);ctx.restore();
       const divW=(W-PAD*2)*ENT;ctx.strokeStyle="rgba(255,255,255,0.1)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(W/2-divW/2,H*0.46);ctx.lineTo(W/2+divW/2,H*0.46);ctx.stroke();
       ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.36,Math.round(64*sc),"600","center","rgba(255,255,255,0.88)",4);ctx.restore();
     } else {
-      const icSc=easeBack(clamp(p*2,0,1));ctx.save();ctx.translate(PAD+Math.round(75*sc),H*0.34);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(100*sc),B.colorPositive,IC);ctx.restore();
+      const icSc=AP.easeBackFn(clamp(p*AP.entMul,0,1));ctx.save();ctx.translate(PAD+Math.round(75*sc),H*0.34);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(100*sc),B.colorPositive,IC);ctx.restore();
       ctx.save();ctx.globalAlpha=TXT;ctx.translate((1-TXT)*-30*sc,0);DT(c.headline||"KEY POINT",PAD+Math.round(152*sc),H*0.26,W-PAD-Math.round(152*sc)-PAD,H*0.13,Math.round(76*sc),"900","left","#fff",1);ctx.restore();
       ctx.strokeStyle="rgba(255,255,255,0.1)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(PAD,H*0.44);ctx.lineTo(PAD+(W-PAD*2)*ENT,H*0.44);ctx.stroke();
       ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.38,Math.round(68*sc),"600","center","rgba(255,255,255,0.88)",4);ctx.restore();
@@ -335,7 +395,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     if(isPortrait){
       // Portrait: wide centred bubble at top, scales in from centre
       const bW=W-PAD,bH=Math.round(240*sc),bX=PAD/2,bY=Math.round(80*sc);
-      const sc2=easeBack(ENT);ctx.save();ctx.translate(W/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-W/2,-(bY+bH/2));ctx.globalAlpha=ENT;
+      const sc2=AP.easeBackFn(ENT);ctx.save();ctx.translate(W/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-W/2,-(bY+bH/2));ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.38)";ctx.shadowBlur=28;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle="#fff";ctx.fill();ctx.shadowBlur=0;
       // tail centred
       ctx.fillStyle="#fff";ctx.beginPath();ctx.moveTo(W/2-30*sc,bY+bH);ctx.lineTo(W/2,bY+bH+50*sc);ctx.lineTo(W/2+30*sc,bY+bH);ctx.closePath();ctx.fill();
@@ -344,7 +404,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       ctx.restore();
     } else {
       const bW=Math.round(680*sc),bH=Math.round(210*sc),bX=W-bW-Math.round(100*sc),bY=Math.round(76*sc);
-      const sc2=easeBack(ENT);ctx.save();ctx.translate(W-Math.round(60*sc),bY);ctx.scale(sc2,sc2);ctx.translate(-(W-Math.round(60*sc)),-bY);ctx.globalAlpha=ENT;
+      const sc2=AP.easeBackFn(ENT);ctx.save();ctx.translate(W-Math.round(60*sc),bY);ctx.scale(sc2,sc2);ctx.translate(-(W-Math.round(60*sc)),-bY);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.38)";ctx.shadowBlur=28;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle="#fff";ctx.fill();ctx.shadowBlur=0;
       ctx.fillStyle="#fff";ctx.beginPath();ctx.moveTo(bX+46*sc,bY+bH);ctx.lineTo(bX+18*sc,bY+bH+50*sc);ctx.lineTo(bX+124*sc,bY+bH);ctx.closePath();ctx.fill();
       drawIcon(ctx,"question",bX+64*sc,bY+bH/2,42*sc,B.colorPrimary,IC);
@@ -373,7 +433,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const markers=c.markers||["6 months","12 months"];
     markers.forEach((m,i)=>{
       const frac=i/(Math.max(markers.length-1,1));if(frac>ENT)return;
-      const mx=tx0+txW*frac,ds=easeBack(clamp((ENT-frac)*4,0,1));
+      const mx=tx0+txW*frac,ds=AP.easeBackFn(clamp((ENT-frac)*4,0,1));
       ctx.save();ctx.translate(mx,ty);ctx.scale(ds,ds);ctx.fillStyle=B.colorAccent;ctx.beginPath();ctx.arc(0,0,11*sc,0,Math.PI*2);ctx.fill();ctx.restore();
       ctx.fillStyle="#fff";ctx.font=`600 ${Math.round(28*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.globalAlpha=ENT*0.9;ctx.fillText(m,mx,ty+46*sc);
     });
@@ -794,13 +854,13 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setGStep("analysing");setError("");
     try{
       const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
-      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},
+      const apiKey=localStorage.getItem("anthropic_api_key")||"";
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2500,system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}]})});
       const data=await res.json();
-      if(data.error)throw new Error(data.error);
       const raw=data.content?.find(b=>b.type==="text")?.text||"";
       setGraphics(JSON.parse(raw.replace(/```json|```/g,"").trim()));setGStep("review");
-    }catch(e){setError("Analysis failed: "+e.message);setGStep("idle");}
+    }catch(e){setError("Analysis failed: "+e.message+(e.message.includes("fetch")?" — check your API key in Settings":""));setGStep("idle");}
   };
 
   const doPreview=useCallback((g,i)=>{
@@ -1235,6 +1295,7 @@ function ProjectView({project,brand,updateProject,onBack}){
   const [tab,setTab]=useState("graphics");
   const [previewRatio,setPreviewRatio]=useState("16:9");
   const fileRef=useRef();
+  const {hasKey,refresh}=useApiKey();
 
   const handleSRT=f=>{
     const r=new FileReader();
@@ -1277,6 +1338,8 @@ function ProjectView({project,brand,updateProject,onBack}){
       </div>
 
       <div style={S.wrap}>
+        {/* API key banner */}
+        {!hasKey&&<ApiKeyBanner onSaved={refresh}/>}
         {/* SRT bar */}
         <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"11px 16px",marginBottom:18,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
           <span style={{fontSize:10,fontWeight:700,opacity:0.45,letterSpacing:1,flexShrink:0}}>SRT</span>
@@ -1659,9 +1722,368 @@ function BrandAssets({b, set, S}){
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  ANIMATION PRESET PICKER  (inside BrandEditor)
+// ═══════════════════════════════════════════════════════════════
+function AnimationPresetPicker({value,onChange,brand,S}){
+  const [hovered,setHovered]=useState(null);
+  // Small live canvas preview per preset on hover
+  const previewRef=useRef();
+  const rafRef=useRef();
+  const startRef=useRef(Date.now());
+
+  useEffect(()=>{
+    if(!hovered||!previewRef.current)return;
+    startRef.current=Date.now();
+    const preset=ANIM_PRESETS[hovered]||ANIM_PRESETS.default;
+    const sampleG={template:"key_point",content:{headline:"KEY POINT",body:"Animation preview for this preset"}};
+    const fakeBrand={...DEFAULT_BRAND,...brand,animationPreset:hovered};
+    const loop=()=>{
+      const elapsed=(Date.now()-startRef.current)/1000;
+      const p=elapsed%2<1.4?Math.min(elapsed%2/0.7,1):1; // animate then hold
+      if(previewRef.current) drawGraphic(previewRef.current,sampleG,fakeBrand,"16:9",p);
+      rafRef.current=requestAnimationFrame(loop);
+    };
+    rafRef.current=requestAnimationFrame(loop);
+    return()=>cancelAnimationFrame(rafRef.current);
+  },[hovered,brand]);
+
+  return(
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:hovered?12:0}}>
+        {Object.entries(ANIM_PRESETS).map(([k,preset])=>(
+          <button key={k}
+            style={{
+              background:value===k?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.05)",
+              border:`1px solid ${value===k?"#2A9D8F":"rgba(255,255,255,0.1)"}`,
+              borderRadius:10,padding:"12px 8px",cursor:"pointer",textAlign:"center",
+              color:"#fff",fontFamily:"inherit",transition:"all 0.15s"
+            }}
+            onClick={()=>onChange(k)}
+            onMouseEnter={()=>setHovered(k)}
+            onMouseLeave={()=>setHovered(null)}
+          >
+            <div style={{fontSize:20,marginBottom:4}}>{preset.icon}</div>
+            <div style={{fontWeight:800,fontSize:11,marginBottom:2}}>{preset.label}</div>
+            <div style={{fontSize:9,opacity:0.45}}>{preset.feel}</div>
+          </button>
+        ))}
+      </div>
+      {hovered&&(
+        <div style={{borderRadius:10,overflow:"hidden",border:"1px solid rgba(255,255,255,0.1)"}}>
+          <canvas ref={previewRef} width={1920} height={1080} style={{width:"100%",display:"block",background:"repeating-conic-gradient(#3a3a3a 0% 25%,#2a2a2a 0% 50%) 0 0/18px 18px"}}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STYLE EXTRACTOR  (Claude Vision image upload + extraction)
+// ═══════════════════════════════════════════════════════════════
+function StyleExtractor({onExtracted,S}){
+  const [images,setImages]=useState([]);       // [{name,dataURL,mediaType}]
+  const [extracting,setExtracting]=useState(false);
+  const [error,setError]=useState("");
+  const [result,setResult]=useState(null);      // raw Claude response
+  const fileRef=useRef();
+  const dropRef=useRef();
+
+  const addFiles=files=>{
+    const allowed=["image/png","image/jpeg","image/webp"];
+    const toAdd=[...files].filter(f=>allowed.includes(f.type)).slice(0,4-images.length);
+    toAdd.forEach(f=>{
+      const reader=new FileReader();
+      reader.onload=()=>{
+        const mediaType=f.type==="image/png"?"image/png":f.type==="image/webp"?"image/webp":"image/jpeg";
+        setImages(prev=>{
+          if(prev.length>=4)return prev;
+          return[...prev,{name:f.name,dataURL:reader.result,mediaType}];
+        });
+      };
+      reader.readAsDataURL(f);
+    });
+  };
+
+  const handleDrop=e=>{e.preventDefault();e.stopPropagation();addFiles(e.dataTransfer.files);};
+  const handleDragOver=e=>{e.preventDefault();e.stopPropagation();};
+
+  const extract=async()=>{
+    const apiKey=localStorage.getItem("anthropic_api_key");
+    if(!apiKey){setError("Set your Anthropic API key in Settings first.");return;}
+    setExtracting(true);setError("");setResult(null);
+    try{
+      const content=[];
+      images.forEach(img=>{
+        const base64=img.dataURL.split(",")[1];
+        content.push({type:"image",source:{type:"base64",media_type:img.mediaType,data:base64}});
+      });
+      content.push({type:"text",text:EXTRACTION_PROMPT});
+
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "x-api-key":apiKey,
+          "anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true"
+        },
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1024,
+          messages:[{role:"user",content}]
+        })
+      });
+      if(!resp.ok){const e=await resp.text();throw new Error(`API ${resp.status}: ${e.slice(0,200)}`);}
+      const data=await resp.json();
+      const txt=(data.content||[]).find(b=>b.type==="text")?.text||"";
+      // Parse JSON — strip markdown fences if present
+      const jsonStr=txt.replace(/```json?\n?/g,"").replace(/```/g,"").trim();
+      const parsed=JSON.parse(jsonStr);
+      setResult(parsed);
+      const mapped=mapExtractedStyle(parsed);
+      onExtracted(mapped,parsed);
+    }catch(err){
+      setError(err.message||"Extraction failed");
+    }finally{
+      setExtracting(false);
+    }
+  };
+
+  return(
+    <div style={{marginBottom:16}}>
+      <label style={S.lbl}>EXTRACT STYLE FROM REFERENCE IMAGE</label>
+      <div ref={dropRef} onDrop={handleDrop} onDragOver={handleDragOver}
+        onClick={()=>fileRef.current?.click()}
+        style={{
+          border:"2px dashed rgba(255,255,255,0.15)",borderRadius:12,padding:"24px 16px",
+          textAlign:"center",cursor:"pointer",background:"rgba(255,255,255,0.02)",
+          transition:"border-color 0.2s",marginBottom:10
+        }}
+        onMouseEnter={e=>e.currentTarget.style.borderColor="rgba(42,157,143,0.5)"}
+        onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(255,255,255,0.15)"}
+      >
+        <div style={{fontSize:28,marginBottom:6}}>📷</div>
+        <div style={{fontSize:13,fontWeight:600,opacity:0.7}}>Drop an image here or click to upload</div>
+        <div style={{fontSize:10,opacity:0.35,marginTop:4}}>PNG, JPG, WebP — upload 1–4 examples for best results</div>
+        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" multiple
+          style={{display:"none"}} onChange={e=>{addFiles(e.target.files);e.target.value="";}}/>
+      </div>
+
+      {/* Thumbnails */}
+      {images.length>0&&(
+        <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+          {images.map((img,i)=>(
+            <div key={i} style={{position:"relative",width:72,height:72,borderRadius:8,overflow:"hidden",border:"1px solid rgba(255,255,255,0.12)"}}>
+              <img src={img.dataURL} alt={img.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              <button onClick={e=>{e.stopPropagation();setImages(prev=>prev.filter((_,j)=>j!==i));}}
+                style={{position:"absolute",top:2,right:2,background:"rgba(0,0,0,0.7)",border:"none",color:"#fff",
+                  borderRadius:10,width:18,height:18,fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+          ))}
+          {images.length<4&&(
+            <div onClick={()=>fileRef.current?.click()}
+              style={{width:72,height:72,borderRadius:8,border:"2px dashed rgba(255,255,255,0.1)",display:"flex",
+                alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:20,opacity:0.3}}>+</div>
+          )}
+        </div>
+      )}
+
+      {/* Extract button */}
+      {images.length>0&&(
+        <button onClick={extract} disabled={extracting}
+          style={{...S.sm,background:extracting?"rgba(255,255,255,0.05)":"rgba(42,157,143,0.18)",
+            border:`1px solid ${extracting?"rgba(255,255,255,0.1)":"rgba(42,157,143,0.5)"}`,
+            padding:"10px 20px",fontSize:13,fontWeight:700,opacity:extracting?0.5:1}}>
+          {extracting?"⏳ Analysing…":"🎨 Extract Style"}
+        </button>
+      )}
+
+      {error&&<div style={{marginTop:8,padding:"8px 12px",background:"rgba(255,80,80,0.12)",border:"1px solid rgba(255,80,80,0.3)",borderRadius:8,fontSize:12,color:"#ff8080"}}>{error}</div>}
+
+      {result&&(
+        <div style={{marginTop:10,padding:"10px 14px",background:"rgba(42,157,143,0.08)",border:"1px solid rgba(42,157,143,0.2)",borderRadius:10}}>
+          <div style={{fontSize:11,fontWeight:700,opacity:0.6,marginBottom:6}}>EXTRACTED STYLE</div>
+          <div style={{display:"flex",gap:6,marginBottom:6}}>
+            {[result.colorPrimary,result.colorAccent,result.colorPositive,result.colorText].filter(Boolean).map((c,i)=>(
+              <div key={i} style={{width:28,height:28,borderRadius:6,background:c,border:"1px solid rgba(255,255,255,0.15)"}} title={c}/>
+            ))}
+          </div>
+          <div style={{fontSize:11,opacity:0.5}}>
+            {result.fontStyle&&<span>Font: {result.fontStyle} · </span>}
+            {result.cornerRadiusFeel&&<span>Corners: {result.cornerRadiusFeel} · </span>}
+            {result.overallFeel&&<span>Feel: {result.overallFeel}</span>}
+          </div>
+          {result.notes&&<div style={{fontSize:10,opacity:0.35,marginTop:4}}>{result.notes}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STYLE TEMPLATE SECTION  (inside BrandEditor)
+// ═══════════════════════════════════════════════════════════════
+function StyleTemplateSection({b, setB, brandId, allBrands, S}){
+  const [templates,setTemplates]=useState(()=>load(TMPL_STORE));
+  const [savedMsg,setSavedMsg]=useState("");
+  const [varName,setVarName]=useState("");
+  const [showVarInput,setShowVarInput]=useState(false);
+  const [confirmDialog,setConfirmDialog]=useState(null);
+  const [copyDropdown,setCopyDropdown]=useState(null); // template id being copied
+
+  const persist=ts=>{setTemplates(ts);save(TMPL_STORE,ts);};
+
+  // Extract style fields from current brand state
+  const extractStyle=()=>{
+    const style={};
+    STYLE_FIELDS.forEach(k=>{if(b[k]!==undefined)style[k]=b[k];});
+    return style;
+  };
+
+  // Apply template to brand
+  const applyTemplate=t=>{
+    const updates={};
+    STYLE_FIELDS.forEach(k=>{if(t[k]!==undefined)updates[k]=t[k];});
+    setB(prev=>({...prev,...updates}));
+  };
+
+  // Save template
+  const saveTemplate=(name,isMaster)=>{
+    const t={
+      id:Date.now(), name:name||"Untitled Style",
+      description:"", isMaster, brandId:brandId||null,
+      createdAt:new Date().toISOString(),
+      ...extractStyle()
+    };
+    persist([...templates,t]);
+    setSavedMsg("✓ Saved");setTimeout(()=>setSavedMsg(""),2000);
+    setShowVarInput(false);setVarName("");
+  };
+
+  // Delete template
+  const deleteTemplate=id=>{persist(templates.filter(t=>t.id!==id));setConfirmDialog(null);};
+
+  // Copy template to another brand
+  const copyToBrand=(tplId,targetBrandId)=>{
+    const src=templates.find(t=>t.id===tplId);
+    if(!src)return;
+    const copy={...src,id:Date.now(),brandId:targetBrandId,isMaster:false,
+      name:src.name+" (copy)",createdAt:new Date().toISOString()};
+    persist([...templates,copy]);
+    setCopyDropdown(null);
+    setSavedMsg("✓ Copied");setTimeout(()=>setSavedMsg(""),2000);
+  };
+
+  // Visible templates: associated with this brand + global
+  const visible=templates.filter(t=>t.brandId===brandId||t.brandId===null)
+    .sort((a,b2)=>(b2.isMaster?1:0)-(a.isMaster?1:0)||b2.id-a.id);
+  const allTemplates=[...templates].sort((a,b2)=>(b2.isMaster?1:0)-(a.isMaster?1:0)||b2.id-a.id);
+
+  const otherBrands=(allBrands||[]).filter(br=>br.id!==brandId);
+
+  return(
+    <div>
+      {confirmDialog&&<ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={()=>setConfirmDialog(null)}/>}
+
+      {/* Apply dropdown */}
+      <div style={{marginBottom:14}}>
+        <label style={S.lbl}>APPLY A TEMPLATE</label>
+        <select
+          value=""
+          onChange={e=>{const t=allTemplates.find(t2=>String(t2.id)===e.target.value);if(t)applyTemplate(t);}}
+          style={{...S.inp,appearance:"auto",cursor:"pointer"}}
+        >
+          <option value="">Choose a template to start from…</option>
+          {allTemplates.map(t=>(
+            <option key={t.id} value={t.id}>{t.isMaster?"⭐ ":""}{t.name}{t.brandId&&t.brandId!==brandId?` (${(allBrands||[]).find(br=>br.id===t.brandId)?.name||"other"})`:""}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Save buttons */}
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+        <button style={{...S.sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}}
+          onClick={()=>saveTemplate(b.name+" Master",true)}>
+          ⭐ Save as Master Template
+        </button>
+        {showVarInput?(
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            <input value={varName} onChange={e=>setVarName(e.target.value)}
+              placeholder="Variation name…" autoFocus
+              onKeyDown={e=>{if(e.key==="Enter"&&varName.trim())saveTemplate(varName.trim(),false);if(e.key==="Escape")setShowVarInput(false);}}
+              style={{...S.inp,width:180,padding:"7px 10px",fontSize:12}}/>
+            <button style={{...S.sm,padding:"7px 12px"}} onClick={()=>{if(varName.trim())saveTemplate(varName.trim(),false);}}>Save</button>
+            <button style={{...S.sm,padding:"7px 10px",opacity:0.5}} onClick={()=>setShowVarInput(false)}>✕</button>
+          </div>
+        ):(
+          <button style={S.sm} onClick={()=>setShowVarInput(true)}>
+            Save As Variation
+          </button>
+        )}
+        {savedMsg&&<span style={{fontSize:12,fontWeight:700,color:"#2A9D8F",animation:"fadeIn 0.2s"}}>{savedMsg}</span>}
+      </div>
+
+      {/* Style extraction from reference images */}
+      <StyleExtractor onExtracted={(mapped,raw)=>{
+        setB(prev=>({...prev,...mapped}));
+      }} S={S}/>
+
+      {/* Template list */}
+      {visible.length>0&&(
+        <div>
+          <label style={{...S.lbl,marginBottom:8}}>SAVED TEMPLATES</label>
+          {visible.map(t=>{
+            const fromOther=t.brandId&&t.brandId!==brandId;
+            const brandName=fromOther?(allBrands||[]).find(br=>br.id===t.brandId)?.name:"";
+            return(
+              <div key={t.id} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:9,padding:"9px 13px",marginBottom:6,display:"flex",alignItems:"center",gap:8}}>
+                {/* Color dots preview */}
+                <div style={{display:"flex",gap:3,flexShrink:0}}>
+                  {[t.colorPrimary,t.colorAccent,t.colorPositive].filter(Boolean).map((c,i)=>(
+                    <div key={i} style={{width:10,height:10,borderRadius:3,background:c}}/>
+                  ))}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    {t.isMaster&&"⭐ "}{t.name}
+                  </div>
+                  <div style={{fontSize:10,opacity:0.4}}>
+                    {t.fontFamily||"Montserrat"}{fromOther?` · from ${brandName}`:""}{!t.brandId?" · global":""}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:4,flexShrink:0}}>
+                  <button style={{...S.sm,padding:"4px 8px",fontSize:10}} onClick={()=>applyTemplate(t)} title="Apply">✓ Apply</button>
+                  {/* Copy to brand */}
+                  <div style={{position:"relative"}}>
+                    <button style={{...S.sm,padding:"4px 8px",fontSize:10}} onClick={()=>setCopyDropdown(copyDropdown===t.id?null:t.id)} title="Copy to brand">📋</button>
+                    {copyDropdown===t.id&&otherBrands.length>0&&(
+                      <div style={{position:"absolute",right:0,top:"110%",background:"#1a2636",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,padding:6,zIndex:50,minWidth:160,boxShadow:"0 8px 24px rgba(0,0,0,0.5)"}}>
+                        {otherBrands.map(br=>(
+                          <div key={br.id} style={{padding:"6px 10px",fontSize:11,cursor:"pointer",borderRadius:5,fontWeight:600,color:"#fff"}}
+                            onClick={()=>copyToBrand(t.id,br.id)}
+                            onMouseEnter={e=>e.currentTarget.style.background="rgba(42,157,143,0.2)"}
+                            onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                            → {br.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button style={{...S.sm,padding:"4px 8px",fontSize:10,opacity:0.5}} onClick={()=>setConfirmDialog({message:`Delete template "${t.name}"?`,onConfirm:()=>deleteTemplate(t.id)})} title="Delete">🗑</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  BRAND EDITOR
 // ═══════════════════════════════════════════════════════════════
-function BrandEditor({brand,onSave,onCancel}){
+function BrandEditor({brand,onSave,onCancel,allBrands}){
   const [b,setB]=useState({...DEFAULT_BRAND,...brand});
   const set=k=>v=>setB(prev=>({...prev,[k]:v}));
   const S={
@@ -1698,6 +2120,11 @@ function BrandEditor({brand,onSave,onCancel}){
             <div style={{fontSize:28,fontWeight:900,marginBottom:2}}>The quick brown fox</div>
             <div style={{fontSize:15,opacity:0.55}}>0123456789 — {b.fontFamily}</div>
           </div>
+        </div>
+        {/* Style Templates */}
+        <div style={S.section}>
+          <div style={S.shead}>Style Templates</div>
+          <StyleTemplateSection b={b} setB={setB} brandId={brand.id||null} allBrands={allBrands} S={S}/>
         </div>
         {/* Colours */}
         <div style={S.section}>
@@ -1748,6 +2175,11 @@ function BrandEditor({brand,onSave,onCancel}){
             <label style={S.lbl}>CARD BACKGROUND OPACITY — {Math.round((b.captionBgOpacity||0)*100)}%</label>
             <input type="range" min={0} max={0.85} step={0.05} value={b.captionBgOpacity} onChange={e=>set("captionBgOpacity")(Number(e.target.value))} style={{width:"100%",accentColor:b.colorAccent}}/>
           </div>
+        </div>
+        {/* Animation preset */}
+        <div style={S.section}>
+          <div style={S.shead}>Animation Feel</div>
+          <AnimationPresetPicker value={b.animationPreset||"default"} onChange={set("animationPreset")} brand={b} S={S}/>
         </div>
         {/* Graphic style */}
         <div style={S.section}>
@@ -2069,8 +2501,22 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
   const [newProjName,setNewProjName]=useState("");
   const [selBrandId,setSelBrandId]=useState(brands[0]?.id||null);
   const [confirmDialog,setConfirmDialog]=useState(null);
+  const [showApiPanel,setShowApiPanel]=useState(false);
+  const [apiKeyInput,setApiKeyInput]=useState("");
+  const allTemplates=load(TMPL_STORE);
+  const templateCountForBrand=id=>allTemplates.filter(t=>t.brandId===id||t.brandId===null).length;
+  const [hasApiKey,setHasApiKey]=useState(!!localStorage.getItem("anthropic_api_key"));
   const confirm=(message,onConfirm)=>setConfirmDialog({message,onConfirm});
   const closeConfirm=()=>setConfirmDialog(null);
+  const saveApiKey=()=>{
+    if(!apiKeyInput.trim())return;
+    localStorage.setItem("anthropic_api_key",apiKeyInput.trim());
+    setHasApiKey(true);setShowApiPanel(false);setApiKeyInput("");
+  };
+  const clearApiKey=()=>{
+    localStorage.removeItem("anthropic_api_key");
+    setHasApiKey(false);setApiKeyInput("");
+  };
   const selBrand=brands.find(b=>b.id===selBrandId);
   const brandProjects=projects.filter(p=>p.brandId===selBrandId);
   const inp={width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,padding:"12px 14px",color:"#fff",fontSize:14,fontFamily:"Montserrat,Arial,sans-serif",boxSizing:"border-box",outline:"none"};
@@ -2085,8 +2531,42 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
           <div style={{fontSize:11,opacity:0.35,fontStyle:"italic"}}>Sign-in coming soon</div>
           <button style={{...sm,opacity:0.45,cursor:"not-allowed",background:"rgba(255,255,255,0.05)"}}>🔒 Sign in with Google</button>
+          <button style={{...sm,background:hasApiKey?"rgba(42,157,143,0.2)":"rgba(230,57,70,0.2)",border:`1px solid ${hasApiKey?"rgba(42,157,143,0.5)":"rgba(230,57,70,0.5)"}`}}
+            onClick={()=>setShowApiPanel(p=>!p)}>
+            {hasApiKey?"✓ API Key":"⚠ Set API Key"}
+          </button>
         </div>
       </div>
+
+      {/* API Key panel */}
+      {showApiPanel&&(
+        <div style={{background:"#0f1927",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"16px 26px",fontFamily:"Montserrat,Arial,sans-serif"}}>
+          <div style={{maxWidth:880,margin:"0 auto"}}>
+            <div style={{fontSize:12,fontWeight:700,opacity:0.6,marginBottom:10,letterSpacing:1}}>ANTHROPIC API KEY</div>
+            {hasApiKey
+              ?<div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                  <div style={{fontSize:13,color:"#2A9D8F",fontWeight:600}}>✓ API key is set and active</div>
+                  <button onClick={clearApiKey} style={{background:"rgba(230,57,70,0.2)",border:"1px solid rgba(230,57,70,0.4)",color:"#fff",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600}}>Remove key</button>
+                  <button onClick={()=>setShowApiPanel(false)} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✕ Close</button>
+                </div>
+              :<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <input
+                    type="password"
+                    value={apiKeyInput}
+                    onChange={e=>setApiKeyInput(e.target.value)}
+                    onKeyDown={e=>e.key==="Enter"&&saveApiKey()}
+                    placeholder="sk-ant-api03-..."
+                    autoFocus
+                    style={{flex:1,minWidth:260,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"10px 14px",color:"#fff",fontSize:13,fontFamily:"inherit",outline:"none"}}
+                  />
+                  <button onClick={saveApiKey} disabled={!apiKeyInput.trim()} style={{background:apiKeyInput.trim()?"#2A9D8F":"rgba(255,255,255,0.1)",border:"none",color:"#fff",padding:"10px 20px",borderRadius:8,cursor:apiKeyInput.trim()?"pointer":"not-allowed",fontSize:13,fontWeight:700,fontFamily:"inherit",transition:"background 0.2s"}}>Save</button>
+                  <button onClick={()=>setShowApiPanel(false)} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"10px 14px",borderRadius:8,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>Cancel</button>
+                  <div style={{width:"100%",fontSize:11,opacity:0.45,marginTop:2}}>Get a key at <strong>console.anthropic.com</strong> → API Keys. Stored only in this browser.</div>
+                </div>
+            }
+          </div>
+        </div>
+      )}
       <div style={{maxWidth:880,margin:"0 auto",padding:"28px 18px",display:"grid",gridTemplateColumns:"260px 1fr",gap:20}}>
         {/* Brands sidebar */}
         <div>
@@ -2100,6 +2580,9 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                 <div style={{fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</div>
                 <div style={{fontSize:10,opacity:0.4,fontFamily:`"${b.fontFamily}",Arial,sans-serif`}}>{b.fontFamily}</div>
               </div>
+              {templateCountForBrand(b.id)>0&&(
+                <span style={{fontSize:9,fontWeight:700,background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",color:"#2A9D8F",padding:"2px 6px",borderRadius:4,flexShrink:0}}>{templateCountForBrand(b.id)} tpl{templateCountForBrand(b.id)!==1?"s":""}</span>
+              )}
               <button style={{...sm,padding:"4px 8px",fontSize:10}} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>
             </div>
           ))}
@@ -2175,6 +2658,7 @@ function App(){
     return(
       <BrandEditor
         brand={editing||newBrand("")}
+        allBrands={brands}
         onSave={b=>{
           if(editBrandId) setBrands(bs=>bs.map(x=>x.id===editBrandId?{...x,...b,id:editBrandId}:x));
           else setBrands(bs=>[...bs,{...b,id:Date.now(),createdAt:new Date().toISOString()}]);
@@ -2209,5 +2693,3 @@ function App(){
     />
   );
 }
-
-export default App;
