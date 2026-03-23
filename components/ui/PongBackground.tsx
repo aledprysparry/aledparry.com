@@ -6,7 +6,6 @@ export function PongBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
-  const [level, setLevel] = useState(1);
   const gameRef = useRef({
     ballX: 0,
     ballY: 0,
@@ -18,8 +17,6 @@ export function PongBackground() {
     level: 1,
     mouseX: 0,
     running: true,
-    levelUpTimer: 0,
-    lastHitElement: "",
   });
 
   useEffect(() => {
@@ -49,15 +46,6 @@ export function PongBackground() {
     const PADDLE_H = 8;
     const BALL_R = 5;
 
-    const LEVEL_THRESHOLDS = [0, 5, 12, 20, 30, 42, 55, 70, 88, 108];
-
-    function getLevelForScore(s: number): number {
-      for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
-        if (s >= LEVEL_THRESHOLDS[i]) return i + 1;
-      }
-      return 1;
-    }
-
     function getSpeedMultiplier(lvl: number): number {
       return 1 + (lvl - 1) * 0.08;
     }
@@ -66,14 +54,13 @@ export function PongBackground() {
       return 2.2 + (lvl - 1) * 0.25;
     }
 
-    // Get bounding rects of text/UI elements on the page for collision
+    // Get bounding rects of text/UI elements for collision
     function getPageObstacles(): DOMRect[] {
-      const selectors = "h1, h2, p, a.bg-stone-900, .text-accent";
+      const selectors = "h1, h2, a.bg-stone-900";
       const els = document.querySelectorAll(selectors);
       const rects: DOMRect[] = [];
       els.forEach((el) => {
         const r = el.getBoundingClientRect();
-        // Only include elements that are visible and reasonably sized
         if (r.width > 20 && r.height > 10 && r.top > 40 && r.bottom < window.innerHeight - 40) {
           rects.push(r);
         }
@@ -81,47 +68,58 @@ export function PongBackground() {
       return rects;
     }
 
-    // Bounce ball off a rect, returns true if collision happened
-    function bounceOffRect(rect: DOMRect): boolean {
+    // Cooldown set to prevent ball getting stuck inside an obstacle
+    const recentHits = new Set<number>();
+
+    function bounceOffRect(rect: DOMRect, idx: number): boolean {
+      if (recentHits.has(idx)) return false;
+
       const bx = g.ballX, by = g.ballY, r = BALL_R;
-      // Find closest point on rect to ball
-      const cx = Math.max(rect.left, Math.min(bx, rect.right));
-      const cy = Math.max(rect.top, Math.min(by, rect.bottom));
-      const dx = bx - cx, dy = by - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const padded = 4; // extra padding so ball doesn't clip inside
 
-      if (dist < r + 2) {
-        // Determine which side was hit
-        const overlapL = rect.left - (bx - r);
-        const overlapR = (bx + r) - rect.right;
-        const overlapT = rect.top - (by - r);
-        const overlapB = (by + r) - rect.bottom;
-
-        const horizontal = Math.max(overlapL, overlapR);
-        const vertical = Math.max(overlapT, overlapB);
-
-        if (horizontal > vertical) {
-          g.ballVX = -g.ballVX;
-          g.ballX += g.ballVX > 0 ? 3 : -3;
-        } else {
-          g.ballVY = -g.ballVY;
-          g.ballY += g.ballVY > 0 ? 3 : -3;
-        }
-        return true;
+      // Is ball overlapping the rect?
+      if (
+        bx + r < rect.left - padded ||
+        bx - r > rect.right + padded ||
+        by + r < rect.top - padded ||
+        by - r > rect.bottom + padded
+      ) {
+        return false;
       }
-      return false;
+
+      // Find penetration depths from each side
+      const fromLeft = (bx + r) - rect.left;
+      const fromRight = rect.right - (bx - r);
+      const fromTop = (by + r) - rect.top;
+      const fromBottom = rect.bottom - (by - r);
+
+      const minX = Math.min(fromLeft, fromRight);
+      const minY = Math.min(fromTop, fromBottom);
+
+      if (minX < minY) {
+        g.ballVX = -g.ballVX;
+        g.ballX += fromLeft < fromRight ? -(minX + 5) : (minX + 5);
+      } else {
+        g.ballVY = -g.ballVY;
+        g.ballY += fromTop < fromBottom ? -(minY + 5) : (minY + 5);
+      }
+
+      // Cooldown: ignore this obstacle for 20 frames
+      recentHits.add(idx);
+      setTimeout(() => recentHits.delete(idx), 333);
+
+      return true;
     }
 
-    function addScore() {
-      g.playerScore++;
+    function addScore(pts = 1) {
+      g.playerScore += pts;
       setScore(g.playerScore);
       updateBest(g.playerScore);
 
-      const newLevel = getLevelForScore(g.playerScore);
+      // Level up every 10 points
+      const newLevel = Math.floor(g.playerScore / 10) + 1;
       if (newLevel > g.level) {
         g.level = newLevel;
-        g.levelUpTimer = 90;
-        setLevel(newLevel);
       }
     }
 
@@ -160,12 +158,12 @@ export function PongBackground() {
       const speedMul = getSpeedMultiplier(g.level);
       const aiSpeed = getAISpeed(g.level);
 
-      // Refresh obstacle cache every 30 frames
-      if (obstacleTick++ % 30 === 0) {
+      // Refresh obstacle cache every 60 frames
+      if (obstacleTick++ % 60 === 0) {
         obstacleCache = getPageObstacles();
       }
 
-      // Score as giant background text
+      // Score as giant background text (the only score display)
       ctx.save();
       ctx.font = `bold ${Math.min(W * 0.5, 400)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center";
@@ -173,37 +171,6 @@ export function PongBackground() {
       ctx.fillStyle = "rgba(0, 0, 0, 0.03)";
       ctx.fillText(String(g.playerScore), W / 2, H / 2);
       ctx.restore();
-
-      // Level display (top-left)
-      ctx.save();
-      ctx.font = "600 13px Inter, system-ui, sans-serif";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = "rgba(120, 113, 108, 0.35)";
-      ctx.fillText(`Level ${g.level}`, 16, 12);
-      ctx.restore();
-
-      // Score display (top-right)
-      ctx.save();
-      ctx.font = "700 16px Inter, system-ui, sans-serif";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = "rgba(87, 83, 78, 0.45)";
-      ctx.fillText(String(g.playerScore), W - 16, 10);
-      ctx.restore();
-
-      // Level-up text (fades out)
-      if (g.levelUpTimer > 0) {
-        g.levelUpTimer--;
-        const alpha = Math.min(1, g.levelUpTimer / 40) * 0.55;
-        ctx.save();
-        ctx.font = `bold ${Math.min(W * 0.08, 48)}px Inter, system-ui, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = `rgba(87, 83, 78, ${alpha})`;
-        ctx.fillText(`Level ${g.level}!`, W / 2, H / 2 - 60);
-        ctx.restore();
-      }
 
       // Player paddle (bottom) — follows mouse X
       g.paddleX += (g.mouseX - g.paddleX - PADDLE_W / 2) * 0.1;
@@ -260,16 +227,17 @@ export function PongBackground() {
         g.ballY = 24 + PADDLE_H + BALL_R;
       }
 
-      // Ball bounces off page text/UI elements
-      for (const rect of obstacleCache) {
-        if (bounceOffRect(rect)) {
-          // Brief highlight flash on the canvas where collision happened
+      // Ball bounces off page headings and buttons (with cooldown)
+      for (let i = 0; i < obstacleCache.length; i++) {
+        if (bounceOffRect(obstacleCache[i], i)) {
+          // Brief highlight flash
           ctx.save();
-          ctx.globalAlpha = 0.15;
+          ctx.globalAlpha = 0.12;
           ctx.fillStyle = "#78716c";
-          ctx.fillRect(rect.left, rect.top, rect.width, rect.height);
+          const r = obstacleCache[i];
+          ctx.fillRect(r.left, r.top, r.width, r.height);
           ctx.restore();
-          break; // one collision per frame
+          break;
         }
       }
 
@@ -283,7 +251,7 @@ export function PongBackground() {
 
       // Ball goes off top — AI missed! 10 bonus points
       if (g.ballY < -BALL_R) {
-        for (let i = 0; i < 10; i++) addScore();
+        addScore(10);
         resetBall(W, H, 1);
       }
 
@@ -292,9 +260,7 @@ export function PongBackground() {
         updateBest(g.playerScore);
         g.playerScore = 0;
         g.level = 1;
-        g.levelUpTimer = 0;
         setScore(0);
-        setLevel(1);
         resetBall(W, H, -1);
       }
 
