@@ -1,4 +1,4 @@
-import { put, list, del, getDownloadUrl } from "@vercel/blob";
+import { put, list, del, head } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 const LATEST_PREFIX = "studio/latest/";
@@ -6,8 +6,9 @@ const SNAPSHOT_PREFIX = "studio/snapshots/";
 
 async function fetchBlob(blobUrl: string): Promise<string | null> {
   try {
-    const downloadUrl = await getDownloadUrl(blobUrl);
-    const res = await fetch(downloadUrl);
+    // For private stores, head() returns a downloadUrl with auth token
+    const metadata = await head(blobUrl);
+    const res = await fetch(metadata.downloadUrl);
     return res.ok ? res.text() : null;
   } catch {
     return null;
