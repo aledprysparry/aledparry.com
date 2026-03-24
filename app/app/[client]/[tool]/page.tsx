@@ -14,13 +14,13 @@ function DemoLoading() {
 
 // Dynamic import registry — maps componentPath to lazy-loaded component.
 // Each entry must be a static import() call for Next.js to bundle correctly.
-// @ts-expect-error — JSX demo components lack type declarations
+// @ts-ignore
 const SocialEditor = dynamic(() => import("@/components/demos/SocialEditor"), { ssr: false, loading: () => <DemoLoading /> });
-// @ts-expect-error — JSX demo components lack type declarations
+// @ts-ignore
 const MasteryCompanion = dynamic(() => import("@/components/demos/MasteryCompanion"), { ssr: false, loading: () => <DemoLoading /> });
-// @ts-expect-error — JSX demo components lack type declarations
+// @ts-ignore
 const PMADemo = dynamic(() => import("@/components/demos/PMA"), { ssr: false, loading: () => <DemoLoading /> });
-// @ts-expect-error — JSX demo components lack type declarations
+// @ts-ignore
 const KeepItLocal = dynamic(() => import("@/components/demos/KeepItLocal"), { ssr: false, loading: () => <DemoLoading /> });
 
 const componentMap: Record<string, React.ComponentType> = {
