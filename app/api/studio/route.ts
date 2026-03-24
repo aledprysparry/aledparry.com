@@ -84,14 +84,14 @@ export async function POST(req: Request) {
     if (latestBlobs.length > 0) {
       await del(latestBlobs.map((b) => b.url));
     }
-    await put(LATEST_PREFIX + "data.json", json, { access: "public" });
+    await put(LATEST_PREFIX + "data.json", json, { access: "private" });
 
     // If snapshot requested, also save a timestamped copy
     if (snapshotName) {
       const ts = new Date().toISOString().replace(/[:.]/g, "-");
       const safeName = snapshotName.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 50);
       await put(`${SNAPSHOT_PREFIX}${ts}_${safeName}.json`, json, {
-        access: "public",
+        access: "private",
       });
     }
 
