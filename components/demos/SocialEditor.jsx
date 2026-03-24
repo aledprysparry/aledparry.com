@@ -2501,7 +2501,7 @@ function ConfirmDialog({message, onConfirm, onCancel}){
 // ═══════════════════════════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════════════════════════
-function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject,onSave,onLoadVersion}){
+function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject,onRenameProject,onSave,onLoadVersion}){
   const [newProjName,setNewProjName]=useState("");
   const [selBrandId,setSelBrandId]=useState(brands[0]?.id||null);
   const [confirmDialog,setConfirmDialog]=useState(null);
@@ -2676,6 +2676,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                     </div>
                   </div>
                   <div style={{display:"flex",gap:6}} onClick={e=>e.stopPropagation()}>
+                    <button style={{...sm,padding:"4px 8px",fontSize:10,opacity:0.5}} onClick={()=>{const n=prompt("Rename project:",p.name);if(n&&n.trim())onRenameProject(p.id,n.trim());}}>✏</button>
                     <button style={{...sm,background:"#E63946",border:"1px solid #E63946"}} onClick={()=>onOpenProject(p.id)}>Open →</button>
                     <button style={{...sm,opacity:0.45}} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})}>🗑</button>
                   </div>
@@ -2769,6 +2770,7 @@ function App(){
       onOpenProject={id=>{setActiveProjectId(id);setView("project");}}
       onDeleteBrand={id=>{setBrands(bs=>bs.filter(b=>b.id!==id));setProjects(ps=>ps.filter(p=>p.brandId!==id));}}
       onDeleteProject={id=>setProjects(ps=>ps.filter(p=>p.id!==id))}
+      onRenameProject={(id,name)=>setProjects(ps=>ps.map(p=>p.id===id?{...p,name}:p))}
       onSave={(snapshotName)=>{
         const templates=load(TMPL_STORE);
         const url=snapshotName?"/api/studio?snapshot="+encodeURIComponent(snapshotName):"/api/studio";
