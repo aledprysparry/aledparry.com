@@ -2507,6 +2507,8 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
   const [confirmDialog,setConfirmDialog]=useState(null);
   const [showApiPanel,setShowApiPanel]=useState(false);
   const [saveStatus,setSaveStatus]=useState("");
+  const [showVersions,setShowVersions]=useState(false);
+  const [versions,setVersions]=useState([]);
   const [apiKeyInput,setApiKeyInput]=useState("");
   const allTemplates=load(TMPL_STORE);
   const templateCountForBrand=id=>allTemplates.filter(t=>t.brandId===id||t.brandId===null).length;
@@ -2550,31 +2552,48 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
             style={{background:"rgba(42,157,143,0.1)",border:"1px solid rgba(42,157,143,0.3)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
             📸 Save As
           </button>
-          <button onClick={async()=>{
-            setSaveStatus("Loading versions...");
-            try{
-              const r=await fetch("/api/studio?versions=1");
-              const d=await r.json();
-              if(!d.versions?.length){setSaveStatus("No snapshots yet");setTimeout(()=>setSaveStatus(""),2000);return;}
-              const list=d.versions.map((v,i)=>{
-                const date=new Date(v.uploadedAt).toLocaleString();
-                const name=v.pathname.split("/").pop().replace(/\.json.*$/,"").replace(/^\d{4}-\d{2}-\d{2}T[\d-]+_/,"");
-                return `${i+1}. ${name} (${date})`;
-              }).join("\n");
-              const choice=prompt("Load which version?\n\n"+list+"\n\nEnter number:");
-              if(!choice)return setSaveStatus("");
-              const idx=parseInt(choice)-1;
-              if(isNaN(idx)||idx<0||idx>=d.versions.length){setSaveStatus("Invalid choice");setTimeout(()=>setSaveStatus(""),2000);return;}
-              const lr=await fetch("/api/studio?load="+encodeURIComponent(d.versions[idx].pathname));
-              const ld=await lr.json();
-              if(ld.brands){onLoadVersion(ld);setSaveStatus("Loaded!");}
-              else setSaveStatus("Failed to load");
-              setTimeout(()=>setSaveStatus(""),2000);
-            }catch{setSaveStatus("Error");setTimeout(()=>setSaveStatus(""),2000);}
-          }}
-            style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
-            📂 Versions
-          </button>
+          <div style={{position:"relative"}}>
+            <button onClick={async()=>{
+              if(showVersions){setShowVersions(false);return;}
+              setVersions([]);setShowVersions(true);
+              try{
+                const r=await fetch("/api/studio?versions=1");
+                const d=await r.json();
+                setVersions(d.versions||[]);
+              }catch{setVersions([]);}
+            }}
+              style={{background:showVersions?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
+              📂 Versions {showVersions?"▲":"▼"}
+            </button>
+            {showVersions&&(
+              <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#141e2e",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,minWidth:280,maxHeight:320,overflowY:"auto",zIndex:999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
+                {versions.length===0?(
+                  <div style={{padding:"16px 18px",fontSize:12,opacity:0.5,textAlign:"center"}}>No snapshots yet — use Save As to create one</div>
+                ):versions.map((v,i)=>{
+                  const name=(v.pathname||"").split("/").pop().replace(/\.json.*$/,"").replace(/^\d{4}-\d{2}-\d{2}T[\d-]+_/,"").replace(/_/g," ");
+                  const date=new Date(v.uploadedAt).toLocaleString();
+                  return(
+                    <div key={i} onClick={async()=>{
+                      setSaveStatus("Loading...");setShowVersions(false);
+                      try{
+                        const lr=await fetch("/api/studio?load="+encodeURIComponent(v.pathname));
+                        const ld=await lr.json();
+                        if(ld.brands){onLoadVersion(ld);setSaveStatus("Loaded!");}
+                        else setSaveStatus("Failed");
+                      }catch{setSaveStatus("Error");}
+                      setTimeout(()=>setSaveStatus(""),2000);
+                    }}
+                      style={{padding:"10px 16px",cursor:"pointer",borderBottom:"1px solid rgba(255,255,255,0.06)",transition:"background 0.15s"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="rgba(42,157,143,0.15)"}
+                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{name||"Untitled"}</div>
+                      <div style={{fontSize:10,opacity:0.4}}>{date}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
