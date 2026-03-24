@@ -2500,7 +2500,7 @@ function ConfirmDialog({message, onConfirm, onCancel}){
 // ═══════════════════════════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════════════════════════
-function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject,onSave}){
+function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject,onSave,onLoadVersion}){
   const [newProjName,setNewProjName]=useState("");
   const [selBrandId,setSelBrandId]=useState(brands[0]?.id||null);
   const [confirmDialog,setConfirmDialog]=useState(null);
@@ -2532,11 +2532,47 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
       <div style={{background:"#1D3557",padding:"14px 26px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid rgba(0,0,0,0.3)"}}>
         <div style={{width:6,height:38,background:"#E63946",borderRadius:4,flexShrink:0}}/>
         <div><div style={{fontWeight:900,fontSize:20,letterSpacing:0.5}}>INFOGRAPHIC STUDIO</div><div style={{fontSize:11,opacity:0.38,marginTop:1}}>Graphics · Captions · Multi-ratio Premiere export</div></div>
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
-          {saveStatus&&<span style={{fontSize:11,color:saveStatus==="Saved!"?"#2A9D8F":"#E63946",fontWeight:600}}>{saveStatus}</span>}
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          {saveStatus&&<span style={{fontSize:11,color:saveStatus.includes("!")||saveStatus.includes("Loaded")?"#2A9D8F":"#E63946",fontWeight:600}}>{saveStatus}</span>}
           <button onClick={async()=>{setSaveStatus("Saving...");const ok=await onSave();setSaveStatus(ok?"Saved!":"Error");setTimeout(()=>setSaveStatus(""),2000);}}
-            style={{background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",color:"#fff",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600}}>
-            💾 Save to Cloud
+            style={{background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
+            💾 Save
+          </button>
+          <button onClick={async()=>{
+            const name=prompt("Snapshot name (e.g. 'Before client meeting'):");
+            if(!name) return;
+            setSaveStatus("Saving snapshot...");
+            const ok=await onSave(name);
+            setSaveStatus(ok?"Snapshot saved!":"Error");
+            setTimeout(()=>setSaveStatus(""),2500);
+          }}
+            style={{background:"rgba(42,157,143,0.1)",border:"1px solid rgba(42,157,143,0.3)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
+            📸 Save As
+          </button>
+          <button onClick={async()=>{
+            setSaveStatus("Loading versions...");
+            try{
+              const r=await fetch("/api/studio?versions=1");
+              const d=await r.json();
+              if(!d.versions?.length){setSaveStatus("No snapshots yet");setTimeout(()=>setSaveStatus(""),2000);return;}
+              const list=d.versions.map((v,i)=>{
+                const date=new Date(v.uploadedAt).toLocaleString();
+                const name=v.pathname.split("/").pop().replace(/\.json.*$/,"").replace(/^\d{4}-\d{2}-\d{2}T[\d-]+_/,"");
+                return `${i+1}. ${name} (${date})`;
+              }).join("\n");
+              const choice=prompt("Load which version?\n\n"+list+"\n\nEnter number:");
+              if(!choice)return setSaveStatus("");
+              const idx=parseInt(choice)-1;
+              if(isNaN(idx)||idx<0||idx>=d.versions.length){setSaveStatus("Invalid choice");setTimeout(()=>setSaveStatus(""),2000);return;}
+              const lr=await fetch("/api/studio?load="+encodeURIComponent(d.versions[idx].pathname));
+              const ld=await lr.json();
+              if(ld.brands){onLoadVersion(ld);setSaveStatus("Loaded!");}
+              else setSaveStatus("Failed to load");
+              setTimeout(()=>setSaveStatus(""),2000);
+            }catch{setSaveStatus("Error");setTimeout(()=>setSaveStatus(""),2000);}
+          }}
+            style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
+            📂 Versions
           </button>
         </div>
       </div>
@@ -2598,7 +2634,6 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
             <>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
                 <div style={{fontWeight:800,fontSize:11,opacity:0.45,letterSpacing:1}}>PROJECTS — {selBrand.name}</div>
-                <button style={{...sm,opacity:0.4,fontSize:10}} onClick={()=>onEditBrand(selBrand.id)}>✏️ Brand</button>
               </div>
               {/* New project */}
               <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:12,padding:"16px",marginBottom:14}}>
@@ -2714,10 +2749,16 @@ function App(){
       onOpenProject={id=>{setActiveProjectId(id);setView("project");}}
       onDeleteBrand={id=>{setBrands(bs=>bs.filter(b=>b.id!==id));setProjects(ps=>ps.filter(p=>p.brandId!==id));}}
       onDeleteProject={id=>setProjects(ps=>ps.filter(p=>p.id!==id))}
-      onSave={()=>{
+      onSave={(snapshotName)=>{
         const templates=load(TMPL_STORE);
-        return fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({brands,projects,templates})}).then(()=>true).catch(()=>false);
+        const url=snapshotName?"/api/studio?snapshot="+encodeURIComponent(snapshotName):"/api/studio";
+        return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({brands,projects,templates})}).then(r=>r.ok).catch(()=>false);
+      }}
+      onLoadVersion={(d)=>{
+        if(d.brands){setBrands(d.brands);save(BS,d.brands);}
+        if(d.projects){setProjects(d.projects);save(PS,d.projects);}
+        if(d.templates) save(TMPL_STORE,d.templates);
       }}
     />
   );
