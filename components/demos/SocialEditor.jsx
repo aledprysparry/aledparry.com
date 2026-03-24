@@ -940,6 +940,12 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={sm} onClick={()=>setSelected(()=>new Set())}>None</button>
         <button style={{...sm,marginLeft:"auto"}} onClick={previewAll}>👁 Preview All</button>
         <button style={{...sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}} onClick={exportSelectedBatch}>⬇ Export Selected</button>
+        <button style={{...sm,background:"rgba(29,53,87,0.6)",border:"1px solid rgba(255,255,255,0.2)"}} onClick={()=>{
+          const ng=graphics.map(g=>({...g,typeOverride:"fullscreen"}));setGraphics(ng);
+        }}>⬛ All Full</button>
+        <button style={{...sm,background:"rgba(42,157,143,0.25)",border:"1px solid rgba(42,157,143,0.4)"}} onClick={()=>{
+          const ng=graphics.map(g=>({...g,typeOverride:"overlay"}));setGraphics(ng);
+        }}>⬜ All Overlay</button>
         <button style={{...sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}} onClick={()=>setShowAdd(true)}>+ Add</button>
         <button style={{...sm,background:"rgba(230,57,70,0.15)",border:"1px solid rgba(230,57,70,0.3)"}} onClick={()=>{setGraphics([]);setGStep("idle");}}>↺ Re-analyse</button>
       </div>
