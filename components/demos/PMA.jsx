@@ -114,8 +114,8 @@ const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Syne:
 
 const CSS = `
 ${FONT_IMPORT}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
+/* ── SCOPED ROOT — all PMA styles contained under .pma ── */
+.pma{
   --bg:#0b0d12;--surface:#13151c;--surface2:#191c27;--surface3:#1f2333;--surface4:#252a3a;
   --border:#252a3a;--border2:#2f3550;
   --accent:#4f72ff;--accent-dim:rgba(79,114,255,0.15);--accent-mid:rgba(79,114,255,0.3);
@@ -126,19 +126,19 @@ ${FONT_IMPORT}
   --teal:#2dd4bf;--teal-dim:rgba(45,212,191,0.12);
   --text:#e8eaf5;--text2:#9197b3;--text3:#555e80;--text4:#3a4060;
   --radius:10px;--radius-sm:7px;--radius-lg:14px;--radius-xl:18px;
+  background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
 }
-html,body,#root{height:100%;overflow:hidden}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
-h1,h2,h3,h4,h5{font-family:'Syne',sans-serif}
-button{font-family:'DM Sans',sans-serif;cursor:pointer}
-input,textarea,select{font-family:'DM Sans',sans-serif}
-a{text-decoration:none;color:inherit}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.pma-app{display:flex;height:100vh;overflow:hidden}
+.pma *,.pma *::before,.pma *::after{box-sizing:border-box;margin:0;padding:0}
+.pma h1,.pma h2,.pma h3,.pma h4,.pma h5{font-family:'Syne',sans-serif}
+.pma button{font-family:'DM Sans',sans-serif;cursor:pointer}
+.pma input,.pma textarea,.pma select{font-family:'DM Sans',sans-serif}
+.pma a{text-decoration:none;color:inherit}
+.pma ::-webkit-scrollbar{width:5px;height:5px}
+.pma ::-webkit-scrollbar-track{background:transparent}
+.pma ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
 /* ── LAYOUT ────────────────────────────────── */
-.app{display:flex;height:100vh;overflow:hidden}
 .sidebar{width:252px;min-width:252px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;gap:12px}
@@ -258,11 +258,11 @@ a{text-decoration:none;color:inherit}
 
 /* ── TABLE ───────────────────────────────────── */
 .tbl-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse}
-th{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text4);padding:9px 13px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:9px 13px;border-bottom:1px solid rgba(37,42,58,.6);font-size:13px;color:var(--text);vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,.015)}
+.pma table{width:100%;border-collapse:collapse}
+.pma th{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text4);padding:9px 13px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.pma td{padding:9px 13px;border-bottom:1px solid rgba(37,42,58,.6);font-size:13px;color:var(--text);vertical-align:middle}
+.pma tr:last-child td{border-bottom:none}
+.pma tr:hover td{background:rgba(255,255,255,.015)}
 
 /* ── WORKFLOW BAR ────────────────────────────── */
 .wf{display:flex;margin-bottom:22px;flex-wrap:wrap;gap:2px}
@@ -632,16 +632,13 @@ const SEED_USERS = [
 ];
 
 // ─── BILINGUAL FIELD HELPER (inline for seed data) ───────────────────────────
-const bf = (cy, en="", cyStatus="PENDING") => {
-  const srcLang = cy ? "CY" : "EN";
-  return {
-    original_language: srcLang,
-    source_text:       srcLang === "CY" ? (cy || "") : (en || ""),
-    translated_text:   srcLang === "CY" ? (en || "") : (cy || ""),
-    translation_status: cyStatus || (en ? "AUTO_TRANSLATED" : "PENDING"),
-    translation_method: "MACHINE",
-  };
-};
+const bf = (cyText, enText="") => ({
+  original_language: "CY",
+  source_text: cyText,
+  translated_text: enText,
+  translation_status: enText ? "AUTO_TRANSLATED" : "PENDING",
+  translation_method: enText ? "MACHINE" : null,
+});
 
 const bfen = (enText, cyText="") => ({
   original_language: "EN",
@@ -1182,8 +1179,8 @@ function SessionProvider({ children }) {
   }, []);
 
   if (loading) return (
-    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
-      background:"var(--bg)", fontFamily:"'DM Sans',sans-serif", color:"var(--text3)", fontSize:14 }}>
+    <div className="pma" style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <style>{CSS}{EXTRA_CSS}</style>
       <div style={{ textAlign:"center" }}>
         <div style={{ fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700, letterSpacing:3,
           textTransform:"uppercase", color:"var(--accent)", marginBottom:12 }}>PSC Module</div>
@@ -1194,11 +1191,11 @@ function SessionProvider({ children }) {
 
   return (
     <SessionContext.Provider value={{ session, can, login, logout, updateUser, updateOrg }}>
-      {authView === "sign-in"       && <SignInPage onNav={setAuthView} onLogin={login} />}
-      {authView === "register"      && <RegisterPage onNav={setAuthView} onLogin={login} />}
-      {authView === "forgot"        && <ForgotPage onNav={setAuthView} />}
-      {authView === "reset"         && <ResetPage token={authToken} onNav={setAuthView} />}
-      {authView === "accept-invite" && <AcceptInvitePage token={authToken} onNav={setAuthView} onLogin={login} />}
+      {authView === "sign-in"       && <div className="pma"><style>{CSS}{EXTRA_CSS}</style><SignInPage onNav={setAuthView} onLogin={login} /></div>}
+      {authView === "register"      && <div className="pma"><style>{CSS}{EXTRA_CSS}</style><RegisterPage onNav={setAuthView} onLogin={login} /></div>}
+      {authView === "forgot"        && <div className="pma"><style>{CSS}{EXTRA_CSS}</style><ForgotPage onNav={setAuthView} /></div>}
+      {authView === "reset"         && <div className="pma"><style>{CSS}{EXTRA_CSS}</style><ResetPage token={authToken} onNav={setAuthView} /></div>}
+      {authView === "accept-invite" && <div className="pma"><style>{CSS}{EXTRA_CSS}</style><AcceptInvitePage token={authToken} onNav={setAuthView} onLogin={login} /></div>}
       {authView === "app" && session && (
         <>
           {!session.user.email_verified_at && (
@@ -1621,7 +1618,7 @@ function BilingualField({
       } else {
         // Fallback: direct Anthropic call (dev only, needs VITE_ANTHROPIC_KEY)
         const ANTHROPIC_KEY = typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_ANTHROPIC_KEY : undefined;
-        if (!ANTHROPIC_KEY) throw new Error("No storyId or VITE_ANTHROPIC_KEY provided");
+        if (!ANTHROPIC_KEY) throw new Error("No storyId or NEXT_PUBLIC_ANTHROPIC_KEY provided");
         const langNames = { CY:"Welsh (Cymraeg)", EN:"English" };
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method:"POST",
@@ -2221,7 +2218,6 @@ function TeamManagementPage({ orgMembers, onMembersChange }) {
 // Each tab auto-saves on every field change (debounced 800ms).
 
 
-
 // ─── useDebounce ──────────────────────────────────────────────────────────────
 function useDebounced(fn, delay = 800) {
   const timer = useRef(null);
@@ -2546,7 +2542,6 @@ function HandoverTab({ story, onUpdate }) {
 
 // ─── psc_deliverables.jsx ────────────────────────────────────────────────────
 // DeliverablesTab, MediaTab, AuditTab — all wired to real API.
-
 
 
 // ─── DELIVERABLES TAB ────────────────────────────────────────────────────────
@@ -2928,7 +2923,7 @@ function AuditTab({ story }) {
 // Handles: story list, story CRUD, navigation, org members cache.
 
 
-// ─── Shared atoms (duplicated here so psc_app is self-contained) ──────────────
+// ─── Shared atoms (defined once at top of file, reused here) ──────────────
 function Spinner() {
   return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:40,
     color:"var(--text3)", fontSize:13 }}>Loading…</div>;
@@ -2950,6 +2945,18 @@ function Toast({ msg, type="success", onDone }) {
 // The backend returns flat fields: brief.hook_cy / brief.hook_en
 // The UI components expect bilingual objects: brief.story_hook.source_text etc.
 // This reconstructs the UI shape from the DB shape on every fetch.
+function normBf(cy, en, cyStatus = "PENDING") {
+  // Determine the original language from content presence
+  const srcLang = cy ? "CY" : "EN";
+  return {
+    original_language: srcLang,
+    source_text:       srcLang === "CY" ? (cy || "") : (en || ""),
+    translated_text:   srcLang === "CY" ? (en || "") : (cy || ""),
+    translation_status: cyStatus || (en ? "AUTO_TRANSLATED" : "PENDING"),
+    translation_method: "MACHINE",
+  };
+}
+
 function normalizeStory(s) {
   if (!s) return s;
   const b = s.brief || {};
@@ -2961,8 +2968,8 @@ function normalizeStory(s) {
     // Normalise brief
     brief: {
       ...b,
-      story_hook: bf(b.hook_cy, b.hook_en, b.hook_status),
-      why_now:    bf(b.why_now_cy, b.why_now_en, b.why_now_status),
+      story_hook: normBf(b.hook_cy, b.hook_en, b.hook_status),
+      why_now:    normBf(b.why_now_cy, b.why_now_en, b.why_now_status),
       tone:       b.tone || "",
       sync_lines: b.sync_lines || [],
       characters: s.characters || [],
@@ -2971,7 +2978,7 @@ function normalizeStory(s) {
     // Normalise handover
     handover: {
       ...h,
-      story_intention: bf(h.intention_cy, h.intention_en),
+      story_intention: normBf(h.intention_cy, h.intention_en),
       clips:           Array.isArray(h.must_clips)        ? h.must_clips        : [],
       highlights:      Array.isArray(h.visual_highlights) ? h.visual_highlights : [],
       music_suggestions: typeof h.music_ref === "object" ? (h.music_ref?.text || "") : (h.music_ref || ""),
@@ -2979,9 +2986,9 @@ function normalizeStory(s) {
     // Normalise shoot notes
     shoot_notes: {
       ...n,
-      worked_well: n.what_worked || n.worked_well || bf("", ""),
-      unexpected:  n.unexpected  || bf("", ""),
-      missing:     n.missing     || bf("", ""),
+      worked_well: n.what_worked || n.worked_well || normBf("", ""),
+      unexpected:  n.unexpected  || normBf("", ""),
+      missing:     n.missing     || normBf("", ""),
     },
   };
 }
@@ -3603,8 +3610,8 @@ function AppInner() {
 
   return (
     <LangProvider defaultLang={user?.preferred_lang || "EN"}>
-      <div className="app">
-        <style>{EXTRA_CSS}</style>
+      <div className="pma pma-app">
+        <style>{CSS}{EXTRA_CSS}</style>
 
         <Sidebar
           stories={stories}
