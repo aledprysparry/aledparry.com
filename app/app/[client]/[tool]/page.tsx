@@ -14,7 +14,8 @@ function DemoLoading() {
 
 // Dynamic import registry — maps componentPath to lazy-loaded component.
 // Each entry must be a static import() call for Next.js to bundle correctly.
-const componentMap: Record<string, React.ComponentType> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const componentMap: Record<string, React.ComponentType<any>> = {
   SocialEditor: dynamic(
     () => import("@/components/demos/SocialEditor"),
     { ssr: false, loading: () => <DemoLoading /> }
