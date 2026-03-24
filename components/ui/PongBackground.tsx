@@ -6,6 +6,8 @@ export function PongBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const gameRef = useRef({
     ballX: 0,
     ballY: 0,
@@ -155,6 +157,38 @@ export function PongBackground() {
 
       ctx.clearRect(0, 0, W, H);
 
+      if (pausedRef.current) {
+        // Still draw everything, just don't update positions
+        // Background score
+        ctx.save();
+        ctx.font = `bold ${Math.min(W, H) * 0.7}px system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.03)";
+        ctx.fillText(String(g.playerScore), W / 2, H / 2);
+        ctx.restore();
+        // Paddles
+        ctx.fillStyle = "rgba(68, 64, 60, 0.35)";
+        ctx.fillRect(g.paddleX, H - 24 - PADDLE_H, PADDLE_W, PADDLE_H);
+        ctx.fillRect(g.aiPaddleX, 18, PADDLE_W, PADDLE_H);
+        // Ball
+        ctx.beginPath();
+        ctx.arc(g.ballX, g.ballY, BALL_R, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(68, 64, 60, 0.4)";
+        ctx.fill();
+        // Pause text
+        ctx.save();
+        ctx.font = "bold 14px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(68, 64, 60, 0.15)";
+        ctx.fillText("PAUSED", W / 2, H / 2 - Math.min(W, H) * 0.25);
+        ctx.restore();
+
+        if (g.running) animId = requestAnimationFrame(draw);
+        return;
+      }
+
       const speedMul = getSpeedMultiplier(g.level);
       const aiSpeed = getAISpeed(g.level);
 
@@ -303,9 +337,20 @@ export function PongBackground() {
         className="fixed inset-0 z-0 pointer-events-auto"
         style={{ cursor: "none" }}
       />
-      {/* Best score indicator */}
-      <div className="fixed bottom-4 right-4 z-10 text-xs font-sans text-stone-400 select-none">
-        {bestScore > 0 && `🏆 ${bestScore}`}
+      {/* Pause + Best score */}
+      <div className="fixed bottom-4 right-4 z-10 flex items-center gap-3 text-xs font-sans text-stone-400 select-none">
+        {bestScore > 0 && <span>🏆 {bestScore}</span>}
+        <button
+          onClick={() => {
+            const next = !pausedRef.current;
+            pausedRef.current = next;
+            setPaused(next);
+          }}
+          className="opacity-30 hover:opacity-60 transition-opacity"
+          aria-label={paused ? "Resume game" : "Pause game"}
+        >
+          {paused ? "▶" : "⏸"}
+        </button>
       </div>
     </>
   );
