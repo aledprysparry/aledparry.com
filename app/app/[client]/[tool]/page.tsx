@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { getDemo } from "@/content/demos.config";
@@ -32,11 +31,10 @@ const componentMap: Record<string, React.ComponentType> = {
 };
 
 interface Props {
-  params: Promise<{ client: string; tool: string }>;
+  params: { client: string; tool: string };
 }
 
-export default function DemoPage({ params: paramsPromise }: Props) {
-  const params = use(paramsPromise);
+export default function DemoPage({ params }: Props) {
   const demo = getDemo(params.client, params.tool);
   if (!demo) notFound();
 
