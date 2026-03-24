@@ -854,8 +854,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setGStep("analysing");setError("");
     try{
       const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
-      const apiKey=localStorage.getItem("anthropic_api_key")||"";
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2500,system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}]})});
       const data=await res.json();
       const raw=data.content?.find(b=>b.type==="text")?.text||"";
@@ -1808,8 +1807,6 @@ function StyleExtractor({onExtracted,S}){
   const handleDragOver=e=>{e.preventDefault();e.stopPropagation();};
 
   const extract=async()=>{
-    const apiKey=localStorage.getItem("anthropic_api_key");
-    if(!apiKey){setError("Set your Anthropic API key in Settings first.");return;}
     setExtracting(true);setError("");setResult(null);
     try{
       const content=[];
@@ -1819,14 +1816,9 @@ function StyleExtractor({onExtracted,S}){
       });
       content.push({type:"text",text:EXTRACTION_PROMPT});
 
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      const resp=await fetch("/api/ai",{
         method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "x-api-key":apiKey,
-          "anthropic-version":"2023-06-01",
-          "anthropic-dangerous-direct-browser-access":"true"
-        },
+        headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",
           max_tokens:1024,
@@ -2381,8 +2373,7 @@ function ApiKeyBanner({onSaved}){
 }
 
 function useApiKey(){
-  const [hasKey,setHasKey]=useState(!!localStorage.getItem("anthropic_api_key"));
-  return{hasKey,refresh:()=>setHasKey(!!localStorage.getItem("anthropic_api_key"))};
+  return{hasKey:true,refresh:()=>{}};
 }
 
 
@@ -2497,11 +2488,12 @@ function ConfirmDialog({message, onConfirm, onCancel}){
 // ═══════════════════════════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════════════════════════
-function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject}){
+function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject,onSave}){
   const [newProjName,setNewProjName]=useState("");
   const [selBrandId,setSelBrandId]=useState(brands[0]?.id||null);
   const [confirmDialog,setConfirmDialog]=useState(null);
   const [showApiPanel,setShowApiPanel]=useState(false);
+  const [saveStatus,setSaveStatus]=useState("");
   const [apiKeyInput,setApiKeyInput]=useState("");
   const allTemplates=load(TMPL_STORE);
   const templateCountForBrand=id=>allTemplates.filter(t=>t.brandId===id||t.brandId===null).length;
@@ -2529,6 +2521,11 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
         <div style={{width:6,height:38,background:"#E63946",borderRadius:4,flexShrink:0}}/>
         <div><div style={{fontWeight:900,fontSize:20,letterSpacing:0.5}}>INFOGRAPHIC STUDIO</div><div style={{fontSize:11,opacity:0.38,marginTop:1}}>Graphics · Captions · Multi-ratio Premiere export</div></div>
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+          {saveStatus&&<span style={{fontSize:11,color:saveStatus==="Saved!"?"#2A9D8F":"#E63946",fontWeight:600}}>{saveStatus}</span>}
+          <button onClick={async()=>{setSaveStatus("Saving...");const ok=await onSave();setSaveStatus(ok?"Saved!":"Error");setTimeout(()=>setSaveStatus(""),2000);}}
+            style={{background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",color:"#fff",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600}}>
+            💾 Save to Cloud
+          </button>
         </div>
       </div>
 
@@ -2704,6 +2701,11 @@ function App(){
       onOpenProject={id=>{setActiveProjectId(id);setView("project");}}
       onDeleteBrand={id=>{setBrands(bs=>bs.filter(b=>b.id!==id));setProjects(ps=>ps.filter(p=>p.brandId!==id));}}
       onDeleteProject={id=>setProjects(ps=>ps.filter(p=>p.id!==id))}
+      onSave={()=>{
+        const templates=load(TMPL_STORE);
+        return fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({brands,projects,templates})}).then(()=>true).catch(()=>false);
+      }}
     />
   );
 }
