@@ -2075,7 +2075,7 @@ function StyleTemplateSection({b, setB, brandId, allBrands, S}){
 // ═══════════════════════════════════════════════════════════════
 //  BRAND EDITOR
 // ═══════════════════════════════════════════════════════════════
-function BrandEditor({brand,onSave,onCancel,allBrands}){
+function BrandEditor({brand,onSave,onCancel,onDelete,allBrands}){
   const [b,setB]=useState({...DEFAULT_BRAND,...brand});
   const set=k=>v=>setB(prev=>({...prev,[k]:v}));
   const S={
@@ -2328,6 +2328,18 @@ function BrandEditor({brand,onSave,onCancel,allBrands}){
           </div>
           <BrandAssets b={b} set={set} S={S}/>
         </div>
+        {/* Delete brand — only when editing existing */}
+        {onDelete&&(
+          <div style={{...S.section,borderColor:"rgba(230,57,70,0.2)",marginTop:24}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{fontSize:12,opacity:0.4}}>Permanently delete this brand and all its projects</div>
+              <button onClick={()=>{if(window.confirm(`Delete "${b.name}"? All projects will also be deleted.`)) onDelete();}}
+                style={{background:"rgba(230,57,70,0.15)",border:"1px solid rgba(230,57,70,0.4)",color:"#E63946",padding:"8px 18px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:700}}>
+                🗑 Delete Brand
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2586,7 +2598,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
             <>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
                 <div style={{fontWeight:800,fontSize:11,opacity:0.45,letterSpacing:1}}>PROJECTS — {selBrand.name}</div>
-                <button style={{...sm,opacity:0.4,fontSize:10}} onClick={()=>confirm(`Delete brand "${selBrand.name}"? All its projects will also be deleted.`,()=>{onDeleteBrand(selBrand.id);closeConfirm();})}>🗑 Brand</button>
+                <button style={{...sm,opacity:0.4,fontSize:10}} onClick={()=>onEditBrand(selBrand.id)}>✏️ Brand</button>
               </div>
               {/* New project */}
               <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:12,padding:"16px",marginBottom:14}}>
@@ -2670,6 +2682,7 @@ function App(){
       <BrandEditor
         brand={editing||newBrand("")}
         allBrands={brands}
+        onDelete={editBrandId?()=>{setBrands(bs=>bs.filter(x=>x.id!==editBrandId));setProjects(ps=>ps.filter(p=>p.brandId!==editBrandId));setView("home");setEditBrandId(null);}:null}
         onSave={b=>{
           if(editBrandId) setBrands(bs=>bs.map(x=>x.id===editBrandId?{...x,...b,id:editBrandId}:x));
           else setBrands(bs=>[...bs,{...b,id:Date.now(),createdAt:new Date().toISOString()}]);
