@@ -17,6 +17,7 @@ const FONTS = [
 ];
 
 function loadFont(name) {
+  if (!name) return;
   const id = "gf-" + name.replace(/ /g, "-");
   if (document.getElementById(id)) return;
   const l = document.createElement("link");
