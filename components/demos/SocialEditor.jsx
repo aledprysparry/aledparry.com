@@ -2634,9 +2634,29 @@ function App(){
   const [view,setView]=useState("home");       // home | brand-edit | project
   const [editBrandId,setEditBrandId]=useState(null);
   const [activeProjectId,setActiveProjectId]=useState(null);
+  const syncTimer=useRef(null);
 
-  useEffect(()=>save(BS,brands),[brands]);
-  useEffect(()=>save(PS,projects),[projects]);
+  // ── Server sync: load on mount ──
+  useEffect(()=>{
+    fetch("/api/studio").then(r=>r.json()).then(d=>{
+      if(d.brands?.length){setBrands(d.brands);save(BS,d.brands);}
+      if(d.projects?.length){setProjects(d.projects);save(PS,d.projects);}
+      if(d.templates?.length) save(TMPL_STORE,d.templates);
+    }).catch(()=>{});
+  },[]);
+
+  // ── Server sync: debounced save ──
+  const syncToServer=useCallback((b,p)=>{
+    if(syncTimer.current) clearTimeout(syncTimer.current);
+    syncTimer.current=setTimeout(()=>{
+      const templates=load(TMPL_STORE);
+      fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({brands:b,projects:p,templates})}).catch(()=>{});
+    },1500);
+  },[]);
+
+  useEffect(()=>{save(BS,brands);syncToServer(brands,projects);},[brands]);
+  useEffect(()=>{save(PS,projects);syncToServer(brands,projects);},[projects]);
 
   useEffect(()=>{ brands.forEach(b=>loadFont(b.fontFamily)); },[brands]);
 
