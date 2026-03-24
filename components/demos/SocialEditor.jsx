@@ -879,6 +879,37 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setExporting(s=>{const n=new Set(s);n.delete(i);return n;});
   };
 
+  const exportSelectedBatch=async()=>{
+    const sel=[...selected].sort((a,b)=>a-b);
+    if(!sel.length){alert("Select graphics to export first.");return;}
+    for(const i of sel){
+      const g=graphics[i]; if(!g) continue;
+      drawGraphic(cvs.current,g,brand,previewRatio,1);
+      const dataUrl=cvs.current.toDataURL("image/png");
+      const a=document.createElement("a");a.href=dataUrl;
+      a.download=`${String(i+1).padStart(2,"0")}_${g.label||g.template}_still.png`;a.click();
+    }
+    for(const i of sel){
+      const g=graphics[i]; if(!g) continue;
+      setExporting(s=>{const n=new Set(s);n.add(i);return n;});
+      try{
+        const blob=await recordGraphic(g,brand,previewRatio);
+        const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+        a.download=`${String(i+1).padStart(2,"0")}_${g.label||g.template}_animated.webm`;a.click();
+      }catch{}
+      setExporting(s=>{const n=new Set(s);n.delete(i);return n;});
+    }
+  };
+
+  const toggleGraphicType=(i)=>{
+    const ng=[...graphics];
+    const g=ng[i]; if(!g) return;
+    const defaultType=(TMPL[g.template]||{}).type||"fullscreen";
+    const currentType=g.typeOverride||defaultType;
+    ng[i]={...g,typeOverride:currentType==="overlay"?"fullscreen":"overlay"};
+    setGraphics(ng);
+  };
+
   const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"7px 12px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600};
   const tplBg=t=>t==="myth"?brand.colorAccent:t==="reality"?brand.colorPositive:brand.colorPrimary;
 
@@ -908,12 +939,13 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={sm} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))}>All</button>
         <button style={sm} onClick={()=>setSelected(()=>new Set())}>None</button>
         <button style={{...sm,marginLeft:"auto"}} onClick={previewAll}>👁 Preview All</button>
+        <button style={{...sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}} onClick={exportSelectedBatch}>⬇ Export Selected</button>
         <button style={{...sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}} onClick={()=>setShowAdd(true)}>+ Add</button>
         <button style={{...sm,background:"rgba(230,57,70,0.15)",border:"1px solid rgba(230,57,70,0.3)"}} onClick={()=>{setGraphics([]);setGStep("idle");}}>↺ Re-analyse</button>
       </div>
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
       {graphics.map((g,i)=>{
-        const meta=TMPL[g.template]||{label:g.template,type:"?"};const sel=selected.has(i);const isOv=meta.type==="overlay";const isExp=exporting.has(i);const showAnim=animIdx===i;
+        const meta=TMPL[g.template]||{label:g.template,type:"?"};const sel=selected.has(i);const effectiveType=g.typeOverride||meta.type||"fullscreen";const isOv=effectiveType==="overlay";const isExp=exporting.has(i);const showAnim=animIdx===i;
         return(
           <div key={i} style={{marginBottom:8}}>
             <div style={{background:sel?"rgba(255,255,255,0.07)":"rgba(255,255,255,0.025)",border:`1px solid ${sel?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.06)"}`,borderRadius:12,padding:"11px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}} onClick={()=>setSelected(s=>{const n=new Set(s);n.has(i)?n.delete(i):n.add(i);return n;})}>
@@ -922,7 +954,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
                   <span style={{fontWeight:700,fontSize:12}}>{meta.label}</span>
-                  <span style={{fontSize:10,background:isOv?"rgba(42,157,143,0.22)":"rgba(29,53,87,0.85)",padding:"1px 6px",borderRadius:4,fontWeight:700}}>{isOv?"OVERLAY":"FULLSCREEN"}</span>
+                  <span style={{fontSize:10,background:isOv?"rgba(42,157,143,0.22)":"rgba(29,53,87,0.85)",padding:"1px 6px",borderRadius:4,fontWeight:700,cursor:"pointer"}} onClick={e=>{e.stopPropagation();toggleGraphicType(i);}} title="Click to toggle">{isOv?"OVERLAY":"FULLSCREEN"}</span>
                 </div>
                 <div style={{opacity:0.45,fontSize:11}}>⏱ {g.timestamp} · {g.duration}s</div>
               </div>
