@@ -6,8 +6,9 @@ const SNAPSHOT_PREFIX = "studio/snapshots/";
 
 async function fetchBlob(blobUrl: string): Promise<string | null> {
   try {
-    const blob = await get(blobUrl);
-    return blob ? await blob.text() : null;
+    const result = await get(blobUrl, { access: "private" });
+    if (!result) return null;
+    return new Response(result.stream).text();
   } catch {
     return null;
   }
