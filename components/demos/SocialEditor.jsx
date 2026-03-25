@@ -1210,7 +1210,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const updateGraphicMeta=(i,changes)=>{
     const ng=[...graphics];
     ng[i]={...ng[i],...changes};
-    updateProject({graphics:ng});
+    updateProject({graphics:ng,previews:{...previews,[i]:undefined}});
+    setTimeout(()=>{drawGraphic(cvs.current,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));},100);
   };
 
   const sm=btn();
@@ -1274,7 +1275,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                   </div>
                 </div>
                 {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
-                {showAnim&&<GraphicAnimPreview g={g} brand={brand} ratio={previewRatio}/>}
+                {showAnim&&<GraphicAnimPreview key={JSON.stringify(g.content)+g.typeOverride} g={g} brand={brand} ratio={previewRatio}/>}
               </div>
             );
           })}
