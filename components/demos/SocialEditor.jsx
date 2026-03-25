@@ -6,83 +6,101 @@ import { useState, useRef, useEffect, useCallback } from "react";
 //  DESIGN SYSTEM — shared tokens for consistent UI
 // ═══════════════════════════════════════════════════════════════
 const DS = {
-  // Colors
+  // ── Backgrounds ──
   bgPage:    "#0b1320",
   bgCard:    "rgba(255,255,255,0.04)",
+  bgCardHover: "rgba(255,255,255,0.07)",
   bgInput:   "rgba(255,255,255,0.06)",
   bgButton:  "rgba(255,255,255,0.08)",
   bgModal:   "#141e2e",
   bgOverlay: "rgba(0,0,0,0.72)",
+  // ── Borders ──
   borderSubtle: "rgba(255,255,255,0.1)",
   borderMedium: "rgba(255,255,255,0.15)",
-  // Semantic
-  positive:  "rgba(42,157,143,0.2)",
+  borderActive: "rgba(255,255,255,0.2)",
+  // ── Brand colors ──
+  accent:    "#E63946",
+  primary:   "#1D3557",
+  green:     "#2A9D8F",
+  // ── Semantic ──
+  positive:       "rgba(42,157,143,0.2)",
   positiveBorder: "rgba(42,157,143,0.4)",
-  danger:    "rgba(230,57,70,0.15)",
-  dangerBorder: "rgba(230,57,70,0.35)",
-  // Radius
+  danger:         "rgba(230,57,70,0.15)",
+  dangerBorder:   "rgba(230,57,70,0.35)",
+  // ── Text ──
+  textPrimary: "#fff",
+  textSecondary: "rgba(255,255,255,0.55)",
+  textMuted:   "rgba(255,255,255,0.35)",
+  // ── Radius ──
   rSm: 7, rMd: 10, rLg: 14,
-  // Spacing
-  xs: 4, sm: 8, md: 12, lg: 16, xl: 24,
-  // Typography
+  // ── Spacing ──
+  xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32,
+  // ── Typography ──
   font: "Montserrat,Arial,sans-serif",
+  fsXs: 10, fsSm: 12, fsMd: 13, fsLg: 15, fsXl: 20,
 };
 
-// Reusable style factories
+// ── Reusable style factories ──────────────────────────────────
+// Small button (toolbar, inline actions)
 const btn = (overrides) => ({
-  background: DS.bgButton,
-  border: `1px solid ${DS.borderSubtle}`,
-  color: "#fff",
-  padding: "7px 13px",
-  borderRadius: DS.rSm,
-  cursor: "pointer",
-  fontSize: 12,
-  fontFamily: "inherit",
-  fontWeight: 600,
-  transition: "background 0.15s, border-color 0.15s",
-  ...overrides,
+  background: DS.bgButton, border: `1px solid ${DS.borderSubtle}`,
+  color: DS.textPrimary, padding: "7px 13px", borderRadius: DS.rSm,
+  cursor: "pointer", fontSize: DS.fsSm, fontFamily: "inherit", fontWeight: 600,
+  transition: "background 0.15s, border-color 0.15s", ...overrides,
 });
+// CTA / primary action button
+const btnCta = (o) => btn({
+  background: DS.accent, border: `1px solid ${DS.accent}`,
+  padding: "12px 24px", fontSize: DS.fsLg, fontWeight: 700,
+  borderRadius: DS.rMd, ...o,
+});
+// Positive action (save, confirm)
 const btnPositive = (o) => btn({ background: DS.positive, border: `1px solid ${DS.positiveBorder}`, ...o });
+// Destructive action
 const btnDanger = (o) => btn({ background: DS.danger, border: `1px solid ${DS.dangerBorder}`, ...o });
+// Icon-only small button
+const btnIcon = (o) => btn({ padding: "4px 8px", fontSize: DS.fsXs, ...o });
+
+// Input / textarea
 const inputS = (overrides) => ({
-  width: "100%",
-  background: DS.bgInput,
-  border: `1px solid ${DS.borderSubtle}`,
-  borderRadius: DS.rSm + 1,
-  padding: "10px 12px",
-  color: "#fff",
-  fontSize: 13,
-  fontFamily: "inherit",
-  boxSizing: "border-box",
-  outline: "none",
+  width: "100%", background: DS.bgInput, border: `1px solid ${DS.borderSubtle}`,
+  borderRadius: DS.rSm + 1, padding: "10px 12px", color: DS.textPrimary,
+  fontSize: DS.fsMd, fontFamily: "inherit", boxSizing: "border-box", outline: "none",
   ...overrides,
 });
+
+// Card / panel container
 const card = (overrides) => ({
-  background: DS.bgCard,
-  border: `1px solid ${DS.borderSubtle}`,
-  borderRadius: DS.rMd + 2,
-  padding: `${DS.lg}px`,
-  marginBottom: DS.lg,
+  background: DS.bgCard, border: `1px solid ${DS.borderSubtle}`,
+  borderRadius: DS.rMd + 2, padding: `${DS.lg}px`, marginBottom: DS.lg,
   ...overrides,
 });
+
+// Field label (uppercase, small)
 const label = (overrides) => ({
-  display: "block",
-  fontSize: 10,
-  fontWeight: 700,
-  opacity: 0.5,
-  letterSpacing: 1,
-  textTransform: "uppercase",
-  marginBottom: DS.xs,
+  display: "block", fontSize: DS.fsXs, fontWeight: 700, color: DS.textSecondary,
+  letterSpacing: 1, textTransform: "uppercase", marginBottom: DS.xs,
   ...overrides,
 });
+
+// Section heading
 const sectionHead = (overrides) => ({
-  fontWeight: 800,
-  fontSize: 11,
-  opacity: 0.45,
-  letterSpacing: 1,
-  textTransform: "uppercase",
-  marginBottom: DS.md,
+  fontWeight: 800, fontSize: 11, color: DS.textMuted,
+  letterSpacing: 1, textTransform: "uppercase", marginBottom: DS.md,
   ...overrides,
+});
+
+// Modal overlay + container
+const modalOverlay = { position:"fixed", inset:0, background:DS.bgOverlay, display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999 };
+const modalBox = (overrides) => ({
+  background: DS.bgModal, border: `1px solid ${DS.borderMedium}`,
+  borderRadius: DS.rLg, padding: `${DS.xl}px`, maxWidth: 440,
+  width: "90%", ...overrides,
+});
+
+// Empty state container
+const emptyState = (overrides) => ({
+  textAlign: "center", padding: `${DS.xxl}px 0`, color: DS.textMuted, ...overrides,
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -873,14 +891,14 @@ function AddGraphicModal({brand, onAdd, onClose}){
 
   const sm=btn();
   const inp=inputS();
-  const lbl={display:"block",fontSize:10,opacity:0.5,fontWeight:700,letterSpacing:1,marginBottom:4};
+  const lbl=label();
 
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999,padding:20}} onClick={onClose}>
-      <div style={{background:"#141e2e",border:"1px solid rgba(255,255,255,0.12)",borderRadius:16,padding:"22px 24px",width:"100%",maxWidth:500,maxHeight:"85vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
-          <div style={{fontWeight:900,fontSize:15,flex:1}}>+ Add Graphic</div>
-          <button style={{...sm,padding:"5px 10px"}} onClick={onClose}>✕</button>
+    <div style={{...modalOverlay,zIndex:999,padding:20}} onClick={onClose}>
+      <div style={modalBox({maxWidth:500,maxHeight:"85vh",overflowY:"auto"})} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",alignItems:"center",gap:DS.md,marginBottom:DS.lg+2}}>
+          <div style={{fontWeight:900,fontSize:DS.fsLg,flex:1}}>+ Add Graphic</div>
+          <button style={btnIcon()} onClick={onClose}>✕</button>
         </div>
 
         {/* Template picker */}
@@ -935,7 +953,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
           )}
         </div>
 
-        <button style={{width:"100%",background:brand.colorAccent,border:"none",borderRadius:10,padding:"14px",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}} onClick={handleAdd}>
+        <button style={btnCta({width:"100%"})} onClick={handleAdd}>
           + Add to Graphics List
         </button>
       </div>
@@ -2751,12 +2769,12 @@ function ThinkingDots(){
 // ═══════════════════════════════════════════════════════════════
 function ConfirmDialog({message, onConfirm, onCancel}){
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:20}}>
-      <div style={{background:"#141e2e",border:"1px solid rgba(255,255,255,0.15)",borderRadius:14,padding:"24px 28px",maxWidth:380,width:"100%",fontFamily:"Montserrat,Arial,sans-serif"}}>
-        <div style={{fontSize:15,fontWeight:600,color:"#fff",marginBottom:20,lineHeight:1.5}}>{message}</div>
-        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-          <button onClick={onCancel} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"9px 20px",borderRadius:8,cursor:"pointer",fontSize:13,fontFamily:"inherit",fontWeight:600}}>Cancel</button>
-          <button onClick={onConfirm} style={{background:"#E63946",border:"none",color:"#fff",padding:"9px 20px",borderRadius:8,cursor:"pointer",fontSize:13,fontFamily:"inherit",fontWeight:700}}>Delete</button>
+    <div style={modalOverlay}>
+      <div style={modalBox({maxWidth:380})}>
+        <div style={{fontSize:DS.fsLg,fontWeight:600,color:DS.textPrimary,marginBottom:DS.xl,lineHeight:1.5}}>{message}</div>
+        <div style={{display:"flex",gap:DS.md,justifyContent:"flex-end"}}>
+          <button onClick={onCancel} style={btn({padding:"9px 20px",fontSize:DS.fsMd})}>Cancel</button>
+          <button onClick={onConfirm} style={btnCta({padding:"9px 20px",fontSize:DS.fsMd})}>Confirm</button>
         </div>
       </div>
     </div>
@@ -2791,12 +2809,12 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
   const inp=inputS();
   const sm=btn();
   return(
-    <div style={{fontFamily:"Montserrat,Arial,sans-serif",background:"#0b1320",minHeight:"100vh",color:"#fff"}}>
+    <div style={{fontFamily:DS.font,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary}}>
       {confirmDialog&&<ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={closeConfirm}/>}
       {/* Header */}
-      <div style={{background:"#1D3557",padding:"14px 26px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid rgba(0,0,0,0.3)"}}>
-        <div style={{width:6,height:38,background:"#E63946",borderRadius:4,flexShrink:0}}/>
-        <div><div style={{fontWeight:900,fontSize:20,letterSpacing:0.5}}>INFOGRAPHIC STUDIO</div><div style={{fontSize:11,opacity:0.38,marginTop:1}}>Graphics · Captions · Multi-ratio Premiere export</div></div>
+      <div style={{background:DS.primary,padding:`${DS.lg-2}px ${DS.xl+2}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"1px solid rgba(0,0,0,0.3)"}}>
+        <div style={{width:6,height:38,background:DS.accent,borderRadius:DS.xs,flexShrink:0}}/>
+        <div><div style={{fontWeight:900,fontSize:DS.fsXl,letterSpacing:0.5}}>INFOGRAPHIC STUDIO</div><div style={{fontSize:11,color:DS.textMuted,marginTop:1}}>Graphics · Captions · Multi-ratio Premiere export</div></div>
         <div style={{marginLeft:"auto"}}></div>
       </div>
 
@@ -2829,65 +2847,67 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
           </div>
         </div>
       )}
-      <div style={{maxWidth:880,margin:"0 auto",padding:"28px 18px",display:"grid",gridTemplateColumns:"260px 1fr",gap:20}}>
+      <div style={{maxWidth:880,margin:"0 auto",padding:`${DS.xl+4}px ${DS.lg+2}px`,display:"grid",gridTemplateColumns:"260px 1fr",gap:DS.xl}}>
         {/* Brands sidebar */}
         <div>
-          <div style={{fontWeight:800,fontSize:11,opacity:0.45,letterSpacing:1,marginBottom:10}}>BRANDS</div>
-          {brands.map(b=>(
-            <div key={b.id} style={{background:selBrandId===b.id?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.03)",border:`1px solid ${selBrandId===b.id?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.07)"}`,borderRadius:10,padding:"11px 13px",marginBottom:7,cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}} onClick={()=>setSelBrandId(b.id)}>
-              <div style={{display:"flex",gap:4,flexShrink:0}}>
+          <div style={sectionHead()}>BRANDS</div>
+          {brands.map(b=>{
+            const sel=selBrandId===b.id;
+            return(
+            <div key={b.id} style={{background:sel?DS.bgCardHover:DS.bgCard,border:`1px solid ${sel?DS.borderActive:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md-1}px ${DS.md+1}px`,marginBottom:DS.sm-1,cursor:"pointer",display:"flex",alignItems:"center",gap:DS.md,transition:"all 0.15s"}} onClick={()=>setSelBrandId(b.id)}>
+              <div style={{display:"flex",gap:DS.xs,flexShrink:0}}>
                 {[b.colorAccent,b.colorPrimary,b.colorPositive].map((c,i)=><div key={i} style={{width:10,height:10,borderRadius:2,background:c}}/>)}
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</div>
-                <div style={{fontSize:10,opacity:0.4,fontFamily:`"${b.fontFamily}",Arial,sans-serif`}}>{b.fontFamily}</div>
+                <div style={{fontWeight:700,fontSize:DS.fsMd,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</div>
+                <div style={{fontSize:DS.fsXs,color:DS.textMuted,fontFamily:`"${b.fontFamily}",Arial,sans-serif`}}>{b.fontFamily}</div>
               </div>
               {templateCountForBrand(b.id)>0&&(
-                <span style={{fontSize:9,fontWeight:700,background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",color:"#2A9D8F",padding:"2px 6px",borderRadius:4,flexShrink:0}}>{templateCountForBrand(b.id)} tpl{templateCountForBrand(b.id)!==1?"s":""}</span>
+                <span style={{fontSize:9,fontWeight:700,background:DS.positive,border:`1px solid ${DS.positiveBorder}`,color:DS.green,padding:"2px 6px",borderRadius:DS.xs,flexShrink:0}}>{templateCountForBrand(b.id)} tpl{templateCountForBrand(b.id)!==1?"s":""}</span>
               )}
-              <button style={{...sm,padding:"4px 8px",fontSize:10}} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>
-              <button style={{...sm,padding:"4px 8px",fontSize:10,opacity:0.4}} onClick={e=>{e.stopPropagation();confirm(`Delete brand "${b.name}"? All its projects will also be deleted.`,()=>{onDeleteBrand(b.id);closeConfirm();});}} title="Delete brand">🗑</button>
+              <button style={btnIcon()} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>
+              <button style={btnIcon({opacity:0.4})} onClick={e=>{e.stopPropagation();confirm(`Delete brand "${b.name}"? All its projects will also be deleted.`,()=>{onDeleteBrand(b.id);closeConfirm();});}} title="Delete brand">🗑</button>
             </div>
-          ))}
-          <button style={{...sm,width:"100%",marginTop:4,padding:"10px",textAlign:"center"}} onClick={onNewBrand}>+ New Brand</button>
+          );})}
+          <button style={{...sm,width:"100%",marginTop:DS.xs,padding:`${DS.md}px`,textAlign:"center"}} onClick={onNewBrand}>+ New Brand</button>
         </div>
 
         {/* Projects panel */}
         <div>
           {selBrand?(
             <>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                <div style={{fontWeight:800,fontSize:11,opacity:0.45,letterSpacing:1}}>PROJECTS — {selBrand.name}</div>
-                <button style={{...sm,padding:"4px 10px",fontSize:10}} onClick={()=>onEditBrand(selBrand.id)}>⚙ Brand</button>
+              <div style={{display:"flex",alignItems:"center",gap:DS.md,marginBottom:DS.lg-2}}>
+                <div style={sectionHead({marginBottom:0})}>PROJECTS — {selBrand.name}</div>
+                <button style={btnIcon({fontSize:DS.fsXs})} onClick={()=>onEditBrand(selBrand.id)}>⚙ Brand</button>
               </div>
               {/* New project */}
-              <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:12,padding:"16px",marginBottom:14}}>
-                <div style={{fontWeight:800,fontSize:12,opacity:0.6,marginBottom:10}}>NEW PROJECT</div>
+              <div style={card({marginBottom:DS.lg-2})}>
+                <div style={sectionHead({fontSize:DS.fsSm})}>NEW PROJECT</div>
                 <input value={newProjName} onChange={e=>setNewProjName(e.target.value)} placeholder="Project name — e.g. EP01 Rent Increase" style={inp} onKeyDown={e=>e.key==="Enter"&&newProjName.trim()&&(onNewProject(selBrandId,newProjName.trim()),setNewProjName(""))}/>
-                <button disabled={!newProjName.trim()} style={{width:"100%",background:newProjName.trim()?"#E63946":"rgba(255,255,255,0.07)",border:"none",borderRadius:10,padding:"12px",color:"#fff",fontSize:14,fontWeight:700,cursor:newProjName.trim()?"pointer":"not-allowed",fontFamily:"inherit",marginTop:10,opacity:newProjName.trim()?1:0.4,transition:"background 0.2s"}}
+                <button disabled={!newProjName.trim()} style={btnCta({width:"100%",marginTop:DS.md,opacity:newProjName.trim()?1:0.4,cursor:newProjName.trim()?"pointer":"not-allowed",background:newProjName.trim()?DS.accent:DS.bgButton})}
                   onClick={()=>{if(newProjName.trim()){onNewProject(selBrandId,newProjName.trim());setNewProjName("");}}}>
                   Create Project →
                 </button>
               </div>
               {/* Project list */}
               {brandProjects.length>0?[...brandProjects].reverse().map(p=>(
-                <div key={p.id} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:11,padding:"13px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:12,cursor:"pointer",transition:"background 0.15s"}} onClick={()=>onOpenProject(p.id)}>
+                <div key={p.id} style={card({padding:`${DS.md+1}px ${DS.lg}px`,marginBottom:DS.sm,display:"flex",alignItems:"center",gap:DS.md,cursor:"pointer",transition:"background 0.15s"})} onClick={()=>onOpenProject(p.id)}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:14,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
-                    <div style={{fontSize:11,opacity:0.4,display:"flex",gap:12,flexWrap:"wrap"}}>
+                    <div style={{fontSize:11,color:DS.textMuted,display:"flex",gap:DS.md,flexWrap:"wrap"}}>
                       {p.subtitles?.length>0&&<span>📄 {p.subtitles.length} lines</span>}
                       {p.graphics?.length>0&&<span>🎨 {p.graphics.length} graphics</span>}
                       <span>{new Date(p.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span>
                     </div>
                   </div>
-                  <div style={{display:"flex",gap:6}} onClick={e=>e.stopPropagation()}>
-                    <button style={{...sm,background:"#E63946",border:"1px solid #E63946"}} onClick={()=>onOpenProject(p.id)}>Open →</button>
-                    <button style={{...sm,opacity:0.45}} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})}>🗑</button>
+                  <div style={{display:"flex",gap:DS.sm-2}} onClick={e=>e.stopPropagation()}>
+                    <button style={btnCta({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>onOpenProject(p.id)}>Open →</button>
+                    <button style={btnIcon({opacity:0.45})} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})}>🗑</button>
                   </div>
                 </div>
-              )):<div style={{textAlign:"center",opacity:0.25,padding:"30px 0",fontSize:13}}>No projects yet</div>}
+              )):<div style={emptyState({padding:`${DS.xxl}px 0`})}>No projects yet</div>}
             </>
-          ):<div style={{textAlign:"center",opacity:0.25,padding:"60px 0"}}><div style={{fontSize:36,marginBottom:10}}>←</div><div style={{fontSize:14}}>Select or create a brand to get started</div></div>}
+          ):<div style={emptyState({padding:`60px 0`})}><div style={{fontSize:36,marginBottom:DS.md}}>←</div><div style={{fontSize:14}}>Select or create a brand to get started</div></div>}
         </div>
       </div>
     </div>
