@@ -421,11 +421,11 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.globalAlpha=0.18;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR*1.05,"#fff",IC);ctx.restore();
     ctx.save();ctx.translate(0,(1-ENT)*H*0.08);ctx.globalAlpha=ENT;
-    ctx.font=`800 ${Math.round(52*sc)}px "${FF}","Arial",sans-serif`;
+    ctx.font=`800 ${Math.round(48*sc)}px "${FF}","Arial",sans-serif`;
     const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
-    ctx.fillStyle="rgba(0,0,0,0.3)";rrPath(ctx,W/2-bw/2-28*sc,H*0.50,bw+56*sc,72*sc,36*sc);ctx.fill();
-    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(badge,W/2,H*0.50+52*sc);ctx.restore();
-    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.62,W-PAD*2,H*0.26,Math.round(78*sc),"800","center","#fff",3);ctx.restore();
+    ctx.fillStyle="rgba(0,0,0,0.3)";rrPath(ctx,W/2-bw/2-24*sc,H*0.44,bw+48*sc,64*sc,32*sc);ctx.fill();
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(badge,W/2,H*0.44+46*sc);ctx.restore();
+    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.54,W-PAD*2,H*0.30,Math.round(78*sc),"800","center","#fff",3);ctx.restore();
     stamp(ctx,B,W,H);
   }
   else if(t==="title"){
@@ -1136,7 +1136,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const previews=project.previews||{};
   const setGraphics=gs=>updateProject({graphics:gs,selected:gs.map((_,i)=>i),previews:{}});
   const setSelected=fn=>{const n=fn(selected);updateProject({selected:[...n]});};
-  const setPreviews=fn=>updateProject({previews:typeof fn==="function"?fn(previews):fn});
+  const setPreviews=fn=>updateProject(prev=>({previews:typeof fn==="function"?fn(prev.previews||{}):fn}));
 
   const analyse=async()=>{
     setGStep("analysing");setError("");
@@ -1231,17 +1231,25 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   };
 
   const updateGraphicContent=(i,changes,metaChanges)=>{
-    const ng=[...graphics];
-    ng[i]={...ng[i],...(metaChanges||{}),content:{...ng[i].content,...changes}};
-    updateProject({graphics:ng,previews:{...previews,[i]:undefined}});
-    setTimeout(()=>{drawGraphic(cvs.current,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));},100);
+    let updated;
+    updateProject(prev=>{
+      const ng=[...(prev.graphics||[])];
+      ng[i]={...ng[i],...(metaChanges||{}),content:{...ng[i].content,...changes}};
+      updated=ng[i];
+      return {graphics:ng,previews:{...(prev.previews||{}),[i]:undefined}};
+    });
+    setTimeout(()=>{if(updated){drawGraphic(cvs.current,updated,brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));}},100);
   };
 
   const updateGraphicMeta=(i,changes)=>{
-    const ng=[...graphics];
-    ng[i]={...ng[i],...changes};
-    updateProject({graphics:ng,previews:{...previews,[i]:undefined}});
-    setTimeout(()=>{drawGraphic(cvs.current,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));},100);
+    let updated;
+    updateProject(prev=>{
+      const ng=[...(prev.graphics||[])];
+      ng[i]={...ng[i],...changes};
+      updated=ng[i];
+      return {graphics:ng,previews:{...(prev.previews||{}),[i]:undefined}};
+    });
+    setTimeout(()=>{if(updated){drawGraphic(cvs.current,updated,brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));}},100);
   };
 
   const sm=btn();
@@ -3134,7 +3142,11 @@ function App(){
   const activeProject=projects.find(p=>p.id===activeProjectId);
 
   const updateProject=useCallback((changes)=>{
-    setProjects(ps=>ps.map(p=>p.id===activeProjectId?{...p,...changes}:p));
+    setProjects(ps=>ps.map(p=>{
+      if(p.id!==activeProjectId) return p;
+      const c=typeof changes==="function"?changes(p):changes;
+      return {...p,...c};
+    }));
   },[activeProjectId]);
 
   if(view==="brand-edit"){
