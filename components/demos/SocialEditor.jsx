@@ -1048,7 +1048,7 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
           const currentType=g.typeOverride||(TMPL[g.template]||{}).type||"fullscreen";
           const active=currentType===type;
           return <button key={type} style={btn({background:active?DS.positive:DS.bgInput,border:`1px solid ${active?DS.positiveBorder:DS.borderSubtle}`,fontSize:11,padding:"6px 12px"})}
-            onClick={()=>onUpdateMeta({typeOverride:type})} title={hint}>{icon}</button>;
+            onClick={()=>{onUpdateMeta({typeOverride:type});setTimeout(()=>onRefreshPreview&&onRefreshPreview(),150);}} title={hint}>{icon}</button>;
         })}
       </div>
 
@@ -1285,7 +1285,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
               key={editingIdx}
               g={editingG} index={editingIdx} brand={brand}
               previewSrc={previews[editingIdx]}
-              onRefreshPreview={()=>doPreview(editingG,editingIdx)}
+              onRefreshPreview={()=>{const g=project.graphics[editingIdx];if(g)doPreview(g,editingIdx);}}
               onRegenerate={(prompt,tplHint)=>regenerateSegment(editingIdx,prompt,tplHint)}
               onUpdateContent={(changes)=>updateGraphicContent(editingIdx,changes)}
               onUpdateMeta={(changes)=>updateGraphicMeta(editingIdx,changes)}
