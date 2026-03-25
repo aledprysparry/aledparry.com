@@ -1055,7 +1055,7 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
       {/* Prompt editor */}
       <div style={{marginBottom:DS.md}}>
         <label style={label()}>AI PROMPT</label>
-        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={5} style={{...inp,minHeight:100}} placeholder="Describe what this graphic should show..."/>
+        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={10} style={{...inp,minHeight:180}} placeholder="Describe what this graphic should show..."/>
       </div>
 
       {/* Content fields (direct edit) */}
@@ -1359,6 +1359,7 @@ function ExportTab({project,brand,updateProject}){
   const [phase,setPhase]=useState("");
   const [prog,setProg]=useState({done:0,total:0,pct:0});
   const [captionMode,setCaptionMode]=useState("composite"); // composite | individual
+  const [gfxMode,setGfxMode]=useState("both"); // png | webm | both
   const cvs=useRef(document.createElement("canvas"));
 
   const selectedRatios=Object.entries(ratios).filter(([,v])=>v).map(([k])=>k);
@@ -1374,9 +1375,10 @@ function ExportTab({project,brand,updateProject}){
     setMode("running");
     try{
     const pn=project.name.replace(/\s+/g,"_");
-    // total steps: gfx PNGs + captions (1 composite or N individual) per ratio
+    // total steps: gfx (PNGs and/or WebMs) + captions per ratio
     const capSteps = captionMode==="composite" ? 1 : subtitles.length;
-    let totalSteps=Math.max(1,(selectedGfx.length+capSteps)*selectedRatios.length);
+    const gfxSteps = gfxMode==="both" ? selectedGfx.length*2 : selectedGfx.length;
+    let totalSteps=Math.max(1,(gfxSteps+capSteps)*selectedRatios.length);
     setProg({done:0,total:totalSteps,pct:0});
     let done=0;
     const tick=(d,pct)=>{done=d;setProg({done,total:totalSteps,pct:pct??done/totalSteps});};
@@ -1384,17 +1386,31 @@ function ExportTab({project,brand,updateProject}){
     for(const ratio of selectedRatios){
       const prefix=`${ratio.replace(":","x")}_`;
       // Graphics PNGs
-      setPhase(`${ratio} — exporting graphic PNGs…`);
-      for(let i=0;i<selectedGfx.length;i++){
-        drawGraphic(cvs.current,selectedGfx[i],brand,ratio,1);
-        await new Promise(res=>{
-          cvs.current.toBlob(blob=>{
-            if(blob) dl(blob,`${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}.png`);
-            res();
-          },"image/png");
-        });
-        tick(done+1);
-        await new Promise(r=>setTimeout(r,300));
+      if(gfxMode==="png"||gfxMode==="both"){
+        setPhase(`${ratio} — exporting graphic PNGs…`);
+        for(let i=0;i<selectedGfx.length;i++){
+          drawGraphic(cvs.current,selectedGfx[i],brand,ratio,1);
+          await new Promise(res=>{
+            cvs.current.toBlob(blob=>{
+              if(blob) dl(blob,`${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}.png`);
+              res();
+            },"image/png");
+          });
+          tick(done+1);
+          await new Promise(r=>setTimeout(r,300));
+        }
+      }
+      // Graphics WebMs
+      if(gfxMode==="webm"||gfxMode==="both"){
+        setPhase(`${ratio} — exporting graphic WebMs…`);
+        for(let i=0;i<selectedGfx.length;i++){
+          try{
+            const blob=await recordGraphic(selectedGfx[i],brand,ratio);
+            dl(blob,`${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}_animated.webm`);
+          }catch(e){console.error("WebM export failed for graphic",i,e);}
+          tick(done+1);
+          await new Promise(r=>setTimeout(r,200));
+        }
       }
       // Captions
       if(captionMode==="composite"){
@@ -1462,6 +1478,21 @@ function ExportTab({project,brand,updateProject}){
 
   return(
     <div>
+      {/* Graphics export mode */}
+      {selectedGfx.length>0&&(
+        <div style={{marginBottom:DS.lg+2}}>
+          <div style={sectionHead()}>GRAPHICS EXPORT FORMAT</div>
+          <div style={{display:"flex",gap:DS.sm}}>
+            {[["png","🖼 Stills (PNG)","Static images for each graphic"],["webm","🎞 Animated (WebM)","Animated transparent videos"],["both","📦 Both","Stills + animated WebMs"]].map(([mode,title,desc])=>(
+              <button key={mode} style={{flex:1,background:gfxMode===mode?DS.positive:DS.bgCard,border:`1px solid ${gfxMode===mode?DS.positiveBorder:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md}px`,cursor:"pointer",color:DS.textPrimary,fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setGfxMode(mode)}>
+                <div style={{fontWeight:800,fontSize:DS.fsMd,marginBottom:3}}>{title}</div>
+                <div style={{fontSize:11,color:DS.textMuted,lineHeight:1.4}}>{desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Caption export mode */}
       {subtitles.length>0&&(
         <div style={{marginBottom:DS.lg+2}}>
