@@ -282,6 +282,17 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const W=AR.W,H=AR.H;canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext("2d",{alpha:true});ctx.clearRect(0,0,W,H);
   const B={...DEFAULT_BRAND,...brand};
+  const isOverlay=g.typeOverride==="overlay"||(!g.typeOverride&&(TMPL[g.template]||{}).type==="overlay");
+  // For overlay mode: draw a rounded semi-transparent card instead of full-canvas fill
+  const bgFill=(color)=>{
+    if(isOverlay){
+      const m=Math.round(40*Math.min(W,H)/1080),r=Math.round(24*Math.min(W,H)/1080);
+      ctx.save();ctx.globalAlpha=0.92;ctx.fillStyle=color;
+      ctx.beginPath();ctx.roundRect(m,m,W-m*2,H-m*2,r);ctx.fill();ctx.restore();
+    } else {
+      ctx.fillStyle=color;ctx.fillRect(0,0,W,H);
+    }
+  };
   const R=Math.max(0,Number(B.cornerRadius)||18);
   const IC=B.iconStyle||"line";
   const FF=B.fontFamily||"Montserrat";
@@ -300,7 +311,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
 
   if(t==="myth"||t==="reality"){
     const bg=t==="myth"?B.colorAccent:B.colorPositive;
-    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    bgFill(bg);
     ctx.save();ctx.globalAlpha=0.07;ctx.strokeStyle="#000";ctx.lineWidth=2;
     for(let i=-H;i<W+H;i+=44*sc){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+H,H);ctx.stroke();}ctx.restore();
     const icR=Math.round(118*sc),icSc=AP.easeBackFn(clamp(p*AP.entMul*1.1,0,1));
@@ -316,7 +327,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="title"){
-    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
+    bgFill(B.colorPrimary);
     if(c.number){ctx.save();ctx.globalAlpha=0.05;ctx.fillStyle="#fff";ctx.font=`900 ${Math.round(Math.min(W,H)*0.52)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(c.number,W/2,H/2+H*0.07);ctx.restore();}
     if(isPortrait){
       // Portrait: centred layout — accent rule + centred text stack
@@ -342,7 +353,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="rule_number"){
-    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
+    bgFill(B.colorPrimary);
     ctx.save();ctx.globalAlpha=0.05;ctx.fillStyle="#fff";const gs=easeOut(clamp(p*1.5,0,1));
     ctx.font=`900 ${Math.round(Math.min(W,H)*0.5)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
     ctx.translate(W/2,H/2+H*0.08);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
@@ -354,7 +365,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="key_point"){
-    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);ctx.fillStyle=B.colorPositive;ctx.fillRect(0,0,W,Math.round(10*sc));
+    bgFill(B.colorPrimary);if(!isOverlay){ctx.fillStyle=B.colorPositive;ctx.fillRect(0,0,W,Math.round(10*sc));}
     if(isPortrait){
       // Portrait: icon centred above, headline + body stacked
       const icSc=AP.easeBackFn(clamp(p*AP.entMul,0,1));ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(120*sc),B.colorPositive,IC);ctx.restore();
@@ -371,6 +382,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="fact_box"){
+    if(!isOverlay) bgFill(B.colorPrimary);
     if(isPortrait){
       // Portrait: full-width card at bottom, slides up
       const bW=W-PAD,bH=Math.round(300*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
@@ -393,6 +405,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
   }
   else if(t==="speech_bubble"){
+    if(!isOverlay) bgFill(B.colorPrimary);
     if(isPortrait){
       // Portrait: wide centred bubble at top, scales in from centre
       const bW=W-PAD,bH=Math.round(240*sc),bX=PAD/2,bY=Math.round(80*sc);
@@ -414,6 +427,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
   }
   else if(t==="stat"){
+    if(!isOverlay) bgFill(B.colorPrimary);
     const bW=Math.round(540*sc),bH=Math.round(260*sc),bX=isPortrait?(W-Math.round(540*sc))/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
     ctx.save();ctx.translate(0,(1-ENT)*bH*0.6);ctx.globalAlpha=ENT;
     ctx.shadowColor="rgba(0,0,0,0.5)";ctx.shadowBlur=32;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=B.colorPrimary;ctx.fill();ctx.shadowBlur=0;
@@ -425,6 +439,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.restore();
   }
   else if(t==="timeline"){
+    if(!isOverlay) bgFill(B.colorPrimary);
     const bW=Math.round(Math.min(1220,W-160)*sc),bH=Math.round(220*sc),bX=(W-bW)/2,bY=H-bH-80*sc;
     ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*50*sc);
     ctx.shadowColor="rgba(0,0,0,0.5)";ctx.shadowBlur=30;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=B.colorPrimary;ctx.fill();ctx.shadowBlur=0;
