@@ -3,6 +3,89 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 // ═══════════════════════════════════════════════════════════════
+//  DESIGN SYSTEM — shared tokens for consistent UI
+// ═══════════════════════════════════════════════════════════════
+const DS = {
+  // Colors
+  bgPage:    "#0b1320",
+  bgCard:    "rgba(255,255,255,0.04)",
+  bgInput:   "rgba(255,255,255,0.06)",
+  bgButton:  "rgba(255,255,255,0.08)",
+  bgModal:   "#141e2e",
+  bgOverlay: "rgba(0,0,0,0.72)",
+  borderSubtle: "rgba(255,255,255,0.1)",
+  borderMedium: "rgba(255,255,255,0.15)",
+  // Semantic
+  positive:  "rgba(42,157,143,0.2)",
+  positiveBorder: "rgba(42,157,143,0.4)",
+  danger:    "rgba(230,57,70,0.15)",
+  dangerBorder: "rgba(230,57,70,0.35)",
+  // Radius
+  rSm: 7, rMd: 10, rLg: 14,
+  // Spacing
+  xs: 4, sm: 8, md: 12, lg: 16, xl: 24,
+  // Typography
+  font: "Montserrat,Arial,sans-serif",
+};
+
+// Reusable style factories
+const btn = (overrides) => ({
+  background: DS.bgButton,
+  border: `1px solid ${DS.borderSubtle}`,
+  color: "#fff",
+  padding: "7px 13px",
+  borderRadius: DS.rSm,
+  cursor: "pointer",
+  fontSize: 12,
+  fontFamily: "inherit",
+  fontWeight: 600,
+  transition: "background 0.15s, border-color 0.15s",
+  ...overrides,
+});
+const btnPositive = (o) => btn({ background: DS.positive, border: `1px solid ${DS.positiveBorder}`, ...o });
+const btnDanger = (o) => btn({ background: DS.danger, border: `1px solid ${DS.dangerBorder}`, ...o });
+const inputS = (overrides) => ({
+  width: "100%",
+  background: DS.bgInput,
+  border: `1px solid ${DS.borderSubtle}`,
+  borderRadius: DS.rSm + 1,
+  padding: "10px 12px",
+  color: "#fff",
+  fontSize: 13,
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+  outline: "none",
+  ...overrides,
+});
+const card = (overrides) => ({
+  background: DS.bgCard,
+  border: `1px solid ${DS.borderSubtle}`,
+  borderRadius: DS.rMd + 2,
+  padding: `${DS.lg}px`,
+  marginBottom: DS.lg,
+  ...overrides,
+});
+const label = (overrides) => ({
+  display: "block",
+  fontSize: 10,
+  fontWeight: 700,
+  opacity: 0.5,
+  letterSpacing: 1,
+  textTransform: "uppercase",
+  marginBottom: DS.xs,
+  ...overrides,
+});
+const sectionHead = (overrides) => ({
+  fontWeight: 800,
+  fontSize: 11,
+  opacity: 0.45,
+  letterSpacing: 1,
+  textTransform: "uppercase",
+  marginBottom: DS.md,
+  ...overrides,
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  FONTS  — curated Google Fonts for video
 // ═══════════════════════════════════════════════════════════════
 const FONTS = [
@@ -17,7 +100,6 @@ const FONTS = [
 ];
 
 function loadFont(name) {
-  if (!name) return;
   const id = "gf-" + name.replace(/ /g, "-");
   if (document.getElementById(id)) return;
   const l = document.createElement("link");
@@ -282,17 +364,6 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const W=AR.W,H=AR.H;canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext("2d",{alpha:true});ctx.clearRect(0,0,W,H);
   const B={...DEFAULT_BRAND,...brand};
-  const isOverlay=g.typeOverride==="overlay"||(!g.typeOverride&&(TMPL[g.template]||{}).type==="overlay");
-  // For overlay mode: draw a rounded semi-transparent card instead of full-canvas fill
-  const bgFill=(color)=>{
-    if(isOverlay){
-      const m=Math.round(40*Math.min(W,H)/1080),r=Math.round(24*Math.min(W,H)/1080);
-      ctx.save();ctx.globalAlpha=0.92;ctx.fillStyle=color;
-      ctx.beginPath();ctx.roundRect(m,m,W-m*2,H-m*2,r);ctx.fill();ctx.restore();
-    } else {
-      ctx.fillStyle=color;ctx.fillRect(0,0,W,H);
-    }
-  };
   const R=Math.max(0,Number(B.cornerRadius)||18);
   const IC=B.iconStyle||"line";
   const FF=B.fontFamily||"Montserrat";
@@ -311,7 +382,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
 
   if(t==="myth"||t==="reality"){
     const bg=t==="myth"?B.colorAccent:B.colorPositive;
-    bgFill(bg);
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     ctx.save();ctx.globalAlpha=0.07;ctx.strokeStyle="#000";ctx.lineWidth=2;
     for(let i=-H;i<W+H;i+=44*sc){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+H,H);ctx.stroke();}ctx.restore();
     const icR=Math.round(118*sc),icSc=AP.easeBackFn(clamp(p*AP.entMul*1.1,0,1));
@@ -327,7 +398,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="title"){
-    bgFill(B.colorPrimary);
+    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
     if(c.number){ctx.save();ctx.globalAlpha=0.05;ctx.fillStyle="#fff";ctx.font=`900 ${Math.round(Math.min(W,H)*0.52)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(c.number,W/2,H/2+H*0.07);ctx.restore();}
     if(isPortrait){
       // Portrait: centred layout — accent rule + centred text stack
@@ -353,7 +424,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="rule_number"){
-    bgFill(B.colorPrimary);
+    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
     ctx.save();ctx.globalAlpha=0.05;ctx.fillStyle="#fff";const gs=easeOut(clamp(p*1.5,0,1));
     ctx.font=`900 ${Math.round(Math.min(W,H)*0.5)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
     ctx.translate(W/2,H/2+H*0.08);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
@@ -365,7 +436,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="key_point"){
-    bgFill(B.colorPrimary);if(!isOverlay){ctx.fillStyle=B.colorPositive;ctx.fillRect(0,0,W,Math.round(10*sc));}
+    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);ctx.fillStyle=B.colorPositive;ctx.fillRect(0,0,W,Math.round(10*sc));
     if(isPortrait){
       // Portrait: icon centred above, headline + body stacked
       const icSc=AP.easeBackFn(clamp(p*AP.entMul,0,1));ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(120*sc),B.colorPositive,IC);ctx.restore();
@@ -382,7 +453,6 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="fact_box"){
-    if(!isOverlay) bgFill(B.colorPrimary);
     if(isPortrait){
       // Portrait: full-width card at bottom, slides up
       const bW=W-PAD,bH=Math.round(300*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
@@ -405,7 +475,6 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
   }
   else if(t==="speech_bubble"){
-    if(!isOverlay) bgFill(B.colorPrimary);
     if(isPortrait){
       // Portrait: wide centred bubble at top, scales in from centre
       const bW=W-PAD,bH=Math.round(240*sc),bX=PAD/2,bY=Math.round(80*sc);
@@ -427,7 +496,6 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
   }
   else if(t==="stat"){
-    if(!isOverlay) bgFill(B.colorPrimary);
     const bW=Math.round(540*sc),bH=Math.round(260*sc),bX=isPortrait?(W-Math.round(540*sc))/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
     ctx.save();ctx.translate(0,(1-ENT)*bH*0.6);ctx.globalAlpha=ENT;
     ctx.shadowColor="rgba(0,0,0,0.5)";ctx.shadowBlur=32;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=B.colorPrimary;ctx.fill();ctx.shadowBlur=0;
@@ -439,7 +507,6 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.restore();
   }
   else if(t==="timeline"){
-    if(!isOverlay) bgFill(B.colorPrimary);
     const bW=Math.round(Math.min(1220,W-160)*sc),bH=Math.round(220*sc),bX=(W-bW)/2,bY=H-bH-80*sc;
     ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*50*sc);
     ctx.shadowColor="rgba(0,0,0,0.5)";ctx.shadowBlur=30;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=B.colorPrimary;ctx.fill();ctx.shadowBlur=0;
@@ -689,6 +756,7 @@ Templates and content fields (keep ALL text SHORT — readable on mobile in 2 se
 - stat:          { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
 - timeline:      { label:"label (max 4 words)", markers:["6 months","12 months"] }`;
 
+// Content field definitions per template (for dynamic edit forms)
 const TMPL_FIELDS={
   myth:[{key:"body",label:"Misconception",placeholder:"max 10 words"}],
   reality:[{key:"body",label:"Correction",placeholder:"max 10 words"}],
@@ -803,8 +871,8 @@ function AddGraphicModal({brand, onAdd, onClose}){
     onClose();
   };
 
-  const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"7px 13px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600};
-  const inp={width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"10px 12px",color:"#fff",fontSize:13,fontFamily:"inherit",boxSizing:"border-box",outline:"none"};
+  const sm=btn();
+  const inp=inputS();
   const lbl={display:"block",fontSize:10,opacity:0.5,fontWeight:700,letterSpacing:1,marginBottom:4};
 
   return(
@@ -876,18 +944,19 @@ function AddGraphicModal({brand, onAdd, onClose}){
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  SEGMENT EDIT PANEL
+//  SEGMENT EDIT PANEL — per-graphic prompt, template, and content editor
 // ═══════════════════════════════════════════════════════════════
 function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMeta,regenLoading,onClose}){
   const [prompt,setPrompt]=useState(g.prompt||"");
   const [tplHint,setTplHint]=useState(g.templateHint||g.template||"any");
   const [localContent,setLocalContent]=useState({...g.content});
   const fields=TMPL_FIELDS[tplHint]||TMPL_FIELDS[g.template]||[];
-  const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"6px 12px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600};
-  const inp={width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"9px 12px",color:"#fff",fontSize:12,fontFamily:"inherit",boxSizing:"border-box",outline:"none",resize:"vertical"};
+  const sm=btn();
+  const inp=inputS({resize:"vertical"});
 
   return(
     <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderTop:"none",borderRadius:"0 0 12px 12px",padding:"14px 16px"}}>
+      {/* Template selector */}
       <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
         <label style={{fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1}}>TEMPLATE</label>
         <select value={tplHint} onChange={e=>{setTplHint(e.target.value);onUpdateMeta({templateHint:e.target.value});}}
@@ -897,10 +966,14 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
         </select>
         <span style={{fontSize:10,opacity:0.35,marginLeft:4}}>{(TMPL[tplHint]||{}).type==="overlay"?"⬜ Overlay":"⬛ Fullscreen"}</span>
       </div>
+
+      {/* Prompt editor */}
       <div style={{marginBottom:12}}>
         <label style={{display:"block",fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:4}}>AI PROMPT</label>
         <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} style={{...inp,minHeight:60}}/>
       </div>
+
+      {/* Content fields (direct edit) */}
       <div style={{marginBottom:12}}>
         <label style={{display:"block",fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:6}}>CONTENT (direct edit)</label>
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -913,6 +986,8 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
           ))}
         </div>
       </div>
+
+      {/* Action buttons */}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         <button disabled={regenLoading} onClick={()=>onRegenerate(prompt,tplHint)}
           style={{...sm,background:regenLoading?"rgba(255,255,255,0.05)":"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",cursor:regenLoading?"wait":"pointer"}}>
@@ -951,18 +1026,25 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setGStep("analysing");setError("");
     try{
       const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
-      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},
+      const apiKey=localStorage.getItem("anthropic_api_key")||"";
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2500,system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}]})});
       const data=await res.json();
       const raw=data.content?.find(b=>b.type==="text")?.text||"";
       const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      // Enrich each graphic with per-segment prompt and template hint
       const subs=project.subtitles||[];
       const enriched=parsed.map(g=>{
+        // Find nearby transcript lines for context
         const ts=g.timestamp||"00:00:00";
         const tsSec=(h=>h[0]*3600+h[1]*60+h[2])(ts.split(":").map(Number));
         const nearby=subs.filter(s=>Math.abs((s.startSec||0)-tsSec)<8).map(s=>s.text).join(" ");
         const tplLabel=(TMPL[g.template]||{}).label||g.template;
-        return{...g,templateHint:g.template,prompt:`At ${ts} — generate a "${tplLabel}" graphic. Context: ${nearby.slice(0,200)}`};
+        return{
+          ...g,
+          templateHint:g.template,
+          prompt:`At ${ts} — generate a "${tplLabel}" graphic. Context: ${nearby.slice(0,200)}`,
+        };
       });
       setGraphics(enriched);setGStep("review");
     }catch(e){setError("Analysis failed: "+e.message+(e.message.includes("fetch")?" — check your API key in Settings":""));setGStep("idle");}
@@ -987,6 +1069,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const exportSelectedBatch=async()=>{
     const sel=[...selected].sort((a,b)=>a-b);
     if(!sel.length){alert("Select graphics to export first.");return;}
+    // Export still PNGs
     for(const i of sel){
       const g=graphics[i]; if(!g) continue;
       drawGraphic(cvs.current,g,brand,previewRatio,1);
@@ -994,6 +1077,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       const a=document.createElement("a");a.href=dataUrl;
       a.download=`${String(i+1).padStart(2,"0")}_${g.label||g.template}_still.png`;a.click();
     }
+    // Export animated WebMs
     for(const i of sel){
       const g=graphics[i]; if(!g) continue;
       setExporting(s=>{const n=new Set(s);n.add(i);return n;});
@@ -1022,7 +1106,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setRegenLoading(true);
     try{
       const tplConstraint=templateHint&&templateHint!=="any"?`\nYou MUST use the "${templateHint}" template.`:"";
-      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},
+      const apiKey=localStorage.getItem("anthropic_api_key")||"";
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:SEGMENT_PROMPT+tplConstraint,messages:[{role:"user",content:prompt}]})});
       const data=await res.json();
       const raw=data.content?.find(b=>b.type==="text")?.text||"";
@@ -1031,6 +1116,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       const old=ng[i];
       ng[i]={...newG,prompt,templateHint:templateHint||newG.template,typeOverride:old?.typeOverride};
       updateProject({graphics:ng,previews:{...previews,[i]:undefined}});
+      // Auto-preview
       setTimeout(()=>{drawGraphic(cvs.current,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));},100);
     }catch(e){alert("Regeneration failed: "+e.message);}
     setRegenLoading(false);
@@ -1049,7 +1135,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     updateProject({graphics:ng});
   };
 
-  const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"7px 12px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600};
+  const sm=btn();
   const tplBg=t=>t==="myth"?brand.colorAccent:t==="reality"?brand.colorPositive:brand.colorPrimary;
 
   if(gStep==="idle"||gStep==="analysing")return(
@@ -1079,12 +1165,6 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={sm} onClick={()=>setSelected(()=>new Set())}>None</button>
         <button style={{...sm,marginLeft:"auto"}} onClick={previewAll}>👁 Preview All</button>
         <button style={{...sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}} onClick={exportSelectedBatch}>⬇ Export Selected</button>
-        <button style={{...sm,background:"rgba(29,53,87,0.6)",border:"1px solid rgba(255,255,255,0.2)"}} onClick={()=>{
-          const ng=graphics.map(g=>({...g,typeOverride:"fullscreen"}));setGraphics(ng);
-        }}>⬛ All Full</button>
-        <button style={{...sm,background:"rgba(42,157,143,0.25)",border:"1px solid rgba(42,157,143,0.4)"}} onClick={()=>{
-          const ng=graphics.map(g=>({...g,typeOverride:"overlay"}));setGraphics(ng);
-        }}>⬜ All Overlay</button>
         <button style={{...sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}} onClick={()=>setShowAdd(true)}>+ Add</button>
         <button style={{...sm,background:"rgba(230,57,70,0.15)",border:"1px solid rgba(230,57,70,0.3)"}} onClick={()=>{setGraphics([]);setGStep("idle");}}>↺ Re-analyse</button>
       </div>
@@ -1099,7 +1179,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
                   <span style={{fontWeight:700,fontSize:12}}>{meta.label}</span>
-                  <span style={{fontSize:10,background:isOv?"rgba(42,157,143,0.22)":"rgba(29,53,87,0.85)",padding:"1px 6px",borderRadius:4,fontWeight:700,cursor:"pointer"}} onClick={e=>{e.stopPropagation();toggleGraphicType(i);}} title="Click to toggle">{isOv?"OVERLAY":"FULLSCREEN"}</span>
+                  <span style={{fontSize:10,background:isOv?"rgba(42,157,143,0.22)":"rgba(29,53,87,0.85)",padding:"1px 6px",borderRadius:4,fontWeight:700,cursor:"pointer"}} onClick={e=>{e.stopPropagation();toggleGraphicType(i);}} title="Click to toggle fullscreen/overlay">{isOv?"OVERLAY":"FULLSCREEN"}</span>
                 </div>
                 <div style={{opacity:0.45,fontSize:11}}>⏱ {g.timestamp} · {g.duration}s</div>
               </div>
@@ -1110,6 +1190,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                 <button style={{...sm,background:editingIdx===i?"rgba(255,255,255,0.15)":undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)}>✏</button>
               </div>
             </div>
+            {/* Inline edit panel */}
             {editingIdx===i&&(
               <SegmentEditPanel
                 g={g} index={i} brand={brand}
@@ -1137,7 +1218,7 @@ function CaptionsTab({project,brand,updateProject,previewRatio}){
   const [prevIdx,setPrevIdx]=useState(0);
   const subtitles=project.subtitles;
   const activeSub=subtitles[prevIdx]||subtitles[0];
-  const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"6px 11px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600};
+  const sm=btn();
   return(
     <div>
       <div style={{marginBottom:14}}>
@@ -1250,7 +1331,7 @@ function ExportTab({project,brand,updateProject}){
     }catch(err){setPhase("Export error: "+err.message);console.error(err);}
   };
 
-  const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600};
+  const sm=btn();
   const ratioBtn=(k,active)=>({flex:1,background:active?"rgba(42,157,143,0.18)":"rgba(255,255,255,0.04)",border:`1px solid ${active?"#2A9D8F":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"14px 8px",cursor:"pointer",textAlign:"center",color:"#fff",fontFamily:"inherit",transition:"all 0.15s"});
 
   if(mode==="done")return(
@@ -1996,6 +2077,8 @@ function StyleExtractor({onExtracted,S}){
   const handleDragOver=e=>{e.preventDefault();e.stopPropagation();};
 
   const extract=async()=>{
+    const apiKey=localStorage.getItem("anthropic_api_key");
+    if(!apiKey){setError("Set your Anthropic API key in Settings first.");return;}
     setExtracting(true);setError("");setResult(null);
     try{
       const content=[];
@@ -2005,9 +2088,14 @@ function StyleExtractor({onExtracted,S}){
       });
       content.push({type:"text",text:EXTRACTION_PROMPT});
 
-      const resp=await fetch("/api/ai",{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{
+          "Content-Type":"application/json",
+          "x-api-key":apiKey,
+          "anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true"
+        },
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",
           max_tokens:1024,
@@ -2264,7 +2352,7 @@ function StyleTemplateSection({b, setB, brandId, allBrands, S}){
 // ═══════════════════════════════════════════════════════════════
 //  BRAND EDITOR
 // ═══════════════════════════════════════════════════════════════
-function BrandEditor({brand,onSave,onCancel,onDelete,allBrands}){
+function BrandEditor({brand,onSave,onCancel,allBrands}){
   const [b,setB]=useState({...DEFAULT_BRAND,...brand});
   const set=k=>v=>setB(prev=>({...prev,[k]:v}));
   const S={
@@ -2517,18 +2605,6 @@ function BrandEditor({brand,onSave,onCancel,onDelete,allBrands}){
           </div>
           <BrandAssets b={b} set={set} S={S}/>
         </div>
-        {/* Delete brand — only when editing existing */}
-        {onDelete&&(
-          <div style={{...S.section,borderColor:"rgba(230,57,70,0.2)",marginTop:24}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div style={{fontSize:12,opacity:0.4}}>Permanently delete this brand and all its projects</div>
-              <button onClick={()=>{if(window.confirm(`Delete "${b.name}"? All projects will also be deleted.`)) onDelete();}}
-                style={{background:"rgba(230,57,70,0.15)",border:"1px solid rgba(230,57,70,0.4)",color:"#E63946",padding:"8px 18px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:700}}>
-                🗑 Delete Brand
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -2574,7 +2650,8 @@ function ApiKeyBanner({onSaved}){
 }
 
 function useApiKey(){
-  return{hasKey:true,refresh:()=>{}};
+  const [hasKey,setHasKey]=useState(!!localStorage.getItem("anthropic_api_key"));
+  return{hasKey,refresh:()=>setHasKey(!!localStorage.getItem("anthropic_api_key"))};
 }
 
 
@@ -2689,14 +2766,11 @@ function ConfirmDialog({message, onConfirm, onCancel}){
 // ═══════════════════════════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════════════════════════
-function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject,onRenameProject,onSave,onLoadVersion}){
+function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject}){
   const [newProjName,setNewProjName]=useState("");
   const [selBrandId,setSelBrandId]=useState(brands[0]?.id||null);
   const [confirmDialog,setConfirmDialog]=useState(null);
   const [showApiPanel,setShowApiPanel]=useState(false);
-  const [saveStatus,setSaveStatus]=useState("");
-  const [showVersions,setShowVersions]=useState(false);
-  const [versions,setVersions]=useState([]);
   const [apiKeyInput,setApiKeyInput]=useState("");
   const allTemplates=load(TMPL_STORE);
   const templateCountForBrand=id=>allTemplates.filter(t=>t.brandId===id||t.brandId===null).length;
@@ -2714,8 +2788,8 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
   };
   const selBrand=brands.find(b=>b.id===selBrandId);
   const brandProjects=projects.filter(p=>p.brandId===selBrandId);
-  const inp={width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,padding:"12px 14px",color:"#fff",fontSize:14,fontFamily:"Montserrat,Arial,sans-serif",boxSizing:"border-box",outline:"none"};
-  const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"7px 13px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600};
+  const inp=inputS();
+  const sm=btn();
   return(
     <div style={{fontFamily:"Montserrat,Arial,sans-serif",background:"#0b1320",minHeight:"100vh",color:"#fff"}}>
       {confirmDialog&&<ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={closeConfirm}/>}
@@ -2723,65 +2797,13 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
       <div style={{background:"#1D3557",padding:"14px 26px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid rgba(0,0,0,0.3)"}}>
         <div style={{width:6,height:38,background:"#E63946",borderRadius:4,flexShrink:0}}/>
         <div><div style={{fontWeight:900,fontSize:20,letterSpacing:0.5}}>INFOGRAPHIC STUDIO</div><div style={{fontSize:11,opacity:0.38,marginTop:1}}>Graphics · Captions · Multi-ratio Premiere export</div></div>
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          {saveStatus&&<span style={{fontSize:11,color:saveStatus.includes("!")||saveStatus.includes("Loaded")?"#2A9D8F":"#E63946",fontWeight:600}}>{saveStatus}</span>}
-          <button onClick={async()=>{setSaveStatus("Saving...");const ok=await onSave();setSaveStatus(ok?"Saved!":"Error");setTimeout(()=>setSaveStatus(""),2000);}}
-            style={{background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
-            💾 Save
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{fontSize:11,opacity:0.35,fontStyle:"italic"}}>Sign-in coming soon</div>
+          <button style={{...sm,opacity:0.45,cursor:"not-allowed",background:"rgba(255,255,255,0.05)"}}>🔒 Sign in with Google</button>
+          <button style={{...sm,background:hasApiKey?"rgba(42,157,143,0.2)":"rgba(230,57,70,0.2)",border:`1px solid ${hasApiKey?"rgba(42,157,143,0.5)":"rgba(230,57,70,0.5)"}`}}
+            onClick={()=>setShowApiPanel(p=>!p)}>
+            {hasApiKey?"✓ API Key":"⚠ Set API Key"}
           </button>
-          <button onClick={async()=>{
-            const name=prompt("Snapshot name (e.g. 'Before client meeting'):");
-            if(!name) return;
-            setSaveStatus("Saving snapshot...");
-            const ok=await onSave(name);
-            setSaveStatus(ok?"Snapshot saved!":"Error");
-            setTimeout(()=>setSaveStatus(""),2500);
-          }}
-            style={{background:"rgba(42,157,143,0.1)",border:"1px solid rgba(42,157,143,0.3)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
-            📸 Save As
-          </button>
-          <div style={{position:"relative"}}>
-            <button onClick={async()=>{
-              if(showVersions){setShowVersions(false);return;}
-              setVersions([]);setShowVersions(true);
-              try{
-                const r=await fetch("/api/studio?versions=1");
-                const d=await r.json();
-                setVersions(d.versions||[]);
-              }catch{setVersions([]);}
-            }}
-              style={{background:showVersions?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
-              📂 Versions {showVersions?"▲":"▼"}
-            </button>
-            {showVersions&&(
-              <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"#141e2e",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,minWidth:280,maxHeight:320,overflowY:"auto",zIndex:999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
-                {versions.length===0?(
-                  <div style={{padding:"16px 18px",fontSize:12,opacity:0.5,textAlign:"center"}}>No snapshots yet — use Save As to create one</div>
-                ):versions.map((v,i)=>{
-                  const name=(v.pathname||"").split("/").pop().replace(/\.json.*$/,"").replace(/^\d{4}-\d{2}-\d{2}T[\d-]+_/,"").replace(/_/g," ");
-                  const date=new Date(v.uploadedAt).toLocaleString();
-                  return(
-                    <div key={i} onClick={async()=>{
-                      setSaveStatus("Loading...");setShowVersions(false);
-                      try{
-                        const lr=await fetch("/api/studio?load="+encodeURIComponent(v.pathname));
-                        const ld=await lr.json();
-                        if(ld.brands){onLoadVersion(ld);setSaveStatus("Loaded!");}
-                        else setSaveStatus("Failed");
-                      }catch{setSaveStatus("Error");}
-                      setTimeout(()=>setSaveStatus(""),2000);
-                    }}
-                      style={{padding:"10px 16px",cursor:"pointer",borderBottom:"1px solid rgba(255,255,255,0.06)",transition:"background 0.15s"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="rgba(42,157,143,0.15)"}
-                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      <div style={{fontSize:13,fontWeight:600,marginBottom:2}}>{name||"Untitled"}</div>
-                      <div style={{fontSize:10,opacity:0.4}}>{date}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -2831,6 +2853,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                 <span style={{fontSize:9,fontWeight:700,background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",color:"#2A9D8F",padding:"2px 6px",borderRadius:4,flexShrink:0}}>{templateCountForBrand(b.id)} tpl{templateCountForBrand(b.id)!==1?"s":""}</span>
               )}
               <button style={{...sm,padding:"4px 8px",fontSize:10}} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>
+              <button style={{...sm,padding:"4px 8px",fontSize:10,opacity:0.4}} onClick={e=>{e.stopPropagation();confirm(`Delete brand "${b.name}"? All its projects will also be deleted.`,()=>{onDeleteBrand(b.id);closeConfirm();});}} title="Delete brand">🗑</button>
             </div>
           ))}
           <button style={{...sm,width:"100%",marginTop:4,padding:"10px",textAlign:"center"}} onClick={onNewBrand}>+ New Brand</button>
@@ -2842,6 +2865,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
             <>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
                 <div style={{fontWeight:800,fontSize:11,opacity:0.45,letterSpacing:1}}>PROJECTS — {selBrand.name}</div>
+                <button style={{...sm,padding:"4px 10px",fontSize:10}} onClick={()=>onEditBrand(selBrand.id)}>⚙ Brand</button>
               </div>
               {/* New project */}
               <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:12,padding:"16px",marginBottom:14}}>
@@ -2864,7 +2888,6 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                     </div>
                   </div>
                   <div style={{display:"flex",gap:6}} onClick={e=>e.stopPropagation()}>
-                    <button style={{...sm,padding:"4px 8px",fontSize:10,opacity:0.5}} onClick={()=>{const n=prompt("Rename project:",p.name);if(n&&n.trim())onRenameProject(p.id,n.trim());}}>✏</button>
                     <button style={{...sm,background:"#E63946",border:"1px solid #E63946"}} onClick={()=>onOpenProject(p.id)}>Open →</button>
                     <button style={{...sm,opacity:0.45}} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})}>🗑</button>
                   </div>
@@ -2887,29 +2910,9 @@ function App(){
   const [view,setView]=useState("home");       // home | brand-edit | project
   const [editBrandId,setEditBrandId]=useState(null);
   const [activeProjectId,setActiveProjectId]=useState(null);
-  const syncTimer=useRef(null);
 
-  // ── Server sync: load on mount ──
-  useEffect(()=>{
-    fetch("/api/studio").then(r=>r.json()).then(d=>{
-      if(d.brands?.length){setBrands(d.brands);save(BS,d.brands);}
-      if(d.projects?.length){setProjects(d.projects);save(PS,d.projects);}
-      if(d.templates?.length) save(TMPL_STORE,d.templates);
-    }).catch(()=>{});
-  },[]);
-
-  // ── Server sync: debounced save ──
-  const syncToServer=useCallback((b,p)=>{
-    if(syncTimer.current) clearTimeout(syncTimer.current);
-    syncTimer.current=setTimeout(()=>{
-      const templates=load(TMPL_STORE);
-      fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({brands:b,projects:p,templates})}).catch(()=>{});
-    },1500);
-  },[]);
-
-  useEffect(()=>{save(BS,brands);syncToServer(brands,projects);},[brands]);
-  useEffect(()=>{save(PS,projects);syncToServer(brands,projects);},[projects]);
+  useEffect(()=>save(BS,brands),[brands]);
+  useEffect(()=>save(PS,projects),[projects]);
 
   useEffect(()=>{ brands.forEach(b=>loadFont(b.fontFamily)); },[brands]);
 
@@ -2926,7 +2929,6 @@ function App(){
       <BrandEditor
         brand={editing||newBrand("")}
         allBrands={brands}
-        onDelete={editBrandId?()=>{setBrands(bs=>bs.filter(x=>x.id!==editBrandId));setProjects(ps=>ps.filter(p=>p.brandId!==editBrandId));setView("home");setEditBrandId(null);}:null}
         onSave={b=>{
           if(editBrandId) setBrands(bs=>bs.map(x=>x.id===editBrandId?{...x,...b,id:editBrandId}:x));
           else setBrands(bs=>[...bs,{...b,id:Date.now(),createdAt:new Date().toISOString()}]);
@@ -2958,18 +2960,6 @@ function App(){
       onOpenProject={id=>{setActiveProjectId(id);setView("project");}}
       onDeleteBrand={id=>{setBrands(bs=>bs.filter(b=>b.id!==id));setProjects(ps=>ps.filter(p=>p.brandId!==id));}}
       onDeleteProject={id=>setProjects(ps=>ps.filter(p=>p.id!==id))}
-      onRenameProject={(id,name)=>setProjects(ps=>ps.map(p=>p.id===id?{...p,name}:p))}
-      onSave={(snapshotName)=>{
-        const templates=load(TMPL_STORE);
-        const url=snapshotName?"/api/studio?snapshot="+encodeURIComponent(snapshotName):"/api/studio";
-        return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({brands,projects,templates})}).then(r=>r.ok).catch(()=>false);
-      }}
-      onLoadVersion={(d)=>{
-        if(d.brands){setBrands(d.brands);save(BS,d.brands);}
-        if(d.projects){setProjects(d.projects);save(PS,d.projects);}
-        if(d.templates) save(TMPL_STORE,d.templates);
-      }}
     />
   );
 }
