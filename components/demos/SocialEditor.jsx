@@ -973,12 +973,12 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
   const inp=inputS({resize:"vertical"});
 
   return(
-    <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderTop:"none",borderRadius:"0 0 12px 12px",padding:"14px 16px"}}>
+    <div style={{background:DS.bgCard,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",borderRadius:`0 0 ${DS.rMd+2}px ${DS.rMd+2}px`,padding:`${DS.lg-2}px ${DS.lg}px`}}>
       {/* Template selector */}
-      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
-        <label style={{fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1}}>TEMPLATE</label>
+      <div style={{display:"flex",gap:DS.sm,alignItems:"center",marginBottom:DS.md,flexWrap:"wrap"}}>
+        <label style={label({marginBottom:0})}>TEMPLATE</label>
         <select value={tplHint} onChange={e=>{setTplHint(e.target.value);onUpdateMeta({templateHint:e.target.value});}}
-          style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px 10px",color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}>
+          style={{background:DS.bgButton,border:`1px solid ${DS.borderMedium}`,borderRadius:DS.rSm,padding:"6px 10px",color:DS.textPrimary,fontSize:DS.fsSm,fontFamily:"inherit",outline:"none"}}>
           <option value="any" style={{background:"#1a2332"}}>Any (AI decides)</option>
           {Object.entries(TMPL).map(([k,v])=><option key={k} value={k} style={{background:"#1a2332"}}>{v.label} ({v.type})</option>)}
         </select>
@@ -1239,8 +1239,8 @@ function CaptionsTab({project,brand,updateProject,previewRatio}){
   const sm=btn();
   return(
     <div>
-      <div style={{marginBottom:14}}>
-        <div style={{fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:8}}>CAPTION STYLE</div>
+      <div style={{marginBottom:DS.lg-2}}>
+        <div style={sectionHead()}>CAPTION STYLE</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {Object.entries(CAP_STYLES).map(([k,cs])=>(
             <button key={k} style={{flex:1,minWidth:110,background:captionStyle===k?"rgba(230,57,70,0.15)":"rgba(255,255,255,0.04)",border:`1px solid ${captionStyle===k?brand.colorAccent:"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"11px 8px",cursor:"pointer",textAlign:"center",color:"#fff",fontFamily:"inherit",transition:"all 0.15s"}} onClick={()=>updateProject({captionStyle:k})}>
@@ -1385,8 +1385,8 @@ function ExportTab({project,brand,updateProject}){
     <div>
       {/* Caption export mode */}
       {subtitles.length>0&&(
-        <div style={{marginBottom:18}}>
-          <div style={{fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:8}}>CAPTION EXPORT MODE</div>
+        <div style={{marginBottom:DS.lg+2}}>
+          <div style={sectionHead()}>CAPTION EXPORT MODE</div>
           <div style={{display:"flex",gap:8}}>
             <button style={{flex:1,background:captionMode==="composite"?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.05)",border:`1px solid ${captionMode==="composite"?"#2A9D8F":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"12px",cursor:"pointer",color:"#fff",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setCaptionMode("composite")}>
               <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>⬛ Composite WebM</div>
@@ -1401,8 +1401,8 @@ function ExportTab({project,brand,updateProject}){
       )}
 
       {/* Ratio selector */}
-      <div style={{marginBottom:18}}>
-        <div style={{fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:8}}>EXPORT RATIOS — tick all you need</div>
+      <div style={{marginBottom:DS.lg+2}}>
+        <div style={sectionHead()}>EXPORT RATIOS — tick all you need</div>
         <div style={{display:"flex",gap:8}}>
           {Object.entries(RATIOS).map(([k,v])=>(
             <button key={k} style={ratioBtn(k,ratios[k])} onClick={()=>setRatios(r=>({...r,[k]:!r[k]}))}>
@@ -1500,20 +1500,20 @@ function TitleCardPanel({project, brand, updateProject}){
   };
 
   const S={
-    sm:{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"6px 12px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600},
-    inp:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,padding:"10px 13px",color:"#fff",fontSize:13,fontFamily:"inherit",boxSizing:"border-box",outline:"none"},
-    lbl:{display:"block",fontSize:10,opacity:0.5,fontWeight:700,letterSpacing:1,marginBottom:4},
+    sm:btn({padding:"6px 12px",fontSize:11}),
+    inp:inputS(),
+    lbl:label(),
   };
 
   return(
-    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,marginBottom:16,overflow:"hidden"}}>
+    <div style={card({padding:0,overflow:"hidden",borderRadius:DS.rMd})}>
       {/* Header row */}
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 16px",cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
+      <div style={{display:"flex",alignItems:"center",gap:DS.md,padding:`${DS.md-1}px ${DS.lg}px`,cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
         <span style={{fontSize:14}}>🎬</span>
-        <span style={{fontWeight:700,fontSize:13,flex:1}}>Title Card</span>
+        <span style={{fontWeight:700,fontSize:DS.fsMd,flex:1}}>Title Card</span>
         {isOverriding
-          ?<span style={{fontSize:10,fontWeight:700,color:brand.colorAccent,background:"rgba(230,57,70,0.15)",border:"1px solid rgba(230,57,70,0.3)",borderRadius:4,padding:"2px 7px"}}>EPISODE OVERRIDE</span>
-          :<span style={{fontSize:10,opacity:0.4,fontWeight:600}}>Using brand defaults</span>
+          ?<span style={{fontSize:DS.fsXs,fontWeight:700,color:brand.colorAccent,background:DS.danger,border:`1px solid ${DS.dangerBorder}`,borderRadius:DS.xs,padding:"2px 7px"}}>EPISODE OVERRIDE</span>
+          :<span style={{fontSize:DS.fsXs,color:DS.textMuted,fontWeight:600}}>Using brand defaults</span>
         }
         <span style={{opacity:0.4,fontSize:12}}>{open?"▲":"▼"}</span>
       </div>
