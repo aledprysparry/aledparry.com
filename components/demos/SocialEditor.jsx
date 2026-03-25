@@ -1046,7 +1046,7 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
       {/* Prompt editor */}
       <div style={{marginBottom:DS.md}}>
         <label style={label()}>AI PROMPT</label>
-        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} style={{...inp,minHeight:60}} placeholder="Describe what this graphic should show..."/>
+        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={5} style={{...inp,minHeight:100}} placeholder="Describe what this graphic should show..."/>
       </div>
 
       {/* Content fields (direct edit) */}
