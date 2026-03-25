@@ -976,7 +976,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
 // ═══════════════════════════════════════════════════════════════
 //  SEGMENT EDIT PANEL — per-graphic prompt, template, and content editor
 // ═══════════════════════════════════════════════════════════════
-function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMeta,regenLoading,onClose,previewSrc}){
+function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMeta,regenLoading,onClose,previewSrc,onRefreshPreview}){
   const [prompt,setPrompt]=useState(g.prompt||"");
   const [tplHint,setTplHint]=useState(g.templateHint||g.template||"any");
   const [localContent,setLocalContent]=useState({...g.content});
@@ -992,7 +992,11 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
         <button style={btnIcon()} onClick={onClose} title="Close editor">✕</button>
       </div>
       {/* Preview reference */}
-      {previewSrc&&<img src={previewSrc} alt="Current preview" style={{width:"100%",borderRadius:DS.rSm,marginBottom:DS.md,border:`1px solid ${DS.borderSubtle}`,background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
+      <div style={{position:"relative",marginBottom:DS.md}}>
+        {previewSrc?<img src={previewSrc} alt="Current preview" style={{width:"100%",borderRadius:DS.rSm,border:`1px solid ${DS.borderSubtle}`,background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>
+          :<div style={{...emptyState({padding:`${DS.xl}px 0`,fontSize:DS.fsSm}),background:DS.bgCard,borderRadius:DS.rSm,border:`1px solid ${DS.borderSubtle}`}}>No preview yet</div>}
+        {onRefreshPreview&&<button style={btnIcon({position:"absolute",top:DS.sm,right:DS.sm,background:"rgba(0,0,0,0.6)",border:"none"})} onClick={onRefreshPreview} title="Refresh preview">🔄</button>}
+      </div>
       {/* Template selector */}
       <div style={{display:"flex",gap:DS.sm,alignItems:"center",marginBottom:DS.md,flexWrap:"wrap"}}>
         <label style={label({marginBottom:0})}>TEMPLATE</label>
@@ -1236,6 +1240,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
             <SegmentEditPanel
               g={editingG} index={editingIdx} brand={brand}
               previewSrc={previews[editingIdx]}
+              onRefreshPreview={()=>doPreview(editingG,editingIdx)}
               onRegenerate={(prompt,tplHint)=>regenerateSegment(editingIdx,prompt,tplHint)}
               onUpdateContent={(changes)=>updateGraphicContent(editingIdx,changes)}
               onUpdateMeta={(changes)=>updateGraphicMeta(editingIdx,changes)}
