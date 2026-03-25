@@ -898,7 +898,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
       <div style={modalBox({maxWidth:500,maxHeight:"85vh",overflowY:"auto"})} onClick={e=>e.stopPropagation()}>
         <div style={{display:"flex",alignItems:"center",gap:DS.md,marginBottom:DS.lg+2}}>
           <div style={{fontWeight:900,fontSize:DS.fsLg,flex:1}}>+ Add Graphic</div>
-          <button style={btnIcon()} onClick={onClose}>✕</button>
+          <button style={btnIcon()} onClick={onClose} title="Close">✕</button>
         </div>
 
         {/* Template picker */}
@@ -973,7 +973,7 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
   const inp=inputS({resize:"vertical"});
 
   return(
-    <div style={{background:DS.bgCard,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",borderRadius:`0 0 ${DS.rMd+2}px ${DS.rMd+2}px`,padding:`${DS.lg-2}px ${DS.lg}px`}}>
+    <div style={card({padding:`${DS.lg}px`,marginBottom:0})}>
       {/* Template selector */}
       <div style={{display:"flex",gap:DS.sm,alignItems:"center",marginBottom:DS.md,flexWrap:"wrap"}}>
         <label style={label({marginBottom:0})}>TEMPLATE</label>
@@ -986,14 +986,14 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
       </div>
 
       {/* Prompt editor */}
-      <div style={{marginBottom:12}}>
-        <label style={{display:"block",fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:4}}>AI PROMPT</label>
-        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} style={{...inp,minHeight:60}}/>
+      <div style={{marginBottom:DS.md}}>
+        <label style={label()}>AI PROMPT</label>
+        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} style={{...inp,minHeight:60}} placeholder="Describe what this graphic should show..."/>
       </div>
 
       {/* Content fields (direct edit) */}
-      <div style={{marginBottom:12}}>
-        <label style={{display:"block",fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:6}}>CONTENT (direct edit)</label>
+      <div style={{marginBottom:DS.md}}>
+        <label style={label()}>CONTENT (direct edit)</label>
         <div style={{display:"flex",flexDirection:"column",gap:6}}>
           {fields.map(f=>(
             <div key={f.key} style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -1175,55 +1175,64 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     </div>
   );
 
+  const editingG=editingIdx!==null?graphics[editingIdx]:null;
+
   return(
     <div>
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
         <span style={{fontSize:13,fontWeight:700,opacity:0.6}}>{graphics.length} suggested</span>
-        <button style={sm} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))}>All</button>
-        <button style={sm} onClick={()=>setSelected(()=>new Set())}>None</button>
-        <button style={{...sm,marginLeft:"auto"}} onClick={previewAll}>👁 Preview All</button>
-        <button style={{...sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}} onClick={exportSelectedBatch}>⬇ Export Selected</button>
-        <button style={{...sm,background:"rgba(42,157,143,0.18)",border:"1px solid rgba(42,157,143,0.5)"}} onClick={()=>setShowAdd(true)}>+ Add</button>
-        <button style={{...sm,background:"rgba(230,57,70,0.15)",border:"1px solid rgba(230,57,70,0.3)"}} onClick={()=>{setGraphics([]);setGStep("idle");}}>↺ Re-analyse</button>
+        <button style={sm} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))} title="Select all">All</button>
+        <button style={sm} onClick={()=>setSelected(()=>new Set())} title="Deselect all">None</button>
+        <button style={{...sm,marginLeft:"auto"}} onClick={previewAll} title="Preview all graphics">👁 Preview All</button>
+        <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export Selected</button>
+        <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
+        <button style={btnDanger({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Clear all and re-analyse">↺ Re-analyse</button>
       </div>
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
-      {graphics.map((g,i)=>{
-        const meta=TMPL[g.template]||{label:g.template,type:"?"};const sel=selected.has(i);const effectiveType=g.typeOverride||meta.type||"fullscreen";const isOv=effectiveType==="overlay";const isExp=exporting.has(i);const showAnim=animIdx===i;
-        return(
-          <div key={i} style={{marginBottom:8}}>
-            <div style={{background:sel?"rgba(255,255,255,0.07)":"rgba(255,255,255,0.025)",border:`1px solid ${sel?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.06)"}`,borderRadius:12,padding:"11px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}} onClick={()=>setSelected(s=>{const n=new Set(s);n.has(i)?n.delete(i):n.add(i);return n;})}>
-              <div style={{width:19,height:19,borderRadius:5,border:`2px solid ${sel?brand.colorPositive:"rgba(255,255,255,0.18)"}`,background:sel?brand.colorPositive:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,flexShrink:0,fontWeight:700}}>{sel&&"✓"}</div>
-              <div style={{width:5,height:38,borderRadius:3,background:isOv?brand.colorPositive:tplBg(g.template),flexShrink:0}}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
-                  <span style={{fontWeight:700,fontSize:12}}>{meta.label}</span>
-                  <span style={{fontSize:10,background:isOv?"rgba(42,157,143,0.22)":"rgba(29,53,87,0.85)",padding:"1px 6px",borderRadius:4,fontWeight:700,cursor:"pointer"}} onClick={e=>{e.stopPropagation();toggleGraphicType(i);}} title="Click to toggle fullscreen/overlay">{isOv?"OVERLAY":"FULLSCREEN"}</span>
+      <div style={{display:"grid",gridTemplateColumns:editingG?"1fr 340px":"1fr",gap:DS.lg,alignItems:"start"}}>
+        {/* Graphics list */}
+        <div>
+          {graphics.map((g,i)=>{
+            const meta=TMPL[g.template]||{label:g.template,type:"?"};const sel=selected.has(i);const effectiveType=g.typeOverride||meta.type||"fullscreen";const isOv=effectiveType==="overlay";const isExp=exporting.has(i);const showAnim=animIdx===i;
+            return(
+              <div key={i} style={{marginBottom:8}}>
+                <div style={{background:sel?DS.bgCardHover:"rgba(255,255,255,0.025)",border:`1px solid ${editingIdx===i?DS.positiveBorder:sel?DS.borderActive:DS.borderSubtle}`,borderRadius:DS.rMd+2,padding:"11px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}} onClick={()=>setSelected(s=>{const n=new Set(s);n.has(i)?n.delete(i):n.add(i);return n;})}>
+                  <div style={{width:19,height:19,borderRadius:5,border:`2px solid ${sel?brand.colorPositive:"rgba(255,255,255,0.18)"}`,background:sel?brand.colorPositive:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,flexShrink:0,fontWeight:700}}>{sel&&"✓"}</div>
+                  <div style={{width:5,height:38,borderRadius:3,background:isOv?brand.colorPositive:tplBg(g.template),flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2,flexWrap:"wrap"}}>
+                      <span style={{fontWeight:700,fontSize:DS.fsSm}}>{meta.label}</span>
+                      <span style={{fontSize:DS.fsXs,background:isOv?DS.positive:"rgba(29,53,87,0.85)",padding:"1px 6px",borderRadius:DS.xs,fontWeight:700,cursor:"pointer"}} onClick={e=>{e.stopPropagation();toggleGraphicType(i);}} title="Click to toggle fullscreen/overlay">{isOv?"OVERLAY":"FULLSCREEN"}</span>
+                    </div>
+                    <div style={{color:DS.textMuted,fontSize:11}}>⏱ {g.timestamp} · {g.duration}s</div>
+                  </div>
+                  <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                    <button style={sm} onClick={()=>doPreview(g,i)} title="Preview graphic">{previews[i]?"🔄":"👁"}</button>
+                    <button style={{...sm,background:showAnim?DS.positive:undefined}} onClick={()=>setAnimIdx(showAnim?null:i)} title={showAnim?"Stop animation":"Play animation"}>{showAnim?"⏹":"▶"}</button>
+                    <button style={{...sm,opacity:isExp?0.6:1}} onClick={()=>!isExp&&exportWebM(g,i)} title="Export as WebM">{isExp?"⏳":"🎞"}</button>
+                    <button style={{...sm,background:editingIdx===i?DS.borderMedium:undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)} title="Edit prompt & content">✏</button>
+                  </div>
                 </div>
-                <div style={{opacity:0.45,fontSize:11}}>⏱ {g.timestamp} · {g.duration}s</div>
+                {previews[i]&&!showAnim&&editingIdx!==i&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
+                {showAnim&&<GraphicAnimPreview g={g} brand={brand} ratio={previewRatio}/>}
               </div>
-              <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-                <button style={sm} onClick={()=>doPreview(g,i)}>{previews[i]?"🔄":"👁"}</button>
-                <button style={{...sm,background:showAnim?"rgba(42,157,143,0.3)":undefined}} onClick={()=>setAnimIdx(showAnim?null:i)}>{showAnim?"⏹":"▶"}</button>
-                <button style={{...sm,opacity:isExp?0.6:1}} onClick={()=>!isExp&&exportWebM(g,i)}>{isExp?"⏳":"🎞"}</button>
-                <button style={{...sm,background:editingIdx===i?"rgba(255,255,255,0.15)":undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)}>✏</button>
-              </div>
-            </div>
-            {/* Inline edit panel */}
-            {editingIdx===i&&(
-              <SegmentEditPanel
-                g={g} index={i} brand={brand}
-                onRegenerate={(prompt,tplHint)=>regenerateSegment(i,prompt,tplHint)}
-                onUpdateContent={(changes)=>updateGraphicContent(i,changes)}
-                onUpdateMeta={(changes)=>updateGraphicMeta(i,changes)}
-                regenLoading={regenLoading}
-                onClose={()=>setEditingIdx(null)}
-              />
-            )}
-            {previews[i]&&!showAnim&&editingIdx!==i&&<img src={previews[i]} alt="" style={{width:"100%",borderRadius:"0 0 8px 8px",border:"1px solid rgba(255,255,255,0.08)",borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
-            {showAnim&&<GraphicAnimPreview g={g} brand={brand} ratio={previewRatio}/>}
+            );
+          })}
+        </div>
+        {/* Right-side edit panel */}
+        {editingG&&(
+          <div style={{position:"sticky",top:DS.lg}}>
+            <SegmentEditPanel
+              g={editingG} index={editingIdx} brand={brand}
+              onRegenerate={(prompt,tplHint)=>regenerateSegment(editingIdx,prompt,tplHint)}
+              onUpdateContent={(changes)=>updateGraphicContent(editingIdx,changes)}
+              onUpdateMeta={(changes)=>updateGraphicMeta(editingIdx,changes)}
+              regenLoading={regenLoading}
+              onClose={()=>setEditingIdx(null)}
+            />
           </div>
-        );
-      })}
+        )}
+      </div>
     </div>
   );
 }
@@ -1582,7 +1591,7 @@ function ProjectView({project,brand,updateProject,onBack}){
   const [tab,setTab]=useState("graphics");
   const [previewRatio,setPreviewRatio]=useState("16:9");
   const fileRef=useRef();
-  const {hasKey,refresh}=useApiKey();
+  // API key check removed — server-side proxy handles AI calls
 
   const handleSRT=f=>{
     const r=new FileReader();
@@ -1605,7 +1614,7 @@ function ProjectView({project,brand,updateProject,onBack}){
       {/* Top bar */}
       <div style={S.topbar}>
         <div style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:DS.sm}}>
-          <button style={btn({background:"transparent",border:"none",opacity:0.5,padding:"4px 8px",fontSize:DS.fsSm})} onClick={onBack}>←</button>
+          <button style={btn({background:"transparent",border:"none",opacity:0.5,padding:"4px 8px",fontSize:DS.fsSm})} onClick={onBack} title="Back to home">←</button>
           <div style={{fontSize:DS.fsSm,color:DS.textMuted,cursor:"pointer"}} onClick={onBack}>{brand.name}</div>
           <span style={{color:DS.textMuted,fontSize:DS.fsXs}}>/</span>
           <div style={{fontWeight:700,fontSize:DS.fsLg,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
@@ -1626,8 +1635,7 @@ function ProjectView({project,brand,updateProject,onBack}){
       </div>
 
       <div style={S.wrap}>
-        {/* API key banner */}
-        {!hasKey&&<ApiKeyBanner onSaved={refresh}/>}
+        {/* API key banner removed — server-side proxy */}
         {/* SRT bar */}
         <div style={card({padding:`${DS.md-1}px ${DS.lg}px`,marginBottom:DS.lg+2,display:"flex",alignItems:"center",gap:DS.md,flexWrap:"wrap"})}>
           <span style={label({marginBottom:0,flexShrink:0})}>SRT</span>
@@ -2867,7 +2875,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                 <div style={{fontWeight:sel?700:600,fontSize:DS.fsMd,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:sel?DS.textPrimary:DS.textSecondary}}>{b.name}</div>
                 <div style={{fontSize:10,color:DS.textMuted}}>{projCount} project{projCount!==1?"s":""}</div>
               </div>
-              {sel&&<button style={btnIcon({background:"transparent",border:"none",opacity:0.5})} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>}
+              {sel&&<button style={btnIcon({background:"transparent",border:"none",opacity:0.5})} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}} title="Edit brand">✏</button>}
             </div>
           );})}
         </div>
@@ -2907,7 +2915,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                     </div>
                     <div style={{display:"flex",gap:DS.sm,alignItems:"center",flexShrink:0}} onClick={e=>e.stopPropagation()}>
                       <button style={btn({fontSize:DS.fsSm})} onClick={()=>onOpenProject(p.id)}>Open →</button>
-                      <button style={btnIcon({opacity:0.35})} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})}>🗑</button>
+                      <button style={btnIcon({opacity:0.35})} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})} title="Delete project">🗑</button>
                     </div>
                   </div>
                 </div>
