@@ -1604,11 +1604,11 @@ function ProjectView({project,brand,updateProject,onBack}){
     <div style={S.app}>
       {/* Top bar */}
       <div style={S.topbar}>
-        <button style={btn({background:"transparent",border:"none",opacity:0.5,padding:"6px 10px"})} onClick={onBack}>← Back</button>
-        <div style={{width:1,height:24,background:DS.borderMedium,margin:`0 ${DS.sm}px`}}/>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:800,fontSize:DS.fsLg,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
-          <div style={{fontSize:DS.fsXs,color:DS.textMuted,marginTop:1}}>{brand.name}</div>
+        <div style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:DS.sm}}>
+          <button style={btn({background:"transparent",border:"none",opacity:0.5,padding:"4px 8px",fontSize:DS.fsSm})} onClick={onBack}>←</button>
+          <div style={{fontSize:DS.fsSm,color:DS.textMuted,cursor:"pointer"}} onClick={onBack}>{brand.name}</div>
+          <span style={{color:DS.textMuted,fontSize:DS.fsXs}}>/</span>
+          <div style={{fontWeight:700,fontSize:DS.fsLg,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
         </div>
         <div style={{display:"flex",gap:DS.xs,alignItems:"center",flexShrink:0}}>
           <span style={{fontSize:DS.fsXs,color:DS.textMuted,marginRight:DS.xs}}>Preview</span>
@@ -2371,7 +2371,7 @@ function StyleTemplateSection({b, setB, brandId, allBrands, S}){
 // ═══════════════════════════════════════════════════════════════
 //  BRAND EDITOR
 // ═══════════════════════════════════════════════════════════════
-function BrandEditor({brand,onSave,onCancel,allBrands}){
+function BrandEditor({brand,onSave,onCancel,onDelete,allBrands}){
   const [b,setB]=useState({...DEFAULT_BRAND,...brand});
   const set=k=>v=>setB(prev=>({...prev,[k]:v}));
   const S={
@@ -2389,7 +2389,8 @@ function BrandEditor({brand,onSave,onCancel,allBrands}){
       <div style={S.hdr}>
         <div style={{width:6,height:38,background:b.colorAccent,borderRadius:DS.xs,flexShrink:0}}/>
         <div style={{fontWeight:900,fontSize:DS.fsLg+3,flex:1}}>{brand.id?"Edit Brand":"New Brand"}</div>
-        <div style={{display:"flex",gap:DS.sm}}>
+        <div style={{display:"flex",gap:DS.sm,alignItems:"center"}}>
+          {onDelete&&<button style={btnDanger({padding:"6px 12px",fontSize:11})} onClick={()=>{if(window.confirm(`Delete brand "${b.name}"? All projects will be deleted.`)) onDelete();}}>🗑 Delete</button>}
           <button style={btn()} onClick={onCancel}>Cancel</button>
           <button style={btnCta({padding:"8px 20px",fontSize:DS.fsSm})} onClick={()=>onSave(b)}>Save Brand →</button>
         </div>
@@ -2783,26 +2784,17 @@ function ConfirmDialog({message, onConfirm, onCancel}){
 // ═══════════════════════════════════════════════════════════════
 //  HOME
 // ═══════════════════════════════════════════════════════════════
-function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject}){
+function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject,onDeleteBrand,onDeleteProject,onSave,onLoadVersion}){
   const [newProjName,setNewProjName]=useState("");
   const [selBrandId,setSelBrandId]=useState(brands[0]?.id||null);
   const [confirmDialog,setConfirmDialog]=useState(null);
-  const [showApiPanel,setShowApiPanel]=useState(false);
-  const [apiKeyInput,setApiKeyInput]=useState("");
+  const [saveStatus,setSaveStatus]=useState("");
+  const [showVersions,setShowVersions]=useState(false);
+  const [versions,setVersions]=useState([]);
   const allTemplates=load(TMPL_STORE);
   const templateCountForBrand=id=>allTemplates.filter(t=>t.brandId===id||t.brandId===null).length;
-  const [hasApiKey,setHasApiKey]=useState(!!localStorage.getItem("anthropic_api_key"));
   const confirm=(message,onConfirm)=>setConfirmDialog({message,onConfirm});
   const closeConfirm=()=>setConfirmDialog(null);
-  const saveApiKey=()=>{
-    if(!apiKeyInput.trim())return;
-    localStorage.setItem("anthropic_api_key",apiKeyInput.trim());
-    setHasApiKey(true);setShowApiPanel(false);setApiKeyInput("");
-  };
-  const clearApiKey=()=>{
-    localStorage.removeItem("anthropic_api_key");
-    setHasApiKey(false);setApiKeyInput("");
-  };
   const selBrand=brands.find(b=>b.id===selBrandId);
   const brandProjects=projects.filter(p=>p.brandId===selBrandId);
   const inp=inputS();
@@ -2814,38 +2806,48 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
       <div style={{background:DS.primary,padding:`${DS.lg-2}px ${DS.xl+2}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"1px solid rgba(0,0,0,0.3)"}}>
         <div style={{width:6,height:38,background:DS.accent,borderRadius:DS.xs,flexShrink:0}}/>
         <div><div style={{fontWeight:900,fontSize:DS.fsXl,letterSpacing:0.5}}>INFOGRAPHIC STUDIO</div><div style={{fontSize:11,color:DS.textMuted,marginTop:1}}>Graphics · Captions · Multi-ratio Premiere export</div></div>
-        <div style={{marginLeft:"auto"}}></div>
-      </div>
-
-      {/* API Key panel */}
-      {showApiPanel&&(
-        <div style={{background:"#0f1927",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"16px 26px",fontFamily:"Montserrat,Arial,sans-serif"}}>
-          <div style={{maxWidth:880,margin:"0 auto"}}>
-            <div style={{fontSize:12,fontWeight:700,opacity:0.6,marginBottom:10,letterSpacing:1}}>ANTHROPIC API KEY</div>
-            {hasApiKey
-              ?<div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                  <div style={{fontSize:13,color:"#2A9D8F",fontWeight:600}}>✓ API key is set and active</div>
-                  <button onClick={clearApiKey} style={{background:"rgba(230,57,70,0.2)",border:"1px solid rgba(230,57,70,0.4)",color:"#fff",padding:"7px 16px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600}}>Remove key</button>
-                  <button onClick={()=>setShowApiPanel(false)} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"7px 14px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✕ Close</button>
-                </div>
-              :<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  <input
-                    type="password"
-                    value={apiKeyInput}
-                    onChange={e=>setApiKeyInput(e.target.value)}
-                    onKeyDown={e=>e.key==="Enter"&&saveApiKey()}
-                    placeholder="sk-ant-api03-..."
-                    autoFocus
-                    style={{flex:1,minWidth:260,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"10px 14px",color:"#fff",fontSize:13,fontFamily:"inherit",outline:"none"}}
-                  />
-                  <button onClick={saveApiKey} disabled={!apiKeyInput.trim()} style={{background:apiKeyInput.trim()?"#2A9D8F":"rgba(255,255,255,0.1)",border:"none",color:"#fff",padding:"10px 20px",borderRadius:8,cursor:apiKeyInput.trim()?"pointer":"not-allowed",fontSize:13,fontWeight:700,fontFamily:"inherit",transition:"background 0.2s"}}>Save</button>
-                  <button onClick={()=>setShowApiPanel(false)} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"10px 14px",borderRadius:8,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>Cancel</button>
-                  <div style={{width:"100%",fontSize:11,opacity:0.45,marginTop:2}}>Get a key at <strong>console.anthropic.com</strong> → API Keys. Stored only in this browser.</div>
-                </div>
-            }
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:DS.sm,flexWrap:"wrap"}}>
+          {saveStatus&&<span style={{fontSize:11,color:saveStatus.includes("!")||saveStatus.includes("Loaded")?DS.green:DS.accent,fontWeight:600}}>{saveStatus}</span>}
+          <button onClick={async()=>{setSaveStatus("Saving...");const ok=await onSave();setSaveStatus(ok?"Saved!":"Error");setTimeout(()=>setSaveStatus(""),2000);}}
+            style={btnPositive({padding:"6px 12px",fontSize:11})}>💾 Save</button>
+          <button onClick={async()=>{
+            const name=prompt("Snapshot name (e.g. 'Before client meeting'):");
+            if(!name) return;
+            setSaveStatus("Saving...");const ok=await onSave(name);
+            setSaveStatus(ok?"Snapshot saved!":"Error");setTimeout(()=>setSaveStatus(""),2500);
+          }} style={btn({padding:"6px 12px",fontSize:11})}>📸 Save As</button>
+          <div style={{position:"relative"}}>
+            <button onClick={async()=>{
+              if(showVersions){setShowVersions(false);return;}
+              setVersions([]);setShowVersions(true);
+              try{const r=await fetch("/api/studio?versions=1");const d=await r.json();setVersions(d.versions||[]);}catch{setVersions([]);}
+            }} style={btn({background:showVersions?DS.borderMedium:DS.bgInput,padding:"6px 12px",fontSize:11})}>📂 Versions {showVersions?"▲":"▼"}</button>
+            {showVersions&&(
+              <div style={modalBox({position:"absolute",top:"100%",right:0,marginTop:6,minWidth:280,maxHeight:320,overflowY:"auto",zIndex:999,boxShadow:"0 8px 32px rgba(0,0,0,0.5)",padding:0})}>
+                {versions.length===0?(
+                  <div style={emptyState({padding:`${DS.lg}px`,fontSize:DS.fsSm})}>No snapshots yet — use Save As to create one</div>
+                ):versions.map((v,i)=>{
+                  const name=(v.pathname||"").split("/").pop().replace(/\.json.*$/,"").replace(/^\d{4}-\d{2}-\d{2}T[\d-]+_/,"").replace(/_/g," ");
+                  const date=new Date(v.uploadedAt).toLocaleString();
+                  return(
+                    <div key={i} onClick={async()=>{
+                      setSaveStatus("Loading...");setShowVersions(false);
+                      try{const lr=await fetch("/api/studio?load="+encodeURIComponent(v.pathname));const ld=await lr.json();
+                        if(ld.brands){onLoadVersion(ld);setSaveStatus("Loaded!");}else setSaveStatus("Failed");
+                      }catch{setSaveStatus("Error");}setTimeout(()=>setSaveStatus(""),2000);
+                    }} style={{padding:`${DS.md}px ${DS.lg}px`,cursor:"pointer",borderBottom:`1px solid ${DS.borderSubtle}`,transition:"background 0.15s"}}
+                      onMouseEnter={e=>e.currentTarget.style.background=DS.positive}
+                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <div style={{fontSize:DS.fsMd,fontWeight:600,marginBottom:2}}>{name||"Untitled"}</div>
+                      <div style={{fontSize:DS.fsXs,color:DS.textMuted}}>{date}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
       <div style={{maxWidth:920,margin:"0 auto",padding:`${DS.xl+4}px ${DS.xl}px`,display:"grid",gridTemplateColumns:"240px 1fr",gap:DS.xxl}}>
         {/* Brands sidebar */}
         <div>
@@ -2865,10 +2867,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                 <div style={{fontWeight:sel?700:600,fontSize:DS.fsMd,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:sel?DS.textPrimary:DS.textSecondary}}>{b.name}</div>
                 <div style={{fontSize:10,color:DS.textMuted}}>{projCount} project{projCount!==1?"s":""}</div>
               </div>
-              {sel&&<div style={{display:"flex",gap:2}}>
-                <button style={btnIcon({background:"transparent",border:"none",opacity:0.5})} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>
-                <button style={btnIcon({background:"transparent",border:"none",opacity:0.3})} onClick={e=>{e.stopPropagation();confirm(`Delete brand "${b.name}"? All its projects will also be deleted.`,()=>{onDeleteBrand(b.id);closeConfirm();});}} title="Delete brand">🗑</button>
-              </div>}
+              {sel&&<button style={btnIcon({background:"transparent",border:"none",opacity:0.5})} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>}
             </div>
           );})}
         </div>
@@ -2877,12 +2876,9 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
         <div>
           {selBrand?(
             <>
-              <div style={{display:"flex",alignItems:"center",gap:DS.md,marginBottom:DS.xl}}>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:800,fontSize:DS.fsLg+3,marginBottom:2}}>{selBrand.name}</div>
-                  <div style={{fontSize:DS.fsSm,color:DS.textMuted}}>{brandProjects.length} project{brandProjects.length!==1?"s":""} · {selBrand.fontFamily}</div>
-                </div>
-                <button style={btn({fontSize:11})} onClick={()=>onEditBrand(selBrand.id)}>⚙ Brand Settings</button>
+              <div style={{marginBottom:DS.xl}}>
+                <div style={{fontWeight:800,fontSize:DS.fsLg+3,marginBottom:2}}>{selBrand.name}</div>
+                <div style={{fontSize:DS.fsSm,color:DS.textMuted}}>{brandProjects.length} project{brandProjects.length!==1?"s":""} · {selBrand.fontFamily}</div>
               </div>
               {/* New project — inline form */}
               <div style={{display:"flex",gap:DS.sm,marginBottom:DS.xl,alignItems:"center"}}>
@@ -2933,9 +2929,29 @@ function App(){
   const [view,setView]=useState("home");       // home | brand-edit | project
   const [editBrandId,setEditBrandId]=useState(null);
   const [activeProjectId,setActiveProjectId]=useState(null);
+  const syncTimer=useRef(null);
 
-  useEffect(()=>save(BS,brands),[brands]);
-  useEffect(()=>save(PS,projects),[projects]);
+  // ── Server sync: load on mount ──
+  useEffect(()=>{
+    fetch("/api/studio").then(r=>r.json()).then(d=>{
+      if(d.brands?.length){setBrands(d.brands);save(BS,d.brands);}
+      if(d.projects?.length){setProjects(d.projects);save(PS,d.projects);}
+      if(d.templates?.length) save(TMPL_STORE,d.templates);
+    }).catch(()=>{});
+  },[]);
+
+  // ── Server sync: debounced save ──
+  const syncToServer=useCallback((b,p)=>{
+    if(syncTimer.current) clearTimeout(syncTimer.current);
+    syncTimer.current=setTimeout(()=>{
+      const templates=load(TMPL_STORE);
+      fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({brands:b,projects:p,templates})}).catch(()=>{});
+    },1500);
+  },[]);
+
+  useEffect(()=>{save(BS,brands);syncToServer(brands,projects);},[brands]);
+  useEffect(()=>{save(PS,projects);syncToServer(brands,projects);},[projects]);
 
   useEffect(()=>{ brands.forEach(b=>loadFont(b.fontFamily)); },[brands]);
 
@@ -2952,6 +2968,7 @@ function App(){
       <BrandEditor
         brand={editing||newBrand("")}
         allBrands={brands}
+        onDelete={editBrandId?()=>{setBrands(bs=>bs.filter(x=>x.id!==editBrandId));setProjects(ps=>ps.filter(p=>p.brandId!==editBrandId));setView("home");setEditBrandId(null);}:null}
         onSave={b=>{
           if(editBrandId) setBrands(bs=>bs.map(x=>x.id===editBrandId?{...x,...b,id:editBrandId}:x));
           else setBrands(bs=>[...bs,{...b,id:Date.now(),createdAt:new Date().toISOString()}]);
@@ -2983,6 +3000,17 @@ function App(){
       onOpenProject={id=>{setActiveProjectId(id);setView("project");}}
       onDeleteBrand={id=>{setBrands(bs=>bs.filter(b=>b.id!==id));setProjects(ps=>ps.filter(p=>p.brandId!==id));}}
       onDeleteProject={id=>setProjects(ps=>ps.filter(p=>p.id!==id))}
+      onSave={(snapshotName)=>{
+        const templates=load(TMPL_STORE);
+        const url=snapshotName?"/api/studio?snapshot="+encodeURIComponent(snapshotName):"/api/studio";
+        return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({brands,projects,templates})}).then(r=>r.ok).catch(()=>false);
+      }}
+      onLoadVersion={(d)=>{
+        if(d.brands){setBrands(d.brands);save(BS,d.brands);}
+        if(d.projects){setProjects(d.projects);save(PS,d.projects);}
+        if(d.templates) save(TMPL_STORE,d.templates);
+      }}
     />
   );
 }
