@@ -976,7 +976,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
 // ═══════════════════════════════════════════════════════════════
 //  SEGMENT EDIT PANEL — per-graphic prompt, template, and content editor
 // ═══════════════════════════════════════════════════════════════
-function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMeta,regenLoading,onClose}){
+function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMeta,regenLoading,onClose,previewSrc}){
   const [prompt,setPrompt]=useState(g.prompt||"");
   const [tplHint,setTplHint]=useState(g.templateHint||g.template||"any");
   const [localContent,setLocalContent]=useState({...g.content});
@@ -986,6 +986,13 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
 
   return(
     <div style={card({padding:`${DS.lg}px`,marginBottom:0})}>
+      {/* Header + close */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:DS.md}}>
+        <div style={sectionHead({marginBottom:0})}>EDIT SEGMENT #{index+1}</div>
+        <button style={btnIcon()} onClick={onClose} title="Close editor">✕</button>
+      </div>
+      {/* Preview reference */}
+      {previewSrc&&<img src={previewSrc} alt="Current preview" style={{width:"100%",borderRadius:DS.rSm,marginBottom:DS.md,border:`1px solid ${DS.borderSubtle}`,background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
       {/* Template selector */}
       <div style={{display:"flex",gap:DS.sm,alignItems:"center",marginBottom:DS.md,flexWrap:"wrap"}}>
         <label style={label({marginBottom:0})}>TEMPLATE</label>
@@ -1006,12 +1013,12 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
       {/* Content fields (direct edit) */}
       <div style={{marginBottom:DS.md}}>
         <label style={label()}>CONTENT (direct edit)</label>
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        <div style={{display:"flex",flexDirection:"column",gap:DS.sm}}>
           {fields.map(f=>(
-            <div key={f.key} style={{display:"flex",gap:8,alignItems:"center"}}>
-              <span style={{fontSize:10,opacity:0.5,width:80,flexShrink:0,textAlign:"right"}}>{f.label}</span>
+            <div key={f.key}>
+              <label style={label()}>{f.label}</label>
               <input value={localContent[f.key]||""} onChange={e=>setLocalContent(c=>({...c,[f.key]:e.target.value}))}
-                placeholder={f.placeholder} style={{...inp,padding:"7px 10px"}}/>
+                placeholder={f.placeholder} style={inp}/>
             </div>
           ))}
         </div>
@@ -1225,9 +1232,10 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         </div>
         {/* Floating edit panel — overlays to the right */}
         {editingG&&(
-          <div style={{position:"fixed",top:160,right:DS.xl,width:360,maxHeight:"calc(100vh - 200px)",overflowY:"auto",zIndex:100,boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
+          <div style={{position:"fixed",top:140,right:DS.xl,width:420,maxHeight:"calc(100vh - 180px)",overflowY:"auto",zIndex:100,boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
             <SegmentEditPanel
               g={editingG} index={editingIdx} brand={brand}
+              previewSrc={previews[editingIdx]}
               onRegenerate={(prompt,tplHint)=>regenerateSegment(editingIdx,prompt,tplHint)}
               onUpdateContent={(changes)=>updateGraphicContent(editingIdx,changes)}
               onUpdateMeta={(changes)=>updateGraphicMeta(editingIdx,changes)}
@@ -1264,16 +1272,24 @@ function CaptionsTab({project,brand,updateProject,previewRatio}){
         </div>
       </div>
       {activeSub&&(
-        <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,padding:"14px",marginBottom:14}}>
-          <div style={{fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:10}}>LIVE PREVIEW</div>
-          <CaptionPreview subtitle={activeSub} brand={brand} captionStyle={captionStyle} ratio={previewRatio}/>
-          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:10,flexWrap:"wrap"}}>
-            <span style={{fontSize:10,opacity:0.4}}>Line:</span>
-            {subtitles.slice(0,8).map((s,i)=>(
-              <button key={i} style={{...sm,background:prevIdx===i?brand.colorAccent:"rgba(255,255,255,0.07)",border:`1px solid ${prevIdx===i?brand.colorAccent:"rgba(255,255,255,0.12)"}`}} onClick={()=>setPrevIdx(i)}>#{s.index}</button>
-            ))}
+        <div style={card({padding:`${DS.lg}px`,marginBottom:DS.lg})}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:DS.md}}>
+            <div style={sectionHead({marginBottom:0})}>LIVE PREVIEW</div>
+            <div style={{fontSize:DS.fsSm,color:DS.textMuted}}>{prevIdx+1} / {subtitles.length}</div>
           </div>
-          <div style={{marginTop:8,fontSize:11,opacity:0.5,fontStyle:"italic"}}>"{activeSub.text}"</div>
+          <CaptionPreview subtitle={activeSub} brand={brand} captionStyle={captionStyle} ratio={previewRatio}/>
+          {/* Navigation */}
+          <div style={{display:"flex",alignItems:"center",gap:DS.sm,marginTop:DS.md}}>
+            <button disabled={prevIdx<=0} style={btn({opacity:prevIdx<=0?0.3:1,cursor:prevIdx<=0?"not-allowed":"pointer"})} onClick={()=>setPrevIdx(Math.max(0,prevIdx-1))} title="Previous caption">← Prev</button>
+            <button disabled={prevIdx>=subtitles.length-1} style={btn({opacity:prevIdx>=subtitles.length-1?0.3:1,cursor:prevIdx>=subtitles.length-1?"not-allowed":"pointer"})} onClick={()=>setPrevIdx(Math.min(subtitles.length-1,prevIdx+1))} title="Next caption">Next →</button>
+            <div style={{flex:1}}/>
+            <input type="range" min={0} max={subtitles.length-1} value={prevIdx} onChange={e=>setPrevIdx(Number(e.target.value))} style={{flex:2,accentColor:brand.colorAccent}} title="Scrub through captions"/>
+          </div>
+          {/* Caption text + timestamp */}
+          <div style={{marginTop:DS.sm,padding:`${DS.sm}px ${DS.md}px`,background:DS.bgCard,borderRadius:DS.rSm,border:`1px solid ${DS.borderSubtle}`}}>
+            <div style={{fontSize:DS.fsMd,lineHeight:1.5}}>"{activeSub.text}"</div>
+            <div style={{fontSize:DS.fsXs,color:DS.textMuted,marginTop:DS.xs}}>⏱ {activeSub.start} → {activeSub.end}</div>
+          </div>
         </div>
       )}
       <div style={{background:"rgba(42,157,143,0.08)",border:"1px solid rgba(42,157,143,0.22)",borderRadius:9,padding:"11px 14px",fontSize:12,lineHeight:1.6}}>
@@ -2936,6 +2952,30 @@ function App(){
   const [activeProjectId,setActiveProjectId]=useState(null);
   const syncTimer=useRef(null);
 
+  // ── URL hash routing ──
+  const pushHash=(v,projId)=>{
+    const slug=projId?projects.find(p=>p.id===projId)?.name?.replace(/[^a-zA-Z0-9]+/g,"-").toLowerCase():"";
+    const hash=v==="project"&&slug?`#/project/${slug}`
+      :v==="brand-edit"?`#/brand`
+      :"#/";
+    window.history.pushState(null,null,hash);
+  };
+  // Restore view from hash on mount
+  useEffect(()=>{
+    const restore=()=>{
+      const h=window.location.hash;
+      if(h.startsWith("#/project/")){
+        const slug=h.replace("#/project/","");
+        const allProjects=[...load(PS)];
+        const match=allProjects.find(p=>p.name?.replace(/[^a-zA-Z0-9]+/g,"-").toLowerCase()===slug);
+        if(match){setActiveProjectId(match.id);setView("project");}
+      }
+    };
+    restore();
+    window.addEventListener("popstate",restore);
+    return()=>window.removeEventListener("popstate",restore);
+  },[]);
+
   // ── Server sync: load on mount ──
   useEffect(()=>{
     fetch("/api/studio").then(r=>r.json()).then(d=>{
@@ -2977,9 +3017,9 @@ function App(){
         onSave={b=>{
           if(editBrandId) setBrands(bs=>bs.map(x=>x.id===editBrandId?{...x,...b,id:editBrandId}:x));
           else setBrands(bs=>[...bs,{...b,id:Date.now(),createdAt:new Date().toISOString()}]);
-          setView("home");setEditBrandId(null);
+          setView("home");setEditBrandId(null);pushHash("home");
         }}
-        onCancel={()=>{setView("home");setEditBrandId(null);}}
+        onCancel={()=>{setView("home");setEditBrandId(null);pushHash("home");}}
       />
     );
   }
@@ -2990,7 +3030,7 @@ function App(){
         project={activeProject}
         brand={activeBrand}
         updateProject={updateProject}
-        onBack={()=>setView("home")}
+        onBack={()=>{setView("home");pushHash("home");}}
       />
     );
   }
@@ -2999,10 +3039,10 @@ function App(){
     <Home
       brands={brands}
       projects={projects}
-      onNewBrand={()=>{setEditBrandId(null);setView("brand-edit");}}
-      onEditBrand={id=>{setEditBrandId(id);setView("brand-edit");}}
-      onNewProject={(brandId,name)=>{const p=newProject(brandId,name);setProjects(ps=>[...ps,p]);setActiveProjectId(p.id);setView("project");}}
-      onOpenProject={id=>{setActiveProjectId(id);setView("project");}}
+      onNewBrand={()=>{setEditBrandId(null);setView("brand-edit");pushHash("brand-edit");}}
+      onEditBrand={id=>{setEditBrandId(id);setView("brand-edit");pushHash("brand-edit");}}
+      onNewProject={(brandId,name)=>{const p=newProject(brandId,name);setProjects(ps=>[...ps,p]);setActiveProjectId(p.id);setView("project");pushHash("project",p.id);}}
+      onOpenProject={id=>{setActiveProjectId(id);setView("project");pushHash("project",id);}}
       onDeleteBrand={id=>{setBrands(bs=>bs.filter(b=>b.id!==id));setProjects(ps=>ps.filter(p=>p.brandId!==id));}}
       onDeleteProject={id=>setProjects(ps=>ps.filter(p=>p.id!==id))}
       onSave={(snapshotName)=>{
