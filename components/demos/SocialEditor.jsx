@@ -1000,7 +1000,7 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
       {/* Template selector */}
       <div style={{display:"flex",gap:DS.sm,alignItems:"center",marginBottom:DS.md,flexWrap:"wrap"}}>
         <label style={label({marginBottom:0})}>TEMPLATE</label>
-        <select value={tplHint} onChange={e=>{setTplHint(e.target.value);onUpdateMeta({templateHint:e.target.value});}}
+        <select value={tplHint} onChange={e=>setTplHint(e.target.value)}
           style={{background:DS.bgButton,border:`1px solid ${DS.borderMedium}`,borderRadius:DS.rSm,padding:"6px 10px",color:DS.textPrimary,fontSize:DS.fsSm,fontFamily:"inherit",outline:"none"}}>
           <option value="any" style={{background:"#1a2332"}}>Any (AI decides)</option>
           {Object.entries(TMPL).map(([k,v])=><option key={k} value={k} style={{background:"#1a2332"}}>{v.label} ({v.type})</option>)}
@@ -1034,7 +1034,7 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
           style={{...sm,background:regenLoading?"rgba(255,255,255,0.05)":"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",cursor:regenLoading?"wait":"pointer"}}>
           {regenLoading?"⏳ Generating...":"🔄 Regenerate with AI"}
         </button>
-        <button onClick={()=>{onUpdateContent(localContent);onClose();}}
+        <button onClick={()=>{onUpdateContent(localContent);onUpdateMeta({templateHint:tplHint,prompt});onClose();}}
           style={{...sm,background:"rgba(42,157,143,0.15)",border:"1px solid rgba(42,157,143,0.3)"}}>
           💾 Save edits
         </button>
@@ -1238,6 +1238,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         {editingG&&(
           <div style={{position:"fixed",top:140,right:DS.xl,width:420,maxHeight:"calc(100vh - 180px)",overflowY:"auto",zIndex:100,boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
             <SegmentEditPanel
+              key={editingIdx}
               g={editingG} index={editingIdx} brand={brand}
               previewSrc={previews[editingIdx]}
               onRefreshPreview={()=>doPreview(editingG,editingIdx)}

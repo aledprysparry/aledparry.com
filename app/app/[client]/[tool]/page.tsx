@@ -42,7 +42,7 @@ export default function DemoPage({ params }: Props) {
   if (!DemoComponent) notFound();
 
   return (
-    <div className="h-screen pt-12">
+    <div className="h-screen">
       <DemoComponent />
     </div>
   );
