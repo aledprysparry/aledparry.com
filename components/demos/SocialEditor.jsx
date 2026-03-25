@@ -1592,12 +1592,12 @@ function ProjectView({project,brand,updateProject,onBack}){
 
   const hasSRT=project.subtitles.length>0;
   const S={
-    app:{fontFamily:`"${brand.fontFamily}","Arial",sans-serif`,background:"#0b1320",minHeight:"100vh",color:"#fff"},
-    topbar:{background:brand.colorPrimary,padding:"10px 22px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid rgba(0,0,0,0.3)"},
-    tabbar:{background:brand.colorPrimary+"ee",borderBottom:"1px solid rgba(0,0,0,0.25)",display:"flex",padding:"0 22px",gap:2},
-    tab:a=>({padding:"14px 20px",cursor:"pointer",fontWeight:a?800:600,fontSize:13,color:a?"#fff":"rgba(255,255,255,0.42)",background:"none",border:"none",borderBottom:a?`3px solid ${brand.colorAccent}`:"3px solid transparent",fontFamily:"inherit",marginTop:1,transition:"color 0.15s"}),
-    sm:{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"6px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600},
-    wrap:{maxWidth:860,margin:"0 auto",padding:"24px 18px"},
+    app:{fontFamily:`"${brand.fontFamily}","Arial",sans-serif`,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary},
+    topbar:{background:brand.colorPrimary,padding:`${DS.md-2}px ${DS.xl-2}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"1px solid rgba(0,0,0,0.3)"},
+    tabbar:{background:brand.colorPrimary+"ee",borderBottom:"1px solid rgba(0,0,0,0.25)",display:"flex",padding:`0 ${DS.xl-2}px`,gap:2},
+    tab:a=>({padding:`${DS.lg-2}px ${DS.xl-4}px`,cursor:"pointer",fontWeight:a?800:600,fontSize:DS.fsMd,color:a?DS.textPrimary:DS.textMuted,background:"none",border:"none",borderBottom:a?`3px solid ${brand.colorAccent}`:"3px solid transparent",fontFamily:"inherit",marginTop:1,transition:"color 0.15s"}),
+    sm:btn({padding:"6px 12px"}),
+    wrap:{maxWidth:860,margin:"0 auto",padding:`${DS.xl}px ${DS.lg+2}px`},
   };
 
   return(
@@ -1628,12 +1628,12 @@ function ProjectView({project,brand,updateProject,onBack}){
         {/* API key banner */}
         {!hasKey&&<ApiKeyBanner onSaved={refresh}/>}
         {/* SRT bar */}
-        <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"11px 16px",marginBottom:18,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-          <span style={{fontSize:10,fontWeight:700,opacity:0.45,letterSpacing:1,flexShrink:0}}>SRT</span>
+        <div style={card({padding:`${DS.md-1}px ${DS.lg}px`,marginBottom:DS.lg+2,display:"flex",alignItems:"center",gap:DS.md,flexWrap:"wrap"})}>
+          <span style={label({marginBottom:0,flexShrink:0})}>SRT</span>
           {hasSRT
-            ?<><span style={{background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",borderRadius:5,padding:"3px 9px",fontSize:11,fontWeight:700,color:"#2A9D8F",flexShrink:0}}>✓ {project.subtitles.length} lines</span>
-              <span style={{fontSize:12,opacity:0.4,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>"{project.subtitles[0]?.text}"…</span></>
-            :<span style={{fontSize:12,opacity:0.4,flex:1}}>No SRT — upload one to unlock both tabs</span>
+            ?<><span style={{background:DS.positive,border:`1px solid ${DS.positiveBorder}`,borderRadius:5,padding:"3px 9px",fontSize:11,fontWeight:700,color:DS.green,flexShrink:0}}>✓ {project.subtitles.length} lines</span>
+              <span style={{fontSize:DS.fsSm,color:DS.textMuted,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>"{project.subtitles[0]?.text}"…</span></>
+            :<span style={{fontSize:DS.fsSm,color:DS.textMuted,flex:1}}>No SRT — upload one to unlock both tabs</span>
           }
           <button style={{...S.sm,flexShrink:0}} onClick={()=>fileRef.current.click()}>{hasSRT?"↺ Replace":"⬆ Upload SRT"}</button>
           <input ref={fileRef} type="file" accept=".srt,.txt" style={{display:"none"}} onChange={e=>e.target.files[0]&&handleSRT(e.target.files[0])}/>
@@ -1644,7 +1644,7 @@ function ProjectView({project,brand,updateProject,onBack}){
 
         {/* Tab content */}
         {!hasSRT
-          ?<div style={{textAlign:"center",padding:"60px 0",opacity:0.35}}><div style={{fontSize:42,marginBottom:12}}>📄</div><div style={{fontSize:15,fontWeight:700}}>Upload an SRT to get started</div></div>
+          ?<div style={emptyState({padding:"60px 0"})}><div style={{fontSize:42,marginBottom:DS.md}}>📄</div><div style={{fontSize:DS.fsLg,fontWeight:700}}>Upload an SRT to get started</div></div>
           :tab==="graphics"?<GraphicsTab project={project} brand={brand} updateProject={updateProject} previewRatio={previewRatio}/>
           :tab==="captions"?<CaptionsTab project={project} brand={brand} updateProject={updateProject} previewRatio={previewRatio}/>
           :<ExportTab project={project} brand={brand} updateProject={updateProject}/>
