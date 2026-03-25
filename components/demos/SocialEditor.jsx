@@ -409,12 +409,13 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   // wt==="HW" is a sentinel meaning "use brand heading weight"
   const DT=(text,x,y,mW,mH,sz,wt,al,col,ml)=>drawText(ctx,text,x,y,mW,mH,Math.round(sz*TS),wt==="HW"?HW:wt,al,col,ml,FF,LH);
   const isPortrait=H>W;
+  const isOverlay=(g.typeOverride||(TMPL[t]||{}).type||"fullscreen")==="overlay";
 
   if(t==="myth"||t==="reality"){
     const bg=t==="myth"?B.colorAccent:B.colorPositive;
-    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    if(!isOverlay){ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     ctx.save();ctx.globalAlpha=0.07;ctx.strokeStyle="#000";ctx.lineWidth=2;
-    for(let i=-H;i<W+H;i+=44*sc){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+H,H);ctx.stroke();}ctx.restore();
+    for(let i=-H;i<W+H;i+=44*sc){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+H,H);ctx.stroke();}ctx.restore();}
     const icR=Math.round(118*sc),icSc=AP.easeBackFn(clamp(p*AP.entMul*1.1,0,1));
     ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);
     ctx.globalAlpha=0.18;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
@@ -428,7 +429,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="title"){
-    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
+    if(!isOverlay){ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);}
     if(c.number){ctx.save();ctx.globalAlpha=0.05;ctx.fillStyle="#fff";ctx.font=`900 ${Math.round(Math.min(W,H)*0.52)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(c.number,W/2,H/2+H*0.07);ctx.restore();}
     if(isPortrait){
       // Portrait: centred layout — accent rule + centred text stack
@@ -454,7 +455,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="rule_number"){
-    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
+    if(!isOverlay){ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);}
     ctx.save();ctx.globalAlpha=0.05;ctx.fillStyle="#fff";const gs=easeOut(clamp(p*1.5,0,1));
     ctx.font=`900 ${Math.round(Math.min(W,H)*0.5)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
     ctx.translate(W/2,H/2+H*0.08);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
@@ -466,7 +467,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H);
   }
   else if(t==="key_point"){
-    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);ctx.fillStyle=B.colorPositive;ctx.fillRect(0,0,W,Math.round(10*sc));
+    if(!isOverlay){ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);ctx.fillStyle=B.colorPositive;ctx.fillRect(0,0,W,Math.round(10*sc));}
     if(isPortrait){
       // Portrait: icon centred above, headline + body stacked
       const icSc=AP.easeBackFn(clamp(p*AP.entMul,0,1));ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(120*sc),B.colorPositive,IC);ctx.restore();
