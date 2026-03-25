@@ -413,19 +413,30 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
 
   if(t==="myth"||t==="reality"){
     const bg=t==="myth"?B.colorAccent:B.colorPositive;
-    if(!isOverlay){ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-    ctx.save();ctx.globalAlpha=0.07;ctx.strokeStyle="#000";ctx.lineWidth=2;
-    for(let i=-H;i<W+H;i+=44*sc){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+H,H);ctx.stroke();}ctx.restore();}
+    if(!isOverlay){
+      ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+      ctx.save();ctx.globalAlpha=0.07;ctx.strokeStyle="#000";ctx.lineWidth=2;
+      for(let i=-H;i<W+H;i+=44*sc){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+H,H);ctx.stroke();}ctx.restore();
+    }
+    // Colours adapt: fullscreen = white on coloured bg, overlay = brand colour on transparent
+    const txtCol=isOverlay?bg:"#fff";
+    const icBg=isOverlay?bg:"#000";
+    const icBgAlpha=isOverlay?0.15:0.18;
+    const badgeBg=isOverlay?bg:"rgba(0,0,0,0.3)";
+    const badgeTxt=isOverlay?"#fff":"#fff";
+
     const icR=Math.round(118*sc),icSc=AP.easeBackFn(clamp(p*AP.entMul*1.1,0,1));
     ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);
-    ctx.globalAlpha=0.18;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR*1.05,"#fff",IC);ctx.restore();
+    ctx.globalAlpha=icBgAlpha;ctx.fillStyle=icBg;ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR*1.05,isOverlay?"#fff":txtCol,IC);ctx.restore();
+    // Badge pill — right below icon
     ctx.save();ctx.translate(0,(1-ENT)*H*0.08);ctx.globalAlpha=ENT;
     ctx.font=`800 ${Math.round(48*sc)}px "${FF}","Arial",sans-serif`;
     const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
-    ctx.fillStyle="rgba(0,0,0,0.3)";rrPath(ctx,W/2-bw/2-24*sc,H*0.44,bw+48*sc,64*sc,32*sc);ctx.fill();
-    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(badge,W/2,H*0.44+46*sc);ctx.restore();
-    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.54,W-PAD*2,H*0.30,Math.round(78*sc),"800","center","#fff",3);ctx.restore();
+    ctx.fillStyle=badgeBg;rrPath(ctx,W/2-bw/2-24*sc,H*0.44,bw+48*sc,64*sc,32*sc);ctx.fill();
+    ctx.fillStyle=badgeTxt;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(badge,W/2,H*0.44+46*sc);ctx.restore();
+    // Body text — one line, larger font
+    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.56,W-PAD*2,H*0.14,Math.round(78*sc),"800","center",txtCol,1);ctx.restore();
     stamp(ctx,B,W,H);
   }
   else if(t==="title"){
