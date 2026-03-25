@@ -673,6 +673,34 @@ Placement rules — be generous, use every appropriate moment:
 - timeline for any contract period or deadline sequence
 - Use overlays (fact_box, speech_bubble, stat) generously — they don't interrupt the video`;
 
+const SEGMENT_PROMPT=`You are a video graphics producer. Generate exactly ONE graphic for a social media explainer video.
+Return ONLY a valid JSON object (NOT an array). No markdown, no preamble.
+
+Format: {"id":1,"timestamp":"HH:MM:SS","duration":3–6,"type":"fullscreen"|"overlay","template":"...","content":{...},"label":"kebab-case-filename"}
+
+Templates and content fields (keep ALL text SHORT — readable on mobile in 2 seconds):
+- myth:          { body:"the misconception (max 10 words)" }
+- reality:       { body:"the correction (max 10 words)" }
+- title:         { headline:"TITLE (max 4 words)", subheadline:"sub", body:"detail", number:"bg number" }
+- rule_number:   { number:"1", body:"rule label (max 7 words)" }
+- key_point:     { headline:"LABEL (max 3 words)", body:"the point (max 18 words)" }
+- fact_box:      { headline:"LABEL (2–3 words)", body:"detail (max 15 words)" }
+- speech_bubble: { text:"a question (max 9 words)" }
+- stat:          { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
+- timeline:      { label:"label (max 4 words)", markers:["6 months","12 months"] }`;
+
+const TMPL_FIELDS={
+  myth:[{key:"body",label:"Misconception",placeholder:"max 10 words"}],
+  reality:[{key:"body",label:"Correction",placeholder:"max 10 words"}],
+  title:[{key:"headline",label:"Headline",placeholder:"max 4 words"},{key:"subheadline",label:"Subheadline",placeholder:"optional"},{key:"body",label:"Detail",placeholder:"optional"},{key:"number",label:"Background number",placeholder:"e.g. 1"}],
+  rule_number:[{key:"number",label:"Rule #",placeholder:"e.g. 1"},{key:"body",label:"Rule label",placeholder:"max 7 words"}],
+  key_point:[{key:"headline",label:"Label",placeholder:"max 3 words"},{key:"body",label:"The point",placeholder:"max 18 words"}],
+  fact_box:[{key:"headline",label:"Label",placeholder:"2-3 words"},{key:"body",label:"Detail",placeholder:"max 15 words"}],
+  speech_bubble:[{key:"text",label:"Question",placeholder:"max 9 words"}],
+  stat:[{key:"stat",label:"Value",placeholder:"e.g. 2%, 12 months"},{key:"label",label:"Description",placeholder:"max 5 words"}],
+  timeline:[{key:"label",label:"Label",placeholder:"max 4 words"}],
+};
+
 // ═══════════════════════════════════════════════════════════════
 //  UI ATOMS
 // ═══════════════════════════════════════════════════════════════
@@ -848,6 +876,59 @@ function AddGraphicModal({brand, onAdd, onClose}){
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  SEGMENT EDIT PANEL
+// ═══════════════════════════════════════════════════════════════
+function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMeta,regenLoading,onClose}){
+  const [prompt,setPrompt]=useState(g.prompt||"");
+  const [tplHint,setTplHint]=useState(g.templateHint||g.template||"any");
+  const [localContent,setLocalContent]=useState({...g.content});
+  const fields=TMPL_FIELDS[tplHint]||TMPL_FIELDS[g.template]||[];
+  const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"6px 12px",borderRadius:7,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600};
+  const inp={width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"9px 12px",color:"#fff",fontSize:12,fontFamily:"inherit",boxSizing:"border-box",outline:"none",resize:"vertical"};
+
+  return(
+    <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderTop:"none",borderRadius:"0 0 12px 12px",padding:"14px 16px"}}>
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
+        <label style={{fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1}}>TEMPLATE</label>
+        <select value={tplHint} onChange={e=>{setTplHint(e.target.value);onUpdateMeta({templateHint:e.target.value});}}
+          style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px 10px",color:"#fff",fontSize:12,fontFamily:"inherit",outline:"none"}}>
+          <option value="any" style={{background:"#1a2332"}}>Any (AI decides)</option>
+          {Object.entries(TMPL).map(([k,v])=><option key={k} value={k} style={{background:"#1a2332"}}>{v.label} ({v.type})</option>)}
+        </select>
+        <span style={{fontSize:10,opacity:0.35,marginLeft:4}}>{(TMPL[tplHint]||{}).type==="overlay"?"⬜ Overlay":"⬛ Fullscreen"}</span>
+      </div>
+      <div style={{marginBottom:12}}>
+        <label style={{display:"block",fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:4}}>AI PROMPT</label>
+        <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} rows={3} style={{...inp,minHeight:60}}/>
+      </div>
+      <div style={{marginBottom:12}}>
+        <label style={{display:"block",fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:6}}>CONTENT (direct edit)</label>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {fields.map(f=>(
+            <div key={f.key} style={{display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{fontSize:10,opacity:0.5,width:80,flexShrink:0,textAlign:"right"}}>{f.label}</span>
+              <input value={localContent[f.key]||""} onChange={e=>setLocalContent(c=>({...c,[f.key]:e.target.value}))}
+                placeholder={f.placeholder} style={{...inp,padding:"7px 10px"}}/>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        <button disabled={regenLoading} onClick={()=>onRegenerate(prompt,tplHint)}
+          style={{...sm,background:regenLoading?"rgba(255,255,255,0.05)":"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",cursor:regenLoading?"wait":"pointer"}}>
+          {regenLoading?"⏳ Generating...":"🔄 Regenerate with AI"}
+        </button>
+        <button onClick={()=>{onUpdateContent(localContent);onClose();}}
+          style={{...sm,background:"rgba(42,157,143,0.15)",border:"1px solid rgba(42,157,143,0.3)"}}>
+          💾 Save edits
+        </button>
+        <button onClick={onClose} style={sm}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  GRAPHICS TAB
 // ═══════════════════════════════════════════════════════════════
 function GraphicsTab({project,brand,updateProject,previewRatio}){
@@ -874,7 +955,16 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2500,system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}]})});
       const data=await res.json();
       const raw=data.content?.find(b=>b.type==="text")?.text||"";
-      setGraphics(JSON.parse(raw.replace(/```json|```/g,"").trim()));setGStep("review");
+      const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      const subs=project.subtitles||[];
+      const enriched=parsed.map(g=>{
+        const ts=g.timestamp||"00:00:00";
+        const tsSec=(h=>h[0]*3600+h[1]*60+h[2])(ts.split(":").map(Number));
+        const nearby=subs.filter(s=>Math.abs((s.startSec||0)-tsSec)<8).map(s=>s.text).join(" ");
+        const tplLabel=(TMPL[g.template]||{}).label||g.template;
+        return{...g,templateHint:g.template,prompt:`At ${ts} — generate a "${tplLabel}" graphic. Context: ${nearby.slice(0,200)}`};
+      });
+      setGraphics(enriched);setGStep("review");
     }catch(e){setError("Analysis failed: "+e.message+(e.message.includes("fetch")?" — check your API key in Settings":""));setGStep("idle");}
   };
 
@@ -923,6 +1013,40 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     const currentType=g.typeOverride||defaultType;
     ng[i]={...g,typeOverride:currentType==="overlay"?"fullscreen":"overlay"};
     setGraphics(ng);
+  };
+
+  const [editingIdx,setEditingIdx]=useState(null);
+  const [regenLoading,setRegenLoading]=useState(false);
+
+  const regenerateSegment=async(i,prompt,templateHint)=>{
+    setRegenLoading(true);
+    try{
+      const tplConstraint=templateHint&&templateHint!=="any"?`\nYou MUST use the "${templateHint}" template.`:"";
+      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:SEGMENT_PROMPT+tplConstraint,messages:[{role:"user",content:prompt}]})});
+      const data=await res.json();
+      const raw=data.content?.find(b=>b.type==="text")?.text||"";
+      const newG=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      const ng=[...graphics];
+      const old=ng[i];
+      ng[i]={...newG,prompt,templateHint:templateHint||newG.template,typeOverride:old?.typeOverride};
+      updateProject({graphics:ng,previews:{...previews,[i]:undefined}});
+      setTimeout(()=>{drawGraphic(cvs.current,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));},100);
+    }catch(e){alert("Regeneration failed: "+e.message);}
+    setRegenLoading(false);
+  };
+
+  const updateGraphicContent=(i,changes)=>{
+    const ng=[...graphics];
+    ng[i]={...ng[i],content:{...ng[i].content,...changes}};
+    updateProject({graphics:ng,previews:{...previews,[i]:undefined}});
+    setTimeout(()=>{drawGraphic(cvs.current,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));},100);
+  };
+
+  const updateGraphicMeta=(i,changes)=>{
+    const ng=[...graphics];
+    ng[i]={...ng[i],...changes};
+    updateProject({graphics:ng});
   };
 
   const sm={background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"7px 12px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600};
@@ -983,9 +1107,20 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                 <button style={sm} onClick={()=>doPreview(g,i)}>{previews[i]?"🔄":"👁"}</button>
                 <button style={{...sm,background:showAnim?"rgba(42,157,143,0.3)":undefined}} onClick={()=>setAnimIdx(showAnim?null:i)}>{showAnim?"⏹":"▶"}</button>
                 <button style={{...sm,opacity:isExp?0.6:1}} onClick={()=>!isExp&&exportWebM(g,i)}>{isExp?"⏳":"🎞"}</button>
+                <button style={{...sm,background:editingIdx===i?"rgba(255,255,255,0.15)":undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)}>✏</button>
               </div>
             </div>
-            {previews[i]&&!showAnim&&<img src={previews[i]} alt="" style={{width:"100%",borderRadius:"0 0 8px 8px",border:"1px solid rgba(255,255,255,0.08)",borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
+            {editingIdx===i&&(
+              <SegmentEditPanel
+                g={g} index={i} brand={brand}
+                onRegenerate={(prompt,tplHint)=>regenerateSegment(i,prompt,tplHint)}
+                onUpdateContent={(changes)=>updateGraphicContent(i,changes)}
+                onUpdateMeta={(changes)=>updateGraphicMeta(i,changes)}
+                regenLoading={regenLoading}
+                onClose={()=>setEditingIdx(null)}
+              />
+            )}
+            {previews[i]&&!showAnim&&editingIdx!==i&&<img src={previews[i]} alt="" style={{width:"100%",borderRadius:"0 0 8px 8px",border:"1px solid rgba(255,255,255,0.08)",borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
             {showAnim&&<GraphicAnimPreview g={g} brand={brand} ratio={previewRatio}/>}
           </div>
         );
