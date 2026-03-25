@@ -103,6 +103,18 @@ const emptyState = (overrides) => ({
   textAlign: "center", padding: `${DS.xxl}px 0`, color: DS.textMuted, ...overrides,
 });
 
+// ── AI helper: route through server-side proxy ─────────────────
+async function callAI({system,messages,max_tokens=2500}){
+  const res=await fetch("/api/ai",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({system,messages,max_tokens,model:"claude-sonnet-4-20250514"})
+  });
+  if(!res.ok) throw new Error(`AI request failed (${res.status})`);
+  const data=await res.json();
+  return data.content?.find(b=>b.type==="text")?.text||"";
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  FONTS  — curated Google Fonts for video
 // ═══════════════════════════════════════════════════════════════
@@ -1044,11 +1056,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setGStep("analysing");setError("");
     try{
       const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
-      const apiKey=localStorage.getItem("anthropic_api_key")||"";
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:2500,system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}]})});
-      const data=await res.json();
-      const raw=data.content?.find(b=>b.type==="text")?.text||"";
+      const raw=await callAI({system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}],max_tokens:2500});
       const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
       // Enrich each graphic with per-segment prompt and template hint
       const subs=project.subtitles||[];
@@ -1124,11 +1132,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setRegenLoading(true);
     try{
       const tplConstraint=templateHint&&templateHint!=="any"?`\nYou MUST use the "${templateHint}" template.`:"";
-      const apiKey=localStorage.getItem("anthropic_api_key")||"";
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,system:SEGMENT_PROMPT+tplConstraint,messages:[{role:"user",content:prompt}]})});
-      const data=await res.json();
-      const raw=data.content?.find(b=>b.type==="text")?.text||"";
+      const raw=await callAI({system:SEGMENT_PROMPT+tplConstraint,messages:[{role:"user",content:prompt}],max_tokens:800});
       const newG=JSON.parse(raw.replace(/```json|```/g,"").trim());
       const ng=[...graphics];
       const old=ng[i];
@@ -1189,7 +1193,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={btnDanger({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Clear all and re-analyse">↺ Re-analyse</button>
       </div>
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
-      <div style={{display:"grid",gridTemplateColumns:editingG?"1fr 340px":"1fr",gap:DS.lg,alignItems:"start"}}>
+      <div style={{position:"relative"}}>
         {/* Graphics list */}
         <div>
           {graphics.map((g,i)=>{
@@ -1219,9 +1223,9 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
             );
           })}
         </div>
-        {/* Right-side edit panel */}
+        {/* Floating edit panel — overlays to the right */}
         {editingG&&(
-          <div style={{position:"sticky",top:DS.lg}}>
+          <div style={{position:"fixed",top:160,right:DS.xl,width:360,maxHeight:"calc(100vh - 200px)",overflowY:"auto",zIndex:100,boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
             <SegmentEditPanel
               g={editingG} index={editingIdx} brand={brand}
               onRegenerate={(prompt,tplHint)=>regenerateSegment(editingIdx,prompt,tplHint)}
@@ -1606,7 +1610,7 @@ function ProjectView({project,brand,updateProject,onBack}){
     tabbar:{background:brand.colorPrimary+"ee",borderBottom:"1px solid rgba(0,0,0,0.25)",display:"flex",padding:`0 ${DS.xl-2}px`,gap:2},
     tab:a=>({padding:`${DS.lg-2}px ${DS.xl-4}px`,cursor:"pointer",fontWeight:a?800:600,fontSize:DS.fsMd,color:a?DS.textPrimary:DS.textMuted,background:"none",border:"none",borderBottom:a?`3px solid ${brand.colorAccent}`:"3px solid transparent",fontFamily:"inherit",marginTop:1,transition:"color 0.15s"}),
     sm:btn({padding:"6px 12px"}),
-    wrap:{maxWidth:860,margin:"0 auto",padding:`${DS.xl}px ${DS.lg+2}px`},
+    wrap:{maxWidth:1200,margin:"0 auto",padding:`${DS.xl}px ${DS.xl}px`},
   };
 
   return(
@@ -2104,8 +2108,6 @@ function StyleExtractor({onExtracted,S}){
   const handleDragOver=e=>{e.preventDefault();e.stopPropagation();};
 
   const extract=async()=>{
-    const apiKey=localStorage.getItem("anthropic_api_key");
-    if(!apiKey){setError("Set your Anthropic API key in Settings first.");return;}
     setExtracting(true);setError("");setResult(null);
     try{
       const content=[];
@@ -2115,14 +2117,9 @@ function StyleExtractor({onExtracted,S}){
       });
       content.push({type:"text",text:EXTRACTION_PROMPT});
 
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+      const resp=await fetch("/api/ai",{
         method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "x-api-key":apiKey,
-          "anthropic-version":"2023-06-01",
-          "anthropic-dangerous-direct-browser-access":"true"
-        },
+        headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",
           max_tokens:1024,
@@ -2385,7 +2382,7 @@ function BrandEditor({brand,onSave,onCancel,onDelete,allBrands}){
   const S={
     app:{fontFamily:`"${b.fontFamily}","Arial",sans-serif`,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary},
     hdr:{background:b.colorPrimary,padding:`${DS.md+1}px ${DS.xl}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"1px solid rgba(0,0,0,0.3)"},
-    wrap:{maxWidth:720,margin:"0 auto",padding:`${DS.xl+2}px ${DS.lg+2}px`},
+    wrap:{maxWidth:860,margin:"0 auto",padding:`${DS.xl+2}px ${DS.xl}px`},
     section:card({padding:`${DS.lg+2}px ${DS.xl-4}px`}),
     shead:sectionHead({fontSize:DS.fsSm}),
     inp:inputS({fontSize:14}),
@@ -2856,7 +2853,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
           </div>
         </div>
       </div>
-      <div style={{maxWidth:920,margin:"0 auto",padding:`${DS.xl+4}px ${DS.xl}px`,display:"grid",gridTemplateColumns:"240px 1fr",gap:DS.xxl}}>
+      <div style={{maxWidth:1200,margin:"0 auto",padding:`${DS.xl+4}px ${DS.xl}px`,display:"grid",gridTemplateColumns:"240px 1fr",gap:DS.xxl}}>
         {/* Brands sidebar */}
         <div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:DS.lg}}>
