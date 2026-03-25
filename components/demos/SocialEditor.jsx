@@ -1307,7 +1307,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                   </div>
                   <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
                     <button style={sm} onClick={()=>doPreview(g,i)} title="Preview graphic">{previews[i]?"🔄":"👁"}</button>
-                    <button style={{...sm,background:showAnim?DS.positive:undefined}} onClick={()=>setAnimIdx(showAnim?null:i)} title={showAnim?"Stop animation":"Play animation"}>{showAnim?"⏹":"▶"}</button>
+                    <button style={{...sm,background:showAnim?DS.positive:undefined}} onClick={()=>{if(showAnim){setAnimIdx(null);setTimeout(()=>setAnimIdx(i),50);}else{setAnimIdx(i);}}} title={showAnim?"Replay animation":"Play animation"}>{showAnim?"🔄":"▶"}</button>
                     <button style={{...sm,opacity:isExp?0.6:1}} onClick={()=>!isExp&&exportWebM(g,i)} title="Export as WebM">{isExp?"⏳":"🎞"}</button>
                     <button style={{...sm,background:editingIdx===i?DS.borderMedium:undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)} title="Edit prompt & content">✏</button>
                   </div>
