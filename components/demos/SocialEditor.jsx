@@ -689,6 +689,20 @@ function recordGraphic(g,brand,ratio){
   });
 }
 
+function recordTitleCard(brand,ratio){
+  return new Promise((res,rej)=>{
+    const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+    const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
+    const frames=Math.round(2*FPS);
+    const rec=new MediaRecorder(cvs.captureStream(FPS),{mimeType:MIME(),videoBitsPerSecond:8000000});
+    const ch=[];rec.ondataavailable=e=>{if(e.data.size>0)ch.push(e.data);};
+    rec.onstop=()=>res(new Blob(ch,{type:"video/webm"}));rec.onerror=rej;
+    rec.start();let f=0;
+    const tick=()=>{drawTitleCard(cvs,brand,ratio,clamp(f/(frames*0.35),0,1));f++;if(f<frames)requestAnimationFrame(tick);else rec.stop();};
+    requestAnimationFrame(tick);
+  });
+}
+
 function recordCaption(subtitle,brand,captionStyle,ratio){
   return new Promise((res,rej)=>{
     const AR=RATIOS[ratio||brand.aspectRatio||"9:16"]||RATIOS["9:16"];
@@ -826,6 +840,21 @@ function FontPicker({value,onChange}){
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function TitleCardAnimPreview({brand,ratio,width=380}){
+  const ref=useRef();const rafRef=useRef();const startRef=useRef(Date.now());
+  useEffect(()=>{
+    startRef.current=Date.now();
+    const loop=()=>{const p=((Date.now()-startRef.current)/1000)%2.5;if(ref.current)drawTitleCard(ref.current,brand,ratio,Math.min(p/0.8,1));rafRef.current=requestAnimationFrame(loop);};
+    rafRef.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(rafRef.current);
+  },[brand,ratio]);
+  const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];const aspect=AR.W/AR.H;
+  return(
+    <div style={{position:"relative",width,height:width/aspect,borderRadius:DS.rMd,overflow:"hidden",border:`1px solid ${DS.borderSubtle}`}}>
+      <canvas ref={ref} width={AR.W} height={AR.H} style={{width:"100%",height:"100%"}}/>
     </div>
   );
 }
@@ -1507,6 +1536,8 @@ function ExportTab({project,brand,updateProject}){
 function TitleCardPanel({project, brand, updateProject}){
   const [open, setOpen] = useState(false);
   const [previewRatio, setPreviewRatio] = useState("16:9");
+  const [showAnim, setShowAnim] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const cvs = useRef(document.createElement("canvas"));
   const override = project.titleCardOverride;
   const isOverriding = override !== null;
@@ -1523,7 +1554,7 @@ function TitleCardPanel({project, brand, updateProject}){
   }});
   const disableOverride = () => updateProject({titleCardOverride:null});
 
-  const exportAll = () => {
+  const exportPNGs = () => {
     Object.keys(RATIOS).forEach(ratio=>{
       drawTitleCard(cvs.current, effectiveBrand, ratio, 1);
       cvs.current.toBlob(blob=>{
@@ -1532,6 +1563,16 @@ function TitleCardPanel({project, brand, updateProject}){
         a.download=`title_card_${project.name.replace(/\s+/g,"_")}_${ratio.replace(":","x")}.png`;a.click();
       },"image/png");
     });
+  };
+
+  const exportWebM = async () => {
+    setExporting(true);
+    try{
+      const blob=await recordTitleCard(effectiveBrand,previewRatio);
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+      a.download=`title_card_${project.name.replace(/\s+/g,"_")}_${previewRatio.replace(":","x")}_animated.webm`;a.click();
+    }catch(e){alert("Export failed: "+e.message);}
+    setExporting(false);
   };
 
   const S={
@@ -1555,27 +1596,31 @@ function TitleCardPanel({project, brand, updateProject}){
 
       {open&&(
         <div style={{padding:"0 16px 16px"}}>
-          {/* Override toggle */}
-          <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-            <button style={{...S.sm,background:isOverriding?"rgba(230,57,70,0.2)":"rgba(42,157,143,0.18)",border:`1px solid ${isOverriding?brand.colorAccent:"#2A9D8F"}`}}
+          {/* Toolbar */}
+          <div style={{display:"flex",gap:DS.sm,marginBottom:DS.lg,flexWrap:"wrap",alignItems:"center"}}>
+            <button style={btnPositive({padding:"6px 12px",fontSize:11})}
               onClick={isOverriding?disableOverride:enableOverride}>
-              {isOverriding?"↺ Reset to brand defaults":"✏ Override for this episode"}
+              {isOverriding?"↺ Reset to defaults":"✏ Override for episode"}
             </button>
-            {isOverriding&&(
-              <div style={{display:"flex",gap:5}}>
-                {Object.keys(RATIOS).map(k=>(
-                  <button key={k} style={{...S.sm,background:previewRatio===k?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.06)",fontSize:10,padding:"5px 9px"}} onClick={()=>setPreviewRatio(k)}>{k}</button>
-                ))}
-              </div>
-            )}
-            <button style={{...S.sm,marginLeft:"auto",background:"rgba(42,157,143,0.15)",border:"1px solid rgba(42,157,143,0.4)"}} onClick={exportAll}>⬇ Export PNGs</button>
+            <div style={{display:"flex",gap:DS.xs}}>
+              {Object.keys(RATIOS).map(k=>(
+                <button key={k} style={btn({background:previewRatio===k?DS.borderActive:DS.bgButton,fontSize:10,padding:"5px 9px",fontWeight:previewRatio===k?700:500})} onClick={()=>setPreviewRatio(k)}>{k}</button>
+              ))}
+            </div>
+            <div style={{flex:1}}/>
+            <button style={btn({fontSize:11})} onClick={()=>setShowAnim(a=>!a)} title={showAnim?"Stop animation":"Play animation"}>{showAnim?"⏹ Stop":"▶ Play"}</button>
+            <button style={btn({fontSize:11,opacity:exporting?0.6:1})} onClick={()=>!exporting&&exportWebM()} title="Export animated WebM">{exporting?"⏳":"🎞"} WebM</button>
+            <button style={btnPositive({fontSize:11})} onClick={exportPNGs} title="Export still PNGs for all ratios">⬇ PNGs</button>
           </div>
 
           {/* Live preview */}
-          <StaticCanvasPreview
-            drawFn={drawTitleCard} brand={effectiveBrand} ratio={previewRatio} width={360}
-            deps={[effectiveBrand.titleCardTitle,effectiveBrand.titleCardSeriesName,effectiveBrand.titleCardSubtitle,effectiveBrand.titleCardStyle,effectiveBrand.colorPrimary,effectiveBrand.colorAccent,effectiveBrand.fontFamily,effectiveBrand.logoDataUrl,previewRatio]}
-          />
+          {showAnim
+            ?<TitleCardAnimPreview brand={effectiveBrand} ratio={previewRatio} width={480}/>
+            :<StaticCanvasPreview
+              drawFn={drawTitleCard} brand={effectiveBrand} ratio={previewRatio} width={480}
+              deps={[effectiveBrand.titleCardTitle,effectiveBrand.titleCardSeriesName,effectiveBrand.titleCardSubtitle,effectiveBrand.titleCardStyle,effectiveBrand.colorPrimary,effectiveBrand.colorAccent,effectiveBrand.fontFamily,effectiveBrand.logoDataUrl,previewRatio]}
+            />
+          }
 
           {/* Override fields — only shown when overriding */}
           {isOverriding&&(
