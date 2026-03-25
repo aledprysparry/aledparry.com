@@ -2374,23 +2374,23 @@ function BrandEditor({brand,onSave,onCancel,allBrands}){
   const [b,setB]=useState({...DEFAULT_BRAND,...brand});
   const set=k=>v=>setB(prev=>({...prev,[k]:v}));
   const S={
-    app:{fontFamily:`"${b.fontFamily}","Arial",sans-serif`,background:"#0b1320",minHeight:"100vh",color:"#fff"},
-    hdr:{background:b.colorPrimary,padding:"13px 24px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid rgba(0,0,0,0.3)"},
-    wrap:{maxWidth:720,margin:"0 auto",padding:"26px 18px"},
-    section:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,padding:"18px 20px",marginBottom:16},
-    shead:{fontWeight:800,fontSize:12,letterSpacing:1,opacity:0.5,textTransform:"uppercase",marginBottom:14},
-    inp:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,padding:"11px 13px",color:"#fff",fontSize:14,fontFamily:"inherit",boxSizing:"border-box",outline:"none"},
-    lbl:{display:"block",fontSize:10,opacity:0.5,fontWeight:700,letterSpacing:1,marginBottom:5},
-    sm:{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.13)",color:"#fff",padding:"8px 14px",borderRadius:8,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:600},
+    app:{fontFamily:`"${b.fontFamily}","Arial",sans-serif`,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary},
+    hdr:{background:b.colorPrimary,padding:`${DS.md+1}px ${DS.xl}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"1px solid rgba(0,0,0,0.3)"},
+    wrap:{maxWidth:720,margin:"0 auto",padding:`${DS.xl+2}px ${DS.lg+2}px`},
+    section:card({padding:`${DS.lg+2}px ${DS.xl-4}px`}),
+    shead:sectionHead({fontSize:DS.fsSm}),
+    inp:inputS({fontSize:14}),
+    lbl:label(),
+    sm:btn(),
   };
   return(
     <div style={S.app}>
       <div style={S.hdr}>
-        <div style={{width:6,height:38,background:b.colorAccent,borderRadius:4,flexShrink:0}}/>
-        <div style={{fontWeight:900,fontSize:18,flex:1}}>{brand.id?"Edit Brand":"New Brand"}</div>
-        <div style={{display:"flex",gap:8}}>
-          <button style={S.sm} onClick={onCancel}>Cancel</button>
-          <button style={{...S.sm,background:b.colorAccent,border:`1px solid ${b.colorAccent}`,padding:"8px 20px"}} onClick={()=>onSave(b)}>Save Brand →</button>
+        <div style={{width:6,height:38,background:b.colorAccent,borderRadius:DS.xs,flexShrink:0}}/>
+        <div style={{fontWeight:900,fontSize:DS.fsLg+3,flex:1}}>{brand.id?"Edit Brand":"New Brand"}</div>
+        <div style={{display:"flex",gap:DS.sm}}>
+          <button style={btn()} onClick={onCancel}>Cancel</button>
+          <button style={btnCta({padding:"8px 20px",fontSize:DS.fsSm})} onClick={()=>onSave(b)}>Save Brand →</button>
         </div>
       </div>
       <div style={S.wrap}>
@@ -2468,11 +2468,7 @@ function BrandEditor({brand,onSave,onCancel,allBrands}){
           <div style={S.shead}>Animation Feel</div>
           <AnimationPresetPicker value={b.animationPreset||"default"} onChange={set("animationPreset")} brand={b} S={S}/>
         </div>
-        {/* Graphic style */}
-        <div style={S.section}>
-          <div style={S.shead}>Graphic Settings</div>
-
-          {/* ── Typography ── */}
+        {/* ── Typography ── */}
         <div style={S.section}>
           <div style={S.shead}>Typography</div>
           <div style={{display:"grid",gap:14}}>
@@ -2544,7 +2540,9 @@ function BrandEditor({brand,onSave,onCancel,allBrands}){
             </div>
           </div>
         </div>
-        {/* ── Logo watermark ── */}
+        {/* ── Graphic Settings ── */}
+        <div style={S.section}>
+          <div style={S.shead}>Graphic Settings</div>
           <div style={{marginBottom:18}}>
             <label style={S.lbl}>WATERMARK LOGO (transparent PNG)</label>
             <div style={{display:"flex",gap:12,alignItems:"flex-start",flexWrap:"wrap"}}>
@@ -2608,7 +2606,7 @@ function BrandEditor({brand,onSave,onCancel,allBrands}){
           <label style={S.lbl}>ICON STYLE</label>
           <div style={{display:"flex",gap:8,marginTop:6}}>
             {["line","filled"].map(v=>(
-              <button key={v} onClick={()=>set("iconStyle")(v)} style={{...S.sm,background:b.iconStyle===v?b.colorPositive:"rgba(255,255,255,0.07)",border:`1px solid ${b.iconStyle===v?b.colorPositive:"rgba(255,255,255,0.13)"}`,padding:"8px 22px",textTransform:"capitalize"}}>
+              <button key={v} onClick={()=>set("iconStyle")(v)} style={btn({background:b.iconStyle===v?DS.positive:DS.bgInput,border:`1px solid ${b.iconStyle===v?DS.positiveBorder:DS.borderSubtle}`,padding:"8px 22px",textTransform:"capitalize"})}>
                 {v==="line"?"⊘ Line":"● Filled"}
               </button>
             ))}
