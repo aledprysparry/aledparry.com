@@ -456,14 +456,19 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   }
   else if(t==="rule_number"){
     if(!isOverlay){ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);}
+    // Ghost number — large, faded, behind everything
     ctx.save();ctx.globalAlpha=0.05;ctx.fillStyle="#fff";const gs=easeOut(clamp(p*1.5,0,1));
-    ctx.font=`900 ${Math.round(Math.min(W,H)*0.5)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.translate(W/2,H/2+H*0.08);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
+    ctx.font=`900 ${Math.round(Math.min(W,H)*0.55)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.translate(W/2,H*0.38);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
+    // Accent bar top
     ctx.fillStyle=B.colorAccent;ctx.fillRect(0,0,W,Math.round(10*sc));
+    // "— RULE —" label
     ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*H*0.06);
-    ctx.fillStyle="rgba(255,255,255,0.4)";ctx.font=`700 ${Math.round(56*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText("— RULE —",W/2,H*0.35);
-    ctx.fillStyle="#fff";ctx.font=`900 ${Math.round(220*sc)}px "${FF}","Arial",sans-serif`;ctx.fillText("#"+(c.number||"1"),W/2,H*0.68);ctx.restore();
-    if(c.body){ctx.save();ctx.globalAlpha=TXT;DT(c.body,W/2,H*0.73,W-PAD*2,H*0.14,Math.round(54*sc),"500","center","rgba(255,255,255,0.55)",2);ctx.restore();}
+    ctx.fillStyle="rgba(255,255,255,0.4)";ctx.font=`700 ${Math.round(48*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText("— RULE —",W/2,H*0.28);
+    // Large #number
+    ctx.fillStyle="#fff";ctx.font=`900 ${Math.round(200*sc)}px "${FF}","Arial",sans-serif`;ctx.fillText("#"+(c.number||"1"),W/2,H*0.56);ctx.restore();
+    // Body text below
+    if(c.body){ctx.save();ctx.globalAlpha=TXT;DT(c.body,W/2,H*0.64,W-PAD*2,H*0.18,Math.round(52*sc),"500","center","rgba(255,255,255,0.6)",2);ctx.restore();}
     stamp(ctx,B,W,H);
   }
   else if(t==="key_point"){
@@ -476,10 +481,27 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       const divW=(W-PAD*2)*ENT;ctx.strokeStyle="rgba(255,255,255,0.1)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(W/2-divW/2,H*0.46);ctx.lineTo(W/2+divW/2,H*0.46);ctx.stroke();
       ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.36,Math.round(64*sc),"600","center","rgba(255,255,255,0.88)",4);ctx.restore();
     } else {
-      const icSc=AP.easeBackFn(clamp(p*AP.entMul,0,1));ctx.save();ctx.translate(PAD+Math.round(75*sc),H*0.34);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(100*sc),B.colorPositive,IC);ctx.restore();
-      ctx.save();ctx.globalAlpha=TXT;ctx.translate((1-TXT)*-30*sc,0);DT(c.headline||"KEY POINT",PAD+Math.round(152*sc),H*0.26,W-PAD-Math.round(152*sc)-PAD,H*0.13,Math.round(76*sc),"900","left","#fff",1);ctx.restore();
-      ctx.strokeStyle="rgba(255,255,255,0.1)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(PAD,H*0.44);ctx.lineTo(PAD+(W-PAD*2)*ENT,H*0.44);ctx.stroke();
-      ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.38,Math.round(68*sc),"600","center","rgba(255,255,255,0.88)",4);ctx.restore();
+      // Landscape: icon left of headline, body aligned below
+      const icR=Math.round(46*sc);
+      const icX=PAD+icR+Math.round(10*sc);
+      const icY=H*0.30;
+      const textX=PAD+icR*2+Math.round(30*sc); // text starts after icon
+      const textW=W-textX-PAD;
+      // Icon — vertically aligned with headline
+      const icSc2=AP.easeBackFn(clamp(p*AP.entMul,0,1));
+      ctx.save();ctx.translate(icX,icY);ctx.scale(icSc2,icSc2);drawIcon(ctx,"info",0,0,icR,B.colorPositive,IC);ctx.restore();
+      // Headline — to the right of icon
+      ctx.save();ctx.globalAlpha=TXT;ctx.translate((1-TXT)*-30*sc,0);
+      DT(c.headline||"KEY POINT",textX,H*0.22,textW,H*0.16,Math.round(76*sc),"900","left","#fff",2);
+      ctx.restore();
+      // Divider — aligned with text left edge
+      const divX=textX;
+      ctx.strokeStyle="rgba(255,255,255,0.12)";ctx.lineWidth=Math.round(2*sc);
+      ctx.beginPath();ctx.moveTo(divX,H*0.48);ctx.lineTo(divX+textW*ENT,H*0.48);ctx.stroke();
+      // Body — left-aligned with headline
+      ctx.save();ctx.globalAlpha=TXT;
+      DT(c.body||"",textX+textW/2,H*0.54,textW,H*0.34,Math.round(52*sc),"500","center","rgba(255,255,255,0.75)",4);
+      ctx.restore();
     }
     stamp(ctx,B,W,H);
   }
@@ -496,12 +518,20 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       ctx.restore();
     } else {
       const bW=Math.round(780*sc),bH=Math.round(260*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
+      const icR=Math.round(36*sc);
+      const contentX=bX+Math.round(36*sc); // after accent bar
+      const textX=contentX+icR*2+Math.round(16*sc); // after icon
+      const textW=bW-(textX-bX)-Math.round(30*sc);
       ctx.save();ctx.translate((1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.55)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=B.colorPrimary;ctx.fill();ctx.shadowBlur=0;
+      // Accent bar left
       ctx.fillStyle=B.colorPositive;rrPath(ctx,bX,bY,Math.round(15*sc),bH,[R,0,0,R]);ctx.fill();
-      drawIcon(ctx,"info",bX+Math.round(58*sc),bY+bH/2,Math.round(46*sc),B.colorPositive,IC);
-      DT((c.headline||"").toUpperCase(),bX+Math.round(94*sc),bY+Math.round(72*sc),bW-Math.round(114*sc),Math.round(58*sc),Math.round(42*sc),"700","left","#fff",1);
-      DT(c.body||"",bX+Math.round(94*sc),bY+Math.round(130*sc),bW-Math.round(114*sc),bH-Math.round(148*sc),Math.round(34*sc),"500","left","rgba(255,255,255,0.72)",3);
+      // Icon — aligned with headline
+      drawIcon(ctx,"info",contentX+icR+Math.round(4*sc),bY+Math.round(58*sc),icR,B.colorPositive,IC);
+      // Headline — to the right of icon
+      DT((c.headline||"").toUpperCase(),textX,bY+Math.round(40*sc),textW,Math.round(50*sc),Math.round(40*sc),"700","left","#fff",1);
+      // Body — aligned with headline
+      DT(c.body||"",textX,bY+Math.round(100*sc),textW,bH-Math.round(120*sc),Math.round(34*sc),"500","left","rgba(255,255,255,0.72)",3);
       ctx.restore();
     }
   }
@@ -1810,28 +1840,29 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
   ctx.restore();
 
   if(style==="bar"){
+    const lx=PAD+Math.round(28*sc); // left x for all text
     // Thick accent bar on left — grows down
     const barH=H*ENT;
     ctx.fillStyle=B.colorAccent; ctx.fillRect(0,(H-barH)/2,Math.round(14*sc),barH);
-    // Series name — small, top
+    // Series name — small, upper area
     ctx.save(); ctx.globalAlpha=TXT*0.55;
-    ctx.font=`600 ${Math.round(36*sc)}px "${FF}",Arial,sans-serif`;
+    ctx.font=`600 ${Math.round(32*sc)}px "${FF}",Arial,sans-serif`;
     ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    ctx.fillText((B.titleCardSeriesName||"").toUpperCase(), PAD+Math.round(28*sc), H*0.38);
+    ctx.fillText((B.titleCardSeriesName||"").toUpperCase(), lx, H*0.30);
     ctx.restore();
-    // Title — big
+    // Title — big, starts below series name with clear gap
     ctx.save(); ctx.globalAlpha=TXT; ctx.translate((1-TXT)*-50*sc,0);
-    drawText(ctx,B.titleCardTitle||"EPISODE TITLE",PAD+Math.round(28*sc),H*0.44,W-PAD*2,H*0.22,Math.round(110*sc),"900","left","#fff",2,FF);
+    drawText(ctx,B.titleCardTitle||"EPISODE TITLE",lx,H*0.36,W-PAD*2-Math.round(28*sc),H*0.26,Math.round(100*sc),"900","left","#fff",2,FF);
     ctx.restore();
-    // Subtitle
-    if(B.titleCardSubtitle){
-      ctx.save(); ctx.globalAlpha=TXT*0.6; ctx.translate((1-TXT)*-30*sc,0);
-      drawText(ctx,B.titleCardSubtitle,PAD+Math.round(28*sc),H*0.68,W-PAD*2,H*0.12,Math.round(44*sc),"500","left","rgba(255,255,255,0.8)",1,FF);
-      ctx.restore();
-    }
     // Divider line grows right
     ctx.strokeStyle=B.colorAccent; ctx.lineWidth=Math.round(3*sc);
-    ctx.beginPath(); ctx.moveTo(PAD+Math.round(28*sc),H*0.66); ctx.lineTo(PAD+Math.round(28*sc)+(W*0.35)*ENT,H*0.66); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lx,H*0.68); ctx.lineTo(lx+(W*0.35)*ENT,H*0.68); ctx.stroke();
+    // Subtitle — below divider
+    if(B.titleCardSubtitle){
+      ctx.save(); ctx.globalAlpha=TXT*0.6; ctx.translate((1-TXT)*-30*sc,0);
+      drawText(ctx,B.titleCardSubtitle,lx,H*0.72,W-PAD*2-Math.round(28*sc),H*0.12,Math.round(40*sc),"500","left","rgba(255,255,255,0.8)",1,FF);
+      ctx.restore();
+    }
   }
   else if(style==="centred"){
     // Large ghost circle
