@@ -1109,7 +1109,7 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
           style={{...sm,background:regenLoading?"rgba(255,255,255,0.05)":"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",cursor:regenLoading?"wait":"pointer"}}>
           {regenLoading?"⏳ Generating...":"🔄 Regenerate with AI"}
         </button>
-        <button onClick={()=>{onUpdateContent(localContent);onUpdateMeta({templateHint:tplHint,prompt});onClose();}}
+        <button onClick={()=>{onUpdateContent(localContent,{templateHint:tplHint,prompt});onClose();}}
           style={{...sm,background:"rgba(42,157,143,0.15)",border:"1px solid rgba(42,157,143,0.3)"}}>
           💾 Save edits
         </button>
@@ -1230,9 +1230,9 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setRegenLoading(false);
   };
 
-  const updateGraphicContent=(i,changes)=>{
+  const updateGraphicContent=(i,changes,metaChanges)=>{
     const ng=[...graphics];
-    ng[i]={...ng[i],content:{...ng[i].content,...changes}};
+    ng[i]={...ng[i],...(metaChanges||{}),content:{...ng[i].content,...changes}};
     updateProject({graphics:ng,previews:{...previews,[i]:undefined}});
     setTimeout(()=>{drawGraphic(cvs.current,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));},100);
   };
@@ -1319,7 +1319,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
               previewSrc={previews[editingIdx]}
               onRefreshPreview={()=>{const g=project.graphics[editingIdx];if(g)doPreview(g,editingIdx);}}
               onRegenerate={(prompt,tplHint)=>regenerateSegment(editingIdx,prompt,tplHint)}
-              onUpdateContent={(changes)=>updateGraphicContent(editingIdx,changes)}
+              onUpdateContent={(changes,meta)=>updateGraphicContent(editingIdx,changes,meta)}
               onUpdateMeta={(changes)=>updateGraphicMeta(editingIdx,changes)}
               regenLoading={regenLoading}
               onClose={()=>setEditingIdx(null)}
