@@ -1631,7 +1631,7 @@ function TitleCardPanel({project, brand, updateProject}){
   // Merged brand: brand defaults + project overrides
   const effectiveBrand = isOverriding ? {...brand, ...override} : brand;
 
-  const setField = k => v => updateProject({titleCardOverride: {...(override||{}), [k]:v}});
+  const setField = k => v => updateProject(prev=>({titleCardOverride: {...(prev.titleCardOverride||{}), [k]:v}}));
   const enableOverride = () => updateProject({titleCardOverride:{
     titleCardTitle: brand.titleCardTitle||"",
     titleCardSeriesName: brand.titleCardSeriesName||"",
@@ -1849,26 +1849,31 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
 
   if(style==="bar"){
     const lx=PAD+Math.round(28*sc); // left x for all text
+    const maxTxtW=W-PAD*2-Math.round(28*sc);
     // Thick accent bar on left — grows down
     const barH=H*ENT;
     ctx.fillStyle=B.colorAccent; ctx.fillRect(0,(H-barH)/2,Math.round(14*sc),barH);
-    // Series name — small, upper area
-    ctx.save(); ctx.globalAlpha=TXT*0.55;
-    ctx.font=`600 ${Math.round(32*sc)}px "${FF}",Arial,sans-serif`;
+
+    // Series name — small label at top
+    ctx.save(); ctx.globalAlpha=TXT*0.5;
+    ctx.font=`600 ${Math.round(28*sc)}px "${FF}",Arial,sans-serif`;
     ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    ctx.fillText((B.titleCardSeriesName||"").toUpperCase(), lx, H*0.30);
+    ctx.fillText((B.titleCardSeriesName||"").toUpperCase(), lx, H*0.20);
     ctx.restore();
-    // Title — big, starts below series name with clear gap
+
+    // Title — big, well below series name (H*0.26 start, up to H*0.30 height)
     ctx.save(); ctx.globalAlpha=TXT; ctx.translate((1-TXT)*-50*sc,0);
-    drawText(ctx,B.titleCardTitle||"EPISODE TITLE",lx,H*0.36,W-PAD*2-Math.round(28*sc),H*0.26,Math.round(100*sc),"900","left","#fff",2,FF);
+    drawText(ctx,B.titleCardTitle||"EPISODE TITLE",lx,H*0.26,maxTxtW,H*0.30,Math.round(96*sc),"900","left","#fff",2,FF);
     ctx.restore();
-    // Divider line grows right
+
+    // Divider line — at 62%
     ctx.strokeStyle=B.colorAccent; ctx.lineWidth=Math.round(3*sc);
-    ctx.beginPath(); ctx.moveTo(lx,H*0.68); ctx.lineTo(lx+(W*0.35)*ENT,H*0.68); ctx.stroke();
-    // Subtitle — below divider
+    ctx.beginPath(); ctx.moveTo(lx,H*0.62); ctx.lineTo(lx+(W*0.35)*ENT,H*0.62); ctx.stroke();
+
+    // Subtitle — below divider at 66%
     if(B.titleCardSubtitle){
       ctx.save(); ctx.globalAlpha=TXT*0.6; ctx.translate((1-TXT)*-30*sc,0);
-      drawText(ctx,B.titleCardSubtitle,lx,H*0.72,W-PAD*2-Math.round(28*sc),H*0.12,Math.round(40*sc),"500","left","rgba(255,255,255,0.8)",1,FF);
+      drawText(ctx,B.titleCardSubtitle,lx,H*0.66,maxTxtW,H*0.16,Math.round(36*sc),"500","left","rgba(255,255,255,0.8)",1,FF);
       ctx.restore();
     }
   }
