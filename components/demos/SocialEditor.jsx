@@ -1032,15 +1032,24 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
           :<div style={{...emptyState({padding:`${DS.xl}px 0`,fontSize:DS.fsSm}),background:DS.bgCard,borderRadius:DS.rSm,border:`1px solid ${DS.borderSubtle}`}}>No preview yet</div>}
         {onRefreshPreview&&<button style={btnIcon({position:"absolute",top:DS.sm,right:DS.sm,background:"rgba(0,0,0,0.6)",border:"none"})} onClick={onRefreshPreview} title="Refresh preview">🔄</button>}
       </div>
-      {/* Template selector */}
-      <div style={{display:"flex",gap:DS.sm,alignItems:"center",marginBottom:DS.md,flexWrap:"wrap"}}>
+      {/* Template + type selector */}
+      <div style={{display:"flex",gap:DS.sm,alignItems:"center",marginBottom:DS.sm,flexWrap:"wrap"}}>
         <label style={label({marginBottom:0})}>TEMPLATE</label>
         <select value={tplHint} onChange={e=>setTplHint(e.target.value)}
           style={{background:DS.bgButton,border:`1px solid ${DS.borderMedium}`,borderRadius:DS.rSm,padding:"6px 10px",color:DS.textPrimary,fontSize:DS.fsSm,fontFamily:"inherit",outline:"none"}}>
           <option value="any" style={{background:"#1a2332"}}>Any (AI decides)</option>
           {Object.entries(TMPL).map(([k,v])=><option key={k} value={k} style={{background:"#1a2332"}}>{v.label} ({v.type})</option>)}
         </select>
-        <span style={{fontSize:10,opacity:0.35,marginLeft:4}}>{(TMPL[tplHint]||{}).type==="overlay"?"⬜ Overlay":"⬛ Fullscreen"}</span>
+      </div>
+      {/* Render type: fullscreen vs overlay (transparent) */}
+      <div style={{display:"flex",gap:DS.sm,marginBottom:DS.md}}>
+        <label style={label({marginBottom:0,marginTop:3})}>RENDER</label>
+        {[["fullscreen","⬛ Fullscreen","Solid background"],["overlay","⬜ Overlay","Transparent PNG"]].map(([type,icon,hint])=>{
+          const currentType=g.typeOverride||(TMPL[g.template]||{}).type||"fullscreen";
+          const active=currentType===type;
+          return <button key={type} style={btn({background:active?DS.positive:DS.bgInput,border:`1px solid ${active?DS.positiveBorder:DS.borderSubtle}`,fontSize:11,padding:"6px 12px"})}
+            onClick={()=>onUpdateMeta({typeOverride:type})} title={hint}>{icon}</button>;
+        })}
       </div>
 
       {/* Prompt editor */}
