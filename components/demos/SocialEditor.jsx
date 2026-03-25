@@ -1604,16 +1604,17 @@ function ProjectView({project,brand,updateProject,onBack}){
     <div style={S.app}>
       {/* Top bar */}
       <div style={S.topbar}>
-        <button style={{...S.sm,background:"transparent",border:"none",opacity:0.5}} onClick={onBack}>← Back</button>
-        <div style={{width:1,height:26,background:"rgba(255,255,255,0.15)",margin:"0 8px"}}/>
-        <div style={{fontWeight:900,fontSize:15,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
-        <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-          {/* Preview ratio toggle */}
-          <div style={{display:"flex",gap:4}}>
-            {Object.keys(RATIOS).map(k=>(
-              <button key={k} style={{...S.sm,background:previewRatio===k?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.08)",fontSize:11,padding:"5px 9px"}} onClick={()=>setPreviewRatio(k)}>{k}</button>
-            ))}
-          </div>
+        <button style={btn({background:"transparent",border:"none",opacity:0.5,padding:"6px 10px"})} onClick={onBack}>← Back</button>
+        <div style={{width:1,height:24,background:DS.borderMedium,margin:`0 ${DS.sm}px`}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:800,fontSize:DS.fsLg,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
+          <div style={{fontSize:DS.fsXs,color:DS.textMuted,marginTop:1}}>{brand.name}</div>
+        </div>
+        <div style={{display:"flex",gap:DS.xs,alignItems:"center",flexShrink:0}}>
+          <span style={{fontSize:DS.fsXs,color:DS.textMuted,marginRight:DS.xs}}>Preview</span>
+          {Object.keys(RATIOS).map(k=>(
+            <button key={k} style={btn({background:previewRatio===k?DS.borderActive:DS.bgButton,fontSize:11,padding:"4px 8px",fontWeight:previewRatio===k?700:500})} onClick={()=>setPreviewRatio(k)}>{k}</button>
+          ))}
         </div>
       </div>
 
@@ -2845,67 +2846,78 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
           </div>
         </div>
       )}
-      <div style={{maxWidth:880,margin:"0 auto",padding:`${DS.xl+4}px ${DS.lg+2}px`,display:"grid",gridTemplateColumns:"260px 1fr",gap:DS.xl}}>
+      <div style={{maxWidth:920,margin:"0 auto",padding:`${DS.xl+4}px ${DS.xl}px`,display:"grid",gridTemplateColumns:"240px 1fr",gap:DS.xxl}}>
         {/* Brands sidebar */}
         <div>
-          <div style={sectionHead()}>BRANDS</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:DS.lg}}>
+            <div style={sectionHead({marginBottom:0})}>BRANDS</div>
+            <button style={btnIcon({fontSize:DS.fsXs,padding:"4px 10px"})} onClick={onNewBrand}>+ New</button>
+          </div>
           {brands.map(b=>{
             const sel=selBrandId===b.id;
+            const projCount=projects.filter(p=>p.brandId===b.id).length;
             return(
-            <div key={b.id} style={{background:sel?DS.bgCardHover:DS.bgCard,border:`1px solid ${sel?DS.borderActive:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md-1}px ${DS.md+1}px`,marginBottom:DS.sm-1,cursor:"pointer",display:"flex",alignItems:"center",gap:DS.md,transition:"all 0.15s"}} onClick={()=>setSelBrandId(b.id)}>
-              <div style={{display:"flex",gap:DS.xs,flexShrink:0}}>
-                {[b.colorAccent,b.colorPrimary,b.colorPositive].map((c,i)=><div key={i} style={{width:10,height:10,borderRadius:2,background:c}}/>)}
+            <div key={b.id} style={{background:sel?DS.bgCardHover:"transparent",border:`1px solid ${sel?DS.borderActive:"transparent"}`,borderRadius:DS.rMd,padding:`${DS.md}px`,marginBottom:2,cursor:"pointer",display:"flex",alignItems:"center",gap:DS.sm+2,transition:"all 0.15s"}} onClick={()=>setSelBrandId(b.id)}>
+              <div style={{display:"flex",gap:3,flexShrink:0}}>
+                {[b.colorAccent,b.colorPrimary].map((c,i)=><div key={i} style={{width:8,height:8,borderRadius:2,background:c}}/>)}
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:DS.fsMd,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</div>
-                <div style={{fontSize:DS.fsXs,color:DS.textMuted,fontFamily:`"${b.fontFamily}",Arial,sans-serif`}}>{b.fontFamily}</div>
+                <div style={{fontWeight:sel?700:600,fontSize:DS.fsMd,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:sel?DS.textPrimary:DS.textSecondary}}>{b.name}</div>
+                <div style={{fontSize:10,color:DS.textMuted}}>{projCount} project{projCount!==1?"s":""}</div>
               </div>
-              {templateCountForBrand(b.id)>0&&(
-                <span style={{fontSize:9,fontWeight:700,background:DS.positive,border:`1px solid ${DS.positiveBorder}`,color:DS.green,padding:"2px 6px",borderRadius:DS.xs,flexShrink:0}}>{templateCountForBrand(b.id)} tpl{templateCountForBrand(b.id)!==1?"s":""}</span>
-              )}
-              <button style={btnIcon()} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>
-              <button style={btnIcon({opacity:0.4})} onClick={e=>{e.stopPropagation();confirm(`Delete brand "${b.name}"? All its projects will also be deleted.`,()=>{onDeleteBrand(b.id);closeConfirm();});}} title="Delete brand">🗑</button>
+              {sel&&<div style={{display:"flex",gap:2}}>
+                <button style={btnIcon({background:"transparent",border:"none",opacity:0.5})} onClick={e=>{e.stopPropagation();onEditBrand(b.id);}}>✏</button>
+                <button style={btnIcon({background:"transparent",border:"none",opacity:0.3})} onClick={e=>{e.stopPropagation();confirm(`Delete brand "${b.name}"? All its projects will also be deleted.`,()=>{onDeleteBrand(b.id);closeConfirm();});}} title="Delete brand">🗑</button>
+              </div>}
             </div>
           );})}
-          <button style={{...sm,width:"100%",marginTop:DS.xs,padding:`${DS.md}px`,textAlign:"center"}} onClick={onNewBrand}>+ New Brand</button>
         </div>
 
         {/* Projects panel */}
         <div>
           {selBrand?(
             <>
-              <div style={{display:"flex",alignItems:"center",gap:DS.md,marginBottom:DS.lg-2}}>
-                <div style={sectionHead({marginBottom:0})}>PROJECTS — {selBrand.name}</div>
-                <button style={btnIcon({fontSize:DS.fsXs})} onClick={()=>onEditBrand(selBrand.id)}>⚙ Brand</button>
+              <div style={{display:"flex",alignItems:"center",gap:DS.md,marginBottom:DS.xl}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:800,fontSize:DS.fsLg+3,marginBottom:2}}>{selBrand.name}</div>
+                  <div style={{fontSize:DS.fsSm,color:DS.textMuted}}>{brandProjects.length} project{brandProjects.length!==1?"s":""} · {selBrand.fontFamily}</div>
+                </div>
+                <button style={btn({fontSize:11})} onClick={()=>onEditBrand(selBrand.id)}>⚙ Brand Settings</button>
               </div>
-              {/* New project */}
-              <div style={card({marginBottom:DS.lg-2})}>
-                <div style={sectionHead({fontSize:DS.fsSm})}>NEW PROJECT</div>
-                <input value={newProjName} onChange={e=>setNewProjName(e.target.value)} placeholder="Project name — e.g. EP01 Rent Increase" style={inp} onKeyDown={e=>e.key==="Enter"&&newProjName.trim()&&(onNewProject(selBrandId,newProjName.trim()),setNewProjName(""))}/>
-                <button disabled={!newProjName.trim()} style={btnCta({width:"100%",marginTop:DS.md,opacity:newProjName.trim()?1:0.4,cursor:newProjName.trim()?"pointer":"not-allowed",background:newProjName.trim()?DS.accent:DS.bgButton})}
+              {/* New project — inline form */}
+              <div style={{display:"flex",gap:DS.sm,marginBottom:DS.xl,alignItems:"center"}}>
+                <input value={newProjName} onChange={e=>setNewProjName(e.target.value)} placeholder="New project name..." style={inputS({flex:1,width:"auto"})} onKeyDown={e=>e.key==="Enter"&&newProjName.trim()&&(onNewProject(selBrandId,newProjName.trim()),setNewProjName(""))}/>
+                <button disabled={!newProjName.trim()} style={btnCta({opacity:newProjName.trim()?1:0.4,cursor:newProjName.trim()?"pointer":"not-allowed",background:newProjName.trim()?DS.accent:DS.bgButton,whiteSpace:"nowrap"})}
                   onClick={()=>{if(newProjName.trim()){onNewProject(selBrandId,newProjName.trim());setNewProjName("");}}}>
-                  Create Project →
+                  + Create
                 </button>
               </div>
               {/* Project list */}
-              {brandProjects.length>0?[...brandProjects].reverse().map(p=>(
-                <div key={p.id} style={card({padding:`${DS.md+1}px ${DS.lg}px`,marginBottom:DS.sm,display:"flex",alignItems:"center",gap:DS.md,cursor:"pointer",transition:"background 0.15s"})} onClick={()=>onOpenProject(p.id)}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:700,fontSize:14,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
-                    <div style={{fontSize:11,color:DS.textMuted,display:"flex",gap:DS.md,flexWrap:"wrap"}}>
-                      {p.subtitles?.length>0&&<span>📄 {p.subtitles.length} lines</span>}
-                      {p.graphics?.length>0&&<span>🎨 {p.graphics.length} graphics</span>}
-                      <span>{new Date(p.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span>
+              {brandProjects.length>0?[...brandProjects].reverse().map(p=>{
+                const hasContent=p.subtitles?.length>0;
+                const hasGraphics=p.graphics?.length>0;
+                return(
+                <div key={p.id} style={card({padding:`${DS.lg}px`,marginBottom:DS.sm+2,cursor:"pointer",transition:"border-color 0.15s"})} onClick={()=>onOpenProject(p.id)}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:DS.lg}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:700,fontSize:DS.fsLg,marginBottom:DS.xs+2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                      <div style={{fontSize:DS.fsSm-2,color:DS.textMuted,display:"flex",gap:DS.lg,flexWrap:"wrap",alignItems:"center"}}>
+                        {hasContent&&<span style={{display:"flex",alignItems:"center",gap:4}}>📄 {p.subtitles.length} lines</span>}
+                        {hasGraphics&&<span style={{display:"flex",alignItems:"center",gap:4}}>🎨 {p.graphics.length} graphics</span>}
+                        {!hasContent&&!hasGraphics&&<span>No content yet</span>}
+                        <span style={{color:"rgba(255,255,255,0.2)"}}>·</span>
+                        <span>{new Date(p.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</span>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:DS.sm,alignItems:"center",flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                      <button style={btn({fontSize:DS.fsSm})} onClick={()=>onOpenProject(p.id)}>Open →</button>
+                      <button style={btnIcon({opacity:0.35})} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})}>🗑</button>
                     </div>
                   </div>
-                  <div style={{display:"flex",gap:DS.sm-2}} onClick={e=>e.stopPropagation()}>
-                    <button style={btnCta({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>onOpenProject(p.id)}>Open →</button>
-                    <button style={btnIcon({opacity:0.45})} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})}>🗑</button>
-                  </div>
                 </div>
-              )):<div style={emptyState({padding:`${DS.xxl}px 0`})}>No projects yet</div>}
+              );}):<div style={emptyState({padding:`${DS.xxl+16}px 0`})}><div style={{fontSize:DS.fsXl,marginBottom:DS.sm}}>No projects yet</div><div style={{fontSize:DS.fsMd}}>Create your first project above</div></div>}
             </>
-          ):<div style={emptyState({padding:`60px 0`})}><div style={{fontSize:36,marginBottom:DS.md}}>←</div><div style={{fontSize:14}}>Select or create a brand to get started</div></div>}
+          ):<div style={emptyState({padding:`80px 0`})}><div style={{fontSize:DS.fsXl,marginBottom:DS.sm}}>Select a brand</div><div style={{fontSize:DS.fsMd}}>Choose a brand from the sidebar or create a new one</div></div>}
         </div>
       </div>
     </div>
