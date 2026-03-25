@@ -1224,7 +1224,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                     <button style={{...sm,background:editingIdx===i?DS.borderMedium:undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)} title="Edit prompt & content">✏</button>
                   </div>
                 </div>
-                {previews[i]&&!showAnim&&editingIdx!==i&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
+                {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
                 {showAnim&&<GraphicAnimPreview g={g} brand={brand} ratio={previewRatio}/>}
               </div>
             );
