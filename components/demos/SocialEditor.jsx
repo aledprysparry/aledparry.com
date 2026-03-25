@@ -2797,14 +2797,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
       <div style={{background:"#1D3557",padding:"14px 26px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid rgba(0,0,0,0.3)"}}>
         <div style={{width:6,height:38,background:"#E63946",borderRadius:4,flexShrink:0}}/>
         <div><div style={{fontWeight:900,fontSize:20,letterSpacing:0.5}}>INFOGRAPHIC STUDIO</div><div style={{fontSize:11,opacity:0.38,marginTop:1}}>Graphics · Captions · Multi-ratio Premiere export</div></div>
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
-          <div style={{fontSize:11,opacity:0.35,fontStyle:"italic"}}>Sign-in coming soon</div>
-          <button style={{...sm,opacity:0.45,cursor:"not-allowed",background:"rgba(255,255,255,0.05)"}}>🔒 Sign in with Google</button>
-          <button style={{...sm,background:hasApiKey?"rgba(42,157,143,0.2)":"rgba(230,57,70,0.2)",border:`1px solid ${hasApiKey?"rgba(42,157,143,0.5)":"rgba(230,57,70,0.5)"}`}}
-            onClick={()=>setShowApiPanel(p=>!p)}>
-            {hasApiKey?"✓ API Key":"⚠ Set API Key"}
-          </button>
-        </div>
+        <div style={{marginLeft:"auto"}}></div>
       </div>
 
       {/* API Key panel */}
