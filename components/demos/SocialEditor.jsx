@@ -435,8 +435,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
     ctx.fillStyle=badgeBg;rrPath(ctx,W/2-bw/2-24*sc,H*0.44,bw+48*sc,64*sc,32*sc);ctx.fill();
     ctx.fillStyle=badgeTxt;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(badge,W/2,H*0.44+46*sc);ctx.restore();
-    // Body text — one line, larger font
-    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.56,W-PAD*2,H*0.14,Math.round(78*sc),"800","center",txtCol,1);ctx.restore();
+    // Body text — prefer single line, allow 2 if needed
+    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.55,W-PAD*1.5,H*0.20,Math.round(68*sc),"800","center",txtCol,2);ctx.restore();
     stamp(ctx,B,W,H);
   }
   else if(t==="title"){
