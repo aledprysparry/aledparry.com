@@ -1006,7 +1006,13 @@ function AddGraphicModal({brand, onAdd, onClose}){
 //  SEGMENT EDIT PANEL — per-graphic prompt, template, and content editor
 // ═══════════════════════════════════════════════════════════════
 function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMeta,regenLoading,onClose,previewSrc,onRefreshPreview}){
-  const [prompt,setPrompt]=useState(g.prompt||"");
+  // Build fallback prompt from content if g.prompt is empty (legacy data)
+  const initPrompt=g.prompt||(()=>{
+    const meta=TMPL[g.template]||{label:g.template};
+    const parts=Object.entries(g.content||{}).filter(([,v])=>v).map(([k,v])=>`${k}: ${v}`).join(", ");
+    return `Generate a "${meta.label||g.template}" graphic at ${g.timestamp||"00:00:00"}. Content: ${parts}`;
+  })();
+  const [prompt,setPrompt]=useState(initPrompt);
   const [tplHint,setTplHint]=useState(g.templateHint||g.template||"any");
   const [localContent,setLocalContent]=useState({...g.content});
   const fields=TMPL_FIELDS[tplHint]||TMPL_FIELDS[g.template]||[];
