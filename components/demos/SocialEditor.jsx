@@ -240,14 +240,22 @@ const BRAND_PRESETS = {
 
 // ── Logo image cache (avoids reloading on every frame) ──────
 const IMG_CACHE = {};
+let _imgLoadListeners=[];
+function onImgLoad(fn){_imgLoadListeners.push(fn);}
 function getCachedImage(src) {
   if (!src) return null;
   if (IMG_CACHE[src]) return IMG_CACHE[src].complete ? IMG_CACHE[src] : null;
   const img = new Image();
-  img.crossOrigin = "anonymous"; // needed for URL-based images on canvas
+  img.crossOrigin = "anonymous";
+  img.onload=()=>_imgLoadListeners.forEach(fn=>fn());
   img.src = src;
   IMG_CACHE[src] = img;
-  return null; // available next frame once decoded
+  return null;
+}
+// Preload logo images so they're ready for first preview render
+function preloadBrandLogos(brand){
+  if(brand?.logoDataUrl)getCachedImage(brand.logoDataUrl);
+  if(brand?.logoDataUrlLight)getCachedImage(brand.logoDataUrlLight);
 }
 
 const BS = "infostudio_brands_v1";
@@ -562,6 +570,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   else if(t==="key_point"){
     // Forest green background
     ctx.fillStyle=B.colorForest||B.colorPrimary;ctx.fillRect(0,0,W,H);
+    // Wavy texture (matching myth/reality)
+    ctx.save();ctx.globalAlpha=0.06;ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
+    for(let i=0;i<5;i++){const off=i*W*0.22;ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
+    ctx.restore();
     const lx=PAD;
     const icSz=Math.round(isPortrait?44*sc:40*sc);
     const icSc=easeBack(clamp(p*2,0,1));
@@ -3316,6 +3328,23 @@ function App(){
 
   const activeBrand=brands.find(b=>b.id===projects.find(p=>p.id===activeProjectId)?.brandId)||brands[0];
   const activeProject=projects.find(p=>p.id===activeProjectId);
+
+  // Preload logo images so they're ready for static previews
+  useEffect(()=>{
+    if(activeBrand){
+      preloadBrandLogos(activeBrand);
+      // Re-render all previews when logos finish loading
+      const handler=()=>{
+        if(activeProject?.graphics?.length){
+          const batch={};const canvas=document.createElement("canvas");
+          activeProject.graphics.forEach((g,i)=>{drawGraphic(canvas,g,activeBrand,activeProject.ratio||"16:9",1);batch[i]=canvas.toDataURL("image/png");});
+          setProjects(ps=>ps.map(p=>p.id===activeProjectId?{...p,previews:{...(p.previews||{}),...batch}}:p));
+        }
+      };
+      onImgLoad(handler);
+      return()=>{_imgLoadListeners=_imgLoadListeners.filter(f=>f!==handler);};
+    }
+  },[activeBrand?.id]);
 
   const updateProject=useCallback((changes)=>{
     setProjects(ps=>ps.map(p=>{
