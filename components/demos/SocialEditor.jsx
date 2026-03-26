@@ -695,8 +695,11 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.strokeStyle=B.colorPrimary+"33";ctx.lineWidth=Math.round(4*sc);ctx.beginPath();ctx.moveTo(tx0,ty);ctx.lineTo(tx0+txW*ENT,ty);ctx.stroke();
     const markers=c.markers||["6 months","12 months"];
     markers.forEach((m,i)=>{
-      const frac=i/(Math.max(markers.length-1,1));if(frac>ENT+0.01)return;
-      const mx=tx0+txW*frac,ds=AP.easeBackFn(clamp((ENT-frac)*4,0,1));
+      const frac=i/(Math.max(markers.length-1,1));
+      // Compress frac into 0–0.7 range so last marker finishes animating well before ENT=1
+      const stagger=frac*0.7;
+      if(stagger>ENT+0.01)return;
+      const mx=tx0+txW*frac,ds=AP.easeBackFn(clamp((ENT-stagger)*3,0,1));
       ctx.save();ctx.translate(mx,ty);ctx.scale(ds,ds);ctx.fillStyle=B.colorAccent;ctx.beginPath();ctx.arc(0,0,11*sc,0,Math.PI*2);ctx.fill();ctx.restore();
       ctx.fillStyle=B.colorPrimary;ctx.font=`500 ${Math.round(28*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.globalAlpha=ENT*0.9;ctx.fillText(m,mx,ty+46*sc);
     });
@@ -745,37 +748,44 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   else if(t==="endboard"){
     // Professional closing slide — teal background, large centered logo, CTA text
     ctx.save();ctx.globalAlpha=ENT;
-    // Full teal background
     ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
-    // Animated wavy lines
     drawWaves(ctx,W,H,B.colorWarm||"#f0e1d3",0.06,p);
+    // Adaptive layout: portrait pushes content up, landscape centres it
+    const logoFrac=isPortrait?0.35:0.28;
+    const sepFrac=isPortrait?0.50:0.46;
+    const ctaFrac=isPortrait?0.55:0.52;
+    const bodyFrac=isPortrait?0.12:0.13;
+    const handleFrac=isPortrait?0.82:0.88;
+    const logoSizeFrac=isPortrait?0.45:0.28;
+    const headSz=isPortrait?Math.round(60*sc):Math.round(52*sc);
+    const bodySz=isPortrait?Math.round(34*sc):Math.round(30*sc);
     // Centered logo — large
     const logoSrc=B.logoDataUrlLight||B.logoDataUrl;
     if(logoSrc){
       const img=getCachedImage(logoSrc);
       if(img){
-        const logoW=Math.round(W*0.28);
+        const logoW=Math.round(W*logoSizeFrac);
         const logoH=Math.round(logoW*(img.naturalHeight/img.naturalWidth));
-        const lx=(W-logoW)/2,ly=H*0.28-logoH/2;
+        const lx=(W-logoW)/2,ly=H*logoFrac-logoH/2;
         const logoScale=AP.easeBackFn(clamp(ENT*1.5,0,1));
         ctx.save();ctx.globalAlpha=ENT;ctx.translate(lx+logoW/2,ly+logoH/2);ctx.scale(logoScale,logoScale);ctx.drawImage(img,-logoW/2,-logoH/2,logoW,logoH);ctx.restore();
       }
     }
     // Separator — salmon accent line
     const sepW=Math.round(120*sc*ENT);
-    ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-sepW/2,H*0.46,sepW,Math.round(3*sc));
+    ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-sepW/2,H*sepFrac,sepW,Math.round(3*sc));
     // CTA headline
-    const ctaY=H*0.52;
-    DT(c.headline||"Thanks for watching",W/2,ctaY,W*0.7,H*0.12,Math.round(52*sc),"700","center","#fff",2,FFS);
-    // Body text — smaller, muted white
+    const ctaY=H*ctaFrac;
+    DT(c.headline||"Thanks for watching",W/2,ctaY,W*0.7,H*0.12,headSz,"700","center","#fff",2,FFS);
+    // Body text
     if(c.body){
-      DT(c.body,W/2,ctaY+H*0.13,W*0.6,H*0.10,Math.round(30*sc),"400","center","rgba(255,255,255,0.7)",2);
+      DT(c.body,W/2,ctaY+H*bodyFrac,W*0.6,H*0.10,bodySz,"400","center","rgba(255,255,255,0.7)",2);
     }
     // Social handle / website
     if(c.handle){
       ctx.font=`500 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
       ctx.fillStyle="rgba(255,255,255,0.5)";ctx.textAlign="center";ctx.textBaseline="alphabetic";
-      ctx.fillText(c.handle,W/2,H*0.88);
+      ctx.fillText(c.handle,W/2,H*handleFrac);
     }
     ctx.restore();
   }
