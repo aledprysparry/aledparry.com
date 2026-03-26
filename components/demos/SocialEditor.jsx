@@ -1638,6 +1638,7 @@ function ExportTab({project,brand,updateProject}){
   const [phase,setPhase]=useState("");
   const [prog,setProg]=useState({done:0,total:0,pct:0});
   const [captionMode,setCaptionMode]=useState("composite"); // composite | individual
+  const [includeCaptions,setIncludeCaptions]=useState(false);
   const [gfxMode,setGfxMode]=useState("both"); // png | webm | both
   const cvs=useRef(document.createElement("canvas"));
 
@@ -1655,7 +1656,7 @@ function ExportTab({project,brand,updateProject}){
     try{
     const pn=project.name.replace(/\s+/g,"_");
     // total steps: gfx (PNGs and/or WebMs) + captions per ratio
-    const capSteps = captionMode==="composite" ? 1 : subtitles.length;
+    const capSteps = includeCaptions ? (captionMode==="composite" ? 1 : subtitles.length) : 0;
     const gfxSteps = gfxMode==="both" ? selectedGfx.length*2 : selectedGfx.length;
     let totalSteps=Math.max(1,(gfxSteps+capSteps)*selectedRatios.length);
     setProg({done:0,total:totalSteps,pct:0});
@@ -1691,8 +1692,8 @@ function ExportTab({project,brand,updateProject}){
           await new Promise(r=>setTimeout(r,200));
         }
       }
-      // Captions
-      if(captionMode==="composite"){
+      // Captions (only if opted in)
+      if(includeCaptions&&captionMode==="composite"){
         setPhase(`${ratio} — rendering composite caption video…`);
         const blob=await recordCompositeCaption(subtitles,brand,captionStyle,ratio,pct=>{
           setProg(p=>({...p,pct:(done/totalSteps)+(pct/totalSteps)}));
@@ -1702,7 +1703,7 @@ function ExportTab({project,brand,updateProject}){
         // Also export Premiere XML so editor knows clip is one file starting at 00:00
         const xml=generatePremiereXML(subtitles,ratio,prefix);
         dlText(xml,`${prefix}${pn}_captions_sequence.xml`);
-      } else {
+      } else if(includeCaptions){
         setPhase(`${ratio} — rendering individual caption WebMs…`);
         for(let i=0;i<subtitles.length;i++){
           const blob=await recordCaption(subtitles[i],brand,captionStyle,ratio);
@@ -1772,20 +1773,26 @@ function ExportTab({project,brand,updateProject}){
         </div>
       )}
 
-      {/* Caption export mode */}
+      {/* Caption export — opt-in checkbox */}
       {subtitles.length>0&&(
         <div style={{marginBottom:DS.lg+2}}>
-          <div style={sectionHead()}>CAPTION EXPORT MODE</div>
-          <div style={{display:"flex",gap:8}}>
-            <button style={{flex:1,background:captionMode==="composite"?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.05)",border:`1px solid ${captionMode==="composite"?"#2A9D8F":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"12px",cursor:"pointer",color:"#fff",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setCaptionMode("composite")}>
-              <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>⬛ Composite WebM</div>
-              <div style={{fontSize:11,opacity:0.55,lineHeight:1.4}}>One transparent video the full length of your edit. Drop on V4, done.</div>
-            </button>
-            <button style={{flex:1,background:captionMode==="individual"?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.05)",border:`1px solid ${captionMode==="individual"?"#2A9D8F":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"12px",cursor:"pointer",color:"#fff",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setCaptionMode("individual")}>
-              <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>📄 Individual WebMs</div>
-              <div style={{fontSize:11,opacity:0.55,lineHeight:1.4}}>{subtitles.length} separate files. Use the XML to auto-place in Premiere.</div>
-            </button>
+          <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 0"}} onClick={()=>setIncludeCaptions(v=>!v)}>
+            <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${includeCaptions?brand.colorPositive||"#2A9D8F":"rgba(255,255,255,0.18)"}`,background:includeCaptions?brand.colorPositive||"#2A9D8F":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{includeCaptions&&"✓"}</div>
+            <span style={{fontWeight:700,fontSize:13}}>Include Captions</span>
+            <span style={{fontSize:11,opacity:0.45}}>{subtitles.length} lines</span>
           </div>
+          {includeCaptions&&(
+            <div style={{display:"flex",gap:8,marginTop:4}}>
+              <button style={{flex:1,background:captionMode==="composite"?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.05)",border:`1px solid ${captionMode==="composite"?"#2A9D8F":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"12px",cursor:"pointer",color:"#fff",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setCaptionMode("composite")}>
+                <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>⬛ Composite WebM</div>
+                <div style={{fontSize:11,opacity:0.55,lineHeight:1.4}}>One transparent video. Drop on V4, done.</div>
+              </button>
+              <button style={{flex:1,background:captionMode==="individual"?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.05)",border:`1px solid ${captionMode==="individual"?"#2A9D8F":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"12px",cursor:"pointer",color:"#fff",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setCaptionMode("individual")}>
+                <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>📄 Individual WebMs</div>
+                <div style={{fontSize:11,opacity:0.55,lineHeight:1.4}}>{subtitles.length} separate files + Premiere XML.</div>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -2025,7 +2032,7 @@ function ProjectView({project,brand,updateProject,onBack}){
 
       {/* Tab bar */}
       <div style={S.tabbar}>
-        {[["graphics","🎨 Graphics"],["captions","💬 Captions"],["export","📦 Export"]].map(([k,l])=>(
+        {[["graphics","🎨 Graphics"],["export","📦 Export"]].map(([k,l])=>(
           <button key={k} style={S.tab(tab===k)} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
@@ -2051,7 +2058,6 @@ function ProjectView({project,brand,updateProject,onBack}){
         {!hasSRT
           ?<div style={emptyState({padding:"60px 0"})}><div style={{fontSize:42,marginBottom:DS.md}}>📄</div><div style={{fontSize:DS.fsLg,fontWeight:700}}>Upload an SRT to get started</div></div>
           :tab==="graphics"?<GraphicsTab project={project} brand={brand} updateProject={updateProject} previewRatio={previewRatio}/>
-          :tab==="captions"?<CaptionsTab project={project} brand={brand} updateProject={updateProject} previewRatio={previewRatio}/>
           :<ExportTab project={project} brand={brand} updateProject={updateProject}/>
         }
       </div>
