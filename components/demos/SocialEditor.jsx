@@ -922,12 +922,14 @@ function recordGraphic(g,brand,ratio){
   return new Promise((res,rej)=>{
     const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
     const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-    const frames=Math.round(2*FPS);
+    const dur=g.duration||4;  // use graphic's duration (default 4s)
+    const frames=Math.round(dur*FPS);
+    const animFrames=Math.round(1.0*FPS); // animation completes in 1s
     const rec=new MediaRecorder(cvs.captureStream(FPS),{mimeType:MIME(),videoBitsPerSecond:8000000});
     const ch=[];rec.ondataavailable=e=>{if(e.data.size>0)ch.push(e.data);};
     rec.onstop=()=>res(new Blob(ch,{type:"video/webm"}));rec.onerror=rej;
     rec.start();let f=0;
-    const tick=()=>{drawGraphic(cvs,g,brand,ratio,clamp(f/(frames*0.35),0,1));f++;if(f<frames)requestAnimationFrame(tick);else rec.stop();};
+    const tick=()=>{drawGraphic(cvs,g,brand,ratio,clamp(f/animFrames,0,1));f++;if(f<frames)requestAnimationFrame(tick);else rec.stop();};
     requestAnimationFrame(tick);
   });
 }
