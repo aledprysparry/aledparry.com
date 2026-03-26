@@ -505,8 +505,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
     ctx.fillStyle="rgba(255,255,255,0.20)";rrPath(ctx,W/2-bw/2-20*sc,H*0.34,bw+40*sc,52*sc,26*sc);ctx.fill();
     ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,W/2,H*0.34+26*sc);ctx.restore();
-    // Body — large, centred, white
-    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.44,W-PAD*2,H*0.40,Math.round(72*sc),"700","center","#fff",4,FFS);ctx.restore();
+    // Body — large, centred, white — extra gap below badge
+    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.38,Math.round(72*sc),"700","center","#fff",4,FFS);ctx.restore();
     stamp(ctx,B,W,H,true);  // dark bg → white logo
   }
   else if(t==="title"){
