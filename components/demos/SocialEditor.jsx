@@ -1301,13 +1301,19 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   };
 
   const doPreview=useCallback((g,i)=>{
-    drawGraphic(cvs.current,g,brand,previewRatio,1);
-    setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));
+    const canvas=document.createElement("canvas");
+    drawGraphic(canvas,g,brand,previewRatio,1);
+    setPreviews(p=>({...p,[i]:canvas.toDataURL("image/png")}));
   },[brand,previewRatio]);
 
   const previewAll=useCallback(()=>{
+    // Render each graphic one at a time to avoid canvas reuse issues
     const batch={};
-    graphics.forEach((g,i)=>{drawGraphic(cvs.current,g,brand,previewRatio,1);batch[i]=cvs.current.toDataURL("image/png");});
+    const canvas=document.createElement("canvas");
+    graphics.forEach((g,i)=>{
+      drawGraphic(canvas,g,brand,previewRatio,1);
+      batch[i]=canvas.toDataURL("image/png");
+    });
     setPreviews(p=>({...p,...batch}));
   },[graphics,brand,previewRatio]);
 
@@ -1365,7 +1371,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       ng[i]={...newG,prompt,templateHint:templateHint||newG.template,typeOverride:old?.typeOverride};
       updateProject({graphics:ng,previews:{...previews,[i]:undefined}});
       // Auto-preview
-      setTimeout(()=>{drawGraphic(cvs.current,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));},100);
+      setTimeout(()=>{const c=document.createElement("canvas");drawGraphic(c,ng[i],brand,previewRatio,1);setPreviews(p=>({...p,[i]:c.toDataURL("image/png")}));},100);
     }catch(e){alert("Regeneration failed: "+e.message);}
     setRegenLoading(false);
   };
@@ -1378,7 +1384,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       updated=ng[i];
       return {graphics:ng,previews:{...(prev.previews||{}),[i]:undefined}};
     });
-    setTimeout(()=>{if(updated){drawGraphic(cvs.current,updated,brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));}},100);
+    setTimeout(()=>{if(updated){const c=document.createElement("canvas");drawGraphic(c,updated,brand,previewRatio,1);setPreviews(p=>({...p,[i]:c.toDataURL("image/png")}));}},100);
   };
 
   const updateGraphicMeta=(i,changes)=>{
@@ -1389,7 +1395,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       updated=ng[i];
       return {graphics:ng,previews:{...(prev.previews||{}),[i]:undefined}};
     });
-    setTimeout(()=>{if(updated){drawGraphic(cvs.current,updated,brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));}},100);
+    setTimeout(()=>{if(updated){const c=document.createElement("canvas");drawGraphic(c,updated,brand,previewRatio,1);setPreviews(p=>({...p,[i]:c.toDataURL("image/png")}));}},100);
   };
 
   const sm=btn();
