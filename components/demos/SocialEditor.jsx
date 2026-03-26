@@ -933,8 +933,7 @@ function recordGraphic(g,brand,ratio){
     // Throttle to ~30fps real-time so captureStream captures every frame
     const interval=1000/FPS;
     const tick=()=>{
-      const loopP=(f%animFrames)/animFrames;
-      drawGraphic(cvs,g,brand,ratio,loopP);
+      drawGraphic(cvs,g,brand,ratio,Math.min(f/animFrames,1)); // animate in, then hold
       f++;
       if(f<frames) setTimeout(tick,interval);
       else setTimeout(()=>rec.stop(),interval);
@@ -1146,11 +1145,8 @@ function GraphicAnimPreview({g,brand,ratio}){
   const ref=useRef();const rafRef=useRef();const st=useRef(Date.now());
   useEffect(()=>{
     st.current=Date.now();
-    const animMs=1000,totalMs=4000;
     const loop=()=>{
-      const elapsed=Date.now()-st.current;
-      if(elapsed>=totalMs){st.current=Date.now();} // restart loop
-      const p=(elapsed%animMs)/animMs; // 0→1 over 1s, then restart
+      const p=Math.min((Date.now()-st.current)/1000,1); // 1s entrance, then hold at 1
       if(ref.current)drawGraphic(ref.current,g,brand,ratio||"16:9",p);
       rafRef.current=requestAnimationFrame(loop);
     };
