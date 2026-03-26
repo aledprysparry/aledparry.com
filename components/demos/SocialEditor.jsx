@@ -923,15 +923,23 @@ function recordGraphic(g,brand,ratio){
   return new Promise((res,rej)=>{
     const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
     const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-    const dur=g.duration||4;  // use graphic's duration (default 4s)
+    const dur=Math.max(4,g.duration||4);  // minimum 4 seconds
     const frames=Math.round(dur*FPS);
-    const animFrames=Math.round(1.0*FPS); // animation completes in 1s
+    const animFrames=Math.round(1.0*FPS); // 1s animation cycle
     const rec=new MediaRecorder(cvs.captureStream(FPS),{mimeType:MIME(),videoBitsPerSecond:8000000});
     const ch=[];rec.ondataavailable=e=>{if(e.data.size>0)ch.push(e.data);};
     rec.onstop=()=>res(new Blob(ch,{type:"video/webm"}));rec.onerror=rej;
     rec.start();let f=0;
-    const tick=()=>{const loopP=(f%animFrames)/animFrames;drawGraphic(cvs,g,brand,ratio,loopP);f++;if(f<frames)requestAnimationFrame(tick);else rec.stop();};
-    requestAnimationFrame(tick);
+    // Throttle to ~30fps real-time so captureStream captures every frame
+    const interval=1000/FPS;
+    const tick=()=>{
+      const loopP=(f%animFrames)/animFrames;
+      drawGraphic(cvs,g,brand,ratio,loopP);
+      f++;
+      if(f<frames) setTimeout(tick,interval);
+      else setTimeout(()=>rec.stop(),interval);
+    };
+    tick();
   });
 }
 
