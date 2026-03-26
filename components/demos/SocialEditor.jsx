@@ -348,7 +348,9 @@ function drawText(ctx,text,x,y,maxW,maxH,baseSz,weight,align,color,maxLines=3,ff
   const{sz,lh}=fitFont(ctx,text,maxW,maxH,baseSz,weight||"700",maxLines,ff,lhMult);
   ctx.font=`${weight||"700"} ${sz}px "${ff}","Arial",sans-serif`;
   ctx.fillStyle=color||"#fff";ctx.textAlign=align||"center";ctx.textBaseline="alphabetic";
-  const words=text.split(" ");let line="",cy=y,count=0;
+  // Offset Y by ascent so y parameter = top of text area, not baseline
+  const ascent=Math.round(sz*0.82);
+  const words=text.split(" ");let line="",cy=y+ascent,count=0;
   for(const word of words){
     const test=line+word+" ";
     if(ctx.measureText(test).width>maxW&&line){
