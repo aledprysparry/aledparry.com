@@ -222,7 +222,7 @@ const BRAND_PRESETS = {
     logoDataUrlLight: "/demos/cpshomes-logo-white.png",  // white logo for dark backgrounds
     logoOpacity:   0.90,
     logoSize:      0.14,
-    logoPosition:  "tl",     // top-left like their actual posts
+    logoPosition:  "br",     // bottom-right
     typeScale:     1.0,
     lineHeight:    1.15,     // tight but readable on canvas (brand guide 0.92 is for design tools)
     headingWeight: "700",
@@ -262,7 +262,7 @@ const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
 const TMPL_STORE = "infostudio_templates_v1";
 const BRAND_VERSION_KEY = "infostudio_brand_version";
-const BRAND_VERSION = 6; // bump this to force-reseed brands from presets
+const BRAND_VERSION = 7; // bump this to force-reseed brands from presets
 const load = k => { try { const r=localStorage.getItem(k); return r?JSON.parse(r):[]; } catch{ return []; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} };
 
