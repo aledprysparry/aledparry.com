@@ -678,6 +678,40 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     });
     ctx.restore();
   }
+  else if(t==="landlord_ask"||t==="tenant_ask"){
+    // Two-perspective overlay: landlord=RIGHT+teal, tenant=LEFT+salmon
+    const isLandlord=t==="landlord_ask";
+    const accentCol=isLandlord?B.colorPrimary:B.colorAccent;
+    const labelText=isLandlord?"LANDLORDS ASK":"TENANTS ASK";
+    const cp=Math.round(28*sc);
+    const bW=isPortrait?W-PAD*1.5:Math.round(620*sc);
+    const bH=isPortrait?Math.round(320*sc):Math.round(260*sc);
+    // Position: landlord=right, tenant=left
+    const bX=isLandlord?(isPortrait?PAD*0.75:W-bW-Math.round(80*sc)):(isPortrait?PAD*0.75:Math.round(80*sc));
+    const bY=isPortrait?(H-bH-Math.round(100*sc)):(H/2-bH/2);
+    // Slide in from the relevant side
+    const slideDir=isLandlord?1:-1;
+    ctx.save();ctx.translate(slideDir*(1-ENT)*bW*0.5,0);ctx.globalAlpha=ENT;
+    // Card
+    ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=32;
+    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+    // Accent bar — right edge for landlord, left edge for tenant
+    if(isLandlord){
+      rrPath(ctx,bX+bW-Math.round(6*sc),bY,Math.round(6*sc),bH,[0,R,R,0]);
+    } else {
+      rrPath(ctx,bX,bY,Math.round(6*sc),bH,[R,0,0,R]);
+    }
+    ctx.fillStyle=accentCol;ctx.fill();
+    // Label — small caps at top
+    const textX=isLandlord?bX+cp:bX+cp+Math.round(10*sc);
+    const textW=bW-cp*2-Math.round(10*sc);
+    ctx.font=`600 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
+    ctx.fillStyle=accentCol;ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    ctx.fillText(labelText,textX,bY+cp+Math.round(22*sc));
+    // Question text — serif, teal, vertically filling remaining space
+    DT(c.text||"",textX,bY+cp+Math.round(40*sc),textW,bH-cp*2-Math.round(48*sc),Math.round(38*sc),"600","left",B.colorPrimary,4,FFS);
+    ctx.restore();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -894,9 +928,11 @@ Templates and their content fields (keep ALL text SHORT — readable on mobile i
 - rule_number:   { number:"1", body:"rule label (max 7 words)" }
 - key_point:     { headline:"LABEL (max 3 words)", body:"the point (max 18 words)" }
 - fact_box:      { headline:"LABEL (2–3 words)", body:"detail (max 15 words)" }
-- speech_bubble: { text:"a question (max 9 words)" }
-- stat:          { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
-- timeline:      { label:"label (max 4 words)", markers:["6 months","12 months"] }
+- speech_bubble:  { text:"a question (max 9 words)" }
+- landlord_ask:   { text:"a question landlords would ask (max 12 words)" }
+- tenant_ask:     { text:"a question tenants would ask (max 12 words)" }
+- stat:           { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
+- timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }
 
 Placement rules — be generous, use every appropriate moment:
 - myth at opening myth-bust moments
@@ -905,10 +941,12 @@ Placement rules — be generous, use every appropriate moment:
 - rule_number whenever a numbered rule is introduced
 - key_point for every important legal or factual statement
 - fact_box as overlay during talking-head explanations
-- speech_bubble for rhetorical or tenant/landlord questions
+- speech_bubble for general rhetorical questions
+- landlord_ask when the speaker addresses what landlords wonder, ask, or need to know (overlay RIGHT side)
+- tenant_ask when the speaker addresses what tenants wonder, ask, or need to know (overlay LEFT side)
 - stat whenever a number, percentage, or time period is mentioned
 - timeline for any contract period or deadline sequence
-- Use overlays (fact_box, speech_bubble, stat) generously — they don't interrupt the video`;
+- Use overlays (fact_box, speech_bubble, landlord_ask, tenant_ask, stat) generously — they don't interrupt the video`;
 
 const SEGMENT_PROMPT=`You are a video graphics producer. Generate exactly ONE graphic for a social media explainer video.
 Return ONLY a valid JSON object (NOT an array). No markdown, no preamble.
@@ -922,9 +960,11 @@ Templates and content fields (keep ALL text SHORT — readable on mobile in 2 se
 - rule_number:   { number:"1", body:"rule label (max 7 words)" }
 - key_point:     { headline:"LABEL (max 3 words)", body:"the point (max 18 words)" }
 - fact_box:      { headline:"LABEL (2–3 words)", body:"detail (max 15 words)" }
-- speech_bubble: { text:"a question (max 9 words)" }
-- stat:          { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
-- timeline:      { label:"label (max 4 words)", markers:["6 months","12 months"] }`;
+- speech_bubble:  { text:"a question (max 9 words)" }
+- landlord_ask:   { text:"a question landlords would ask (max 12 words)" }
+- tenant_ask:     { text:"a question tenants would ask (max 12 words)" }
+- stat:           { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
+- timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }`;
 
 // Content field definitions per template (for dynamic edit forms)
 const TMPL_FIELDS={
@@ -935,6 +975,8 @@ const TMPL_FIELDS={
   key_point:[{key:"headline",label:"Label",placeholder:"max 3 words"},{key:"body",label:"The point",placeholder:"max 18 words"}],
   fact_box:[{key:"headline",label:"Label",placeholder:"2-3 words"},{key:"body",label:"Detail",placeholder:"max 15 words"}],
   speech_bubble:[{key:"text",label:"Question",placeholder:"max 9 words"}],
+  landlord_ask:[{key:"text",label:"Landlord question",placeholder:"max 12 words"}],
+  tenant_ask:[{key:"text",label:"Tenant question",placeholder:"max 12 words"}],
   stat:[{key:"stat",label:"Value",placeholder:"e.g. 2%, 12 months"},{key:"label",label:"Description",placeholder:"max 5 words"}],
   timeline:[{key:"label",label:"Label",placeholder:"max 4 words"}],
 };
@@ -1013,7 +1055,7 @@ function GraphicAnimPreview({g,brand,ratio}){
   return(<canvas ref={ref} width={AR.W} height={AR.H} style={{width:"100%",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>);
 }
 
-const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"}};
+const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"}};
 const CAP_STYLES={karaoke:{label:"Karaoke",icon:"🎤"},popin:{label:"Pop-in",icon:"💥"},tiktok:{label:"TikTok Block",icon:"📱"},fade:{label:"Elegant Fade",icon:"✨"}};
 
 
@@ -1039,7 +1081,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
     if(tpl==="rule_number") return{number:num,body};
     if(tpl==="key_point") return{headline,body};
     if(tpl==="fact_box") return{headline,body};
-    if(tpl==="speech_bubble") return{text};
+    if(tpl==="speech_bubble"||tpl==="landlord_ask"||tpl==="tenant_ask") return{text};
     if(tpl==="stat") return{stat,label};
     if(tpl==="timeline") return{label:headline,markers:markerStr.split(",").map(s=>s.trim()).filter(Boolean)};
     return{};
