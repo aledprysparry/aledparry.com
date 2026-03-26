@@ -521,20 +521,21 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       ctx.restore();
     } else {
       // Landscape: left-aligned with accent bar
-      ctx.fillStyle=B.colorAccent;ctx.fillRect(PAD,H*0.20,Math.round(4*sc),H*0.55*ENT);
+      ctx.fillStyle=B.colorAccent;ctx.fillRect(PAD,H*0.15,Math.round(4*sc),H*0.65*ENT);
       const tx=PAD+Math.round(30*sc);
       ctx.save();ctx.globalAlpha=TXT;ctx.translate((1-TXT)*-40*sc,0);
-      let y=H*0.22;
-      // Small label
-      if(c.subheadline){y=DT(c.subheadline.toUpperCase(),tx,y,W-tx-PAD,H*0.06,Math.round(32*sc),"500","left",B.colorPrimary+"88",1)+H*0.01;}
-      // Main headline — big serif
-      y=DT(c.headline||"",tx,y,W-tx-PAD,H*0.35,Math.round(110*sc),"HW","left",B.colorPrimary,3,FFS)+H*0.03;
-      // Accent rule
+      let y=H*0.18;
+      // Main headline FIRST — big serif, dominant
+      y=DT(c.headline||"",tx,y,W*0.65-tx,H*0.30,Math.round(110*sc),"HW","left",B.colorPrimary,3,FFS);
+      y+=H*0.02;
+      // Accent rule — salmon
       const ruleW=Math.round((W*0.25)*ENT);
       ctx.fillStyle=B.colorAccent;ctx.fillRect(tx,y,ruleW,Math.round(3*sc));
-      y+=H*0.04;
+      y+=H*0.035;
+      // Subheadline below the rule — smaller, muted
+      if(c.subheadline){y=DT(c.subheadline,tx,y,W*0.6-tx,H*0.08,Math.round(36*sc),"400","left",B.colorPrimary+"99",1)+H*0.02;}
       // Body text
-      if(c.body)DT(c.body,tx,y,W-tx-PAD,H*0.18,Math.round(42*sc),"400","left",B.colorPrimary+"88",3);
+      if(c.body)DT(c.body,tx,y,W*0.6-tx,H*0.15,Math.round(34*sc),"400","left",B.colorPrimary+"77",3);
       ctx.restore();
     }
     stamp(ctx,B,W,H,false);  // cream bg → teal logo
