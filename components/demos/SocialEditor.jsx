@@ -923,21 +923,19 @@ function recordGraphic(g,brand,ratio){
   return new Promise((res,rej)=>{
     const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
     const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-    const dur=Math.max(4,g.duration||4);  // minimum 4 seconds
-    const frames=Math.round(dur*FPS);
-    const animFrames=Math.round(1.0*FPS); // 1s animation cycle
-    const rec=new MediaRecorder(cvs.captureStream(FPS),{mimeType:MIME(),videoBitsPerSecond:8000000});
+    const durMs=Math.max(4000,(g.duration||4)*1000);  // minimum 4 seconds
+    // captureStream(0) = capture on every canvas change (no frame rate limit)
+    const rec=new MediaRecorder(cvs.captureStream(0),{mimeType:MIME(),videoBitsPerSecond:8000000});
     const ch=[];rec.ondataavailable=e=>{if(e.data.size>0)ch.push(e.data);};
     rec.onstop=()=>res(new Blob(ch,{type:"video/webm"}));rec.onerror=rej;
-    rec.start();let f=0;
-    // Throttle to ~30fps real-time so captureStream captures every frame
-    const interval=1000/FPS;
+    rec.start();
+    const startT=performance.now();
     const tick=()=>{
-      // p goes 0→1 over 1s (entrance), then keeps rising (waves keep drifting)
-      drawGraphic(cvs,g,brand,ratio,f/animFrames);
-      f++;
-      if(f<frames) setTimeout(tick,interval);
-      else setTimeout(()=>rec.stop(),interval);
+      const elapsed=performance.now()-startT;
+      const p=elapsed/1000; // seconds elapsed = progress (entrance at 0-1, waves drift after)
+      drawGraphic(cvs,g,brand,ratio,p);
+      if(elapsed<durMs) requestAnimationFrame(tick);
+      else rec.stop();
     };
     tick();
   });
