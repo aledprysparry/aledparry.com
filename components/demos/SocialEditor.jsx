@@ -484,6 +484,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   // optional last arg: font override (pass FFS for serif headlines)
   const DT=(text,x,y,mW,mH,sz,wt,al,col,ml,font)=>drawText(ctx,text,x,y,mW,mH,Math.round(sz*TS),wt==="HW"?HW:wt,al,col,ml,font||FF,LH);
   const isPortrait=H>W;
+  const isSquare=Math.abs(W-H)<10;  // 1:1 ratio
+  const isCompact=isPortrait||isSquare; // not wide — use centred layouts
   const isOverlay=(g.typeOverride||(TMPL[t]||{}).type||"fullscreen")==="overlay";
 
   if(t==="myth"||t==="reality"){
@@ -515,8 +517,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=CW;ctx.fillRect(0,0,W,H);
     // Ghost number — large, behind everything
     if(c.number){ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;ctx.font=`700 ${Math.round(Math.min(W,H)*0.7)}px "${FF}","Arial",sans-serif`;ctx.textAlign="right";ctx.textBaseline="bottom";ctx.fillText(c.number,W-PAD*0.5,H*0.95);ctx.restore();}
-    if(isPortrait){
-      // Portrait: centred layout
+    if(isCompact){
+      // Portrait/square: centred layout
       ctx.save();ctx.globalAlpha=TXT;ctx.translate(0,(1-TXT)*50*sc);
       let y=H*0.22;
       // Small label
@@ -579,10 +581,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
     const lx=PAD;
-    const icSz=Math.round(isPortrait?44*sc:40*sc);
+    const icSz=Math.round(isCompact?44*sc:40*sc);
     const icSc=easeBack(clamp(p*2,0,1));
     ctx.save();ctx.globalAlpha=TXT;
-    if(isPortrait){
+    if(isCompact){
       let y=H*0.15;
       // Headline — bold serif, top
       y=DT(c.headline||"KEY POINT",lx,y,W-PAD*2,H*0.14,Math.round(64*sc),"HW","left","#fff",2,FFS);
@@ -613,7 +615,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   else if(t==="fact_box"){
     // Overlay card — clean label + body, no icon clutter
     const cp=Math.round(28*sc);
-    if(isPortrait){
+    if(isCompact){
       const bW=W-PAD,bH=Math.round(280*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
       ctx.save();ctx.translate(0,(1-ENT)*bH*0.7);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
@@ -650,7 +652,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   else if(t==="speech_bubble"){
     // Overlay bubble — text vertically centred
     const cp=Math.round(30*sc);
-    if(isPortrait){
+    if(isCompact){
       const bW=W-PAD,bH=Math.round(260*sc),bX=PAD/2,bY=Math.round(80*sc);
       const sc2=easeBack(ENT);ctx.save();ctx.translate(W/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-W/2,-(bY+bH/2));ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=28;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
@@ -670,7 +672,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   }
   else if(t==="stat"){
     // Warm cream card — stat value centred, label below
-    const bW=Math.round(480*sc),bH=Math.round(240*sc),bX=isPortrait?(W-bW)/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
+    const bW=Math.round(480*sc),bH=Math.round(240*sc),bX=isCompact?(W-bW)/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
     const cp=Math.round(28*sc);
     ctx.save();ctx.translate(0,(1-ENT)*bH*0.6);ctx.globalAlpha=ENT;
     ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=32;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
@@ -711,11 +713,11 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const accentCol=isLandlord?B.colorPrimary:B.colorAccent;
     const labelText=isLandlord?"LANDLORDS ASK":"TENANTS ASK";
     const cp=Math.round(28*sc);
-    const bW=isPortrait?W-PAD*1.5:Math.round(620*sc);
-    const bH=isPortrait?Math.round(320*sc):Math.round(260*sc);
+    const bW=isCompact?W-PAD*1.5:Math.round(620*sc);
+    const bH=isCompact?Math.round(320*sc):Math.round(260*sc);
     // Position: landlord=right, tenant=left
-    const bX=isLandlord?(isPortrait?PAD*0.75:W-bW-Math.round(80*sc)):(isPortrait?PAD*0.75:Math.round(80*sc));
-    const bY=isPortrait?(H-bH-Math.round(100*sc)):(H/2-bH/2);
+    const bX=isLandlord?(isCompact?PAD*0.75:W-bW-Math.round(80*sc)):(isCompact?PAD*0.75:Math.round(80*sc));
+    const bY=isCompact?(H-bH-Math.round(100*sc)):(H/2-bH/2);
     // Slide in from the relevant side
     const slideDir=isLandlord?1:-1;
     ctx.save();ctx.translate(slideDir*(1-ENT)*bW*0.5,0);ctx.globalAlpha=ENT;
@@ -755,14 +757,14 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     for(let wi=0;wi<5;wi++){const off=wi*W*0.22+waveShift*(wi%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+wi*H*0.12);}ctx.stroke();}
     ctx.restore();
     // Adaptive layout: portrait pushes content up, landscape centres it
-    const logoFrac=isPortrait?0.35:0.28;
-    const sepFrac=isPortrait?0.50:0.46;
-    const ctaFrac=isPortrait?0.55:0.52;
-    const bodyFrac=isPortrait?0.12:0.13;
-    const handleFrac=isPortrait?0.82:0.88;
-    const logoSizeFrac=isPortrait?0.45:0.28;
-    const headSz=isPortrait?Math.round(60*sc):Math.round(52*sc);
-    const bodySz=isPortrait?Math.round(34*sc):Math.round(30*sc);
+    const logoFrac=isCompact?0.35:0.28;
+    const sepFrac=isCompact?0.50:0.46;
+    const ctaFrac=isCompact?0.55:0.52;
+    const bodyFrac=isCompact?0.12:0.13;
+    const handleFrac=isPortrait?0.82:isSquare?0.85:0.88;
+    const logoSizeFrac=isCompact?0.40:0.28;
+    const headSz=isCompact?Math.round(56*sc):Math.round(52*sc);
+    const bodySz=isCompact?Math.round(32*sc):Math.round(30*sc);
     // Centered logo — large
     const logoSrc=B.logoDataUrlLight||B.logoDataUrl;
     if(logoSrc){
