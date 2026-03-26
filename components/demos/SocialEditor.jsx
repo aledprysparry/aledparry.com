@@ -1388,26 +1388,22 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     }catch(e){setError("Analysis failed: "+e.message+(e.message.includes("fetch")?" — check your API key in Settings":""));setGStep("idle");}
   };
 
-  const doPreview=useCallback((g,i)=>{
-    // Wait for web fonts before canvas render
-    document.fonts.ready.then(()=>{
-      const canvas=document.createElement("canvas");
-      drawGraphic(canvas,g,brand,previewRatio,1);
-      setPreviews(p=>({...p,[i]:canvas.toDataURL("image/png")}));
-    });
+  const doPreview=useCallback(async(g,i)=>{
+    await document.fonts.ready;
+    const canvas=document.createElement("canvas");
+    drawGraphic(canvas,g,brand,previewRatio,1);
+    setPreviews(p=>({...p,[i]:canvas.toDataURL("image/png")}));
   },[brand,previewRatio]);
 
-  const previewAll=useCallback(()=>{
-    // Wait for web fonts before canvas render
-    document.fonts.ready.then(()=>{
-      const batch={};
+  const previewAll=useCallback(async()=>{
+    await document.fonts.ready;
+    const batch={};
+    graphics.forEach((g,i)=>{
       const canvas=document.createElement("canvas");
-      graphics.forEach((g,i)=>{
-        drawGraphic(canvas,g,brand,previewRatio,1);
-        batch[i]=canvas.toDataURL("image/png");
-      });
-      setPreviews(p=>({...p,...batch}));
+      drawGraphic(canvas,g,brand,previewRatio,1);
+      batch[i]=canvas.toDataURL("image/png");
     });
+    setPreviews(p=>({...p,...batch}));
   },[graphics,brand,previewRatio]);
 
   const exportWebM=async(g,i)=>{
