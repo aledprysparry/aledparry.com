@@ -560,69 +560,74 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="key_point"){
-    // Forest green background (like their landlord posts)
+    // Forest green background
     ctx.fillStyle=B.colorForest||B.colorPrimary;ctx.fillRect(0,0,W,H);
-    const lx=PAD; // left alignment edge — everything anchors here
+    const lx=PAD;
+    const icSz=Math.round(isPortrait?44*sc:40*sc);
+    const icSc=easeBack(clamp(p*2,0,1));
+    ctx.save();ctx.globalAlpha=TXT;
     if(isPortrait){
-      // Portrait: left-aligned grid
-      const icSz=Math.round(48*sc);
-      const icSc=easeBack(clamp(p*2,0,1));
-      let y=H*0.18;
-      // Icon + headline on same baseline
+      let y=H*0.15;
+      // Headline — bold serif, top
+      y=DT(c.headline||"KEY POINT",lx,y,W-PAD*2,H*0.14,Math.round(64*sc),"HW","left","#fff",2,FFS);
+      y+=H*0.02;
+      // Icon + rule on same line
       ctx.save();ctx.translate(lx+icSz/2,y+icSz/2);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,icSz,CW,IC);ctx.restore();
-      ctx.save();ctx.globalAlpha=TXT;
-      y=DT(c.headline||"KEY POINT",lx+icSz+Math.round(16*sc),y,W-lx-icSz-Math.round(16*sc)-PAD,H*0.12,Math.round(68*sc),"HW","left","#fff",2,FFS);
-      y+=H*0.03;
-      // Rule — same left edge
-      const ruleW=Math.round(W*0.20*ENT);ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lx,y);ctx.lineTo(lx+ruleW,y);ctx.stroke();
-      y+=H*0.04;
-      // Body — same left alignment
-      DT(c.body||"",lx+(W-PAD*2)/2,y,W-PAD*2,H*0.45,Math.round(56*sc),"500","center","rgba(255,255,255,0.85)",5);
-      ctx.restore();
+      const ruleX=lx+icSz+Math.round(14*sc);const ruleW=Math.round((W*0.25)*ENT);
+      ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ruleX,y+icSz/2);ctx.lineTo(ruleX+ruleW,y+icSz/2);ctx.stroke();
+      y+=icSz+H*0.04;
+      // Body
+      DT(c.body||"",lx,y,W-PAD*2,H*0.45,Math.round(50*sc),"500","left","rgba(255,255,255,0.85)",5);
     } else {
-      // Landscape: left-aligned grid, all elements share lx
-      const icSz=Math.round(44*sc);
-      const icSc=easeBack(clamp(p*2,0,1));
-      let y=H*0.18;
-      // Icon + headline on same line
+      let y=H*0.15;
+      // Headline — bold serif
+      y=DT(c.headline||"KEY POINT",lx,y,W*0.6,H*0.14,Math.round(68*sc),"HW","left","#fff",2,FFS);
+      y+=H*0.02;
+      // Icon + rule
       ctx.save();ctx.translate(lx+icSz/2,y+icSz/2);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,icSz,CW,IC);ctx.restore();
-      ctx.save();ctx.globalAlpha=TXT;ctx.translate((1-TXT)*-20*sc,0);
-      y=DT(c.headline||"KEY POINT",lx+icSz+Math.round(16*sc),y,W-lx-icSz-Math.round(16*sc)-PAD,H*0.12,Math.round(72*sc),"HW","left","#fff",2,FFS);
-      y+=H*0.04;
-      // Rule — aligned to lx
-      const ruleW=Math.round(W*0.18*ENT);ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lx,y);ctx.lineTo(lx+ruleW,y);ctx.stroke();
-      y+=H*0.05;
-      // Body — left aligned
-      DT(c.body||"",lx,y,W-PAD*2,H*0.40,Math.round(60*sc),"500","left","rgba(255,255,255,0.85)",4);
-      ctx.restore();
+      const ruleX=lx+icSz+Math.round(14*sc);const ruleW=Math.round((W*0.20)*ENT);
+      ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ruleX,y+icSz/2);ctx.lineTo(ruleX+ruleW,y+icSz/2);ctx.stroke();
+      y+=icSz+H*0.05;
+      // Body
+      DT(c.body||"",lx,y,W*0.65,H*0.40,Math.round(52*sc),"500","left","rgba(255,255,255,0.85)",4);
     }
-    stamp(ctx,B,W,H,true);  // dark bg → white logo
+    ctx.restore();
+    stamp(ctx,B,W,H,true);
   }
   else if(t==="fact_box"){
-    // Overlay card — vertically centred content within card
-    const cp=Math.round(28*sc); // card padding
+    // Overlay card — clean label + body, no icon clutter
+    const cp=Math.round(28*sc);
     if(isPortrait){
-      const bW=W-PAD,bH=Math.round(320*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
+      const bW=W-PAD,bH=Math.round(280*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
       ctx.save();ctx.translate(0,(1-ENT)*bH*0.7);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
       ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
-      // Content vertically centred: headline top third, body bottom two thirds
-      const innerX=bX+cp,innerW=bW-cp*2,innerY=bY+cp+Math.round(10*sc);
-      DT((c.headline||"").toUpperCase(),innerX,innerY,innerW,Math.round(60*sc),Math.round(42*sc),"700","left",B.colorPrimary,1,FFS);
-      const icSz=Math.round(28*sc);drawIcon(ctx,"info",innerX+icSz/2,innerY+Math.round(72*sc)+icSz/2,icSz,B.colorPrimary,IC);
-      DT(c.body||"",innerX+icSz+Math.round(12*sc),innerY+Math.round(68*sc),innerW-icSz-Math.round(12*sc),bH-cp*2-Math.round(78*sc),Math.round(34*sc),"400","left",B.colorPrimary+"b8",4);
+      const ix=bX+cp,iw=bW-cp*2;let y=bY+cp;
+      // Label
+      ctx.font=`700 ${Math.round(22*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle=B.colorPrimary;ctx.textAlign="left";ctx.textBaseline="alphabetic";
+      ctx.fillText((c.headline||"").toUpperCase(),ix,y+Math.round(20*sc));
+      y+=Math.round(32*sc);
+      // Separator
+      ctx.fillStyle=B.colorAccent+"66";ctx.fillRect(ix,y,Math.round(50*sc),Math.round(2*sc));
+      y+=Math.round(18*sc);
+      // Body
+      DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(34*sc),"400","left",B.colorPrimary+"cc",4);
       ctx.restore();
     } else {
-      const bW=Math.round(720*sc),bH=Math.round(240*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
+      const bW=Math.round(620*sc),bH=Math.round(220*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
       ctx.save();ctx.translate((1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
       ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,Math.round(6*sc),bH,[R,0,0,R]);ctx.fill();
-      // Vertically centred content
-      const innerX=bX+Math.round(24*sc),innerW=bW-Math.round(48*sc);
-      const topY=bY+cp;
-      DT((c.headline||"").toUpperCase(),innerX,topY,innerW,Math.round(50*sc),Math.round(40*sc),"700","left",B.colorPrimary,1,FFS);
-      const icSz=Math.round(26*sc);drawIcon(ctx,"info",innerX+icSz/2,topY+Math.round(64*sc)+icSz/2,icSz,B.colorPrimary,IC);
-      DT(c.body||"",innerX+icSz+Math.round(12*sc),topY+Math.round(58*sc),innerW-icSz-Math.round(12*sc),bH-cp*2-Math.round(64*sc),Math.round(32*sc),"400","left",B.colorPrimary+"b8",3);
+      const ix=bX+cp,iw=bW-cp*2;let y=bY+cp;
+      // Label
+      ctx.font=`700 ${Math.round(20*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle=B.colorPrimary;ctx.textAlign="left";ctx.textBaseline="alphabetic";
+      ctx.fillText((c.headline||"").toUpperCase(),ix,y+Math.round(18*sc));
+      y+=Math.round(30*sc);
+      // Separator
+      ctx.fillStyle=B.colorAccent+"66";ctx.fillRect(ix,y,Math.round(50*sc),Math.round(2*sc));
+      y+=Math.round(16*sc);
+      // Body
+      DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(30*sc),"400","left",B.colorPrimary+"cc",3);
       ctx.restore();
     }
   }
@@ -648,18 +653,20 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
   }
   else if(t==="stat"){
-    // Warm cream card with teal text — properly contained
-    const bW=Math.round(540*sc),bH=Math.round(280*sc),bX=isPortrait?(W-bW)/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
-    const cardPad=Math.round(30*sc);
+    // Warm cream card — stat value centred, label below
+    const bW=Math.round(480*sc),bH=Math.round(240*sc),bX=isPortrait?(W-bW)/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
+    const cp=Math.round(28*sc);
     ctx.save();ctx.translate(0,(1-ENT)*bH*0.6);ctx.globalAlpha=ENT;
     ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=32;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
-    ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(6*sc),[R,R,0,0]);ctx.fill();
-    // Stat value — sized to fit within card
+    ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
+    // Stat value — auto-sized to fit card width
     const rs=c.stat||"",nm=rs.match(/^([^0-9]*)([0-9.]+)(.*)$/);
     let ds=rs;if(nm){const n=parseFloat(nm[2]),d=Math.round(n*TXT*10)/10;ds=nm[1]+(Number.isInteger(n)?Math.round(d):d.toFixed(1))+nm[3];}
-    DT(ds,bX+bW/2,bY+cardPad+Math.round(20*sc),bW-cardPad*2,Math.round(bH*0.50),Math.round(80*sc),"700","center",B.colorPrimary,1,FFS);
-    // Label — bottom of card
-    DT(c.label||"",bX+bW/2,bY+bH-cardPad-Math.round(40*sc),bW-cardPad*2,Math.round(44*sc),Math.round(32*sc),"400","center",B.colorPrimary+"99",1);
+    DT(ds,bX+bW/2,bY+cp,bW-cp*2,Math.round(bH*0.45),Math.round(64*sc),"700","center",B.colorPrimary,1,FFS);
+    // Separator
+    const sepW=Math.round(50*sc*ENT);ctx.fillStyle=B.colorAccent+"66";ctx.fillRect(bX+bW/2-sepW/2,bY+bH*0.58,sepW,Math.round(2*sc));
+    // Label
+    DT(c.label||"",bX+bW/2,bY+bH*0.63,bW-cp*2,Math.round(bH*0.25),Math.round(28*sc),"400","center",B.colorPrimary+"99",2);
     ctx.restore();
   }
   else if(t==="timeline"){
@@ -704,13 +711,19 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
     ctx.fillStyle=accentCol;ctx.fill();
     // Label — small caps at top
-    const textX=isLandlord?bX+cp:bX+cp+Math.round(10*sc);
-    const textW=bW-cp*2-Math.round(10*sc);
-    ctx.font=`600 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
+    const textX=isLandlord?bX+cp:bX+cp+Math.round(14*sc);
+    const textW=bW-cp*2-Math.round(14*sc);
+    const labelSize=Math.round(20*sc);
+    const labelY=bY+cp+Math.round(16*sc);
+    ctx.font=`700 ${labelSize}px "${FF}","Arial",sans-serif`;
     ctx.fillStyle=accentCol;ctx.textAlign="left";ctx.textBaseline="alphabetic";
-    ctx.fillText(labelText,textX,bY+cp+Math.round(22*sc));
-    // Question text — serif, teal, vertically filling remaining space
-    DT(c.text||"",textX,bY+cp+Math.round(40*sc),textW,bH-cp*2-Math.round(48*sc),Math.round(38*sc),"600","left",B.colorPrimary,4,FFS);
+    ctx.letterSpacing="2px";ctx.fillText(labelText,textX,labelY);ctx.letterSpacing="0px";
+    // Separator line
+    const sepY=labelY+Math.round(12*sc);
+    ctx.fillStyle=accentCol+"44";ctx.fillRect(textX,sepY,Math.round(60*sc),Math.round(2*sc));
+    // Question text — serif, teal, below separator
+    const qY=sepY+Math.round(18*sc);
+    DT(c.text||"",textX,qY,textW,bH-(qY-bY)-cp,Math.round(36*sc),"600","left",B.colorPrimary,4,FFS);
     ctx.restore();
   }
 }
