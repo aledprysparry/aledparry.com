@@ -930,7 +930,7 @@ function recordGraphic(g,brand,ratio){
     const ch=[];rec.ondataavailable=e=>{if(e.data.size>0)ch.push(e.data);};
     rec.onstop=()=>res(new Blob(ch,{type:"video/webm"}));rec.onerror=rej;
     rec.start();let f=0;
-    const tick=()=>{drawGraphic(cvs,g,brand,ratio,clamp(f/animFrames,0,1));f++;if(f<frames)requestAnimationFrame(tick);else rec.stop();};
+    const tick=()=>{const loopP=(f%animFrames)/animFrames;drawGraphic(cvs,g,brand,ratio,loopP);f++;if(f<frames)requestAnimationFrame(tick);else rec.stop();};
     requestAnimationFrame(tick);
   });
 }
