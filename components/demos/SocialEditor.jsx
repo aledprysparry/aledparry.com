@@ -224,7 +224,7 @@ const BRAND_PRESETS = {
     logoSize:      0.14,
     logoPosition:  "tl",     // top-left like their actual posts
     typeScale:     1.0,
-    lineHeight:    0.92,     // tight — matches Matter spec from brand guide
+    lineHeight:    1.15,     // tight but readable on canvas (brand guide 0.92 is for design tools)
     headingWeight: "700",
     captionLineHeight: 1.07, // matches Nantes spec from brand guide
     titleCardSeriesName: "",
@@ -501,41 +501,60 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   else if(t==="title"){
     // Warm cream background with teal text
     ctx.fillStyle=CW;ctx.fillRect(0,0,W,H);
-    if(c.number){ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(Math.min(W,H)*0.52)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(c.number,W/2,H/2+H*0.07);ctx.restore();}
+    // Ghost number — large, behind everything
+    if(c.number){ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;ctx.font=`700 ${Math.round(Math.min(W,H)*0.7)}px "${FF}","Arial",sans-serif`;ctx.textAlign="right";ctx.textBaseline="bottom";ctx.fillText(c.number,W-PAD*0.5,H*0.95);ctx.restore();}
     if(isPortrait){
-      // Portrait: centred layout — thin accent rule + centred serif text
-      const ruleW=Math.round(W*0.18*ENT);
-      ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-ruleW/2,H*0.38,ruleW,Math.round(3*sc));
-      ctx.save();ctx.globalAlpha=TXT*0.45;DT((c.headline||"").toUpperCase(),W/2,H*0.30,W-PAD*2,H*0.10,Math.round(38*sc),"500","center",B.colorPrimary,1);ctx.restore();
+      // Portrait: centred layout
       ctx.save();ctx.globalAlpha=TXT;ctx.translate(0,(1-TXT)*50*sc);
-      let y=H*0.41;
-      y=DT(c.headline||"",W/2,y,W-PAD*2,H*0.20,Math.round(110*sc),"HW","center",B.colorPrimary,2,FFS)+H*0.03;
-      if(c.subheadline)y=DT(c.subheadline,W/2,y,W-PAD*2,H*0.10,Math.round(52*sc),"500","center",B.colorPrimary+"a8",2)+H*0.02;
-      if(c.body)DT(c.body,W/2,y,W-PAD*2,H*0.08,Math.round(40*sc),"400","center",B.colorPrimary+"66",1);
+      let y=H*0.22;
+      // Small label
+      if(c.subheadline){y=DT(c.subheadline.toUpperCase(),W/2,y,W-PAD*2,H*0.06,Math.round(32*sc),"500","center",B.colorPrimary+"88",1)+H*0.02;}
+      // Main headline — big serif
+      y=DT(c.headline||"",W/2,y,W-PAD*2,H*0.35,Math.round(100*sc),"HW","center",B.colorPrimary,3,FFS)+H*0.03;
+      // Accent rule
+      const ruleW=Math.round(W*0.15*ENT);
+      ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-ruleW/2,y,ruleW,Math.round(3*sc));
+      y+=H*0.04;
+      // Body text
+      if(c.body)DT(c.body,W/2,y,W-PAD*2,H*0.20,Math.round(40*sc),"400","center",B.colorPrimary+"88",3);
       ctx.restore();
     } else {
-      ctx.fillStyle=B.colorAccent;ctx.fillRect(PAD,H*0.27,Math.round(4*sc),H*0.46*ENT);
+      // Landscape: left-aligned with accent bar
+      ctx.fillStyle=B.colorAccent;ctx.fillRect(PAD,H*0.20,Math.round(4*sc),H*0.55*ENT);
       const tx=PAD+Math.round(30*sc);
       ctx.save();ctx.globalAlpha=TXT;ctx.translate((1-TXT)*-40*sc,0);
-      let y=H*0.34;
-      y=DT(c.headline||"",tx,y,W-tx-PAD,H*0.20,Math.round(115*sc),"HW","left",B.colorPrimary,2,FFS)+H*0.03;
-      if(c.subheadline)y=DT(c.subheadline,tx,y,W-tx-PAD,H*0.14,Math.round(68*sc),"500","left",B.colorPrimary+"a8",2)+H*0.02;
-      if(c.body)DT(c.body,tx,y,W-tx-PAD,H*0.12,Math.round(48*sc),"400","left",B.colorPrimary+"66",2);
+      let y=H*0.22;
+      // Small label
+      if(c.subheadline){y=DT(c.subheadline.toUpperCase(),tx,y,W-tx-PAD,H*0.06,Math.round(32*sc),"500","left",B.colorPrimary+"88",1)+H*0.01;}
+      // Main headline — big serif
+      y=DT(c.headline||"",tx,y,W-tx-PAD,H*0.35,Math.round(110*sc),"HW","left",B.colorPrimary,3,FFS)+H*0.03;
+      // Accent rule
+      const ruleW=Math.round((W*0.25)*ENT);
+      ctx.fillStyle=B.colorAccent;ctx.fillRect(tx,y,ruleW,Math.round(3*sc));
+      y+=H*0.04;
+      // Body text
+      if(c.body)DT(c.body,tx,y,W-tx-PAD,H*0.18,Math.round(42*sc),"400","left",B.colorPrimary+"88",3);
       ctx.restore();
     }
     stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="rule_number"){
-    // Warm cream background with teal text
+    // Warm cream background, centred layout
     ctx.fillStyle=CW;ctx.fillRect(0,0,W,H);
-    ctx.save();ctx.globalAlpha=0.05;ctx.fillStyle=B.colorPrimary;const gs=easeOut(clamp(p*1.5,0,1));
-    ctx.font=`700 ${Math.round(Math.min(W,H)*0.5)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.translate(W/2,H/2+H*0.08);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
-    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,Math.round(2*sc));
-    ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*H*0.06);
-    ctx.fillStyle=B.colorPrimary+"66";ctx.font=`600 ${Math.round(56*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText("— RULE —",W/2,H*0.35);
-    ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(220*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.fillText("#"+(c.number||"1"),W/2,H*0.68);ctx.restore();
-    if(c.body){ctx.save();ctx.globalAlpha=TXT;DT(c.body,W/2,H*0.73,W-PAD*2,H*0.14,Math.round(54*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
+    // Ghost number — large, centred behind main content
+    ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;const gs=easeOut(clamp(p*1.5,0,1));
+    ctx.font=`700 ${Math.round(Math.min(W,H)*0.65)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.translate(W/2,H*0.48);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
+    // "RULE" label — centred
+    ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*H*0.05);
+    ctx.fillStyle=B.colorPrimary+"66";ctx.font=`600 ${Math.round(44*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";
+    ctx.fillText("— RULE —",W/2,H*0.33);
+    // Big number — centred
+    ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(200*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";
+    ctx.fillText("#"+(c.number||"1"),W/2,H*0.58);
+    ctx.restore();
+    // Body text — centred below
+    if(c.body){ctx.save();ctx.globalAlpha=TXT;DT(c.body,W/2,H*0.65,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
     stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="key_point"){
