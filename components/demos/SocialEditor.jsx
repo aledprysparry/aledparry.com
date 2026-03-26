@@ -1146,7 +1146,14 @@ function GraphicAnimPreview({g,brand,ratio}){
   const ref=useRef();const rafRef=useRef();const st=useRef(Date.now());
   useEffect(()=>{
     st.current=Date.now();
-    const loop=()=>{const p=Math.min((Date.now()-st.current)/700,1);if(ref.current)drawGraphic(ref.current,g,brand,ratio||"16:9",p);rafRef.current=requestAnimationFrame(loop);};
+    const animMs=1000,totalMs=4000;
+    const loop=()=>{
+      const elapsed=Date.now()-st.current;
+      if(elapsed>=totalMs){st.current=Date.now();} // restart loop
+      const p=(elapsed%animMs)/animMs; // 0→1 over 1s, then restart
+      if(ref.current)drawGraphic(ref.current,g,brand,ratio||"16:9",p);
+      rafRef.current=requestAnimationFrame(loop);
+    };
     document.fonts.ready.then(()=>{rafRef.current=requestAnimationFrame(loop);});
     return()=>cancelAnimationFrame(rafRef.current);
   },[g,brand,ratio]);
