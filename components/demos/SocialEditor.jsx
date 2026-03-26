@@ -254,7 +254,7 @@ const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
 const TMPL_STORE = "infostudio_templates_v1";
 const BRAND_VERSION_KEY = "infostudio_brand_version";
-const BRAND_VERSION = 5; // bump this to force-reseed brands from presets
+const BRAND_VERSION = 6; // bump this to force-reseed brands from presets
 const load = k => { try { const r=localStorage.getItem(k); return r?JSON.parse(r):[]; } catch{ return []; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} };
 
@@ -477,26 +477,27 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const isOverlay=(g.typeOverride||(TMPL[t]||{}).type||"fullscreen")==="overlay";
 
   if(t==="myth"||t==="reality"){
-    // Editorial gradient background (top color → lighter shade)
+    // Solid brand colour — myth=salmon, reality=green
     const bg=t==="myth"?B.colorAccent:B.colorPositive;
-    const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,bg);grad.addColorStop(1,CW);
-    ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
-    // Subtle texture — soft horizontal rules instead of diagonal stripes
-    ctx.save();ctx.globalAlpha=0.04;ctx.strokeStyle="#000";ctx.lineWidth=1;
-    for(let y=0;y<H;y+=Math.round(48*sc)){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}ctx.restore();
-    const icR=Math.round(100*sc),icSc=easeBack(clamp(p*2.2,0,1));
-    ctx.save();ctx.translate(W/2,H*0.26);ctx.scale(icSc,icSc);
-    ctx.globalAlpha=0.10;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR*1.05,"#fff",IC);ctx.restore();
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    // Subtle wavy texture (like CPS posts)
+    ctx.save();ctx.globalAlpha=0.06;ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
+    for(let i=0;i<5;i++){const off=i*W*0.22;ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
+    ctx.restore();
+    // Icon — vertically centred in top portion
+    const icR=Math.round(70*sc),icSc=easeBack(clamp(p*2.2,0,1));
+    ctx.save();ctx.translate(W/2,H*0.24);ctx.scale(icSc,icSc);
+    ctx.globalAlpha=0.15;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR,"#fff",IC);ctx.restore();
     // Badge — tight below icon
-    ctx.save();ctx.translate(0,(1-ENT)*H*0.06);ctx.globalAlpha=ENT;
-    ctx.font=`600 ${Math.round(48*sc)}px "${FFS}","${FF}","Arial",sans-serif`;
+    ctx.save();ctx.translate(0,(1-ENT)*H*0.04);ctx.globalAlpha=ENT;
+    ctx.font=`700 ${Math.round(36*sc)}px "${FF}","Arial",sans-serif`;
     const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
-    ctx.fillStyle="rgba(0,0,0,0.12)";rrPath(ctx,W/2-bw/2-24*sc,H*0.38,bw+48*sc,64*sc,32*sc);ctx.fill();
-    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(badge,W/2,H*0.38+46*sc);ctx.restore();
-    // Body text
-    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.34,Math.round(78*sc),"HW","center","#fff",3,FFS);ctx.restore();
-    stamp(ctx,B,W,H);
+    ctx.fillStyle="rgba(255,255,255,0.20)";rrPath(ctx,W/2-bw/2-20*sc,H*0.34,bw+40*sc,52*sc,26*sc);ctx.fill();
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,W/2,H*0.34+26*sc);ctx.restore();
+    // Body — large, centred, white
+    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.44,W-PAD*2,H*0.40,Math.round(72*sc),"700","center","#fff",4,FFS);ctx.restore();
+    stamp(ctx,B,W,H,true);  // dark bg → white logo
   }
   else if(t==="title"){
     // Warm cream background with teal text
@@ -3222,12 +3223,9 @@ function App(){
     return()=>window.removeEventListener("popstate",restore);
   },[]);
 
-  // ── Server sync: load on mount (skip brands if local version is newer) ──
+  // ── Server sync: load on mount (projects + templates only, NOT brands — preset is source of truth) ──
   useEffect(()=>{
     fetch("/api/studio").then(r=>{if(!r.ok)throw r;return r.json();}).then(d=>{
-      // Only load server brands if they have the new properties (fontSerif),
-      // otherwise local preset is newer and should win
-      if(d.brands?.length && d.brands[0]?.fontSerif){setBrands(d.brands);save(BS,d.brands);}
       if(d.projects?.length){setProjects(d.projects);save(PS,d.projects);}
       if(d.templates?.length) save(TMPL_STORE,d.templates);
     }).catch(()=>{});
