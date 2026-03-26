@@ -3169,22 +3169,28 @@ function App(){
     return()=>window.removeEventListener("popstate",restore);
   },[]);
 
-  // ── Server sync: load on mount ──
+  // ── Server sync: load on mount (skip brands if local version is newer) ──
   useEffect(()=>{
-    fetch("/api/studio").then(r=>r.json()).then(d=>{
-      if(d.brands?.length){setBrands(d.brands);save(BS,d.brands);}
+    fetch("/api/studio").then(r=>{if(!r.ok)throw r;return r.json();}).then(d=>{
+      // Only load server brands if they have the new properties (fontSerif),
+      // otherwise local preset is newer and should win
+      if(d.brands?.length && d.brands[0]?.fontSerif){setBrands(d.brands);save(BS,d.brands);}
       if(d.projects?.length){setProjects(d.projects);save(PS,d.projects);}
       if(d.templates?.length) save(TMPL_STORE,d.templates);
     }).catch(()=>{});
   },[]);
 
-  // ── Server sync: debounced save ──
+  // ── Server sync: debounced save (stops retrying on 413/error) ──
+  const syncFailed=useRef(false);
   const syncToServer=useCallback((b,p)=>{
+    if(syncFailed.current) return;
     if(syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(()=>{
       const templates=load(TMPL_STORE);
       fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({brands:b,projects:p,templates})}).catch(()=>{});
+        body:JSON.stringify({brands:b,projects:p,templates})})
+        .then(r=>{if(!r.ok) syncFailed.current=true;})
+        .catch(()=>{syncFailed.current=true;});
     },1500);
   },[]);
 
