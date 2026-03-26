@@ -1305,7 +1305,9 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   },[brand,previewRatio]);
 
   const previewAll=useCallback(()=>{
-    graphics.forEach((g,i)=>{drawGraphic(cvs.current,g,brand,previewRatio,1);setPreviews(p=>({...p,[i]:cvs.current.toDataURL("image/png")}));});
+    const batch={};
+    graphics.forEach((g,i)=>{drawGraphic(cvs.current,g,brand,previewRatio,1);batch[i]=cvs.current.toDataURL("image/png");});
+    setPreviews(p=>({...p,...batch}));
   },[graphics,brand,previewRatio]);
 
   const exportWebM=async(g,i)=>{
