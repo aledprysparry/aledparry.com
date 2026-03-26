@@ -695,7 +695,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.strokeStyle=B.colorPrimary+"33";ctx.lineWidth=Math.round(4*sc);ctx.beginPath();ctx.moveTo(tx0,ty);ctx.lineTo(tx0+txW*ENT,ty);ctx.stroke();
     const markers=c.markers||["6 months","12 months"];
     markers.forEach((m,i)=>{
-      const frac=i/(Math.max(markers.length-1,1));if(frac>ENT)return;
+      const frac=i/(Math.max(markers.length-1,1));if(frac>ENT+0.01)return;
       const mx=tx0+txW*frac,ds=AP.easeBackFn(clamp((ENT-frac)*4,0,1));
       ctx.save();ctx.translate(mx,ty);ctx.scale(ds,ds);ctx.fillStyle=B.colorAccent;ctx.beginPath();ctx.arc(0,0,11*sc,0,Math.PI*2);ctx.fill();ctx.restore();
       ctx.fillStyle=B.colorPrimary;ctx.font=`500 ${Math.round(28*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.globalAlpha=ENT*0.9;ctx.fillText(m,mx,ty+46*sc);
@@ -740,6 +740,43 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Question text — serif, teal, below separator
     const qY=sepY+Math.round(18*sc);
     DT(c.text||"",textX,qY,textW,bH-(qY-bY)-cp,Math.round(36*sc),"600","left",B.colorPrimary,4,FFS);
+    ctx.restore();
+  }
+  else if(t==="endboard"){
+    // Professional closing slide — teal background, large centered logo, CTA text
+    ctx.save();ctx.globalAlpha=ENT;
+    // Full teal background
+    ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
+    // Animated wavy lines
+    drawWaves(ctx,W,H,B.colorWarm||"#f0e1d3",0.06,p);
+    // Centered logo — large
+    const logoSrc=B.logoDataUrlLight||B.logoDataUrl;
+    if(logoSrc){
+      const img=getCachedImage(logoSrc);
+      if(img){
+        const logoW=Math.round(W*0.28);
+        const logoH=Math.round(logoW*(img.naturalHeight/img.naturalWidth));
+        const lx=(W-logoW)/2,ly=H*0.28-logoH/2;
+        const logoScale=AP.easeBackFn(clamp(ENT*1.5,0,1));
+        ctx.save();ctx.globalAlpha=ENT;ctx.translate(lx+logoW/2,ly+logoH/2);ctx.scale(logoScale,logoScale);ctx.drawImage(img,-logoW/2,-logoH/2,logoW,logoH);ctx.restore();
+      }
+    }
+    // Separator — salmon accent line
+    const sepW=Math.round(120*sc*ENT);
+    ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-sepW/2,H*0.46,sepW,Math.round(3*sc));
+    // CTA headline
+    const ctaY=H*0.52;
+    DT(c.headline||"Thanks for watching",W/2,ctaY,W*0.7,H*0.12,Math.round(52*sc),"700","center","#fff",2,FFS);
+    // Body text — smaller, muted white
+    if(c.body){
+      DT(c.body,W/2,ctaY+H*0.13,W*0.6,H*0.10,Math.round(30*sc),"400","center","rgba(255,255,255,0.7)",2);
+    }
+    // Social handle / website
+    if(c.handle){
+      ctx.font=`500 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
+      ctx.fillStyle="rgba(255,255,255,0.5)";ctx.textAlign="center";ctx.textBaseline="alphabetic";
+      ctx.fillText(c.handle,W/2,H*0.88);
+    }
     ctx.restore();
   }
 }
@@ -963,6 +1000,7 @@ Templates and their content fields (keep ALL text SHORT — readable on mobile i
 - tenant_ask:     { text:"a question tenants would ask (max 12 words)" }
 - stat:           { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
 - timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }
+- endboard:       { headline:"Thanks for watching", body:"optional CTA", handle:"@cpshomes" }
 
 Placement rules — be generous, use every appropriate moment:
 - myth at opening myth-bust moments
@@ -976,6 +1014,7 @@ Placement rules — be generous, use every appropriate moment:
 - tenant_ask when the speaker addresses what tenants wonder, ask, or need to know (overlay LEFT side)
 - stat whenever a number, percentage, or time period is mentioned
 - timeline for any contract period or deadline sequence
+- endboard ALWAYS as the LAST graphic — closing slide with logo and CTA
 - Use overlays (fact_box, speech_bubble, landlord_ask, tenant_ask, stat) generously — they don't interrupt the video`;
 
 const SEGMENT_PROMPT=`You are a video graphics producer. Generate exactly ONE graphic for a social media explainer video.
@@ -994,7 +1033,8 @@ Templates and content fields (keep ALL text SHORT — readable on mobile in 2 se
 - landlord_ask:   { text:"a question landlords would ask (max 12 words)" }
 - tenant_ask:     { text:"a question tenants would ask (max 12 words)" }
 - stat:           { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
-- timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }`;
+- timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }
+- endboard:       { headline:"Thanks for watching", body:"optional CTA", handle:"@cpshomes" }`;
 
 // Content field definitions per template (for dynamic edit forms)
 const TMPL_FIELDS={
@@ -1009,6 +1049,7 @@ const TMPL_FIELDS={
   tenant_ask:[{key:"text",label:"Tenant question",placeholder:"max 12 words"}],
   stat:[{key:"stat",label:"Value",placeholder:"e.g. 2%, 12 months"},{key:"label",label:"Description",placeholder:"max 5 words"}],
   timeline:[{key:"label",label:"Label",placeholder:"max 4 words"}],
+  endboard:[{key:"headline",label:"Headline",placeholder:"e.g. Thanks for watching"},{key:"body",label:"CTA text",placeholder:"optional"},{key:"handle",label:"Handle / website",placeholder:"e.g. @cpshomes"}],
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1085,7 +1126,7 @@ function GraphicAnimPreview({g,brand,ratio}){
   return(<canvas ref={ref} width={AR.W} height={AR.H} style={{width:"100%",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>);
 }
 
-const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"}};
+const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"},endboard:{label:"Endboard",type:"fullscreen"}};
 const CAP_STYLES={karaoke:{label:"Karaoke",icon:"🎤"},popin:{label:"Pop-in",icon:"💥"},tiktok:{label:"TikTok Block",icon:"📱"},fade:{label:"Elegant Fade",icon:"✨"}};
 
 
@@ -1114,6 +1155,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
     if(tpl==="speech_bubble"||tpl==="landlord_ask"||tpl==="tenant_ask") return{text};
     if(tpl==="stat") return{stat,label};
     if(tpl==="timeline") return{label:headline,markers:markerStr.split(",").map(s=>s.trim()).filter(Boolean)};
+    if(tpl==="endboard") return{headline,body,handle:text};
     return{};
   };
 
