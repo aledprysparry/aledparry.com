@@ -2158,8 +2158,8 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     }
   }
 
-  // Logo — teal logo on cream background
-  stamp(ctx,B,W,H,false);
+  // Logo — white on dark bg (split), teal on cream bg (bar/centred)
+  stamp(ctx,B,W,H,style==="split");
 }
 
 // ═══════════════════════════════════════════════════════════════
