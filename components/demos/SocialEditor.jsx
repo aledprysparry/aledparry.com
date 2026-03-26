@@ -484,16 +484,18 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Subtle texture — soft horizontal rules instead of diagonal stripes
     ctx.save();ctx.globalAlpha=0.04;ctx.strokeStyle="#000";ctx.lineWidth=1;
     for(let y=0;y<H;y+=Math.round(48*sc)){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}ctx.restore();
-    const icR=Math.round(118*sc),icSc=easeBack(clamp(p*2.2,0,1));
-    ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);
+    const icR=Math.round(100*sc),icSc=easeBack(clamp(p*2.2,0,1));
+    ctx.save();ctx.translate(W/2,H*0.26);ctx.scale(icSc,icSc);
     ctx.globalAlpha=0.10;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR*1.05,"#fff",IC);ctx.restore();
-    ctx.save();ctx.translate(0,(1-ENT)*H*0.08);ctx.globalAlpha=ENT;
-    ctx.font=`600 ${Math.round(52*sc)}px "${FFS}","${FF}","Arial",sans-serif`;
+    // Badge — tight below icon
+    ctx.save();ctx.translate(0,(1-ENT)*H*0.06);ctx.globalAlpha=ENT;
+    ctx.font=`600 ${Math.round(48*sc)}px "${FFS}","${FF}","Arial",sans-serif`;
     const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
-    ctx.fillStyle="rgba(0,0,0,0.12)";rrPath(ctx,W/2-bw/2-28*sc,H*0.50,bw+56*sc,72*sc,36*sc);ctx.fill();
-    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(badge,W/2,H*0.50+52*sc);ctx.restore();
-    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.62,W-PAD*2,H*0.26,Math.round(78*sc),"HW","center","#fff",3,FFS);ctx.restore();
+    ctx.fillStyle="rgba(0,0,0,0.12)";rrPath(ctx,W/2-bw/2-24*sc,H*0.38,bw+48*sc,64*sc,32*sc);ctx.fill();
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(badge,W/2,H*0.38+46*sc);ctx.restore();
+    // Body text
+    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.34,Math.round(78*sc),"HW","center","#fff",3,FFS);ctx.restore();
     stamp(ctx,B,W,H);
   }
   else if(t==="title"){
