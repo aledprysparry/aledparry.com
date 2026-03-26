@@ -597,49 +597,51 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H,true);  // dark bg → white logo
   }
   else if(t==="fact_box"){
+    // Overlay card — vertically centred content within card
+    const cp=Math.round(28*sc); // card padding
     if(isPortrait){
-      // Portrait: warm cream card at bottom, slides up
-      const bW=W-PAD,bH=Math.round(300*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
+      const bW=W-PAD,bH=Math.round(320*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
       ctx.save();ctx.translate(0,(1-ENT)*bH*0.7);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
-      ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(6*sc),[R,R,0,0]);ctx.fill();
-      drawIcon(ctx,"info",bX+Math.round(58*sc),bY+bH*0.42,Math.round(50*sc),B.colorPrimary,IC);
-      DT((c.headline||"").toUpperCase(),bX+Math.round(96*sc),bY+Math.round(80*sc),bW-Math.round(120*sc),Math.round(64*sc),Math.round(44*sc),"600","left",B.colorPrimary,1,FFS);
-      DT(c.body||"",bX+Math.round(96*sc),bY+Math.round(148*sc),bW-Math.round(120*sc),bH-Math.round(166*sc),Math.round(36*sc),"400","left",B.colorPrimary+"b8",3);
+      ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
+      // Content vertically centred: headline top third, body bottom two thirds
+      const innerX=bX+cp,innerW=bW-cp*2,innerY=bY+cp+Math.round(10*sc);
+      DT((c.headline||"").toUpperCase(),innerX,innerY,innerW,Math.round(60*sc),Math.round(42*sc),"700","left",B.colorPrimary,1,FFS);
+      const icSz=Math.round(28*sc);drawIcon(ctx,"info",innerX+icSz/2,innerY+Math.round(72*sc)+icSz/2,icSz,B.colorPrimary,IC);
+      DT(c.body||"",innerX+icSz+Math.round(12*sc),innerY+Math.round(68*sc),innerW-icSz-Math.round(12*sc),bH-cp*2-Math.round(78*sc),Math.round(34*sc),"400","left",B.colorPrimary+"b8",4);
       ctx.restore();
     } else {
-      const bW=Math.round(780*sc),bH=Math.round(260*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
-      const icR=Math.round(36*sc);
-      const contentX=bX+Math.round(36*sc); // after accent bar
-      const textX=contentX+icR*2+Math.round(16*sc); // after icon
-      const textW=bW-(textX-bX)-Math.round(30*sc);
+      const bW=Math.round(720*sc),bH=Math.round(240*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
       ctx.save();ctx.translate((1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
-      ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,Math.round(8*sc),bH,[R,0,0,R]);ctx.fill();
-      drawIcon(ctx,"info",bX+Math.round(58*sc),bY+bH/2,Math.round(46*sc),B.colorPrimary,IC);
-      DT((c.headline||"").toUpperCase(),bX+Math.round(94*sc),bY+Math.round(72*sc),bW-Math.round(114*sc),Math.round(58*sc),Math.round(42*sc),"600","left",B.colorPrimary,1,FFS);
-      DT(c.body||"",bX+Math.round(94*sc),bY+Math.round(130*sc),bW-Math.round(114*sc),bH-Math.round(148*sc),Math.round(34*sc),"400","left",B.colorPrimary+"b8",3);
+      ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,Math.round(6*sc),bH,[R,0,0,R]);ctx.fill();
+      // Vertically centred content
+      const innerX=bX+Math.round(24*sc),innerW=bW-Math.round(48*sc);
+      const topY=bY+cp;
+      DT((c.headline||"").toUpperCase(),innerX,topY,innerW,Math.round(50*sc),Math.round(40*sc),"700","left",B.colorPrimary,1,FFS);
+      const icSz=Math.round(26*sc);drawIcon(ctx,"info",innerX+icSz/2,topY+Math.round(64*sc)+icSz/2,icSz,B.colorPrimary,IC);
+      DT(c.body||"",innerX+icSz+Math.round(12*sc),topY+Math.round(58*sc),innerW-icSz-Math.round(12*sc),bH-cp*2-Math.round(64*sc),Math.round(32*sc),"400","left",B.colorPrimary+"b8",3);
       ctx.restore();
     }
   }
   else if(t==="speech_bubble"){
+    // Overlay bubble — text vertically centred
+    const cp=Math.round(30*sc);
     if(isPortrait){
-      // Portrait: warm cream bubble at top, scales in from centre
-      const bW=W-PAD,bH=Math.round(240*sc),bX=PAD/2,bY=Math.round(80*sc);
+      const bW=W-PAD,bH=Math.round(260*sc),bX=PAD/2,bY=Math.round(80*sc);
       const sc2=easeBack(ENT);ctx.save();ctx.translate(W/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-W/2,-(bY+bH/2));ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=28;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
-      // tail centred
-      ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(W/2-30*sc,bY+bH);ctx.lineTo(W/2,bY+bH+50*sc);ctx.lineTo(W/2+30*sc,bY+bH);ctx.closePath();ctx.fill();
-      drawIcon(ctx,"question",bX+60*sc,bY+bH/2,46*sc,B.colorPrimary,IC);
-      DT(c.text||"",bX+110*sc+(bW-120*sc)/2,bY+78*sc,bW-130*sc,bH-96*sc,Math.round(48*sc),"600","center",B.colorPrimary,2,FFS);
+      ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(W/2-24*sc,bY+bH);ctx.lineTo(W/2,bY+bH+40*sc);ctx.lineTo(W/2+24*sc,bY+bH);ctx.closePath();ctx.fill();
+      // Centred text within card
+      DT(c.text||"",bX+bW/2,bY+cp,bW-cp*2,bH-cp*2,Math.round(46*sc),"600","center",B.colorPrimary,3,FFS);
       ctx.restore();
     } else {
-      const bW=Math.round(680*sc),bH=Math.round(210*sc),bX=W-bW-Math.round(100*sc),bY=Math.round(76*sc);
+      const bW=Math.round(640*sc),bH=Math.round(200*sc),bX=W-bW-Math.round(100*sc),bY=Math.round(76*sc);
       const sc2=easeBack(ENT);ctx.save();ctx.translate(W-Math.round(60*sc),bY);ctx.scale(sc2,sc2);ctx.translate(-(W-Math.round(60*sc)),-bY);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=28;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
-      ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(bX+46*sc,bY+bH);ctx.lineTo(bX+18*sc,bY+bH+50*sc);ctx.lineTo(bX+124*sc,bY+bH);ctx.closePath();ctx.fill();
-      drawIcon(ctx,"question",bX+64*sc,bY+bH/2,42*sc,B.colorPrimary,IC);
-      DT(c.text||"",bX+106*sc+(bW-120*sc)/2,bY+68*sc,bW-128*sc,bH-84*sc,Math.round(44*sc),"600","center",B.colorPrimary,2,FFS);
+      ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(bX+40*sc,bY+bH);ctx.lineTo(bX+16*sc,bY+bH+40*sc);ctx.lineTo(bX+100*sc,bY+bH);ctx.closePath();ctx.fill();
+      // Centred text within card
+      DT(c.text||"",bX+bW/2,bY+cp,bW-cp*2,bH-cp*2,Math.round(42*sc),"600","center",B.colorPrimary,3,FFS);
       ctx.restore();
     }
   }
