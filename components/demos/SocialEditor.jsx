@@ -558,24 +558,43 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="key_point"){
-    // Teal background with warm gradient at bottom
-    const kpGrad=ctx.createLinearGradient(0,0,0,H);kpGrad.addColorStop(0,B.colorPrimary);kpGrad.addColorStop(1,B.colorPrimary+"dd");
-    ctx.fillStyle=kpGrad;ctx.fillRect(0,0,W,H);
-    ctx.fillStyle=CW;ctx.fillRect(0,0,W,Math.round(3*sc));
+    // Forest green background (like their landlord posts)
+    ctx.fillStyle=B.colorForest||B.colorPrimary;ctx.fillRect(0,0,W,H);
+    const lx=PAD; // left alignment edge — everything anchors here
     if(isPortrait){
-      // Portrait: icon centred above, serif headline + body stacked
-      const icSc=easeBack(clamp(p*2,0,1));ctx.save();ctx.translate(W/2,H*0.28);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(100*sc),CW,IC);ctx.restore();
-      ctx.save();ctx.globalAlpha=TXT;ctx.translate(0,(1-TXT)*40*sc);
-      DT(c.headline||"KEY POINT",W/2,H*0.38,W-PAD*2,H*0.10,Math.round(72*sc),"HW","center","#fff",1,FFS);ctx.restore();
-      const divW=Math.round(W*0.25*ENT);ctx.strokeStyle=CW+"44";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(W/2-divW/2,H*0.46);ctx.lineTo(W/2+divW/2,H*0.46);ctx.stroke();
-      ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.36,Math.round(64*sc),"500","center","rgba(255,255,255,0.85)",4);ctx.restore();
+      // Portrait: left-aligned grid
+      const icSz=Math.round(48*sc);
+      const icSc=easeBack(clamp(p*2,0,1));
+      let y=H*0.18;
+      // Icon + headline on same baseline
+      ctx.save();ctx.translate(lx+icSz/2,y+icSz/2);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,icSz,CW,IC);ctx.restore();
+      ctx.save();ctx.globalAlpha=TXT;
+      y=DT(c.headline||"KEY POINT",lx+icSz+Math.round(16*sc),y,W-lx-icSz-Math.round(16*sc)-PAD,H*0.12,Math.round(68*sc),"HW","left","#fff",2,FFS);
+      y+=H*0.03;
+      // Rule — same left edge
+      const ruleW=Math.round(W*0.20*ENT);ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lx,y);ctx.lineTo(lx+ruleW,y);ctx.stroke();
+      y+=H*0.04;
+      // Body — same left alignment
+      DT(c.body||"",lx+(W-PAD*2)/2,y,W-PAD*2,H*0.45,Math.round(56*sc),"500","center","rgba(255,255,255,0.85)",5);
+      ctx.restore();
     } else {
-      const icSc=easeBack(clamp(p*2,0,1));ctx.save();ctx.translate(PAD+Math.round(75*sc),H*0.34);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,Math.round(80*sc),CW,IC);ctx.restore();
-      ctx.save();ctx.globalAlpha=TXT;ctx.translate((1-TXT)*-30*sc,0);DT(c.headline||"KEY POINT",PAD+Math.round(152*sc),H*0.26,W-PAD-Math.round(152*sc)-PAD,H*0.13,Math.round(76*sc),"HW","left","#fff",1,FFS);ctx.restore();
-      const divW=Math.round(W*0.15*ENT);ctx.strokeStyle=CW+"44";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(PAD,H*0.44);ctx.lineTo(PAD+divW,H*0.44);ctx.stroke();
-      ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.38,Math.round(68*sc),"500","center","rgba(255,255,255,0.85)",4);ctx.restore();
+      // Landscape: left-aligned grid, all elements share lx
+      const icSz=Math.round(44*sc);
+      const icSc=easeBack(clamp(p*2,0,1));
+      let y=H*0.18;
+      // Icon + headline on same line
+      ctx.save();ctx.translate(lx+icSz/2,y+icSz/2);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,icSz,CW,IC);ctx.restore();
+      ctx.save();ctx.globalAlpha=TXT;ctx.translate((1-TXT)*-20*sc,0);
+      y=DT(c.headline||"KEY POINT",lx+icSz+Math.round(16*sc),y,W-lx-icSz-Math.round(16*sc)-PAD,H*0.12,Math.round(72*sc),"HW","left","#fff",2,FFS);
+      y+=H*0.04;
+      // Rule — aligned to lx
+      const ruleW=Math.round(W*0.18*ENT);ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lx,y);ctx.lineTo(lx+ruleW,y);ctx.stroke();
+      y+=H*0.05;
+      // Body — left aligned
+      DT(c.body||"",lx,y,W-PAD*2,H*0.40,Math.round(60*sc),"500","left","rgba(255,255,255,0.85)",4);
+      ctx.restore();
     }
-    stamp(ctx,B,W,H);
+    stamp(ctx,B,W,H,true);  // dark bg → white logo
   }
   else if(t==="fact_box"){
     if(isPortrait){
