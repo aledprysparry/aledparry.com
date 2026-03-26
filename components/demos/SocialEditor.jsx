@@ -128,6 +128,8 @@ const FONTS = [
   { name:"Raleway",          weights:"400;600;700;800;900" },
   { name:"Nunito",           weights:"400;600;700;800;900" },
   { name:"Roboto",           weights:"400;500;700"         },
+  { name:"DM Sans",          weights:"400;500;600;700"     },
+  { name:"Lora",             weights:"400;500;600;700", ital:true },
   { name:"Libre Baskerville", weights:"400;700", ital:true  },
 ];
 
@@ -170,7 +172,8 @@ const DEFAULT_BRAND = {
   captionFontWeight:"800", captionPosition:"lower",
   captionTextCase:"upper", captionBgOpacity:0,
   // watermark
-  logoDataUrl:"",    // base64 transparent PNG
+  logoDataUrl:"",         // base64 or URL — dark/teal logo for light backgrounds
+  logoDataUrlLight:"",    // base64 or URL — white logo for dark backgrounds
   logoOpacity:0.75,  // 0–1
   logoSize:0.10,     // fraction of canvas width (0.05–0.25)
   logoPosition:"br", // br | bl | tr | tl
@@ -197,13 +200,15 @@ const DEFAULT_BRAND = {
 const BRAND_PRESETS = {
   "CPS Homes": {
     id: 1, name: "CPS Homes", createdAt: "2026-01-01T00:00:00.000Z",
-    colorPrimary:  "#325E69",   // deep teal — headings, nav, primary UI
-    colorAccent:   "#FA8770",   // salmon/coral — CTAs, highlights
-    colorPositive: "#76936C",   // sage green — positive actions, buttons
+    colorPrimary:  "#335F6A",   // deep teal — official brand
+    colorAccent:   "#FB8770",   // salmon/coral — official brand
+    colorPositive: "#83A381",   // sage green — official brand
     colorText:     "#FFFFFF",   // white — overlay text
-    fontFamily:    "Roboto",    // matches cpshomes.co.uk
-    fontSerif:     "Libre Baskerville",
-    colorWarm:     "#f0e1d3",   // warm cream from cpshomes.co.uk
+    fontFamily:    "DM Sans",   // closest Google Font to Matter (proprietary)
+    fontSerif:     "Lora",      // closest Google Font to Nantes (proprietary)
+    colorWarm:     "#F2E6D8",   // warm cream — official brand
+    colorForest:   "#445A46",   // dark forest green — landlord overlays
+    colorOlive:    "#A7A740",   // olive — insight/education posts
     channelName:   "CPS Homes",
     cornerRadius:  20,
     iconStyle:     "line",
@@ -213,14 +218,15 @@ const BRAND_PRESETS = {
     captionPosition:   "lower",
     captionTextCase:   "normal",
     captionBgOpacity:  0.0,
-    logoDataUrl:   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALUAAAA6CAYAAAD2tRikAAAABGdBTUEAALGPC/xhBQAACklpQ0NQc1JHQiBJRUM2MTk2Ni0yLjEAAEiJnVN3WJP3Fj7f92UPVkLY8LGXbIEAIiOsCMgQWaIQkgBhhBASQMWFiApWFBURnEhVxILVCkidiOKgKLhnQYqIWotVXDjuH9yntX167+3t+9f7vOec5/zOec8PgBESJpHmomoAOVKFPDrYH49PSMTJvYACFUjgBCAQ5svCZwXFAADwA3l4fnSwP/wBr28AAgBw1S4kEsfh/4O6UCZXACCRAOAiEucLAZBSAMguVMgUAMgYALBTs2QKAJQAAGx5fEIiAKoNAOz0ST4FANipk9wXANiiHKkIAI0BAJkoRyQCQLsAYFWBUiwCwMIAoKxAIi4EwK4BgFm2MkcCgL0FAHaOWJAPQGAAgJlCLMwAIDgCAEMeE80DIEwDoDDSv+CpX3CFuEgBAMDLlc2XS9IzFLiV0Bp38vDg4iHiwmyxQmEXKRBmCeQinJebIxNI5wNMzgwAABr50cH+OD+Q5+bk4eZm52zv9MWi/mvwbyI+IfHf/ryMAgQAEE7P79pf5eXWA3DHAbB1v2upWwDaVgBo3/ldM9sJoFoK0Hr5i3k4/EAenqFQyDwdHAoLC+0lYqG9MOOLPv8z4W/gi372/EAe/tt68ABxmkCZrcCjg/1xYW52rlKO58sEQjFu9+cj/seFf/2OKdHiNLFcLBWK8ViJuFAiTcd5uVKRRCHJleIS6X8y8R+W/QmTdw0ArIZPwE62B7XLbMB+7gECiw5Y0nYAQH7zLYwaC5EAEGc0Mnn3AACTv/mPQCsBAM2XpOMAALzoGFyolBdMxggAAESggSqwQQcMwRSswA6cwR28wBcCYQZEQAwkwDwQQgbkgBwKoRiWQRlUwDrYBLWwAxqgEZrhELTBMTgN5+ASXIHrcBcGYBiewhi8hgkEQcgIE2EhOogRYo7YIs4IF5mOBCJhSDSSgKQg6YgUUSLFyHKkAqlCapFdSCPyLXIUOY1cQPqQ28ggMor8irxHMZSBslED1AJ1QLmoHxqKxqBz0XQ0D12AlqJr0Rq0Hj2AtqKn0UvodXQAfYqOY4DRMQ5mjNlhXIyHRWCJWBomxxZj5Vg1Vo81Yx1YN3YVG8CeYe8IJAKLgBPsCF6EEMJsgpCQR1hMWEOoJewjtBK6CFcJg4Qxwicik6hPtCV6EvnEeGI6sZBYRqwm7iEeIZ4lXicOE1+TSCQOyZLkTgohJZAySQtJa0jbSC2kU6Q+0hBpnEwm65Btyd7kCLKArCCXkbeQD5BPkvvJw+S3FDrFiOJMCaIkUqSUEko1ZT/lBKWfMkKZoKpRzame1AiqiDqfWkltoHZQL1OHqRM0dZolzZsWQ8ukLaPV0JppZ2n3aC/pdLoJ3YMeRZfQl9Jr6Afp5+mD9HcMDYYNg8dIYigZaxl7GacYtxkvmUymBdOXmchUMNcyG5lnmA+Yb1VYKvYqfBWRyhKVOpVWlX6V56pUVXNVP9V5qgtUq1UPq15WfaZGVbNQ46kJ1Bar1akdVbupNq7OUndSj1DPUV+jvl/9gvpjDbKGhUaghkijVGO3xhmNIRbGMmXxWELWclYD6yxrmE1iW7L57Ex2Bfsbdi97TFNDc6pmrGaRZp3mcc0BDsax4PA52ZxKziHODc57LQMtPy2x1mqtZq1+rTfaetq+2mLtcu0W7eva73VwnUCdLJ31Om0693UJuja6UbqFutt1z+o+02PreekJ9cr1Dund0Uf1bfSj9Rfq79bv0R83MDQINpAZbDE4Y/DMkGPoa5hpuNHwhOGoEctoupHEaKPRSaMnuCbuh2fjNXgXPmasbxxirDTeZdxrPGFiaTLbpMSkxeS+Kc2Ua5pmutG003TMzMgs3KzYrMnsjjnVnGueYb7ZvNv8jYWlRZzFSos2i8eW2pZ8ywWWTZb3rJhWPlZ5VvVW16xJ1lzrLOtt1ldsUBtXmwybOpvLtqitm63Edptt3xTiFI8p0in1U27aMez87ArsmuwG7Tn2YfYl9m32zx3MHBId1jt0O3xydHXMdmxwvOuk4TTDqcSpw+lXZxtnoXOd8zUXpkuQyxKXdpcXU22niqdun3rLleUa7rrStdP1o5u7m9yt2W3U3cw9xX2r+00umxvJXcM970H08PdY4nHM452nm6fC85DnL152Xlle+70eT7OcJp7WMG3I28Rb4L3Le2A6Pj1l+s7pAz7GPgKfep+Hvqa+It89viN+1n6Zfgf8nvs7+sv9j/i/4XnyFvFOBWABwQHlAb2BGoGzA2sDHwSZBKUHNQWNBbsGLww+FUIMCQ1ZH3KTb8AX8hv5YzPcZyya0RXKCJ0VWhv6MMwmTB7WEY6GzwjfEH5vpvlM6cy2CIjgR2yIuB9pGZkX+X0UKSoyqi7qUbRTdHF09yzWrORZ+2e9jvGPqYy5O9tqtnJ2Z6xqbFJsY+ybuIC4qriBeIf4RfGXEnQTJAntieTE2MQ9ieNzAudsmjOc5JpUlnRjruXcorkX5unOy553PFk1WZB8OIWYEpeyP+WDIEJQLxhP5aduTR0T8oSbhU9FvqKNolGxt7hKPJLmnVaV9jjdO31D+miGT0Z1xjMJT1IreZEZkrkj801WRNberM/ZcdktOZSclJyjUg1plrQr1zC3KLdPZisrkw3keeZtyhuTh8r35CP5c/PbFWyFTNGjtFKuUA4WTC+oK3hbGFt4uEi9SFrUM99m/ur5IwuCFny9kLBQuLCz2Lh4WfHgIr9FuxYji1MXdy4xXVK6ZHhp8NJ9y2jLspb9UOJYUlXyannc8o5Sg9KlpUMrglc0lamUycturvRauWMVYZVkVe9ql9VbVn8qF5VfrHCsqK74sEa45uJXTl/VfPV5bdra3kq3yu3rSOuk626s91m/r0q9akHV0IbwDa0b8Y3lG19tSt50oXpq9Y7NtM3KzQM1YTXtW8y2rNvyoTaj9nqdf13LVv2tq7e+2Sba1r/dd3vzDoMdFTve75TsvLUreFdrvUV99W7S7oLdjxpiG7q/5n7duEd3T8Wej3ulewf2Re/ranRvbNyvv7+yCW1SNo0eSDpw5ZuAb9qb7Zp3tXBaKg7CQeXBJ9+mfHvjUOihzsPcw83fmX+39QjrSHkr0jq/dawto22gPaG97+iMo50dXh1Hvrf/fu8x42N1xzWPV56gnSg98fnkgpPjp2Snnp1OPz3Umdx590z8mWtdUV29Z0PPnj8XdO5Mt1/3yfPe549d8Lxw9CL3Ytslt0utPa49R35w/eFIr1tv62X3y+1XPK509E3rO9Hv03/6asDVc9f41y5dn3m978bsG7duJt0cuCW69fh29u0XdwruTNxdeo94r/y+2v3qB/oP6n+0/rFlwG3g+GDAYM/DWQ/vDgmHnv6U/9OH4dJHzEfVI0YjjY+dHx8bDRq98mTOk+GnsqcTz8p+Vv9563Or59/94vtLz1j82PAL+YvPv655qfNy76uprzrHI8cfvM55PfGm/K3O233vuO+638e9H5ko/ED+UPPR+mPHp9BP9z7nfP78L/eE8/stRzjPAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAJcEhZcwAALiMAAC4jAXilP3YAAA6fSURBVHic7Z13lBXVHcc/u3SyhhWIiAoWoqAICJp1SdBYsAdsMZYo1iSgsUSNRKPHEtQoxkIQG+aA2I69oEREURSNRDEoYCwIBhARFVaUsrT88Z05b3bmTns79+3u433P4Sx75747d/b95t7f7/srt6zfkGEUEN2AUcCBQCtgCXAdMLqQkyihuFFewHsdBswGDkcCDdAZ+DvwBNCigHMpoYhRKKH+E/A80Drk+tHAXGDHAs2nhCJGIYT6EeD6BP1+DHwAHGp3OiUUO2wKdWdgDnBcis+0AiYBl1qZUQmbBWwJ9UBgHrBbnp+/Dngsu+mUsDnBhlBfDLwItKnnOMcCs4Au9Z5RCZsVmlsY748Zjtcb+BAYDEzJcFxb2AX4FdAXqATKgK+BN9HO8z/DZ7YAhgFbAmuBtsB4pLpVAUcCvYAfAt8B89HfYiKwIcGcdgZOAPo59yoHVqIF40ng3bQP2dhRZoGnfh34WdaDoh3gbxbGzQLbAHcCg2L6jQcuQoLuoi8w09fvYWAtcErEWEuA84FHI/rcAFwSM6fXgLMR3VoUsKF+vGJhTICbkFA0NhyE7Ic4gQY4Ffgv8FNPWy2w0dfvBKIFGmSIPwLcEXL9NuIFGmAf4H1gjwR9mwRsCPV/LIzpYgha1bazeI80OAD4J+H8uwkdgankdrONBIU6DYYSFOwBwHkpxvgIqTVFgax1aoAXgOVIR7SBvuQ8k29YukcStAfuw7wwLAZeQjr1gUg98aIlUh2mA5ti7rMS7X4LgT2BvQ19hgJvAeOc34829JkIvIp09irkD2iGXqhjgJqYeTQZ5CPUvYBOhBtuKxHXfFK+k0qAdkggzkNu9obAhcC2hnbTnG6krgH9BDnVoCziHmOd+6z0tFUh4d3V1/cK4CFkbPp3skXAicjQdLE9cA3aaeZEzKHJIa36UQX8C1F2URbmQ3nPKB1GAfcW6F5etMTsVBqC+SW7BDgH7TAHIbpygXMtTKhvAX5DXYEGmIFUlwW+9p0I1+u3A/4C/MDT9hnS8Qv1XRUMaYT6dLTFtXV+HwP8OaTvRIIWvS2cgSizDgW6H8DPEX3nxSRgQsRnxqBdLgk1+TkwIuL6cuBKQ/t+zk8TTXcBsAKph2dSV8CLCkmF+nbgX8Y2kegFcCEUXnNKD9XAx5j1TRswOYSezHD8F4FvEvT52tfWw/l5b8h/LPMWZiN4ajVdCZ6ecKOOXGz9aPqwuyHdpbhhOdWtkPJxIsIP5ntFuABonNoB6Jkhwm2hfjniGtdUeRc1pkoDYVy9AXFsT0VKL65wnDtDHLleJNif5R946+R7VdNygh/2bw4Gb1USc+0nIBZYA9DalLSmn0tkR3lT7cbhHa3pNjdplDXYE7FBwUnzSFYYaiYsInwXMNdgN/52nZDpRTywd5oNUuDjZjn14ygWhr1LF0JPks3dMqBCYsQtRqWuXM/det5n2bosxTp4v4zdNYAJ9kU6qcxJ4B2RfqPaaUqBsxFOZg7oGc9DjMD5GdhrsZ8IsFktLVujw5QHYI5lmYooi7j8CZSGbZBKWeXR/StRUm5OyH/QH/MFVX9z3I9we/3U/QcXYC9nJ97EizL0J5cIrCpyM5zyAD/Cbm/yd3OtXOAD2waiqYUoi3QFrOVxfs2JJYiXdibi/gYEvS3qauf9kBCtQjtXL80jHclyvb3Yh7a8p9DlKcXpyChDcOHqOCQN6rxWmTgmpInTqfu97gU5WDOoe6z7IhiVlahF8Bfu/st9EL4V/uZiBF5g7ov5AlIn99AsNLBts693WeYh3aK83FYFFsr9VuIcvJjHEVUs82AZzAn185FycZetCdXq3Afw2cmERRoL04jWPV0INHf6RjMYboPGNrmYF6Y5qNd2IutyKmSphIUE5BA90RJxO6/ns51f1hxZ3IJ2X4adA/k0BuLKiG4OadrcM7OsSXUJprpXIrf8RFVuvh9Q5t7gFEfw7W4yq3LUDy3F9ujcxPDEMYtryDo+Y2iHf0hv2XkSpv5j+1Yj+ozbkLMz1zPv9lO+xUED3Pay/npf0aQmnYmMpCXIhqyo3vRhlBPJ5g2tTON9wzELBEV3206gcvdjv20WS0KyIqDv15HS+SkCUNYcJfJEEzrKApzBDUnngFpTVAWXSEdgWQqDB2QDr4MZ9G0IdRXGdquoQgr1hsQRZlFlWbwC1SLmLFcmKi0qAI2YTZUGUEqMk2VKBvw5qYeQDJ253FgYNaG4u0E05n6I8W/hHD4V8UyZEC9F/O5Q3y/LyF9rE0Y8l3wTC/VcKRudCa4Y5UjA3MdekmbO328x43UIsPxemRQD0aOHRNbNDxLoZ4F/N7QfmGG9yhWTCOYKHAp4npXhHzmCILnJb5H+jp6WeMFgs+ylqAxmA+WkUvIboPKRl9LXTatOiv143vMtfN6Y6aqSqiLlxDd5sUOSEA6Bnrr2LqHDe2N4fi46QTPrLmV6N36USRDpmC2Fog5uoO6K/NqxIDc5P9AVkJ9FNpe/Dgxo/GzRGNMal2DgqD8qEKMxd0oDvwCpN5NJujcmEHjqGuyFvPJbA+hF3F/5HjpjRxGH6KFry2igv3HT49ENOFQpF6Ncfr3cdpP9t8oiy84qiyA6QDNhkZjzZkcjVZg//EZ7VDkX1QJ5PVEH9ZaaNyGVuZqX/vxzr8ojEC89nK0+5/vuVaJnjPqWaeUEx10FIVNqFTYfSHX90ExAI0NU+O7WIEp0MnfdjTps3I2ISrLfxhrmjQ6E/uRFv7PD0KBUWlxBjm7wOSUisPN5SjmICrY3ITliByPKurYGKPvxiNPnS1E0XYmis5/bstGFH6ZNDjpXeSVe9ZwzcQMhPHFLQly5WEhp2HwP99X6BCpcQk/vwTFpDzmaRuGiconlc9jgdeaoze8L9KDBqA/rKl+RTn6EiajrSXOynZPxTJlUxQSrZC3bBQ6CyUrfIzcyLVotWyNzoAJw2QUfPOtM6dvMTtYNiHGaDQK0DkIxVOUIXXxSxQrMYFoRmEa8IozXguUVOA/ks7FYqS3VzvzqiR6wXocFfNci4R/AWabag2KH7kRJRQMJHeUXjNyidEPopPdTKrhreg4w7OQZtATUX/rkUzORwb1Tc5z8H8VNOB2RPfmrwAAAABJRU5ErkJggg==",
-    logoOpacity:   0.85,
-    logoSize:      0.12,
-    logoPosition:  "br",
+    logoDataUrl:      "/demos/cpshomes-logo-teal.png",   // teal logo for light backgrounds
+    logoDataUrlLight: "/demos/cpshomes-logo-white.png",  // white logo for dark backgrounds
+    logoOpacity:   0.90,
+    logoSize:      0.14,
+    logoPosition:  "tl",     // top-left like their actual posts
     typeScale:     1.0,
-    lineHeight:    1.30,
-    headingWeight: "600",
-    captionLineHeight: 1.45,
+    lineHeight:    0.92,     // tight — matches Matter spec from brand guide
+    headingWeight: "700",
+    captionLineHeight: 1.07, // matches Nantes spec from brand guide
     titleCardSeriesName: "",
     titleCardTitle:     "",
     titleCardSubtitle:  "",
@@ -234,12 +240,13 @@ const BRAND_PRESETS = {
 
 // ── Logo image cache (avoids reloading on every frame) ──────
 const IMG_CACHE = {};
-function getCachedImage(dataUrl) {
-  if (!dataUrl) return null;
-  if (IMG_CACHE[dataUrl]) return IMG_CACHE[dataUrl].complete ? IMG_CACHE[dataUrl] : null;
+function getCachedImage(src) {
+  if (!src) return null;
+  if (IMG_CACHE[src]) return IMG_CACHE[src].complete ? IMG_CACHE[src] : null;
   const img = new Image();
-  img.src = dataUrl;
-  IMG_CACHE[dataUrl] = img;
+  img.crossOrigin = "anonymous"; // needed for URL-based images on canvas
+  img.src = src;
+  IMG_CACHE[src] = img;
   return null; // available next frame once decoded
 }
 
@@ -247,7 +254,7 @@ const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
 const TMPL_STORE = "infostudio_templates_v1";
 const BRAND_VERSION_KEY = "infostudio_brand_version";
-const BRAND_VERSION = 4; // bump this to force-reseed brands from presets
+const BRAND_VERSION = 5; // bump this to force-reseed brands from presets
 const load = k => { try { const r=localStorage.getItem(k); return r?JSON.parse(r):[]; } catch{ return []; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} };
 
@@ -343,12 +350,13 @@ function drawText(ctx,text,x,y,maxW,maxH,baseSz,weight,align,color,maxLines=3,ff
   if(line.trim()&&count<maxLines&&cy<=y+maxH)ctx.fillText(line.trim(),x,cy);
   return cy;
 }
-function stamp(ctx,brand,W,H){
+function stamp(ctx,brand,W,H,darkBg=true){
   const MARGIN=W*0.03;
   const opacity=Math.min(1,Math.max(0,brand.logoOpacity??0.75));
-  // Logo image
-  if(brand.logoDataUrl){
-    const img=getCachedImage(brand.logoDataUrl);
+  // Pick logo: white for dark backgrounds, teal for light backgrounds
+  const logoSrc=darkBg?(brand.logoDataUrlLight||brand.logoDataUrl):brand.logoDataUrl;
+  if(logoSrc){
+    const img=getCachedImage(logoSrc);
     if(img){
       const logoW=Math.round(W*Math.min(0.25,Math.max(0.04,brand.logoSize??0.10)));
       const logoH=Math.round(logoW*(img.naturalHeight/img.naturalWidth));
@@ -404,7 +412,7 @@ const ANIM_PRESETS = {
 };
 
 // ── Style Extraction Mappings ─────────────────────────────────
-const FONT_MAP  = { condensed:"Barlow Condensed", sans:"Montserrat", display:"Anton", serif:"Libre Baskerville" };
+const FONT_MAP  = { condensed:"Barlow Condensed", sans:"DM Sans", display:"Anton", serif:"Lora" };
 const RADIUS_MAP = { sharp:0, slight:8, rounded:18, pill:32 };
 const LH_MAP     = { tight:1.15, normal:1.30, airy:1.55 };
 
@@ -513,7 +521,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       if(c.body)DT(c.body,tx,y,W-tx-PAD,H*0.12,Math.round(48*sc),"400","left",B.colorPrimary+"66",2);
       ctx.restore();
     }
-    stamp(ctx,B,W,H);
+    stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="rule_number"){
     // Warm cream background with teal text
@@ -526,7 +534,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=B.colorPrimary+"66";ctx.font=`600 ${Math.round(56*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText("— RULE —",W/2,H*0.35);
     ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(220*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.fillText("#"+(c.number||"1"),W/2,H*0.68);ctx.restore();
     if(c.body){ctx.save();ctx.globalAlpha=TXT;DT(c.body,W/2,H*0.73,W-PAD*2,H*0.14,Math.round(54*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
-    stamp(ctx,B,W,H);
+    stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="key_point"){
     // Teal background with warm gradient at bottom
@@ -1958,8 +1966,8 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     }
   }
 
-  // Logo always bottom-right
-  stamp(ctx,B,W,H);
+  // Logo — teal logo on cream background
+  stamp(ctx,B,W,H,false);
 }
 
 // ═══════════════════════════════════════════════════════════════
