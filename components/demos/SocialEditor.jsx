@@ -491,8 +491,9 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const bg=t==="myth"?B.colorAccent:B.colorPositive;
     ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     // Subtle wavy texture (like CPS posts)
-    ctx.save();ctx.globalAlpha=0.06;ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
-    for(let i=0;i<5;i++){const off=i*W*0.22;ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
+    ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
+    const waveShift=p*W*0.15;
+    for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
     // Icon — vertically centred in top portion
     const icR=Math.round(70*sc),icSc=easeBack(clamp(p*2.2,0,1));
@@ -573,8 +574,9 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Forest green background
     ctx.fillStyle=B.colorForest||B.colorPrimary;ctx.fillRect(0,0,W,H);
     // Wavy texture (matching myth/reality)
-    ctx.save();ctx.globalAlpha=0.06;ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
-    for(let i=0;i<5;i++){const off=i*W*0.22;ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
+    ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
+    const waveShift=p*W*0.15;
+    for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
     const lx=PAD;
     const icSz=Math.round(isPortrait?44*sc:40*sc);
