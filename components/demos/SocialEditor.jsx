@@ -247,7 +247,7 @@ const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
 const TMPL_STORE = "infostudio_templates_v1";
 const BRAND_VERSION_KEY = "infostudio_brand_version";
-const BRAND_VERSION = 3; // bump this to force-reseed brands from presets
+const BRAND_VERSION = 4; // bump this to force-reseed brands from presets
 const load = k => { try { const r=localStorage.getItem(k); return r?JSON.parse(r):[]; } catch{ return []; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} };
 
@@ -404,7 +404,7 @@ const ANIM_PRESETS = {
 };
 
 // ── Style Extraction Mappings ─────────────────────────────────
-const FONT_MAP  = { condensed:"Barlow Condensed", sans:"Montserrat", display:"Anton", serif:"Raleway" };
+const FONT_MAP  = { condensed:"Barlow Condensed", sans:"Montserrat", display:"Anton", serif:"Libre Baskerville" };
 const RADIUS_MAP = { sharp:0, slight:8, rounded:18, pill:32 };
 const LH_MAP     = { tight:1.15, normal:1.30, airy:1.55 };
 
