@@ -1120,7 +1120,8 @@ function GraphicAnimPreview({g,brand,ratio}){
   useEffect(()=>{
     st.current=Date.now();
     const loop=()=>{const p=Math.min((Date.now()-st.current)/700,1);if(ref.current)drawGraphic(ref.current,g,brand,ratio||"16:9",p);rafRef.current=requestAnimationFrame(loop);};
-    rafRef.current=requestAnimationFrame(loop);return()=>cancelAnimationFrame(rafRef.current);
+    document.fonts.ready.then(()=>{rafRef.current=requestAnimationFrame(loop);});
+    return()=>cancelAnimationFrame(rafRef.current);
   },[g,brand,ratio]);
   const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
   return(<canvas ref={ref} width={AR.W} height={AR.H} style={{width:"100%",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>);
@@ -1372,20 +1373,25 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   };
 
   const doPreview=useCallback((g,i)=>{
-    const canvas=document.createElement("canvas");
-    drawGraphic(canvas,g,brand,previewRatio,1);
-    setPreviews(p=>({...p,[i]:canvas.toDataURL("image/png")}));
+    // Wait for web fonts before canvas render
+    document.fonts.ready.then(()=>{
+      const canvas=document.createElement("canvas");
+      drawGraphic(canvas,g,brand,previewRatio,1);
+      setPreviews(p=>({...p,[i]:canvas.toDataURL("image/png")}));
+    });
   },[brand,previewRatio]);
 
   const previewAll=useCallback(()=>{
-    // Render each graphic one at a time to avoid canvas reuse issues
-    const batch={};
-    const canvas=document.createElement("canvas");
-    graphics.forEach((g,i)=>{
-      drawGraphic(canvas,g,brand,previewRatio,1);
-      batch[i]=canvas.toDataURL("image/png");
+    // Wait for web fonts before canvas render
+    document.fonts.ready.then(()=>{
+      const batch={};
+      const canvas=document.createElement("canvas");
+      graphics.forEach((g,i)=>{
+        drawGraphic(canvas,g,brand,previewRatio,1);
+        batch[i]=canvas.toDataURL("image/png");
+      });
+      setPreviews(p=>({...p,...batch}));
     });
-    setPreviews(p=>({...p,...batch}));
   },[graphics,brand,previewRatio]);
 
   const exportWebM=async(g,i)=>{
