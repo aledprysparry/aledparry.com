@@ -625,15 +625,18 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
   }
   else if(t==="stat"){
-    // Warm cream card with teal text
-    const bW=Math.round(540*sc),bH=Math.round(260*sc),bX=isPortrait?(W-Math.round(540*sc))/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
+    // Warm cream card with teal text — properly contained
+    const bW=Math.round(540*sc),bH=Math.round(280*sc),bX=isPortrait?(W-bW)/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
+    const cardPad=Math.round(30*sc);
     ctx.save();ctx.translate(0,(1-ENT)*bH*0.6);ctx.globalAlpha=ENT;
     ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=32;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
     ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(6*sc),[R,R,0,0]);ctx.fill();
+    // Stat value — sized to fit within card
     const rs=c.stat||"",nm=rs.match(/^([^0-9]*)([0-9.]+)(.*)$/);
     let ds=rs;if(nm){const n=parseFloat(nm[2]),d=Math.round(n*TXT*10)/10;ds=nm[1]+(Number.isInteger(n)?Math.round(d):d.toFixed(1))+nm[3];}
-    DT(ds,bX+bW/2,bY+Math.round(52*sc),bW-40*sc,Math.round(155*sc),Math.round(115*sc),"700","center",B.colorPrimary,1,FFS);
-    DT(c.label||"",bX+bW/2,bY+Math.round(218*sc),bW-40*sc,52*sc,Math.round(34*sc),"400","center",B.colorPrimary+"99",1);
+    DT(ds,bX+bW/2,bY+cardPad+Math.round(20*sc),bW-cardPad*2,Math.round(bH*0.50),Math.round(80*sc),"700","center",B.colorPrimary,1,FFS);
+    // Label — bottom of card
+    DT(c.label||"",bX+bW/2,bY+bH-cardPad-Math.round(40*sc),bW-cardPad*2,Math.round(44*sc),Math.round(32*sc),"400","center",B.colorPrimary+"99",1);
     ctx.restore();
   }
   else if(t==="timeline"){
