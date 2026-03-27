@@ -2032,8 +2032,10 @@ function ExportTab({project,brand,updateProject}){
             <div key={r} style={{marginBottom:8}}>
               <div style={{fontWeight:700,fontSize:13,marginBottom:3,color:"#2A9D8F"}}>{r} — {RATIOS[r].W}×{RATIOS[r].H}</div>
               <div style={{fontSize:12,opacity:0.6,display:"flex",gap:16,flexWrap:"wrap"}}>
-                <span>{selectedGfx.length} graphic PNG{selectedGfx.length!==1?"s":""}</span>
-                <span>{captionMode==="composite"?"1 composite caption WebM":`${subtitles.length} caption WebM${subtitles.length!==1?"s":""}`}</span>
+                <span>1 title card</span>
+                <span>{selectedGfx.length} graphic{selectedGfx.length!==1?"s":""}{gfxMode==="png"?" (PNG)":gfxMode==="webm"?" (WebM)":gfxMode==="pngseq"?" (PNG sequence)":" (PNG + WebM)"}</span>
+                <span>1 endboard</span>
+                {includeCaptions&&<span>{captionMode==="composite"?"1 caption WebM":`${subtitles.length} caption WebMs`}</span>}
                 <span>1 Premiere XML sequence</span>
                 <span>1 graphics cue sheet</span>
               </div>
