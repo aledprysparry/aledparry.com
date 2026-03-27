@@ -776,16 +776,23 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
         ctx.save();ctx.globalAlpha=ENT;ctx.translate(lx+logoW/2,ly+logoH/2);ctx.scale(logoScale,logoScale);ctx.drawImage(img,-logoW/2,-logoH/2,logoW,logoH);ctx.restore();
       }
     }
+    // Subtle pulse after entrance (breathe effect)
+    const pulse=p>=1?0.92+0.08*Math.sin(pRaw*Math.PI*0.8):1; // gentle 0.92–1.0 scale
+    const pulseAlpha=p>=1?0.85+0.15*Math.sin(pRaw*Math.PI*0.8):1; // gentle opacity breathe
     // Separator — salmon accent line
     const sepW=Math.round(120*sc*ENT);
+    ctx.save();ctx.globalAlpha=pulseAlpha;
     ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-sepW/2,H*sepFrac,sepW,Math.round(3*sc));
+    ctx.restore();
     // CTA headline — use brand endboard fields first, then content fields, then defaults
     const ctaY=H*ctaFrac;
     const ctaText=c.headline||B.endboardCTA||"Thanks for watching";
     const handleText=c.handle||B.endboardHandles||"";
     const websiteText=B.endboardWebsite||"";
     const bodyText=c.body||"";
+    ctx.save();ctx.translate(W/2,ctaY+H*0.06);ctx.scale(pulse,pulse);ctx.translate(-W/2,-(ctaY+H*0.06));
     DT(ctaText,W/2,ctaY,W*0.7,H*0.12,headSz,"700","center","#fff",2,FFS);
+    ctx.restore();
     // Body text
     if(bodyText){
       DT(bodyText,W/2,ctaY+H*bodyFrac,W*0.6,H*0.10,bodySz,"400","center","rgba(255,255,255,0.7)",2);
