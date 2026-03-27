@@ -2102,12 +2102,12 @@ function TitleCardPanel({project, brand, updateProject}){
   const effectiveBrand = isOverriding ? {...brand, ...override} : brand;
 
   const setField = k => v => updateProject(prev=>({titleCardOverride: {...(prev.titleCardOverride||{}), [k]:v}}));
-  const enableOverride = () => updateProject({titleCardOverride:{
-    titleCardTitle: brand.titleCardTitle||"",
+  const enableOverride = () => updateProject(prev=>({titleCardOverride:{
+    titleCardTitle: brand.titleCardTitle||prev.name||"",
     titleCardSeriesName: brand.titleCardSeriesName||"",
     titleCardSubtitle: brand.titleCardSubtitle||"",
     titleCardStyle: brand.titleCardStyle||"bar",
-  }});
+  }}));
   const disableOverride = () => updateProject({titleCardOverride:null});
 
   const exportPNGs = () => {
