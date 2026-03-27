@@ -1810,7 +1810,7 @@ function ExportTab({project,brand,updateProject}){
           const bleedCvs=addBleed(cvs.current,10);
           await new Promise(res=>{
             bleedCvs.toBlob(blob=>{
-              if(blob) dl(blob,`${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}.png`);
+              if(blob) dl(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}.png`);
               res();
             },"image/png");
           });
@@ -1824,7 +1824,7 @@ function ExportTab({project,brand,updateProject}){
         for(let i=0;i<selectedGfx.length;i++){
           try{
             const blob=await recordGraphic(selectedGfx[i],brand,ratio);
-            dl(blob,`${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}_animated.webm`);
+            dl(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}_animated.webm`);
           }catch(e){console.error("WebM export failed for graphic",i,e);}
           tick(done+1);
           await new Promise(r=>setTimeout(r,200));
