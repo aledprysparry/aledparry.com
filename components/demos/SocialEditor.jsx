@@ -1636,6 +1636,17 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export Selected</button>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
         <button style={btnDanger({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Clear all and re-analyse">↺ Re-analyse</button>
+        <button style={{...sm,background:"#FB8770",color:"#fff",fontWeight:700}} onClick={()=>{const n=graphics.length;const add=[
+          {id:n+1,timestamp:"00:00:30",duration:4,type:"overlay",template:"timeline",content:{label:"CONTRACT LENGTH",markers:["6 months","9 months","12 months"]},label:"contract-length"},
+          {id:n+2,timestamp:"00:01:00",duration:4,type:"fullscreen",template:"key_point",content:{headline:"BACK TO SQUARE ONE",body:"They need to start the process again"},label:"back-to-square-one"},
+          {id:n+3,timestamp:"00:01:15",duration:5,type:"fullscreen",template:"rule_number",content:{number:"!",body:"New rent does not take effect until after the fixed term"},label:"rent-after-fixed-term"},
+          {id:n+4,timestamp:"00:01:30",duration:4,type:"overlay",template:"fact_box",content:{headline:"WHY IT MATTERS",body:"Saves faffing around with pro rata amounts and standing orders"},label:"why-it-matters"},
+          {id:n+5,timestamp:"00:01:45",duration:4,type:"overlay",template:"tenant_ask",content:{text:"A tenant can only afford what they can afford"},label:"tenant-affordability"},
+          {id:n+6,timestamp:"00:02:00",duration:4,type:"overlay",template:"landlord_ask",content:{text:"Paying the rent on time every month"},label:"landlord-on-time-rent"},
+          {id:n+7,timestamp:"00:02:15",duration:4,type:"overlay",template:"fact_box",content:{headline:"THE RISK",body:"Slightly increased rent when there's no guarantee"},label:"the-risk"},
+          {id:n+8,timestamp:"00:02:30",duration:5,type:"fullscreen",template:"key_point",content:{headline:"HIDDEN COSTS",body:"Void period, council tax liability, standing charges liability"},label:"hidden-costs"},
+          {id:n+9,timestamp:"00:00:10",duration:4,type:"fullscreen",template:"title",content:{headline:"RENT INCREASES",subheadline:"Wales 2026",body:"What landlords and tenants need to know",number:"6"},label:"title-six-points"}
+        ];const ng=[...graphics,...add];setGraphics(ng);setSelected(s=>{const ns=new Set(s);add.forEach((_,i)=>ns.add(n+i));return ns;});}} title="Add client feedback graphics">+ Client v1</button>
       </div>
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
       <div style={{position:"relative"}}>
