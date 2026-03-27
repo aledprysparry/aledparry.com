@@ -766,6 +766,36 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     DT(c.text||"",textX,qY,textW,bH-(qY-bY)-cp,Math.round(36*sc),"600","left",B.colorPrimary,4,FFS);
     ctx.restore();
   }
+  else if(t==="subscribe"){
+    // Like & Subscribe overlay — compact branded card
+    const cp=Math.round(28*sc);
+    const bW=isCompact?W-PAD*1.5:Math.round(540*sc);
+    const bH=Math.round(isCompact?180*sc:160*sc);
+    const bX=isCompact?(W-bW)/2:W-bW-Math.round(80*sc);
+    const bY=isCompact?H-bH-Math.round(100*sc):H-bH-Math.round(80*sc);
+    // Scale-bounce entrance
+    const sc2=easeBack(ENT);
+    ctx.save();ctx.translate(bX+bW/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-(bX+bW/2),-(bY+bH/2));ctx.globalAlpha=ENT;
+    // Card with shadow
+    ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=32;
+    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=B.colorPrimary;ctx.fill();ctx.shadowBlur=0;
+    // Accent bar top — salmon
+    ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
+    ctx.fillStyle=B.colorAccent;ctx.fillRect(bX,bY,bW,Math.round(5*sc));
+    ctx.restore();
+    // Bell/thumbs icon
+    const icY=bY+bH*0.38;
+    ctx.font=`${Math.round(36*sc)}px Arial,sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText("👍",bX+cp+Math.round(16*sc),icY);
+    // "Like & Subscribe" text
+    DT(c.text||"Like & Subscribe",bX+cp+Math.round(50*sc),bY+cp,bW-cp*2-Math.round(50*sc),bH*0.4,Math.round(34*sc),"700","left","#fff",1,FFS);
+    // Subline — channel or handle
+    const subText=c.body||B.endboardHandles||B.channelName||"";
+    if(subText){
+      DT(subText,bX+cp+Math.round(50*sc),bY+bH*0.52,bW-cp*2-Math.round(50*sc),bH*0.3,Math.round(22*sc),"400","left","rgba(255,255,255,0.55)",1);
+    }
+    ctx.restore();
+  }
   else if(t==="endboard"){
     // Professional closing slide — teal background, large centered logo, CTA text
     ctx.save();ctx.globalAlpha=ENT;
@@ -1070,6 +1100,7 @@ Templates and their content fields (keep ALL text SHORT — readable on mobile i
 - tenant_ask:     { text:"a question tenants would ask (max 12 words)" }
 - stat:           { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
 - timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }
+- subscribe:      { text:"Like & Subscribe", body:"optional handle" }
 - endboard:       { headline:"Thanks for watching", body:"optional CTA", handle:"@cpshomes" }
 
 Placement rules — be generous, use every appropriate moment:
@@ -1082,6 +1113,7 @@ Placement rules — be generous, use every appropriate moment:
 - speech_bubble for general rhetorical questions
 - landlord_ask when the speaker addresses what landlords wonder, ask, or need to know (overlay RIGHT side)
 - tenant_ask when the speaker addresses what tenants wonder, ask, or need to know (overlay LEFT side)
+- subscribe as a "like and subscribe" reminder overlay near the end of the video (before endboard)
 - stat whenever a number, percentage, or time period is mentioned
 - timeline for any contract period or deadline sequence
 - endboard ALWAYS as the LAST graphic — closing slide with logo and CTA
@@ -1103,6 +1135,7 @@ Templates and content fields (keep ALL text SHORT — readable on mobile in 2 se
 - landlord_ask:   { text:"a question landlords would ask (max 12 words)" }
 - tenant_ask:     { text:"a question tenants would ask (max 12 words)" }
 - stat:           { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
+- subscribe:      { text:"Like & Subscribe", body:"optional handle" }
 - timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }
 - endboard:       { headline:"Thanks for watching", body:"optional CTA", handle:"@cpshomes" }`;
 
@@ -1119,6 +1152,7 @@ const TMPL_FIELDS={
   tenant_ask:[{key:"text",label:"Tenant question",placeholder:"max 12 words"}],
   stat:[{key:"stat",label:"Value",placeholder:"e.g. 2%, 12 months"},{key:"label",label:"Description",placeholder:"max 5 words"}],
   timeline:[{key:"label",label:"Label",placeholder:"max 4 words"}],
+  subscribe:[{key:"text",label:"CTA text",placeholder:"e.g. Like & Subscribe"},{key:"body",label:"Handle / channel",placeholder:"optional"}],
   endboard:[{key:"headline",label:"Headline",placeholder:"e.g. Thanks for watching"},{key:"body",label:"CTA text",placeholder:"optional"},{key:"handle",label:"Handle / website",placeholder:"e.g. @cpshomes"}],
 };
 
@@ -1202,7 +1236,7 @@ function GraphicAnimPreview({g,brand,ratio}){
   return(<canvas ref={ref} width={AR.W} height={AR.H} style={{width:"100%",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>);
 }
 
-const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"},endboard:{label:"Endboard",type:"fullscreen"}};
+const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"},subscribe:{label:"Subscribe",type:"overlay"},endboard:{label:"Endboard",type:"fullscreen"}};
 const CAP_STYLES={karaoke:{label:"Karaoke",icon:"🎤"},popin:{label:"Pop-in",icon:"💥"},tiktok:{label:"TikTok Block",icon:"📱"},fade:{label:"Elegant Fade",icon:"✨"}};
 
 
@@ -1229,6 +1263,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
     if(tpl==="key_point") return{headline,body};
     if(tpl==="fact_box") return{headline,body};
     if(tpl==="speech_bubble"||tpl==="landlord_ask"||tpl==="tenant_ask") return{text};
+    if(tpl==="subscribe") return{text:text||"Like & Subscribe",body};
     if(tpl==="stat") return{stat,label:labelVal};
     if(tpl==="timeline") return{label:headline,markers:markerStr.split(",").map(s=>s.trim()).filter(Boolean)};
     if(tpl==="endboard") return{headline,body,handle:text};
