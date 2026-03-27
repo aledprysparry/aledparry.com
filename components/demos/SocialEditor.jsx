@@ -1111,7 +1111,7 @@ function recordCompositeCaption(subtitles, brand, captionStyle, ratio, onProgres
 // ═══════════════════════════════════════════════════════════════
 //  CLAUDE PROMPT
 // ═══════════════════════════════════════════════════════════════
-const GFX_PROMPT=`You are a video graphics producer creating social media explainer graphics. Given a transcript, be GENEROUS — identify 10–16 moments where a graphic would help the viewer understand or stay engaged. It is far better to suggest too many than too few, as the editor can always remove extras but cannot add what was not suggested.
+const GFX_PROMPT=`You are a video graphics producer creating social media explainer graphics. Given a transcript, be VERY GENEROUS — identify 20–30 moments where a graphic would help the viewer understand or stay engaged. More is always better — the editor will curate down. Every key fact, statistic, rule, question, myth, and talking point deserves its own graphic. When in doubt, add it.
 
 Return ONLY a valid JSON array. No markdown, no preamble.
 
@@ -1491,7 +1491,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setGStep("analysing");setError("");
     try{
       const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
-      const raw=await callAI({system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}],max_tokens:2500});
+      const raw=await callAI({system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}],max_tokens:4500});
       const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
       // Enrich each graphic with per-segment prompt and template hint
       const subs=project.subtitles||[];
