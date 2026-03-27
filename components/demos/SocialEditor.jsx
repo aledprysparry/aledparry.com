@@ -496,7 +496,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     // Subtle wavy texture (like CPS posts)
     ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
-    const waveShift=pRaw*W*0.15;
+    const waveShift=pRaw*W*0.04;
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
     // Icon — vertically centred in top portion
@@ -579,7 +579,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=B.colorForest||B.colorPrimary;ctx.fillRect(0,0,W,H);
     // Wavy texture (matching myth/reality)
     ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
-    const waveShift=pRaw*W*0.15;
+    const waveShift=pRaw*W*0.04;
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
     const lx=PAD;
@@ -752,7 +752,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
     // Animated wavy lines (inline — same as key_point)
     ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle=B.colorWarm||"#f0e1d3";ctx.lineWidth=Math.round(3*sc);
-    const waveShift=pRaw*W*0.15;
+    const waveShift=pRaw*W*0.04;
     for(let wi=0;wi<5;wi++){const off=wi*W*0.22+waveShift*(wi%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+wi*H*0.12);}ctx.stroke();}
     ctx.restore();
     // Adaptive layout: portrait pushes content up, landscape centres it
