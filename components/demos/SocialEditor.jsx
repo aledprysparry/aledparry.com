@@ -362,7 +362,7 @@ function drawText(ctx,text,x,y,maxW,maxH,baseSz,weight,align,color,maxLines=3,ff
   return cy;
 }
 function stamp(ctx,brand,W,H,darkBg=true){
-  const MARGIN=W*0.03;
+  const MARGIN=W*0.05;  // 5% safe zone margin
   const opacity=Math.min(1,Math.max(0,brand.logoOpacity??0.75));
   // Pick logo: white for dark backgrounds, teal for light backgrounds
   const logoSrc=darkBg?(brand.logoDataUrlLight||brand.logoDataUrl):brand.logoDataUrl;
@@ -917,6 +917,18 @@ function drawCaption(canvas,subtitle,brand,captionStyle,currentTime,ratio){
       }startY+=lh;
     }
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BLEED — adds transparent padding around a canvas for safe export
+// ═══════════════════════════════════════════════════════════════
+function addBleed(srcCanvas, bleed=10){
+  const c=document.createElement("canvas");
+  c.width=srcCanvas.width+bleed*2;c.height=srcCanvas.height+bleed*2;
+  const ctx=c.getContext("2d",{alpha:true});
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.drawImage(srcCanvas,bleed,bleed);
+  return c;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1733,8 +1745,9 @@ function ExportTab({project,brand,updateProject}){
         setPhase(`${ratio} — exporting graphic PNGs…`);
         for(let i=0;i<selectedGfx.length;i++){
           drawGraphic(cvs.current,selectedGfx[i],brand,ratio,1);
+          const bleedCvs=addBleed(cvs.current,10);
           await new Promise(res=>{
-            cvs.current.toBlob(blob=>{
+            bleedCvs.toBlob(blob=>{
               if(blob) dl(blob,`${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}.png`);
               res();
             },"image/png");
