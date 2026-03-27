@@ -1843,16 +1843,38 @@ function ExportTab({project,brand,updateProject}){
       if(gfxMode==="pngseq"){
         setPhase(`${ratio} — rendering PNG sequences…`);
         const zip=new JSZip();
+        // Helper: render a drawFn as PNG sequence into a zip folder
+        const renderAssetSeq=async(drawFn,folderName,dur=4)=>{
+          const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+          const c=document.createElement("canvas");c.width=AR.W;c.height=AR.H;
+          const fps=25;const total=Math.round(dur*fps);
+          const folder=zip.folder(folderName);
+          for(let f=0;f<total;f++){
+            drawFn(c,brand,ratio,f/fps);
+            const bc=addBleed(c,10);
+            const blob=await new Promise(r=>bc.toBlob(r,"image/png"));
+            folder.file(`frame_${String(f).padStart(4,"0")}.png`,blob);
+          }
+        };
+        // 00 — Title Card
+        setPhase(`${ratio} — title card sequence…`);
+        await renderAssetSeq(drawTitleCard,"00_title_card",4);
+        // Graphics
         for(let i=0;i<selectedGfx.length;i++){
           const gLabel=selectedGfx[i].label||selectedGfx[i].template;
           const folderName=`${String(i+1).padStart(2,"0")}_${gLabel}`;
           const folder=zip.folder(folderName);
+          setPhase(`${ratio} — ${gLabel} sequence…`);
           const frames=await recordPNGSequence(selectedGfx[i],brand,ratio,frac=>{
             setProg(p=>({...p,pct:(done+frac)/totalSteps}));
           });
           for(const f of frames) folder.file(f.name,f.blob);
           tick(done+1);
         }
+        // Last — Endboard
+        setPhase(`${ratio} — endboard sequence…`);
+        await renderAssetSeq(drawEndboard,`${String(selectedGfx.length+1).padStart(2,"0")}_endboard`,5);
+        // Zip it all
         setPhase(`${ratio} — zipping…`);
         const zipBlob=await zip.generateAsync({type:"blob"},meta=>{
           setProg(p=>({...p,pct:meta.percent/100}));
