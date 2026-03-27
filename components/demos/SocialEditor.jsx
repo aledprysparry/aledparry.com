@@ -263,7 +263,7 @@ const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
 const TMPL_STORE = "infostudio_templates_v1";
 const BRAND_VERSION_KEY = "infostudio_brand_version";
-const BRAND_VERSION = 7; // bump this to force-reseed brands from presets
+const BRAND_VERSION = 8; // bump this to force-reseed brands from presets
 const load = k => { try { const r=localStorage.getItem(k); return r?JSON.parse(r):[]; } catch{ return []; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} };
 
@@ -810,12 +810,13 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const handleText=c.handle||B.endboardHandles||"";
     const websiteText=B.endboardWebsite||"";
     const bodyText=c.body||"";
-    ctx.save();ctx.translate(W/2,ctaY+H*0.06);ctx.scale(pulse,pulse);ctx.translate(-W/2,-(ctaY+H*0.06));
     DT(ctaText,W/2,ctaY,W*0.7,H*0.12,headSz,"700","center","#fff",2,FFS);
-    ctx.restore();
-    // Body text
+    // Body text — with subtle pulse
     if(bodyText){
-      DT(bodyText,W/2,ctaY+H*bodyFrac,W*0.6,H*0.10,bodySz,"400","center","rgba(255,255,255,0.7)",2);
+      const bodyY=ctaY+H*bodyFrac;
+      ctx.save();ctx.translate(W/2,bodyY+H*0.04);ctx.scale(pulse,pulse);ctx.translate(-W/2,-(bodyY+H*0.04));
+      DT(bodyText,W/2,bodyY,W*0.6,H*0.10,bodySz,"400","center","rgba(255,255,255,0.7)",2);
+      ctx.restore();
     }
     // Social handles + website
     const bottomLine=[handleText,websiteText].filter(Boolean).join("  ·  ");
