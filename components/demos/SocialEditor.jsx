@@ -1192,7 +1192,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
   const [body,setBody]=useState("");
   const [text,setText]=useState("");
   const [stat,setStat]=useState("");
-  const [label,setLabel]=useState("");
+  const [labelVal,setLabelVal]=useState("");
   const [markerStr,setMarkerStr]=useState("6 months,12 months");
   const [num,setNum]=useState("1");
 
@@ -1206,7 +1206,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
     if(tpl==="key_point") return{headline,body};
     if(tpl==="fact_box") return{headline,body};
     if(tpl==="speech_bubble"||tpl==="landlord_ask"||tpl==="tenant_ask") return{text};
-    if(tpl==="stat") return{stat,label};
+    if(tpl==="stat") return{stat,label:labelVal};
     if(tpl==="timeline") return{label:headline,markers:markerStr.split(",").map(s=>s.trim()).filter(Boolean)};
     if(tpl==="endboard") return{headline,body,handle:text};
     return{};
@@ -1277,7 +1277,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
           )}
           {tpl==="stat"&&(<>
             <div><label style={lbl}>STAT VALUE</label><input value={stat} onChange={e=>setStat(e.target.value)} placeholder="e.g. 2% or 12 months" style={inp}/></div>
-            <div><label style={lbl}>DESCRIPTION</label><input value={label} onChange={e=>setLabel(e.target.value)} placeholder="e.g. max increase" style={inp}/></div>
+            <div><label style={lbl}>DESCRIPTION</label><input value={labelVal} onChange={e=>setLabelVal(e.target.value)} placeholder="e.g. max increase" style={inp}/></div>
           </>)}
           {["title","rule_number"].includes(tpl)&&(
             <div><label style={lbl}>NUMBER (large background)</label><input value={num} onChange={e=>setNum(e.target.value)} placeholder="e.g. 1" style={inp}/></div>
