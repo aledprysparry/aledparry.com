@@ -3631,8 +3631,9 @@ function App(){
     if(syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(()=>{
       const templates=load(TMPL_STORE);
+      const lightP=p.map(pr=>({...pr,previews:{}}));
       fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({brands:b,projects:p,templates})})
+        body:JSON.stringify({brands:b,projects:lightP,templates})})
         .then(r=>{if(!r.ok) syncFailed.current=true;})
         .catch(()=>{syncFailed.current=true;});
     },1500);
@@ -3711,9 +3712,11 @@ function App(){
       onDeleteProject={id=>setProjects(ps=>ps.filter(p=>p.id!==id))}
       onSave={(snapshotName)=>{
         const templates=load(TMPL_STORE);
+        // Strip preview images to avoid 413 — they're regenerated client-side
+        const lightProjects=projects.map(p=>({...p,previews:{}}));
         const url=snapshotName?"/api/studio?snapshot="+encodeURIComponent(snapshotName):"/api/studio";
         return fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({brands,projects,templates})}).then(r=>r.ok).catch(()=>false);
+          body:JSON.stringify({brands,projects:lightProjects,templates})}).then(r=>r.ok).catch(()=>false);
       }}
       onLoadVersion={(d)=>{
         if(d.brands){setBrands(d.brands);save(BS,d.brands);}
