@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, AlignmentType, BorderStyle, WidthType, ShadingType } from "docx";
+import JSZip from "jszip";
 
 // ═══════════════════════════════════════════════════════════════
 //  DESIGN SYSTEM — shared tokens for consistent UI
@@ -1840,20 +1841,23 @@ function ExportTab({project,brand,updateProject}){
       }
       // PNG Sequences (for Premiere Pro)
       if(gfxMode==="pngseq"){
-        setPhase(`${ratio} — exporting PNG sequences…`);
+        setPhase(`${ratio} — rendering PNG sequences…`);
+        const zip=new JSZip();
         for(let i=0;i<selectedGfx.length;i++){
           const gLabel=selectedGfx[i].label||selectedGfx[i].template;
-          const seqPrefix=`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${gLabel}`;
+          const folderName=`${String(i+1).padStart(2,"0")}_${gLabel}`;
+          const folder=zip.folder(folderName);
           const frames=await recordPNGSequence(selectedGfx[i],brand,ratio,frac=>{
             setProg(p=>({...p,pct:(done+frac)/totalSteps}));
           });
-          // Download each frame
-          for(const f of frames){
-            dl(f.blob,`${seqPrefix}_${f.name}`);
-            await new Promise(r=>setTimeout(r,50)); // throttle downloads
-          }
+          for(const f of frames) folder.file(f.name,f.blob);
           tick(done+1);
         }
+        setPhase(`${ratio} — zipping…`);
+        const zipBlob=await zip.generateAsync({type:"blob"},meta=>{
+          setProg(p=>({...p,pct:meta.percent/100}));
+        });
+        dl(zipBlob,`${pn}_${prefix}png_sequences.zip`);
       }
       // Graphics WebMs
       if(gfxMode==="webm"||gfxMode==="both"){
