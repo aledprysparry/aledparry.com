@@ -603,13 +603,38 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const waveShift=pRaw*W*0.04;
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
-    // Ghost number (like title/rule_number)
+    // Ghost number (like title/rule_number) — with optional strikethrough animation
     if(c.number){
-      ctx.save();ctx.globalAlpha=0.07*Math.min(1,p*3);
       const ghostSz=Math.round((isCompact?H*0.7:H*0.85));
-      ctx.font=`800 ${ghostSz}px "${FFS}","serif"`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#fff";
-      ctx.fillText(c.number,isCompact?W/2:W*0.75,H*0.5);
-      ctx.restore();
+      const gx=isCompact?W/2:W*0.75,gy=H*0.5;
+      ctx.font=`800 ${ghostSz}px "${FFS}","serif"`;ctx.textAlign="center";ctx.textBaseline="middle";
+      if(c.strikeNumber){
+        // Animated strikethrough: 0-0.3 show original, 0.3-0.5 strike line, 0.5-0.7 fade to new number
+        const sp=clamp(p,0,1);
+        // Original number (fades out 0.5-0.7)
+        const origAlpha=sp<0.5?0.12:0.12*(1-clamp((sp-0.5)/0.2,0,1));
+        ctx.save();ctx.globalAlpha=origAlpha;ctx.fillStyle="#fff";
+        ctx.fillText(c.number,gx,gy);ctx.restore();
+        // Strikethrough line (draws 0.3-0.5, stays after)
+        if(sp>0.3){
+          const lineProg=clamp((sp-0.3)/0.2,0,1);
+          const numW=ctx.measureText(c.number).width;
+          const lx0=gx-numW*0.6,lx1=gx+numW*0.6;
+          ctx.save();ctx.globalAlpha=0.35;
+          ctx.strokeStyle=B.colorAccent||"#FB8770";ctx.lineWidth=Math.round(8*sc);ctx.lineCap="round";
+          ctx.beginPath();ctx.moveTo(lx0,gy);ctx.lineTo(lx0+(lx1-lx0)*lineProg,gy);ctx.stroke();
+          ctx.restore();
+        }
+        // New number (fades in 0.5-0.8)
+        if(sp>0.5){
+          const newAlpha=0.15*clamp((sp-0.5)/0.3,0,1);
+          ctx.save();ctx.globalAlpha=newAlpha;ctx.fillStyle="#fff";
+          ctx.fillText(c.strikeNumber,gx,gy);ctx.restore();
+        }
+      } else {
+        ctx.save();ctx.globalAlpha=0.07*Math.min(1,p*3);ctx.fillStyle="#fff";
+        ctx.fillText(c.number,gx,gy);ctx.restore();
+      }
     }
     const lx=PAD;
     const icSz=Math.round(isCompact?44*sc:40*sc);
@@ -1232,7 +1257,7 @@ const TMPL_FIELDS={
   reality:[{key:"body",label:"Correction",placeholder:"max 10 words"}],
   title:[{key:"headline",label:"Headline",placeholder:"max 4 words"},{key:"subheadline",label:"Subheadline",placeholder:"optional"},{key:"body",label:"Detail",placeholder:"optional"},{key:"number",label:"Background number",placeholder:"e.g. 1"}],
   rule_number:[{key:"number",label:"Rule #",placeholder:"e.g. 1"},{key:"body",label:"Rule label",placeholder:"max 7 words"}],
-  key_point:[{key:"headline",label:"Label",placeholder:"max 3 words"},{key:"body",label:"The point",placeholder:"max 18 words"},{key:"number",label:"Ghost number",placeholder:"e.g. 5 (optional)"}],
+  key_point:[{key:"headline",label:"Label",placeholder:"max 3 words"},{key:"body",label:"The point",placeholder:"max 18 words"},{key:"number",label:"Ghost number",placeholder:"e.g. 5 (optional)"},{key:"strikeNumber",label:"Strike → new number",placeholder:"e.g. 6 (animates 5→6)"}],
   fact_box:[{key:"headline",label:"Label",placeholder:"2-3 words"},{key:"body",label:"Detail",placeholder:"max 15 words"}],
   speech_bubble:[{key:"text",label:"Question",placeholder:"max 9 words"}],
   landlord_ask:[{key:"text",label:"Landlord question",placeholder:"max 12 words"}],
@@ -1720,7 +1745,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           {id:n+12,timestamp:"00:02:55",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CAN APPEAL",body:"Tenants on a periodic before December 2022"},label:"can-appeal"},
           {id:n+13,timestamp:"00:03:05",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CANNOT APPEAL",body:"New tenants from December 2022 onwards"},label:"cannot-appeal"},
           {id:n+14,timestamp:"00:03:15",duration:5,type:"fullscreen",template:"key_point",content:{headline:"HIDDEN COSTS",body:"Void period, council tax liability, standing charges liability"},label:"hidden-costs"},
-          {id:n+15,timestamp:"00:03:20",duration:4,type:"overlay",template:"tenant_ask",content:{text:"A tenant can only afford what they can afford"},label:"tenant-affordability"}
+          {id:n+15,timestamp:"00:03:20",duration:4,type:"overlay",template:"tenant_ask",content:{text:"A tenant can only afford what they can afford"},label:"tenant-affordability"},
+          {id:n+16,timestamp:"00:01:50",duration:6,type:"fullscreen",template:"key_point",content:{headline:"KEY RULES",body:"Five essential things you need to know",number:"5",strikeNumber:"6"},label:"five-to-six-rules"}
         ];const ng=[...graphics,...add];setGraphics(ng);setSelected(s=>{const ns=new Set(s);add.forEach((_,i)=>ns.add(n+i));return ns;});}} title="Add Nikki's feedback graphics">+ Client v2</button>
       </div>
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
