@@ -561,17 +561,17 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Ghost number — large, centred behind main content
     ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;const gs=easeOut(clamp(p*1.5,0,1));
     ctx.font=`700 ${Math.round(Math.min(W,H)*0.65)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.translate(W/2,H*0.48);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
+    ctx.translate(W/2,H*0.43);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
     // "RULE" label — centred
     ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*H*0.05);
     ctx.fillStyle=B.colorPrimary+"66";ctx.font=`600 ${Math.round(44*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";
-    ctx.fillText("— RULE —",W/2,H*0.33);
-    // Big number — centred
+    ctx.fillText("— RULE —",W/2,H*0.30);
+    // Big number — centred vertically
     ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(200*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";
-    ctx.fillText("#"+(c.number||"1"),W/2,H*0.58);
+    ctx.fillText("#"+(c.number||"1"),W/2,H*0.52);
     ctx.restore();
     // Body text — centred below
-    if(c.body){ctx.save();ctx.globalAlpha=TXT;DT(c.body,W/2,H*0.65,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
+    if(c.body){ctx.save();ctx.globalAlpha=TXT;DT(c.body,W/2,H*0.60,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
     stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="key_point"){
