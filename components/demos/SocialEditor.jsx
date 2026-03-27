@@ -473,6 +473,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const{template:t,content:c={}}=g;
   const sc=Math.min(W,H)/1080,PAD=Math.round(80*sc);
   const p=clamp(progress,0,1);
+  const pRaw=progress; // raw progress for wave drifting (can exceed 1)
   const AP=ANIM_PRESETS[B.animationPreset]||ANIM_PRESETS.default;
   const ENT=AP.easeFn(clamp(p*AP.entMul,0,1)),TXT=AP.easeFn(clamp((p-AP.txtDelay)*AP.txtMul,0,1));
   const TS=Math.max(0.5,Math.min(1.6,Number(B.typeScale)||1.0));   // type scale
@@ -495,7 +496,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
     // Subtle wavy texture (like CPS posts)
     ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
-    const waveShift=p*W*0.15;
+    const waveShift=pRaw*W*0.15;
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
     // Icon — vertically centred in top portion
@@ -578,7 +579,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=B.colorForest||B.colorPrimary;ctx.fillRect(0,0,W,H);
     // Wavy texture (matching myth/reality)
     ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
-    const waveShift=p*W*0.15;
+    const waveShift=pRaw*W*0.15;
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
     const lx=PAD;
@@ -754,7 +755,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
     // Animated wavy lines (inline — same as key_point)
     ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle=B.colorWarm||"#f0e1d3";ctx.lineWidth=Math.round(3*sc);
-    const waveShift=p*W*0.15;
+    const waveShift=pRaw*W*0.15;
     for(let wi=0;wi<5;wi++){const off=wi*W*0.22+waveShift*(wi%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+wi*H*0.12);}ctx.stroke();}
     ctx.restore();
     // Adaptive layout: portrait pushes content up, landscape centres it
@@ -781,18 +782,23 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Separator — salmon accent line
     const sepW=Math.round(120*sc*ENT);
     ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-sepW/2,H*sepFrac,sepW,Math.round(3*sc));
-    // CTA headline
+    // CTA headline — use brand endboard fields first, then content fields, then defaults
     const ctaY=H*ctaFrac;
-    DT(c.headline||"Thanks for watching",W/2,ctaY,W*0.7,H*0.12,headSz,"700","center","#fff",2,FFS);
+    const ctaText=c.headline||B.endboardCTA||"Thanks for watching";
+    const handleText=c.handle||B.endboardHandles||"";
+    const websiteText=B.endboardWebsite||"";
+    const bodyText=c.body||"";
+    DT(ctaText,W/2,ctaY,W*0.7,H*0.12,headSz,"700","center","#fff",2,FFS);
     // Body text
-    if(c.body){
-      DT(c.body,W/2,ctaY+H*bodyFrac,W*0.6,H*0.10,bodySz,"400","center","rgba(255,255,255,0.7)",2);
+    if(bodyText){
+      DT(bodyText,W/2,ctaY+H*bodyFrac,W*0.6,H*0.10,bodySz,"400","center","rgba(255,255,255,0.7)",2);
     }
-    // Social handle / website
-    if(c.handle){
+    // Social handles + website
+    const bottomLine=[handleText,websiteText].filter(Boolean).join("  ·  ");
+    if(bottomLine){
       ctx.font=`500 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
       ctx.fillStyle="rgba(255,255,255,0.5)";ctx.textAlign="center";ctx.textBaseline="alphabetic";
-      ctx.fillText(c.handle,W/2,H*handleFrac);
+      ctx.fillText(bottomLine,W/2,H*handleFrac);
     }
     ctx.restore();
   }
