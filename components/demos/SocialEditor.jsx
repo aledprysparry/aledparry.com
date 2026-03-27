@@ -232,7 +232,7 @@ const BRAND_PRESETS = {
     titleCardTitle:     "",
     titleCardSubtitle:  "",
     titleCardStyle:     "bar",
-    endboardCTA:      "Find your perfect home today",
+    endboardCTA:      "Like and Subscribe for more",
     endboardHandles:  "@cps_homes  ·  @CPSHomes  ·  @cpshomes_cardiff",
     endboardWebsite:  "cpshomes.co.uk",
     endboardStyle:    "logo",
