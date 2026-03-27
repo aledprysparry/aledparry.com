@@ -1856,13 +1856,14 @@ function ExportTab({project,brand,updateProject}){
             folder.file(`frame_${String(f).padStart(4,"0")}.png`,blob);
           }
         };
+        const rp=ratio.replace(":","x");
         // 00 — Title Card
         setPhase(`${ratio} — title card sequence…`);
-        await renderAssetSeq(drawTitleCard,"00_title_card",4);
+        await renderAssetSeq(drawTitleCard,`${rp}_00_title_card`,4);
         // Graphics
         for(let i=0;i<selectedGfx.length;i++){
           const gLabel=selectedGfx[i].label||selectedGfx[i].template;
-          const folderName=`${String(i+1).padStart(2,"0")}_${gLabel}`;
+          const folderName=`${rp}_${String(i+1).padStart(2,"0")}_${gLabel}`;
           const folder=zip.folder(folderName);
           setPhase(`${ratio} — ${gLabel} sequence…`);
           const frames=await recordPNGSequence(selectedGfx[i],brand,ratio,frac=>{
@@ -1873,7 +1874,7 @@ function ExportTab({project,brand,updateProject}){
         }
         // Last — Endboard
         setPhase(`${ratio} — endboard sequence…`);
-        await renderAssetSeq(drawEndboard,`${String(selectedGfx.length+1).padStart(2,"0")}_endboard`,5);
+        await renderAssetSeq(drawEndboard,`${rp}_${String(selectedGfx.length+1).padStart(2,"0")}_endboard`,5);
         // Zip it all
         setPhase(`${ratio} — zipping…`);
         const zipBlob=await zip.generateAsync({type:"blob"},meta=>{
