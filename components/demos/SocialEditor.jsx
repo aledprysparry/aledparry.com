@@ -805,6 +805,59 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
     ctx.restore();
   }
+  else if(t==="lower_third"){
+    // News-style name strap — bottom-left, slim card, teal accent bar
+    const cp=Math.round(20*sc);
+    const bW=isCompact?W-PAD*1.5:Math.round(520*sc);
+    const bH=Math.round(isCompact?120*sc:100*sc);
+    const bX=isCompact?PAD*0.75:Math.round(60*sc);
+    const bY=H-bH-Math.round(isCompact?80*sc:60*sc);
+    // Slide in from left
+    ctx.save();ctx.translate(-(1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
+    // Dark semi-transparent card
+    ctx.shadowColor="rgba(0,0,0,0.3)";ctx.shadowBlur=24;
+    rrPath(ctx,bX,bY,bW,bH,Math.round(8*sc));ctx.fillStyle="rgba(0,0,0,0.75)";ctx.fill();ctx.shadowBlur=0;
+    // Teal accent bar left edge (clipped inside card)
+    ctx.save();rrPath(ctx,bX,bY,bW,bH,Math.round(8*sc));ctx.clip();
+    ctx.fillStyle=B.colorPrimary;ctx.fillRect(bX,bY,Math.round(5*sc),bH);
+    ctx.restore();
+    // Name — bold serif
+    const nameX=bX+cp+Math.round(10*sc);
+    DT(c.name||"",nameX,bY+cp,bW-cp*2,bH*0.38,Math.round(32*sc),"700","left","#fff",1,FFS);
+    // Title + Company — smaller sans-serif
+    const roleText=[c.title,c.company].filter(Boolean).join(" · ");
+    DT(roleText,nameX,bY+cp+Math.round(36*sc),bW-cp*2,bH*0.3,Math.round(20*sc),"400","left","rgba(255,255,255,0.7)",1);
+    ctx.restore();
+  }
+  else if(t==="advice"){
+    // Advice overlay — warm cream card with lightbulb icon, centered bottom
+    const cp=Math.round(28*sc);
+    const bW=isCompact?W-PAD*1.5:Math.round(620*sc);
+    const bH=isCompact?Math.round(260*sc):Math.round(220*sc);
+    const bX=(W-bW)/2;
+    const bY=isCompact?H-bH-Math.round(100*sc):H-bH-Math.round(80*sc);
+    // Scale-bounce entrance
+    const sc2=easeBack(ENT);
+    ctx.save();ctx.translate(bX+bW/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-(bX+bW/2),-(bY+bH/2));ctx.globalAlpha=ENT;
+    // Card
+    ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=32;
+    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+    // Salmon accent bar top (clipped)
+    ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
+    ctx.fillStyle=B.colorAccent;ctx.fillRect(bX,bY,bW,Math.round(5*sc));
+    ctx.restore();
+    // Label "ADVICE" in salmon
+    const textX=bX+cp;
+    const textW=bW-cp*2;
+    ctx.font=`700 ${Math.round(20*sc)}px "${FF}","Arial",sans-serif`;
+    ctx.fillStyle=B.colorAccent;ctx.textAlign="left";ctx.textBaseline="alphabetic";
+    ctx.letterSpacing="2px";ctx.fillText("ADVICE",textX,bY+cp+Math.round(16*sc));ctx.letterSpacing="0px";
+    // Separator
+    ctx.fillStyle=B.colorAccent+"44";ctx.fillRect(textX,bY+cp+Math.round(28*sc),Math.round(60*sc),Math.round(2*sc));
+    // Body text — serif, teal
+    DT(c.text||"",textX,bY+cp+Math.round(44*sc),textW,bH-cp*2-Math.round(52*sc),Math.round(36*sc),"600","left",B.colorPrimary,4,FFS);
+    ctx.restore();
+  }
   else if(t==="endboard"){
     // Professional closing slide — teal background, large centered logo, CTA text
     ctx.save();ctx.globalAlpha=ENT;
@@ -1127,6 +1180,8 @@ Templates and their content fields (keep ALL text SHORT — readable on mobile i
 - speech_bubble:  { text:"a question (max 9 words)" }
 - landlord_ask:   { text:"a question landlords would ask (max 12 words)" }
 - tenant_ask:     { text:"a question tenants would ask (max 12 words)" }
+- lower_third:    { name:"Full Name", title:"Job Title", company:"Company Name" }
+- advice:         { text:"practical advice or insight (max 12 words)" }
 - stat:           { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
 - timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }
 - subscribe:      { text:"Like & Subscribe", body:"optional handle" }
@@ -1135,6 +1190,7 @@ Templates and their content fields (keep ALL text SHORT — readable on mobile i
 Placement rules — be generous, use every appropriate moment:
 - myth at opening myth-bust moments
 - reality immediately after each myth
+- lower_third when the speaker first introduces themselves (name + title + company)
 - title for video intro and major section changes
 - rule_number whenever a numbered rule is introduced
 - key_point for every important legal or factual statement
@@ -1163,6 +1219,8 @@ Templates and content fields (keep ALL text SHORT — readable on mobile in 2 se
 - speech_bubble:  { text:"a question (max 9 words)" }
 - landlord_ask:   { text:"a question landlords would ask (max 12 words)" }
 - tenant_ask:     { text:"a question tenants would ask (max 12 words)" }
+- lower_third:    { name:"Full Name", title:"Job Title", company:"Company Name" }
+- advice:         { text:"practical advice or insight (max 12 words)" }
 - stat:           { stat:"VALUE e.g. 2%", label:"description (max 5 words)" }
 - subscribe:      { text:"Like & Subscribe", body:"optional handle" }
 - timeline:       { label:"label (max 4 words)", markers:["6 months","12 months"] }
@@ -1179,6 +1237,8 @@ const TMPL_FIELDS={
   speech_bubble:[{key:"text",label:"Question",placeholder:"max 9 words"}],
   landlord_ask:[{key:"text",label:"Landlord question",placeholder:"max 12 words"}],
   tenant_ask:[{key:"text",label:"Tenant question",placeholder:"max 12 words"}],
+  lower_third:[{key:"name",label:"Name",placeholder:"e.g. Nikki Lewis"},{key:"title",label:"Job title",placeholder:"e.g. Director of Operations"},{key:"company",label:"Company",placeholder:"e.g. CPS Homes"}],
+  advice:[{key:"text",label:"Advice",placeholder:"practical insight (max 12 words)"}],
   stat:[{key:"stat",label:"Value",placeholder:"e.g. 2%, 12 months"},{key:"label",label:"Description",placeholder:"max 5 words"}],
   timeline:[{key:"label",label:"Label",placeholder:"max 4 words"}],
   subscribe:[{key:"text",label:"CTA text",placeholder:"e.g. Like & Subscribe"},{key:"body",label:"Handle / channel",placeholder:"optional"}],
@@ -1265,7 +1325,7 @@ function GraphicAnimPreview({g,brand,ratio}){
   return(<canvas ref={ref} width={AR.W} height={AR.H} style={{width:"100%",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>);
 }
 
-const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"},subscribe:{label:"Subscribe",type:"overlay"},endboard:{label:"Endboard",type:"fullscreen"}};
+const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"},lower_third:{label:"Lower Third",type:"overlay"},advice:{label:"Advice",type:"overlay"},subscribe:{label:"Subscribe",type:"overlay"},endboard:{label:"Endboard",type:"fullscreen"}};
 const CAP_STYLES={karaoke:{label:"Karaoke",icon:"🎤"},popin:{label:"Pop-in",icon:"💥"},tiktok:{label:"TikTok Block",icon:"📱"},fade:{label:"Elegant Fade",icon:"✨"}};
 
 
@@ -1291,7 +1351,8 @@ function AddGraphicModal({brand, onAdd, onClose}){
     if(tpl==="rule_number") return{number:num,body};
     if(tpl==="key_point") return{headline,body};
     if(tpl==="fact_box") return{headline,body};
-    if(tpl==="speech_bubble"||tpl==="landlord_ask"||tpl==="tenant_ask") return{text};
+    if(tpl==="speech_bubble"||tpl==="landlord_ask"||tpl==="tenant_ask"||tpl==="advice") return{text};
+    if(tpl==="lower_third") return{name:text,title:"",company:""};
     if(tpl==="subscribe") return{text:text||"Like & Subscribe",body};
     if(tpl==="stat") return{stat,label:labelVal};
     if(tpl==="timeline") return{label:headline,markers:markerStr.split(",").map(s=>s.trim()).filter(Boolean)};
@@ -1645,16 +1706,22 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
         <button style={btnDanger({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Clear all and re-analyse">↺ Re-analyse</button>
         <button style={{...sm,background:"#FB8770",color:"#fff",fontWeight:700}} onClick={()=>{const n=graphics.length;const add=[
-          {id:n+1,timestamp:"00:00:30",duration:4,type:"overlay",template:"timeline",content:{label:"CONTRACT LENGTH",markers:["6 months","9 months","12 months"]},label:"contract-length"},
-          {id:n+2,timestamp:"00:01:00",duration:4,type:"fullscreen",template:"key_point",content:{headline:"BACK TO SQUARE ONE",body:"They need to start the process again"},label:"back-to-square-one"},
-          {id:n+3,timestamp:"00:01:15",duration:5,type:"fullscreen",template:"rule_number",content:{number:"!",body:"New rent does not take effect until after the fixed term"},label:"rent-after-fixed-term"},
-          {id:n+4,timestamp:"00:01:30",duration:4,type:"overlay",template:"fact_box",content:{headline:"WHY IT MATTERS",body:"Saves faffing around with pro rata amounts and standing orders"},label:"why-it-matters"},
-          {id:n+5,timestamp:"00:01:45",duration:4,type:"overlay",template:"tenant_ask",content:{text:"A tenant can only afford what they can afford"},label:"tenant-affordability"},
-          {id:n+6,timestamp:"00:02:00",duration:4,type:"overlay",template:"landlord_ask",content:{text:"Paying the rent on time every month"},label:"landlord-on-time-rent"},
-          {id:n+7,timestamp:"00:02:15",duration:4,type:"overlay",template:"fact_box",content:{headline:"THE RISK",body:"Slightly increased rent when there's no guarantee"},label:"the-risk"},
-          {id:n+8,timestamp:"00:02:30",duration:5,type:"fullscreen",template:"key_point",content:{headline:"HIDDEN COSTS",body:"Void period, council tax liability, standing charges liability"},label:"hidden-costs"},
-          {id:n+9,timestamp:"00:00:10",duration:4,type:"fullscreen",template:"title",content:{headline:"RENT INCREASES",subheadline:"Wales 2026",body:"What landlords and tenants need to know",number:"6"},label:"title-six-points"}
-        ];const ng=[...graphics,...add];setGraphics(ng);setSelected(s=>{const ns=new Set(s);add.forEach((_,i)=>ns.add(n+i));return ns;});}} title="Add client feedback graphics">+ Client v1</button>
+          {id:n+1,timestamp:"00:00:10",duration:6,type:"fullscreen",template:"title",content:{headline:"RENT INCREASES EXPLAINED",subheadline:"Wales 2026",body:"What landlords and tenants need to know",number:"6"},label:"title-card"},
+          {id:n+2,timestamp:"00:00:15",duration:5,type:"overlay",template:"lower_third",content:{name:"Nikki Lewis",title:"Director of Operations",company:"CPS Homes"},label:"nikki-intro"},
+          {id:n+3,timestamp:"00:00:30",duration:4,type:"overlay",template:"timeline",content:{label:"CONTRACT LENGTH",markers:["6 months","9 months","12 months"]},label:"contract-length"},
+          {id:n+4,timestamp:"00:01:00",duration:4,type:"overlay",template:"speech_bubble",content:{text:"Back to square one — start the process again"},label:"back-to-square-one"},
+          {id:n+5,timestamp:"00:01:15",duration:5,type:"fullscreen",template:"rule_number",content:{number:"!",body:"New rent does not take effect until after the fixed term"},label:"rent-after-fixed-term"},
+          {id:n+6,timestamp:"00:01:30",duration:4,type:"overlay",template:"fact_box",content:{headline:"WHY IT MATTERS",body:"Saves faffing around with pro rata amounts and standing orders"},label:"why-it-matters"},
+          {id:n+7,timestamp:"00:01:40",duration:5,type:"fullscreen",template:"key_point",content:{headline:"QUIRK ONE",body:"Notice can be served during fixed term… but can only take effect after it"},label:"quirk-one"},
+          {id:n+8,timestamp:"00:01:55",duration:5,type:"fullscreen",template:"key_point",content:{headline:"QUIRK TWO",body:"Can serve notice before 12 months up… as long as new rent only takes effect at 12-month mark"},label:"quirk-two"},
+          {id:n+9,timestamp:"00:02:10",duration:4,type:"overlay",template:"advice",content:{text:"It might be better to stick than twist"},label:"stick-or-twist"},
+          {id:n+10,timestamp:"00:02:25",duration:4,type:"overlay",template:"fact_box",content:{headline:"THE RISK",body:"Slightly increased rent with no guarantee of same reliability"},label:"the-risk"},
+          {id:n+11,timestamp:"00:02:40",duration:5,type:"overlay",template:"fact_box",content:{headline:"RENTING HOMES (WALES) ACT",body:"Came into effect December 2022"},label:"renting-act"},
+          {id:n+12,timestamp:"00:02:55",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CAN APPEAL",body:"Tenants on a periodic before December 2022"},label:"can-appeal"},
+          {id:n+13,timestamp:"00:03:05",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CANNOT APPEAL",body:"New tenants from December 2022 onwards"},label:"cannot-appeal"},
+          {id:n+14,timestamp:"00:03:15",duration:5,type:"fullscreen",template:"key_point",content:{headline:"HIDDEN COSTS",body:"Void period, council tax liability, standing charges liability"},label:"hidden-costs"},
+          {id:n+15,timestamp:"00:03:20",duration:4,type:"overlay",template:"tenant_ask",content:{text:"A tenant can only afford what they can afford"},label:"tenant-affordability"}
+        ];const ng=[...graphics,...add];setGraphics(ng);setSelected(s=>{const ns=new Set(s);add.forEach((_,i)=>ns.add(n+i));return ns;});}} title="Add Nikki's feedback graphics">+ Client v2</button>
       </div>
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
       <div style={{position:"relative"}}>
