@@ -726,15 +726,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Card
     ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=32;
     rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
-    // Accent bar — right edge for landlord, left edge for tenant
-    if(isLandlord){
-      rrPath(ctx,bX+bW-Math.round(6*sc),bY,Math.round(6*sc),bH,[0,R,R,0]);
-    } else {
-      rrPath(ctx,bX,bY,Math.round(6*sc),bH,[R,0,0,R]);
-    }
-    ctx.fillStyle=accentCol;ctx.fill();
+    // Accent bar — top edge, matching fact_box style
+    ctx.fillStyle=accentCol;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
     // Label — small caps at top
-    const textX=isLandlord?bX+cp:bX+cp+Math.round(14*sc);
+    const textX=bX+cp;
     const textW=bW-cp*2-Math.round(14*sc);
     const labelSize=Math.round(20*sc);
     const labelY=bY+cp+Math.round(16*sc);
