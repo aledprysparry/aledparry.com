@@ -599,15 +599,15 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       // Body
       DT(c.body||"",lx,y,W-PAD*2,H*0.45,Math.round(50*sc),"500","left","rgba(255,255,255,0.85)",5);
     } else {
-      let y=H*0.15;
+      let y=H*0.12;
       // Headline — bold serif
       y=DT(c.headline||"KEY POINT",lx,y,W*0.6,H*0.14,Math.round(68*sc),"HW","left","#fff",2,FFS);
-      y+=H*0.02;
+      y+=H*0.035;
       // Icon + rule
       ctx.save();ctx.translate(lx+icSz/2,y+icSz/2);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,icSz,CW,IC);ctx.restore();
       const ruleX=lx+icSz+Math.round(14*sc);const ruleW=Math.round((W*0.20)*ENT);
       ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ruleX,y+icSz/2);ctx.lineTo(ruleX+ruleW,y+icSz/2);ctx.stroke();
-      y+=icSz+H*0.05;
+      y+=icSz+H*0.06;
       // Body
       DT(c.body||"",lx,y,W*0.65,H*0.40,Math.round(52*sc),"500","left","rgba(255,255,255,0.85)",4);
     }
