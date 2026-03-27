@@ -995,7 +995,7 @@ async function recordPNGSequence(g,brand,ratio,onProgress){
   const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
   const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
   const dur=Math.max(4,g.duration||4);
-  const fps=30;const totalFrames=Math.round(dur*fps);
+  const fps=25;const totalFrames=Math.round(dur*fps);
   const frames=[];
   for(let f=0;f<totalFrames;f++){
     const p=f/fps; // seconds elapsed
@@ -1011,7 +1011,7 @@ async function recordPNGSequence(g,brand,ratio,onProgress){
 // ═══════════════════════════════════════════════════════════════
 //  RECORDING
 // ═══════════════════════════════════════════════════════════════
-const FPS=30;
+const FPS=25;
 const MIME=()=>MediaRecorder.isTypeSupported("video/webm;codecs=vp9")?"video/webm;codecs=vp9":"video/webm";
 
 function recordGraphic(g,brand,ratio){
