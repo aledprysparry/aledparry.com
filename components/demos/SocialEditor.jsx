@@ -518,7 +518,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Warm cream background with teal text
     ctx.fillStyle=CW;ctx.fillRect(0,0,W,H);
     // Ghost number — large, behind everything
-    if(c.number){ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;ctx.font=`700 ${Math.round(Math.min(W,H)*0.7)}px "${FF}","Arial",sans-serif`;ctx.textAlign="right";ctx.textBaseline="bottom";ctx.fillText(c.number,W-PAD*0.5,H*0.95);ctx.restore();}
+    if(c.number){ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;ctx.font=`700 ${Math.round(Math.min(W,H)*0.7)}px "${FF}","Arial",sans-serif`;ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(c.number,W-PAD*0.5,H*0.50);ctx.restore();}
     if(isCompact){
       // Portrait/square: centred layout
       ctx.save();ctx.globalAlpha=TXT;ctx.translate(0,(1-TXT)*50*sc);
