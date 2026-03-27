@@ -726,8 +726,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Card
     ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=32;
     rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
-    // Accent bar — top edge, matching fact_box style
-    ctx.fillStyle=accentCol;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
+    // Accent bar — clipped inside card shape
+    ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
+    ctx.fillStyle=accentCol;ctx.fillRect(bX,bY,bW,Math.round(5*sc));
+    ctx.restore();
     // Label — small caps at top
     const textX=bX+cp;
     const textW=bW-cp*2-Math.round(14*sc);
