@@ -989,6 +989,26 @@ function addBleed(srcCanvas, bleed=10){
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  PNG SEQUENCE — frame-by-frame export for Premiere Pro
+// ═══════════════════════════════════════════════════════════════
+async function recordPNGSequence(g,brand,ratio,onProgress){
+  const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+  const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
+  const dur=Math.max(4,g.duration||4);
+  const fps=30;const totalFrames=Math.round(dur*fps);
+  const frames=[];
+  for(let f=0;f<totalFrames;f++){
+    const p=f/fps; // seconds elapsed
+    drawGraphic(cvs,g,brand,ratio,p);
+    const bleedCvs=addBleed(cvs,10);
+    const blob=await new Promise(r=>bleedCvs.toBlob(r,"image/png"));
+    frames.push({name:`frame_${String(f).padStart(4,"0")}.png`,blob});
+    if(onProgress) onProgress(f/totalFrames);
+  }
+  return frames;
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  RECORDING
 // ═══════════════════════════════════════════════════════════════
 const FPS=30;
@@ -1818,6 +1838,23 @@ function ExportTab({project,brand,updateProject}){
           await new Promise(r=>setTimeout(r,300));
         }
       }
+      // PNG Sequences (for Premiere Pro)
+      if(gfxMode==="pngseq"){
+        setPhase(`${ratio} — exporting PNG sequences…`);
+        for(let i=0;i<selectedGfx.length;i++){
+          const gLabel=selectedGfx[i].label||selectedGfx[i].template;
+          const seqPrefix=`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${gLabel}`;
+          const frames=await recordPNGSequence(selectedGfx[i],brand,ratio,frac=>{
+            setProg(p=>({...p,pct:(done+frac)/totalSteps}));
+          });
+          // Download each frame
+          for(const f of frames){
+            dl(f.blob,`${seqPrefix}_${f.name}`);
+            await new Promise(r=>setTimeout(r,50)); // throttle downloads
+          }
+          tick(done+1);
+        }
+      }
       // Graphics WebMs
       if(gfxMode==="webm"||gfxMode==="both"){
         setPhase(`${ratio} — exporting graphic WebMs…`);
@@ -1901,7 +1938,7 @@ function ExportTab({project,brand,updateProject}){
         <div style={{marginBottom:DS.lg+2}}>
           <div style={sectionHead()}>GRAPHICS EXPORT FORMAT</div>
           <div style={{display:"flex",gap:DS.sm}}>
-            {[["png","🖼 Stills (PNG)","Static images for each graphic"],["webm","🎞 Animated (WebM)","Animated transparent videos"],["both","📦 Both","Stills + animated WebMs"]].map(([mode,title,desc])=>(
+            {[["png","🖼 Stills (PNG)","Static images for each graphic"],["webm","🎞 Animated (WebM)","Animated transparent videos"],["pngseq","🎬 PNG Sequence","Frame-by-frame for Premiere Pro"],["both","📦 Both","Stills + animated WebMs"]].map(([mode,title,desc])=>(
               <button key={mode} style={{flex:1,background:gfxMode===mode?DS.positive:DS.bgCard,border:`1px solid ${gfxMode===mode?DS.positiveBorder:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md}px`,cursor:"pointer",color:DS.textPrimary,fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setGfxMode(mode)}>
                 <div style={{fontWeight:800,fontSize:DS.fsMd,marginBottom:3}}>{title}</div>
                 <div style={{fontSize:11,color:DS.textMuted,lineHeight:1.4}}>{desc}</div>
