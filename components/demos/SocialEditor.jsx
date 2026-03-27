@@ -796,9 +796,11 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
         ctx.save();ctx.globalAlpha=ENT;ctx.translate(lx+logoW/2,ly+logoH/2);ctx.scale(logoScale,logoScale);ctx.drawImage(img,-logoW/2,-logoH/2,logoW,logoH);ctx.restore();
       }
     }
-    // Subtle pulse after entrance (breathe effect)
-    const pulse=p>=1?0.92+0.08*Math.sin(pRaw*Math.PI*0.8):1; // gentle 0.92–1.0 scale
-    const pulseAlpha=p>=1?0.85+0.15*Math.sin(pRaw*Math.PI*0.8):1; // gentle opacity breathe
+    // Subtle pulse — eases in gradually after entrance completes
+    const pulseRamp=clamp((pRaw-1)*0.5,0,1); // 0→1 over 2 seconds after entrance
+    const pulseAmt=pulseRamp*0.06; // max 6% scale variation
+    const pulse=1-pulseAmt+pulseAmt*Math.sin(pRaw*Math.PI*0.6); // slow ~1.7s cycle
+    const pulseAlpha=1-pulseRamp*0.12+pulseRamp*0.12*Math.sin(pRaw*Math.PI*0.6);
     // Separator — salmon accent line
     const sepW=Math.round(120*sc*ENT);
     ctx.save();ctx.globalAlpha=pulseAlpha;
