@@ -603,6 +603,14 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const waveShift=pRaw*W*0.04;
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
+    // Ghost number (like title/rule_number)
+    if(c.number){
+      ctx.save();ctx.globalAlpha=0.07*Math.min(1,p*3);
+      const ghostSz=Math.round((isCompact?H*0.7:H*0.85));
+      ctx.font=`800 ${ghostSz}px "${FFS}","serif"`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#fff";
+      ctx.fillText(c.number,isCompact?W/2:W*0.75,H*0.5);
+      ctx.restore();
+    }
     const lx=PAD;
     const icSz=Math.round(isCompact?44*sc:40*sc);
     const icSc=easeBack(clamp(p*2,0,1));
@@ -1114,7 +1122,7 @@ Templates and their content fields (keep ALL text SHORT — readable on mobile i
 - reality:       { body:"the correction (max 10 words)" }
 - title:         { headline:"TITLE (max 4 words)", subheadline:"sub", body:"detail", number:"bg number" }
 - rule_number:   { number:"1", body:"rule label (max 7 words)" }
-- key_point:     { headline:"LABEL (max 3 words)", body:"the point (max 18 words)" }
+- key_point:     { headline:"LABEL (max 3 words)", body:"the point (max 18 words)", number:"optional ghost number" }
 - fact_box:      { headline:"LABEL (2–3 words)", body:"detail (max 15 words)" }
 - speech_bubble:  { text:"a question (max 9 words)" }
 - landlord_ask:   { text:"a question landlords would ask (max 12 words)" }
@@ -1150,7 +1158,7 @@ Templates and content fields (keep ALL text SHORT — readable on mobile in 2 se
 - reality:       { body:"the correction (max 10 words)" }
 - title:         { headline:"TITLE (max 4 words)", subheadline:"sub", body:"detail", number:"bg number" }
 - rule_number:   { number:"1", body:"rule label (max 7 words)" }
-- key_point:     { headline:"LABEL (max 3 words)", body:"the point (max 18 words)" }
+- key_point:     { headline:"LABEL (max 3 words)", body:"the point (max 18 words)", number:"optional ghost number" }
 - fact_box:      { headline:"LABEL (2–3 words)", body:"detail (max 15 words)" }
 - speech_bubble:  { text:"a question (max 9 words)" }
 - landlord_ask:   { text:"a question landlords would ask (max 12 words)" }
@@ -1166,7 +1174,7 @@ const TMPL_FIELDS={
   reality:[{key:"body",label:"Correction",placeholder:"max 10 words"}],
   title:[{key:"headline",label:"Headline",placeholder:"max 4 words"},{key:"subheadline",label:"Subheadline",placeholder:"optional"},{key:"body",label:"Detail",placeholder:"optional"},{key:"number",label:"Background number",placeholder:"e.g. 1"}],
   rule_number:[{key:"number",label:"Rule #",placeholder:"e.g. 1"},{key:"body",label:"Rule label",placeholder:"max 7 words"}],
-  key_point:[{key:"headline",label:"Label",placeholder:"max 3 words"},{key:"body",label:"The point",placeholder:"max 18 words"}],
+  key_point:[{key:"headline",label:"Label",placeholder:"max 3 words"},{key:"body",label:"The point",placeholder:"max 18 words"},{key:"number",label:"Ghost number",placeholder:"e.g. 5 (optional)"}],
   fact_box:[{key:"headline",label:"Label",placeholder:"2-3 words"},{key:"body",label:"Detail",placeholder:"max 15 words"}],
   speech_bubble:[{key:"text",label:"Question",placeholder:"max 9 words"}],
   landlord_ask:[{key:"text",label:"Landlord question",placeholder:"max 12 words"}],
