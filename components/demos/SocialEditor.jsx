@@ -527,10 +527,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR,"#fff",IC);ctx.restore();
     // Badge — tight below icon
     ctx.save();ctx.translate(0,(1-ENT)*H*0.04);ctx.globalAlpha=ENT;
-    ctx.font=`700 ${Math.round(36*sc)}px "${FF}","Arial",sans-serif`;
+    ctx.font=`700 ${Math.round(52*sc)}px "${FF}","Arial",sans-serif`;
     const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
-    ctx.fillStyle="rgba(255,255,255,0.20)";rrPath(ctx,W/2-bw/2-20*sc,H*0.34,bw+40*sc,52*sc,26*sc);ctx.fill();
-    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,W/2,H*0.34+26*sc);ctx.restore();
+    ctx.fillStyle="rgba(255,255,255,0.20)";rrPath(ctx,W/2-bw/2-24*sc,H*0.335,bw+48*sc,68*sc,34*sc);ctx.fill();
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,W/2,H*0.335+34*sc);ctx.restore();
     // Body — large, centred, white — extra gap below badge
     ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.38,Math.round(72*sc),"700","center","#fff",4,FFS);ctx.restore();
     stamp(ctx,B,W,H,true);  // dark bg → white logo
