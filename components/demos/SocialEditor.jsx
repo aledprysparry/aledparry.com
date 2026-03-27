@@ -1813,6 +1813,8 @@ function ExportTab({project,brand,updateProject}){
     setMode("running");
     try{
     const pn=project.name.replace(/\s+/g,"_");
+    // Merge title card override into brand for export
+    const exportBrand=project.titleCardOverride?{...brand,...project.titleCardOverride}:brand;
     // total steps: gfx (PNGs and/or WebMs) + captions per ratio
     const capSteps = includeCaptions ? (captionMode==="composite" ? 1 : subtitles.length) : 0;
     const gfxSteps = gfxMode==="both" ? selectedGfx.length*2 : selectedGfx.length;
@@ -1823,8 +1825,18 @@ function ExportTab({project,brand,updateProject}){
 
     for(const ratio of selectedRatios){
       const prefix=`${ratio.replace(":","x")}_`;
-      // Graphics PNGs
+      // Helper: export a brand asset (title card / endboard) as still PNG
+      const exportAssetPNG=async(drawFn,name)=>{
+        const c=document.createElement("canvas");
+        drawFn(c,exportBrand,ratio,1);
+        const bc=addBleed(c,10);
+        await new Promise(res=>{bc.toBlob(blob=>{if(blob)dl(blob,`${pn}_${prefix}${name}.png`);res();},"image/png");});
+        await new Promise(r=>setTimeout(r,200));
+      };
+      // Graphics PNGs (+ title card & endboard)
       if(gfxMode==="png"||gfxMode==="both"){
+        setPhase(`${ratio} — exporting title card…`);
+        await exportAssetPNG(drawTitleCard,"00_title_card");
         setPhase(`${ratio} — exporting graphic PNGs…`);
         for(let i=0;i<selectedGfx.length;i++){
           drawGraphic(cvs.current,selectedGfx[i],brand,ratio,1);
@@ -1838,6 +1850,8 @@ function ExportTab({project,brand,updateProject}){
           tick(done+1);
           await new Promise(r=>setTimeout(r,300));
         }
+        setPhase(`${ratio} — exporting endboard…`);
+        await exportAssetPNG(drawEndboard,`${String(selectedGfx.length+1).padStart(2,"0")}_endboard`);
       }
       // PNG Sequences (for Premiere Pro)
       if(gfxMode==="pngseq"){
@@ -1850,7 +1864,7 @@ function ExportTab({project,brand,updateProject}){
           const fps=25;const total=Math.round(dur*fps);
           const folder=zip.folder(folderName);
           for(let f=0;f<total;f++){
-            drawFn(c,brand,ratio,f/fps);
+            drawFn(c,exportBrand,ratio,f/fps);
             const bc=addBleed(c,10);
             const blob=await new Promise(r=>bc.toBlob(r,"image/png"));
             folder.file(`frame_${String(f).padStart(4,"0")}.png`,blob);
