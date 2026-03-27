@@ -2442,7 +2442,7 @@ function StaticCanvasPreview({drawFn, brand, ratio, deps=[], width=380}){
       if(ref.current) drawFn(ref.current,brand,ratio,p);
       if(p<1) rafRef.current=requestAnimationFrame(loop);
     };
-    rafRef.current=requestAnimationFrame(loop);
+    document.fonts.ready.then(()=>{rafRef.current=requestAnimationFrame(loop);});
     return()=>cancelAnimationFrame(rafRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[ratio,...deps]);
