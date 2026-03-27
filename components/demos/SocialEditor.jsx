@@ -618,36 +618,36 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Overlay card — clean label + body, no icon clutter
     const cp=Math.round(28*sc);
     if(isCompact){
-      const bW=W-PAD,bH=Math.round(280*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
+      const bW=W-PAD,bH=Math.round(300*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
       ctx.save();ctx.translate(0,(1-ENT)*bH*0.7);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
       ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
       const ix=bX+cp,iw=bW-cp*2;let y=bY+cp;
       // Label
-      ctx.font=`700 ${Math.round(22*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle=B.colorPrimary;ctx.textAlign="left";ctx.textBaseline="alphabetic";
-      ctx.fillText((c.headline||"").toUpperCase(),ix,y+Math.round(20*sc));
-      y+=Math.round(32*sc);
+      ctx.font=`700 ${Math.round(26*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle=B.colorPrimary;ctx.textAlign="left";ctx.textBaseline="alphabetic";
+      ctx.fillText((c.headline||"").toUpperCase(),ix,y+Math.round(22*sc));
+      y+=Math.round(36*sc);
       // Separator
       ctx.fillStyle=B.colorAccent+"66";ctx.fillRect(ix,y,Math.round(50*sc),Math.round(2*sc));
       y+=Math.round(18*sc);
       // Body
-      DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(34*sc),"400","left",B.colorPrimary+"cc",4);
+      DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(40*sc),"500","left",B.colorPrimary+"cc",4);
       ctx.restore();
     } else {
-      const bW=Math.round(620*sc),bH=Math.round(220*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
+      const bW=Math.round(660*sc),bH=Math.round(250*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
       ctx.save();ctx.translate((1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
       ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
       ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,Math.round(6*sc),bH,[R,0,0,R]);ctx.fill();
       const ix=bX+cp,iw=bW-cp*2;let y=bY+cp;
       // Label
-      ctx.font=`700 ${Math.round(20*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle=B.colorPrimary;ctx.textAlign="left";ctx.textBaseline="alphabetic";
-      ctx.fillText((c.headline||"").toUpperCase(),ix,y+Math.round(18*sc));
-      y+=Math.round(30*sc);
+      ctx.font=`700 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle=B.colorPrimary;ctx.textAlign="left";ctx.textBaseline="alphabetic";
+      ctx.fillText((c.headline||"").toUpperCase(),ix,y+Math.round(20*sc));
+      y+=Math.round(34*sc);
       // Separator
       ctx.fillStyle=B.colorAccent+"66";ctx.fillRect(ix,y,Math.round(50*sc),Math.round(2*sc));
       y+=Math.round(16*sc);
       // Body
-      DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(30*sc),"400","left",B.colorPrimary+"cc",3);
+      DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(36*sc),"500","left",B.colorPrimary+"cc",3);
       ctx.restore();
     }
   }
@@ -674,19 +674,19 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   }
   else if(t==="stat"){
     // Warm cream card — stat value centred, label below
-    const bW=Math.round(480*sc),bH=Math.round(240*sc),bX=isCompact?(W-bW)/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
+    const bW=Math.round(520*sc),bH=Math.round(270*sc),bX=isCompact?(W-bW)/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
     const cp=Math.round(28*sc);
     ctx.save();ctx.translate(0,(1-ENT)*bH*0.6);ctx.globalAlpha=ENT;
     ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=32;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
     ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
-    // Stat value — auto-sized to fit card width
+    // Stat value — punchy, auto-sized to fit card width
     const rs=c.stat||"",nm=rs.match(/^([^0-9]*)([0-9.]+)(.*)$/);
     let ds=rs;if(nm){const n=parseFloat(nm[2]),d=Math.round(n*TXT*10)/10;ds=nm[1]+(Number.isInteger(n)?Math.round(d):d.toFixed(1))+nm[3];}
-    DT(ds,bX+bW/2,bY+cp,bW-cp*2,Math.round(bH*0.45),Math.round(64*sc),"700","center",B.colorPrimary,1,FFS);
+    DT(ds,bX+bW/2,bY+cp,bW-cp*2,Math.round(bH*0.45),Math.round(80*sc),"700","center",B.colorPrimary,1,FFS);
     // Separator
     const sepW=Math.round(50*sc*ENT);ctx.fillStyle=B.colorAccent+"66";ctx.fillRect(bX+bW/2-sepW/2,bY+bH*0.58,sepW,Math.round(2*sc));
     // Label
-    DT(c.label||"",bX+bW/2,bY+bH*0.63,bW-cp*2,Math.round(bH*0.25),Math.round(28*sc),"400","center",B.colorPrimary+"99",2);
+    DT(c.label||"",bX+bW/2,bY+bH*0.63,bW-cp*2,Math.round(bH*0.25),Math.round(32*sc),"500","center",B.colorPrimary+"99",2);
     ctx.restore();
   }
   else if(t==="timeline"){
