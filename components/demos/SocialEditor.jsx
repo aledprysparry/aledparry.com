@@ -349,16 +349,36 @@ function drawText(ctx,text,x,y,maxW,maxH,baseSz,weight,align,color,maxLines=3,ff
   const{sz,lh}=fitFont(ctx,text,maxW,maxH,baseSz,weight||"700",maxLines,ff,lhMult);
   ctx.font=`${weight||"700"} ${sz}px "${ff}","Arial",sans-serif`;
   ctx.fillStyle=color||"#fff";ctx.textAlign=align||"center";ctx.textBaseline="alphabetic";
-  // Offset Y by ascent so y parameter = top of text area, not baseline
   const ascent=Math.round(sz*0.82);
-  const words=text.split(" ");let line="",cy=y+ascent,count=0;
-  for(const word of words){
-    const test=line+word+" ";
-    if(ctx.measureText(test).width>maxW&&line){
-      if(count<maxLines&&cy<=y+maxH){ctx.fillText(line.trim(),x,cy);line=word+" ";cy+=lh;count++;}else break;
-    }else line=test;
+  const words=text.split(" ");
+  // Smart line-breaking: balance lines + prefer breaks before conjunctions/prepositions
+  const BREAK_BEFORE=new Set(["but","and","or","nor","yet","so","for","with","from","that","which","where","when","while","after","before","during","until","unless","because","although","if","then"]);
+  // First do greedy wrap to find how many lines we need
+  const greedyLines=[];let gl="";
+  for(const w of words){const t=gl+w+" ";if(ctx.measureText(t).width>maxW&&gl){greedyLines.push(gl.trim());gl=w+" ";}else gl=t;}
+  if(gl.trim())greedyLines.push(gl.trim());
+  // If 2 lines, try balanced break: find split point closest to middle that makes both lines fit
+  let finalLines=greedyLines;
+  if(greedyLines.length===2&&words.length>=4){
+    const fullW=ctx.measureText(text).width;
+    let bestIdx=-1,bestScore=Infinity;
+    for(let i=1;i<words.length;i++){
+      const l1=words.slice(0,i).join(" "),l2=words.slice(i).join(" ");
+      const w1=ctx.measureText(l1).width,w2=ctx.measureText(l2).width;
+      if(w1>maxW||w2>maxW)continue;
+      // Score: prefer balanced widths, bonus for breaking before conjunctions
+      let score=Math.abs(w1-w2);
+      if(BREAK_BEFORE.has(words[i].toLowerCase().replace(/[^a-z]/g,"")))score*=0.4; // strong preference
+      if(score<bestScore){bestScore=score;bestIdx=i;}
+    }
+    if(bestIdx>0)finalLines=[words.slice(0,bestIdx).join(" "),words.slice(bestIdx).join(" ")];
   }
-  if(line.trim()&&count<maxLines&&cy<=y+maxH)ctx.fillText(line.trim(),x,cy);
+  // Render lines
+  let cy=y+ascent,count=0;
+  for(const ln of finalLines){
+    if(count>=maxLines||cy>y+maxH)break;
+    ctx.fillText(ln,x,cy);cy+=lh;count++;
+  }
   return cy;
 }
 function stamp(ctx,brand,W,H,darkBg=true){
