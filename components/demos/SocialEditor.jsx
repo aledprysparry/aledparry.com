@@ -2298,11 +2298,17 @@ function ExportTab({project,brand,updateProject}){
         }
       </div>
 
-      {/* Quick-download cue sheet */}
-      <button style={{width:"100%",background:"rgba(27,73,101,0.15)",border:"1px solid rgba(27,73,101,0.3)",borderRadius:10,padding:"11px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:16,transition:"all 0.15s"}}
-        onClick={exportCueSheet} title="Download a Word doc with all timecodes and content">
-        📋 Download Cue Sheet (.docx)
-      </button>
+      {/* Quick actions */}
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        <button style={{flex:1,background:"rgba(27,73,101,0.15)",border:"1px solid rgba(27,73,101,0.3)",borderRadius:10,padding:"11px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}
+          onClick={exportCueSheet} title="Download a Word doc with all timecodes and content">
+          📋 Cue Sheet (.docx)
+        </button>
+        <button style={{flex:1,background:"rgba(42,157,143,0.15)",border:"1px solid rgba(42,157,143,0.3)",borderRadius:10,padding:"11px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}
+          onClick={()=>{setMode("confirming");}} title="Quick export with current settings">
+          ⚡ Quick Export
+        </button>
+      </div>
 
       {mode==="confirming"
         ?(
