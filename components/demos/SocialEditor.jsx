@@ -325,6 +325,106 @@ function generatePremiereXML(subtitles, ratio, prefix) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  GRAPHICS PREMIERE XML GENERATOR
+// ═══════════════════════════════════════════════════════════════
+function generateGraphicsXML(graphics, ratio, prefix, projectName) {
+  const { W, H } = RATIOS[ratio] || RATIOS["16:9"];
+  const FPS = 25;
+  const toF = sec => Math.round(sec * FPS);
+  const tsToSec = ts => { const p=ts.split(":").map(Number); return p[0]*3600+p[1]*60+(p[2]||0); };
+  // Find total duration from last graphic end
+  const lastEnd = graphics.reduce((max,g) => {
+    const s=tsToSec(g.timestamp||"00:00:00"); return Math.max(max, s+(g.duration||4));
+  }, 60);
+  const totalFrames = toF(lastEnd) + FPS;
+  // Two tracks: fullscreen on V2, overlays on V3
+  const fullscreen = graphics.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)==="fullscreen");
+  const overlays = graphics.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)!=="fullscreen");
+  const makeClips = (list, trackLabel) => list.map((g,i) => {
+    const sf = toF(tsToSec(g.timestamp||"00:00:00"));
+    const dur = toF(g.duration||4);
+    const ef = sf + dur;
+    const fn = `${prefix}${(g.label||g.template+"_"+i).replace(/[^a-z0-9_-]/gi,"_")}`;
+    return `      <clipitem id="${trackLabel}_${i+1}">
+        <name>${fn}</name><start>${sf}</start><end>${ef}</end>
+        <in>0</in><out>${dur}</out>
+        <file id="${trackLabel}_file${i+1}">
+          <name>${fn}</name><pathurl>${fn}/frame_%04d.png</pathurl>
+          <duration>${dur}</duration>
+          <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
+          <media><video><samplecharacteristics>
+            <width>${W}</width><height>${H}</height>
+          </samplecharacteristics></video></media>
+        </file>
+      </clipitem>`;
+  }).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xmeml>
+<xmeml version="5">
+  <sequence id="gfx_seq">
+    <name>${projectName||"Graphics"} ${ratio}</name>
+    <duration>${totalFrames}</duration>
+    <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
+    <media>
+      <video>
+        <format><samplecharacteristics><width>${W}</width><height>${H}</height></samplecharacteristics></format>
+        <track>
+          <!-- V2: Fullscreen graphics -->
+${makeClips(fullscreen,"fs")}
+        </track>
+        <track>
+          <!-- V3: Overlay graphics -->
+${makeClips(overlays,"ov")}
+        </track>
+      </video>
+    </media>
+  </sequence>
+</xmeml>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  COMPOSITE VIDEO GENERATOR
+// ═══════════════════════════════════════════════════════════════
+function recordCompositeVideo(graphics, brand, ratio, onProgress) {
+  return new Promise((resolve, reject) => {
+    const AR = RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+    const cvs = document.createElement("canvas"); cvs.width=AR.W; cvs.height=AR.H;
+    const ctx = cvs.getContext("2d");
+    const FPS = 25;
+    const tsToSec = ts => { const p=ts.split(":").map(Number); return p[0]*3600+p[1]*60+(p[2]||0); };
+    // Sort graphics by timestamp
+    const sorted = [...graphics].sort((a,b) => tsToSec(a.timestamp||"00:00:00") - tsToSec(b.timestamp||"00:00:00"));
+    // Total duration = last graphic end + 1s buffer
+    const lastEnd = sorted.reduce((max,g) => Math.max(max, tsToSec(g.timestamp||"00:00:00")+(g.duration||4)), 0);
+    const totalDurMs = (lastEnd + 1) * 1000;
+    const rec = new MediaRecorder(cvs.captureStream(0), {mimeType:MIME(), videoBitsPerSecond:8000000});
+    const ch = []; rec.ondataavailable = e => { if(e.data.size>0) ch.push(e.data); };
+    rec.onstop = () => resolve(new Blob(ch, {type:"video/webm"}));
+    rec.onerror = reject;
+    rec.start();
+    const startT = performance.now();
+    const tick = () => {
+      const elapsed = performance.now() - startT;
+      const currentSec = elapsed / 1000;
+      ctx.clearRect(0, 0, AR.W, AR.H);
+      // Find all active graphics at this timestamp
+      sorted.forEach(g => {
+        const gStart = tsToSec(g.timestamp||"00:00:00");
+        const gEnd = gStart + (g.duration||4);
+        if(currentSec >= gStart && currentSec < gEnd) {
+          const localP = (currentSec - gStart); // seconds since graphic started
+          drawGraphic(cvs, g, brand, ratio, localP);
+        }
+      });
+      if(onProgress) onProgress(elapsed / totalDurMs);
+      if(elapsed < totalDurMs) requestAnimationFrame(tick);
+      else rec.stop();
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  CANVAS UTILS
 // ═══════════════════════════════════════════════════════════════
 function rrPath(ctx,x,y,w,h,r){
@@ -2020,6 +2120,20 @@ function ExportTab({project,brand,updateProject}){
           await new Promise(r=>setTimeout(r,200));
         }
       }
+      // Composite video — one transparent WebM with all graphics timed
+      if(gfxMode==="composite"){
+        setPhase(`${ratio} — rendering composite video (all graphics)…`);
+        const compositeBlob=await recordCompositeVideo(selectedGfx,exportBrand,ratio,pct=>{
+          setProg(p=>({...p,pct:(done/totalSteps)+(pct/totalSteps)}));
+        });
+        dl(compositeBlob,`${pn}_${prefix}all_graphics_composite.webm`);
+        tick(done+1);
+      }
+      // Premiere XML for graphics (always include with pngseq, composite, or webm)
+      if(gfxMode==="pngseq"||gfxMode==="composite"||gfxMode==="webm"||gfxMode==="both"){
+        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
+        dlText(gfxXml,`${pn}_${prefix}graphics_sequence.xml`);
+      }
       // Captions (only if opted in)
       if(includeCaptions&&captionMode==="composite"){
         setPhase(`${ratio} — rendering composite caption video…`);
@@ -2091,7 +2205,7 @@ function ExportTab({project,brand,updateProject}){
         <div style={{marginBottom:DS.lg+2}}>
           <div style={sectionHead()}>GRAPHICS EXPORT FORMAT</div>
           <div style={{display:"flex",gap:DS.sm}}>
-            {[["png","🖼 Stills (PNG)","Static images for each graphic"],["webm","🎞 Animated (WebM)","Animated transparent videos"],["pngseq","🎬 PNG Sequence","Frame-by-frame for Premiere Pro"],["both","📦 Both","Stills + animated WebMs"]].map(([mode,title,desc])=>(
+            {[["png","🖼 Stills (PNG)","Static images"],["webm","🎞 Animated (WebM)","Individual transparent videos"],["pngseq","🎬 PNG Sequence","Frames for Premiere"],["composite","🎬 Composite","One video, all graphics timed"],["both","📦 Both","Stills + WebMs"]].map(([mode,title,desc])=>(
               <button key={mode} style={{flex:1,background:gfxMode===mode?DS.positive:DS.bgCard,border:`1px solid ${gfxMode===mode?DS.positiveBorder:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md}px`,cursor:"pointer",color:DS.textPrimary,fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setGfxMode(mode)}>
                 <div style={{fontWeight:800,fontSize:DS.fsMd,marginBottom:3}}>{title}</div>
                 <div style={{fontSize:11,color:DS.textMuted,lineHeight:1.4}}>{desc}</div>
