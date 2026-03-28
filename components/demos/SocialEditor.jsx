@@ -1691,6 +1691,127 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  LIVE VIDEO PREVIEW — video + graphics overlay
+// ═══════════════════════════════════════════════════════════════
+function LiveVideoPreview({videoUrl,graphics,brand,ratio,onSeek}){
+  const containerRef=useRef();
+  const videoRef=useRef();
+  const canvasRef=useRef();
+  const rafRef=useRef();
+  const [playing,setPlaying]=useState(false);
+  const [currentTime,setCT]=useState(0);
+  const [duration,setDuration]=useState(0);
+  const [showOverlay,setShowOverlay]=useState(true);
+
+  const toSec=ts=>{if(!ts)return 0;const p=ts.split(":").map(Number);return(p[0]||0)*3600+(p[1]||0)*60+(p[2]||0);};
+  const fmtTime=s=>{const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m}:${String(sec).padStart(2,"0")}`;};
+
+  // Find active graphics at current time
+  const getActiveGraphics=(t)=>{
+    return graphics.filter(g=>{
+      const start=toSec(g.timestamp);
+      const end=start+(g.duration||4);
+      return t>=start&&t<end;
+    }).map(g=>{
+      const start=toSec(g.timestamp);
+      const elapsed=t-start;
+      const dur=g.duration||4;
+      return{...g,progress:Math.min(elapsed/1,dur)}; // 1s entrance, then hold
+    });
+  };
+
+  // Render loop
+  useEffect(()=>{
+    if(!canvasRef.current||!videoRef.current) return;
+    const loop=()=>{
+      const v=videoRef.current;
+      if(!v) return;
+      const t=v.currentTime;
+      setCT(t);
+      if(showOverlay){
+        const active=getActiveGraphics(t);
+        const c=canvasRef.current;
+        const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+        c.width=AR.W;c.height=AR.H;
+        const ctx=c.getContext("2d",{alpha:true});
+        ctx.clearRect(0,0,AR.W,AR.H);
+        // Draw each graphic on a temp canvas, then composite
+        const tmp=document.createElement("canvas");
+        active.forEach(g=>{
+          drawGraphic(tmp,g,brand,ratio,g.progress);
+          ctx.drawImage(tmp,0,0);
+        });
+      }
+      rafRef.current=requestAnimationFrame(loop);
+    };
+    rafRef.current=requestAnimationFrame(loop);
+    return()=>cancelAnimationFrame(rafRef.current);
+  },[graphics,brand,ratio,showOverlay]);
+
+  const togglePlay=()=>{
+    const v=videoRef.current;if(!v) return;
+    if(v.paused){v.play();setPlaying(true);}
+    else{v.pause();setPlaying(false);}
+  };
+
+  const seek=(e)=>{
+    const rect=e.currentTarget.getBoundingClientRect();
+    const frac=(e.clientX-rect.left)/rect.width;
+    const t=frac*duration;
+    videoRef.current.currentTime=t;
+    setCT(t);
+    if(onSeek) onSeek(t);
+  };
+
+  // Active graphic indicators on timeline
+  const gfxMarkers=graphics.map(g=>{
+    const start=toSec(g.timestamp);
+    const end=start+(g.duration||4);
+    const meta=TMPL[g.template]||{};
+    const isOv=(g.typeOverride||meta.type||"fullscreen")==="overlay";
+    return{start,end,isOv,template:g.template};
+  });
+
+  return(
+    <div ref={containerRef} style={{marginBottom:DS.xl,borderRadius:DS.rLg,overflow:"hidden",background:"#000",position:"relative"}}>
+      {/* Video + canvas stack */}
+      <div style={{position:"relative",paddingBottom:ratio==="9:16"?"177.78%":ratio==="1:1"?"100%":"56.25%"}}>
+        <video ref={videoRef} src={videoUrl} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"contain",background:"#000"}}
+          onLoadedMetadata={e=>setDuration(e.target.duration)}
+          onClick={togglePlay}
+          playsInline muted/>
+        {showOverlay&&<canvas ref={canvasRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}/>}
+      </div>
+
+      {/* Controls bar */}
+      <div style={{background:"rgba(13,25,38,0.95)",padding:`${DS.sm}px ${DS.md}px`}}>
+        {/* Timeline scrubber */}
+        <div style={{position:"relative",height:32,cursor:"pointer",marginBottom:DS.xs}} onClick={seek}>
+          {/* Background track */}
+          <div style={{position:"absolute",top:12,left:0,right:0,height:8,background:"rgba(255,255,255,0.08)",borderRadius:4}}/>
+          {/* Graphic markers */}
+          {duration>0&&gfxMarkers.map((m,i)=>(
+            <div key={i} style={{position:"absolute",top:10,left:`${(m.start/duration)*100}%`,width:`${Math.max(1,((m.end-m.start)/duration)*100)}%`,height:12,background:m.isOv?"rgba(42,157,143,0.5)":"rgba(230,57,70,0.4)",borderRadius:3,transition:"opacity 0.15s"}} title={m.template}/>
+          ))}
+          {/* Playhead */}
+          <div style={{position:"absolute",top:6,left:`${duration>0?(currentTime/duration)*100:0}%`,width:3,height:20,background:"#fff",borderRadius:2,transform:"translateX(-1px)",boxShadow:"0 0 6px rgba(255,255,255,0.5)",transition:"left 0.05s linear"}}/>
+        </div>
+
+        {/* Buttons row */}
+        <div style={{display:"flex",alignItems:"center",gap:DS.md}}>
+          <button onClick={togglePlay} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:"2px 6px"}}>{playing?"⏸":"▶"}</button>
+          <span style={{fontSize:11,color:DS.textMuted,fontVariantNumeric:"tabular-nums"}}>{fmtTime(currentTime)} / {fmtTime(duration)}</span>
+          <div style={{flex:1}}/>
+          <button onClick={()=>setShowOverlay(!showOverlay)} style={{background:showOverlay?"rgba(42,157,143,0.2)":"transparent",border:`1px solid ${showOverlay?"rgba(42,157,143,0.4)":"rgba(255,255,255,0.1)"}`,borderRadius:DS.xs,padding:"3px 10px",color:"#fff",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
+            {showOverlay?"🎨 Overlay ON":"🎨 Overlay OFF"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  GRAPHICS TAB
 // ═══════════════════════════════════════════════════════════════
 function GraphicsTab({project,brand,updateProject,previewRatio}){
@@ -1858,6 +1979,19 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
 
   return(
     <div>
+      {/* Live Video Preview — shows when video is attached */}
+      {project.videoUrl&&graphics.length>0&&(
+        <LiveVideoPreview videoUrl={project.videoUrl} graphics={graphics} brand={brand} ratio={previewRatio}
+          onSeek={t=>{/* Could highlight the graphic at this timecode */}}/>
+      )}
+      {/* Attach video button — shows when SRT loaded but no video */}
+      {!project.videoUrl&&graphics.length>0&&(
+        <div style={{marginBottom:DS.lg,padding:`${DS.md}px ${DS.lg}px`,background:"rgba(42,157,143,0.08)",border:"1px dashed rgba(42,157,143,0.3)",borderRadius:DS.rMd,display:"flex",alignItems:"center",gap:DS.md,cursor:"pointer"}}
+          onClick={()=>{const inp=document.createElement("input");inp.type="file";inp.accept=".mp4,.mov,.webm";inp.onchange=e=>{const f=e.target.files[0];if(f){updateProject({videoUrl:URL.createObjectURL(f),videoName:f.name});}};inp.click();}}>
+          <span style={{fontSize:20}}>🎬</span>
+          <div><div style={{fontSize:DS.fsSm,fontWeight:600}}>Attach video for live preview</div><div style={{fontSize:11,color:DS.textMuted}}>Drop your .mp4 or .mov to see graphics overlaid on video</div></div>
+        </div>
+      )}
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
         <span style={{fontSize:13,fontWeight:700,opacity:0.6}}>{graphics.length} suggested</span>
         <button style={sm} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))} title="Select all">All</button>
@@ -2499,13 +2633,16 @@ function ProjectView({project,brand,updateProject,onBack}){
 
   const handleVideo=async(f)=>{
     setTranscribing(true);setTranscribeError("");
+    // Store video blob URL for live preview
+    const videoUrl=URL.createObjectURL(f);
+    updateProject({videoUrl,videoName:f.name});
     try{
       const form=new FormData();form.append("file",f);
       const res=await fetch("/api/transcribe",{method:"POST",body:form});
       const data=await res.json();
       if(!res.ok) throw new Error(data.error||"Transcription failed");
       const subs=parseSRT(data.srt);
-      updateProject({srt:data.srt,subtitles:subs,graphics:[],selected:[],previews:{}});
+      updateProject({srt:data.srt,subtitles:subs,graphics:[],selected:[],previews:{},videoUrl,videoName:f.name});
     }catch(e){setTranscribeError(e.message);}
     finally{setTranscribing(false);}
   };
@@ -2514,7 +2651,15 @@ function ProjectView({project,brand,updateProject,onBack}){
     if(!f) return;
     const ext=f.name.split(".").pop().toLowerCase();
     if(["srt","txt"].includes(ext)) handleSRT(f);
-    else if(["mp4","mov","m4a","mp3","wav","webm","ogg"].includes(ext)) handleVideo(f);
+    else if(["mp4","mov","m4a","mp3","wav","webm","ogg"].includes(ext)){
+      // If SRT already loaded, just attach video for preview (don't re-transcribe)
+      if(hasSRT&&["mp4","mov","webm"].includes(ext)){
+        const videoUrl=URL.createObjectURL(f);
+        updateProject({videoUrl,videoName:f.name});
+      } else {
+        handleVideo(f);
+      }
+    }
     else setTranscribeError("Unsupported file type. Upload .srt, .mp4, .mov, .mp3, or .wav");
   };
 
