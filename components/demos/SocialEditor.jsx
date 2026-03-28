@@ -608,6 +608,9 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const pRaw=progress; // raw progress for wave drifting (can exceed 1)
   const AP=ANIM_PRESETS[B.animationPreset]||ANIM_PRESETS.default;
   const ENT=AP.easeFn(clamp(p*AP.entMul,0,1)),TXT=AP.easeFn(clamp((p-AP.txtDelay)*AP.txtMul,0,1));
+  // Cascade helper — staggers elements by delay (in seconds relative to p=0-1 over 1s)
+  const cascade=(delay)=>AP.easeFn(clamp((p-delay)*AP.entMul*0.8,0,1));
+  const cascadeBack=(delay)=>easeBack(clamp((p-delay)*2.5,0,1));
   const TS=Math.max(0.5,Math.min(1.6,Number(B.typeScale)||1.0));   // type scale
   const LH=Math.max(1.0,Math.min(2.2,Number(B.lineHeight)||1.30)); // line height
   const HW=B.headingWeight||"900";                                   // heading weight
@@ -631,22 +634,24 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const waveShift=pRaw*W*0.04;
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
-    // Icon — vertically centred in top portion
-    const icR=Math.round(70*sc),icSc=easeBack(clamp(p*2.2,0,1));
-    ctx.save();ctx.translate(W/2,H*0.24);ctx.scale(icSc,icSc);
-    ctx.globalAlpha=0.15;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();
-    ctx.globalAlpha=1;drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR,"#fff",IC);ctx.restore();
-    // Badge — tight below icon
-    ctx.save();ctx.translate(0,(1-ENT)*H*0.04);ctx.globalAlpha=ENT;
+    // Icon — bounces in first (cascade 0)
+    const icR=Math.round(70*sc),icSc=cascadeBack(0);
+    ctx.save();ctx.translate(W/2,H*0.24);ctx.scale(icSc,icSc);ctx.globalAlpha=cascade(0);
+    ctx.save();ctx.globalAlpha=0.15;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();ctx.restore();
+    drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR,"#fff",IC);ctx.restore();
+    // Badge — slides up after icon (cascade 0.12)
+    const badgeP=cascade(0.12);
+    ctx.save();ctx.translate(0,(1-badgeP)*H*0.06);ctx.globalAlpha=badgeP;
     ctx.font=`700 ${Math.round(52*sc)}px "${FF}","Arial",sans-serif`;
     const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
     ctx.fillStyle="rgba(255,255,255,0.20)";rrPath(ctx,W/2-bw/2-24*sc,H*0.335,bw+48*sc,68*sc,34*sc);ctx.fill();
     ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,W/2,H*0.335+34*sc);ctx.restore();
-    // Body — large, centred, white — extra gap below badge
+    // Body — fades up after badge (cascade 0.25)
+    const bodyP=cascade(0.25);
     const mythFontSz=isCompact?Math.round(56*sc):Math.round(72*sc);
     const mythBodyY=isCompact?H*0.45:H*0.50;
     const mythBodyH=isCompact?H*0.42:H*0.38;
-    ctx.save();ctx.globalAlpha=TXT;DT(c.body||"",W/2,mythBodyY,W-PAD*2,mythBodyH,mythFontSz,"700","center","#fff",4,FFS);ctx.restore();
+    ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.04);DT(c.body||"",W/2,mythBodyY,W-PAD*2,mythBodyH,mythFontSz,"700","center","#fff",4,FFS);ctx.restore();
     stamp(ctx,B,W,H,true);  // dark bg → white logo
   }
   else if(t==="title"){
@@ -697,16 +702,20 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;const gs=easeOut(clamp(p*1.5,0,1));
     ctx.font=`700 ${Math.round(Math.min(W,H)*0.65)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
     ctx.translate(W/2,H*0.43);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
-    // "RULE" label — centred
-    ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*H*0.05);
+    // "RULE" label — cascades first (0)
+    const ruleLabel=cascade(0);
+    ctx.save();ctx.globalAlpha=ruleLabel;ctx.translate(0,(1-ruleLabel)*H*0.03);
     ctx.fillStyle=B.colorPrimary+"66";ctx.font=`600 ${Math.round(44*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";
     ctx.fillText("— RULE —",W/2,H*0.30);
-    // Big number — centred vertically
-    ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(200*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";
-    ctx.fillText("#"+(c.number||"1"),W/2,H*0.52);
     ctx.restore();
-    // Body text — centred below
-    if(c.body){ctx.save();ctx.globalAlpha=TXT;DT(c.body,W/2,H*0.60,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
+    // Big number — punchy bounce in (cascade 0.12)
+    const numP=cascadeBack(0.12);
+    ctx.save();ctx.globalAlpha=cascade(0.12);ctx.translate(W/2,H*0.52);ctx.scale(numP,numP);
+    ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(200*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText("#"+(c.number||"1"),0,0);
+    ctx.restore();
+    // Body text — slides up last (cascade 0.28)
+    if(c.body){const bodyP=cascade(0.28);ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.04);DT(c.body,W/2,H*0.60,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
     stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="key_point"){
@@ -752,34 +761,47 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
     const lx=PAD;
     const icSz=Math.round(isCompact?44*sc:40*sc);
-    const icSc=easeBack(clamp(p*2,0,1));
-    ctx.save();ctx.globalAlpha=TXT;
+    const icSc=cascadeBack(0.15);
+    const headP=cascade(0);
+    const ruleP=cascade(0.18);
+    const bodyP=cascade(0.30);
     if(isCompact){
       let y=H*0.15;
-      // Headline — bold serif, top
+      // Headline — cascades first
+      ctx.save();ctx.globalAlpha=headP;ctx.translate((1-headP)*-30*sc,0);
       y=DT(c.headline||"KEY POINT",lx,y,W-PAD*2,H*0.14,Math.round(64*sc),"HW","left","#fff",2,FFS);
+      ctx.restore();
       y+=H*0.02;
-      // Icon + rule on same line
+      // Icon + rule — bounces in
+      ctx.save();ctx.globalAlpha=ruleP;
       ctx.save();ctx.translate(lx+icSz/2,y+icSz/2);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,icSz,CW,IC);ctx.restore();
-      const ruleX=lx+icSz+Math.round(14*sc);const ruleW=Math.round((W*0.25)*ENT);
+      const ruleX=lx+icSz+Math.round(14*sc);const ruleW=Math.round((W*0.25)*ruleP);
       ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ruleX,y+icSz/2);ctx.lineTo(ruleX+ruleW,y+icSz/2);ctx.stroke();
+      ctx.restore();
       y+=icSz+H*0.04;
-      // Body
+      // Body — slides up last
+      ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.05);
       DT(c.body||"",lx,y,W-PAD*2,H*0.45,Math.round(50*sc),"500","left","rgba(255,255,255,0.85)",5);
+      ctx.restore();
     } else {
       let y=H*0.12;
-      // Headline — bold serif
+      // Headline — slides in from left
+      ctx.save();ctx.globalAlpha=headP;ctx.translate((1-headP)*-40*sc,0);
       y=DT(c.headline||"KEY POINT",lx,y,W*0.6,H*0.14,Math.round(68*sc),"HW","left","#fff",2,FFS);
+      ctx.restore();
       y+=H*0.035;
-      // Icon + rule
+      // Icon + rule — bounces in
+      ctx.save();ctx.globalAlpha=ruleP;
       ctx.save();ctx.translate(lx+icSz/2,y+icSz/2);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,icSz,CW,IC);ctx.restore();
-      const ruleX=lx+icSz+Math.round(14*sc);const ruleW=Math.round((W*0.20)*ENT);
+      const ruleX=lx+icSz+Math.round(14*sc);const ruleW=Math.round((W*0.20)*ruleP);
       ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ruleX,y+icSz/2);ctx.lineTo(ruleX+ruleW,y+icSz/2);ctx.stroke();
+      ctx.restore();
       y+=icSz+H*0.06;
-      // Body
+      // Body — slides up last
+      ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.05);
       DT(c.body||"",lx,y,W*0.65,H*0.40,Math.round(52*sc),"500","left","rgba(255,255,255,0.85)",4);
+      ctx.restore();
     }
-    ctx.restore();
     stamp(ctx,B,W,H,true);
   }
   else if(t==="fact_box"){
