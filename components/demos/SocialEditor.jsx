@@ -2488,10 +2488,34 @@ function ProjectView({project,brand,updateProject,onBack}){
   const fileRef=useRef();
   // API key check removed — server-side proxy handles AI calls
 
+  const [transcribing,setTranscribing]=useState(false);
+  const [transcribeError,setTranscribeError]=useState("");
+
   const handleSRT=f=>{
     const r=new FileReader();
     r.onload=e=>{ const subs=parseSRT(e.target.result); updateProject({srt:e.target.result,subtitles:subs,graphics:[],selected:[],previews:{}}); };
     r.readAsText(f);
+  };
+
+  const handleVideo=async(f)=>{
+    setTranscribing(true);setTranscribeError("");
+    try{
+      const form=new FormData();form.append("file",f);
+      const res=await fetch("/api/transcribe",{method:"POST",body:form});
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.error||"Transcription failed");
+      const subs=parseSRT(data.srt);
+      updateProject({srt:data.srt,subtitles:subs,graphics:[],selected:[],previews:{}});
+    }catch(e){setTranscribeError(e.message);}
+    finally{setTranscribing(false);}
+  };
+
+  const handleFile=f=>{
+    if(!f) return;
+    const ext=f.name.split(".").pop().toLowerCase();
+    if(["srt","txt"].includes(ext)) handleSRT(f);
+    else if(["mp4","mov","m4a","mp3","wav","webm","ogg"].includes(ext)) handleVideo(f);
+    else setTranscribeError("Unsupported file type. Upload .srt, .mp4, .mov, .mp3, or .wav");
   };
 
   const hasSRT=project.subtitles.length>0;
@@ -2531,16 +2555,22 @@ function ProjectView({project,brand,updateProject,onBack}){
 
       <div style={S.wrap}>
         {/* API key banner removed — server-side proxy */}
-        {/* SRT bar */}
-        <div style={card({padding:`${DS.md-1}px ${DS.lg}px`,marginBottom:DS.lg+2,display:"flex",alignItems:"center",gap:DS.md,flexWrap:"wrap"})}>
-          <span style={label({marginBottom:0,flexShrink:0})}>SRT</span>
-          {hasSRT
-            ?<><span style={{background:DS.positive,border:`1px solid ${DS.positiveBorder}`,borderRadius:5,padding:"3px 9px",fontSize:11,fontWeight:700,color:DS.green,flexShrink:0}}>✓ {project.subtitles.length} lines</span>
-              <span style={{fontSize:DS.fsSm,color:DS.textMuted,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>"{project.subtitles[0]?.text}"…</span></>
-            :<span style={{fontSize:DS.fsSm,color:DS.textMuted,flex:1}}>No SRT — upload one to unlock both tabs</span>
+        {/* Upload bar — accepts SRT or video/audio files */}
+        <div style={card({padding:`${DS.md-1}px ${DS.lg}px`,marginBottom:DS.lg+2,display:"flex",alignItems:"center",gap:DS.md,flexWrap:"wrap"})}
+          onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=brand.colorAccent;}}
+          onDragLeave={e=>{e.currentTarget.style.borderColor=DS.borderSubtle;}}
+          onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor=DS.borderSubtle;handleFile(e.dataTransfer.files[0]);}}>
+          <span style={label({marginBottom:0,flexShrink:0})}>{transcribing?"🎙":"SRT"}</span>
+          {transcribing
+            ?<span style={{fontSize:DS.fsSm,color:brand.colorAccent,flex:1,fontWeight:600}}>🔄 Transcribing audio… this may take a minute</span>
+            :hasSRT
+              ?<><span style={{background:DS.positive,border:`1px solid ${DS.positiveBorder}`,borderRadius:5,padding:"3px 9px",fontSize:11,fontWeight:700,color:DS.green,flexShrink:0}}>✓ {project.subtitles.length} lines</span>
+                <span style={{fontSize:DS.fsSm,color:DS.textMuted,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>"{project.subtitles[0]?.text}"…</span></>
+              :<span style={{fontSize:DS.fsSm,color:DS.textMuted,flex:1}}>Drop SRT or video/audio file here</span>
           }
-          <button style={{...S.sm,flexShrink:0}} onClick={()=>fileRef.current.click()}>{hasSRT?"↺ Replace":"⬆ Upload SRT"}</button>
-          <input ref={fileRef} type="file" accept=".srt,.txt" style={{display:"none"}} onChange={e=>e.target.files[0]&&handleSRT(e.target.files[0])}/>
+          {transcribeError&&<span style={{fontSize:11,color:DS.accent,flex:"0 0 100%",marginTop:4}}>{transcribeError}</span>}
+          {!transcribing&&<button style={{...S.sm,flexShrink:0}} onClick={()=>fileRef.current.click()}>{hasSRT?"↺ Replace":"⬆ Upload"}</button>}
+          <input ref={fileRef} type="file" accept=".srt,.txt,.mp4,.mov,.m4a,.mp3,.wav,.webm,.ogg" style={{display:"none"}} onChange={e=>e.target.files[0]&&handleFile(e.target.files[0])}/>
         </div>
 
         {/* Title card panel — always visible */}
@@ -2548,7 +2578,16 @@ function ProjectView({project,brand,updateProject,onBack}){
 
         {/* Tab content */}
         {!hasSRT
-          ?<div style={emptyState({padding:"60px 0"})}><div style={{fontSize:42,marginBottom:DS.md}}>📄</div><div style={{fontSize:DS.fsLg,fontWeight:700}}>Upload an SRT to get started</div></div>
+          ?<div style={{...emptyState({padding:"60px 0"}),cursor:"pointer",border:`2px dashed ${DS.borderMedium}`,borderRadius:DS.rLg,transition:"all 0.2s"}}
+              onClick={()=>fileRef.current.click()}
+              onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=brand.colorAccent;e.currentTarget.style.background="rgba(230,57,70,0.05)";}}
+              onDragLeave={e=>{e.currentTarget.style.borderColor=DS.borderMedium;e.currentTarget.style.background="transparent";}}
+              onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor=DS.borderMedium;e.currentTarget.style.background="transparent";handleFile(e.dataTransfer.files[0]);}}>
+              {transcribing
+                ?<><div style={{fontSize:42,marginBottom:DS.md}}>🎙</div><div style={{fontSize:DS.fsLg,fontWeight:700}}>Transcribing audio…</div><div style={{fontSize:DS.fsSm,color:DS.textMuted,marginTop:DS.xs}}>This may take a minute depending on file length</div></>
+                :<><div style={{fontSize:42,marginBottom:DS.md}}>🎬</div><div style={{fontSize:DS.fsLg,fontWeight:700}}>Drop video, audio, or SRT file here</div><div style={{fontSize:DS.fsSm,color:DS.textMuted,marginTop:DS.xs}}>Supports .mp4 .mov .mp3 .wav .srt — or click to browse</div></>
+              }
+            </div>
           :tab==="graphics"?<GraphicsTab project={project} brand={brand} updateProject={updateProject} previewRatio={previewRatio}/>
           :<ExportTab project={project} brand={brand} updateProject={updateProject}/>
         }
