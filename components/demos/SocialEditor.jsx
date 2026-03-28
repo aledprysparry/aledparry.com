@@ -1831,9 +1831,11 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const [progress,setProgress]=useState("");
   const [error,setError]=useState("");
   const [showAdd,setShowAdd]=useState(false);
+  const [filterTpl,setFilterTpl]=useState("");
   const cvs=useRef(document.createElement("canvas"));
 
   const graphics=project.graphics;
+  const filteredGraphics=filterTpl?graphics.filter(g=>g.template===filterTpl):graphics;
   const selected=new Set(project.selected||[]);
   const previews=project.previews||{};
   const setGraphics=gs=>updateProject({graphics:gs,selected:gs.map((_,i)=>i),previews:{}});
@@ -2012,8 +2014,17 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           <div><div style={{fontSize:DS.fsSm,fontWeight:600}}>Attach video for live preview</div><div style={{fontSize:11,color:DS.textMuted}}>Drop your .mp4 or .mov to see graphics overlaid on video</div></div>
         </div>
       )}
+      {/* Filter + sort bar */}
+      <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
+        <select value={filterTpl} onChange={e=>setFilterTpl(e.target.value)}
+          style={{background:DS.bgButton,border:`1px solid ${DS.borderSubtle}`,borderRadius:DS.rSm,padding:"5px 8px",color:DS.textSecondary,fontSize:11,fontFamily:"inherit",outline:"none"}}>
+          <option value="">All templates</option>
+          {Object.entries(TMPL).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <button style={sm} onClick={()=>{const sorted=[...graphics].sort((a,b)=>{const ta=a.timestamp||"",tb=b.timestamp||"";return ta.localeCompare(tb);});setGraphics(sorted);}} title="Sort by timecode">⏱ Sort</button>
+        <span style={{fontSize:11,color:DS.textMuted}}>{filterTpl?filteredGraphics.length+" / ":""}{graphics.length} graphics</span>
+      </div>
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
-        <span style={{fontSize:13,fontWeight:700,opacity:0.6}}>{graphics.length} suggested</span>
         <button style={sm} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))} title="Select all">All</button>
         <button style={sm} onClick={()=>setSelected(()=>new Set())} title="Deselect all">None</button>
         <button style={{...sm,marginLeft:"auto"}} onClick={previewAll} title="Preview all graphics">👁 Preview All</button>
