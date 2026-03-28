@@ -462,28 +462,32 @@ function drawText(ctx,text,x,y,maxW,maxH,baseSz,weight,align,color,maxLines=3,ff
   ctx.font=`${weight||"700"} ${sz}px "${ff}","Arial",sans-serif`;
   ctx.fillStyle=color||"#fff";ctx.textAlign=align||"center";ctx.textBaseline="alphabetic";
   const ascent=Math.round(sz*0.82);
-  const words=text.split(" ");
-  // Smart line-breaking: balance lines + prefer breaks before conjunctions/prepositions
+  // Handle manual line breaks (\n) first, then smart-wrap each paragraph
   const BREAK_BEFORE=new Set(["but","and","or","nor","yet","so","for","with","from","that","which","where","when","while","after","before","during","until","unless","because","although","if","then"]);
-  // First do greedy wrap to find how many lines we need
-  const greedyLines=[];let gl="";
-  for(const w of words){const t=gl+w+" ";if(ctx.measureText(t).width>maxW&&gl){greedyLines.push(gl.trim());gl=w+" ";}else gl=t;}
-  if(gl.trim())greedyLines.push(gl.trim());
-  // If 2 lines, try balanced break: find split point closest to middle that makes both lines fit
-  let finalLines=greedyLines;
-  if(greedyLines.length===2&&words.length>=4){
-    const fullW=ctx.measureText(text).width;
-    let bestIdx=-1,bestScore=Infinity;
-    for(let i=1;i<words.length;i++){
-      const l1=words.slice(0,i).join(" "),l2=words.slice(i).join(" ");
-      const w1=ctx.measureText(l1).width,w2=ctx.measureText(l2).width;
-      if(w1>maxW||w2>maxW)continue;
-      // Score: prefer balanced widths, bonus for breaking before conjunctions
-      let score=Math.abs(w1-w2);
-      if(BREAK_BEFORE.has(words[i].toLowerCase().replace(/[^a-z]/g,"")))score*=0.4; // strong preference
-      if(score<bestScore){bestScore=score;bestIdx=i;}
+  const paragraphs=text.split("\n");
+  let finalLines=[];
+  for(const para of paragraphs){
+    if(!para.trim()){finalLines.push("");continue;}
+    const words=para.split(" ");
+    // Greedy wrap
+    const greedyLines=[];let gl="";
+    for(const w of words){const t=gl+w+" ";if(ctx.measureText(t).width>maxW&&gl){greedyLines.push(gl.trim());gl=w+" ";}else gl=t;}
+    if(gl.trim())greedyLines.push(gl.trim());
+    // If 2 lines, try balanced break
+    let paraLines=greedyLines;
+    if(greedyLines.length===2&&words.length>=4){
+      let bestIdx=-1,bestScore=Infinity;
+      for(let i=1;i<words.length;i++){
+        const l1=words.slice(0,i).join(" "),l2=words.slice(i).join(" ");
+        const w1=ctx.measureText(l1).width,w2=ctx.measureText(l2).width;
+        if(w1>maxW||w2>maxW)continue;
+        let score=Math.abs(w1-w2);
+        if(BREAK_BEFORE.has(words[i].toLowerCase().replace(/[^a-z]/g,"")))score*=0.4;
+        if(score<bestScore){bestScore=score;bestIdx=i;}
+      }
+      if(bestIdx>0)paraLines=[words.slice(0,bestIdx).join(" "),words.slice(bestIdx).join(" ")];
     }
-    if(bestIdx>0)finalLines=[words.slice(0,bestIdx).join(" "),words.slice(bestIdx).join(" ")];
+    finalLines.push(...paraLines);
   }
   // Render lines
   let cy=y+ascent,count=0;
@@ -1664,13 +1668,19 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
       <div style={{marginBottom:DS.md}}>
         <label style={label()}>CONTENT (direct edit)</label>
         <div style={{display:"flex",flexDirection:"column",gap:DS.sm}}>
-          {fields.map(f=>(
+          {fields.map(f=>{
+            const isLong=["body","text","headline","subheadline"].includes(f.key);
+            return(
             <div key={f.key}>
               <label style={label()}>{f.label}</label>
-              <input value={localContent[f.key]||""} onChange={e=>setLocalContent(c=>({...c,[f.key]:e.target.value}))}
-                placeholder={f.placeholder} style={inp}/>
+              {isLong
+                ?<textarea value={localContent[f.key]||""} onChange={e=>setLocalContent(c=>({...c,[f.key]:e.target.value}))}
+                  placeholder={f.placeholder+"\n(Press Enter for line break)"} rows={3} style={{...inp,minHeight:60,resize:"vertical"}}/>
+                :<input value={localContent[f.key]||""} onChange={e=>setLocalContent(c=>({...c,[f.key]:e.target.value}))}
+                  placeholder={f.placeholder} style={inp}/>
+              }
             </div>
-          ))}
+          );})}
         </div>
       </div>
 
