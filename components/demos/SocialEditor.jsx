@@ -2466,9 +2466,9 @@ function ProjectView({project,brand,updateProject,onBack}){
   const hasSRT=project.subtitles.length>0;
   const S={
     app:{fontFamily:`"${brand.fontFamily}","Arial",sans-serif`,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary},
-    topbar:{background:brand.colorPrimary,padding:`${DS.md-2}px ${DS.xl-2}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"1px solid rgba(0,0,0,0.3)"},
-    tabbar:{background:brand.colorPrimary+"ee",borderBottom:"1px solid rgba(0,0,0,0.25)",display:"flex",padding:`0 ${DS.xl-2}px`,gap:2},
-    tab:a=>({padding:`${DS.lg-2}px ${DS.xl-4}px`,cursor:"pointer",fontWeight:a?800:600,fontSize:DS.fsMd,color:a?DS.textPrimary:DS.textMuted,background:"none",border:"none",borderBottom:a?`3px solid ${brand.colorAccent}`:"3px solid transparent",fontFamily:"inherit",marginTop:1,transition:"color 0.15s"}),
+    topbar:{background:"linear-gradient(135deg, #0d1926 0%, #132438 100%)",padding:`${DS.md}px ${DS.xl}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"none"},
+    tabbar:{background:"rgba(13,25,38,0.85)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${brand.colorAccent}22`,display:"flex",padding:`0 ${DS.xl}px`,gap:0},
+    tab:a=>({padding:`${DS.lg}px ${DS.xl}px`,cursor:"pointer",fontWeight:a?700:500,fontSize:DS.fsMd,color:a?DS.textPrimary:"rgba(255,255,255,0.45)",background:"none",border:"none",borderBottom:a?`3px solid ${brand.colorAccent}`:"3px solid transparent",fontFamily:"inherit",transition:"all 0.2s",letterSpacing:0.3}),
     sm:btn({padding:"6px 12px"}),
     wrap:{maxWidth:1200,margin:"0 auto",padding:`${DS.xl}px ${DS.xl}px`},
   };
@@ -3671,9 +3671,11 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
     <div style={{fontFamily:DS.font,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary}}>
       {confirmDialog&&<ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={closeConfirm}/>}
       {/* Header */}
-      <div style={{background:DS.primary,padding:`${DS.lg-2}px ${DS.xl+2}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"1px solid rgba(0,0,0,0.3)"}}>
-        <div style={{width:6,height:38,background:DS.accent,borderRadius:DS.xs,flexShrink:0}}/>
-        <div><div style={{fontWeight:900,fontSize:DS.fsXl,letterSpacing:0.5}}>INFOGRAPHIC STUDIO</div><div style={{fontSize:11,color:DS.textMuted,marginTop:1}}>Graphics · Captions · Multi-ratio Premiere export</div></div>
+      <div style={{background:"linear-gradient(135deg, #0d1926 0%, #132438 100%)",padding:`${DS.lg}px ${DS.xl+4}px`,display:"flex",alignItems:"center",gap:DS.lg,borderBottom:`2px solid ${DS.accent}22`}}>
+        <div style={{display:"flex",alignItems:"center",gap:DS.md}}>
+          <div style={{width:36,height:36,borderRadius:DS.rMd,background:`linear-gradient(135deg, ${DS.accent}, #c0392b)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:900,color:"#fff",letterSpacing:-1}}>IS</div>
+          <div><div style={{fontWeight:800,fontSize:DS.fsXl,letterSpacing:0.3,background:`linear-gradient(90deg, #fff 60%, ${DS.accent})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Infographic Studio</div><div style={{fontSize:10,color:DS.textMuted,marginTop:0,letterSpacing:1,textTransform:"uppercase"}}>AI-powered video graphics</div></div>
+        </div>
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:DS.sm,flexWrap:"wrap"}}>
           {saveStatus&&<span style={{fontSize:11,color:saveStatus.includes("!")||saveStatus.includes("Loaded")?DS.green:DS.accent,fontWeight:600}}>{saveStatus}</span>}
           <button onClick={async()=>{setSaveStatus("Saving...");const ok=await onSave();setSaveStatus(ok?"Saved!":"Error");setTimeout(()=>setSaveStatus(""),2000);}}
@@ -3744,9 +3746,14 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
         <div>
           {selBrand?(
             <>
-              <div style={{marginBottom:DS.xl}}>
-                <div style={{fontWeight:800,fontSize:DS.fsLg+3,marginBottom:2}}>{selBrand.name}</div>
-                <div style={{fontSize:DS.fsSm,color:DS.textMuted}}>{brandProjects.length} project{brandProjects.length!==1?"s":""} · {selBrand.fontFamily}</div>
+              <div style={{marginBottom:DS.xl,display:"flex",alignItems:"center",gap:DS.lg}}>
+                <div style={{display:"flex",gap:4}}>
+                  {[selBrand.colorPrimary,selBrand.colorAccent,selBrand.colorPositive||selBrand.colorPrimary].map((c,i)=><div key={i} style={{width:12,height:32,borderRadius:DS.xs,background:c}}/>)}
+                </div>
+                <div>
+                  <div style={{fontWeight:800,fontSize:DS.fsLg+4,marginBottom:1}}>{selBrand.name}</div>
+                  <div style={{fontSize:DS.fsSm-1,color:DS.textMuted}}>{brandProjects.length} project{brandProjects.length!==1?"s":""} · {selBrand.fontFamily}{selBrand.fontSerif?` + ${selBrand.fontSerif}`:""}</div>
+                </div>
               </div>
               {/* New project — inline form */}
               <div style={{display:"flex",gap:DS.sm,marginBottom:DS.xl,alignItems:"center"}}>
@@ -3761,21 +3768,23 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                 const hasContent=p.subtitles?.length>0;
                 const hasGraphics=p.graphics?.length>0;
                 return(
-                <div key={p.id} style={card({padding:`${DS.lg}px`,marginBottom:DS.sm+2,cursor:"pointer",transition:"border-color 0.15s"})} onClick={()=>onOpenProject(p.id)}>
-                  <div style={{display:"flex",alignItems:"flex-start",gap:DS.lg}}>
+                <div key={p.id} style={{...card({padding:0,marginBottom:DS.sm+2,cursor:"pointer",transition:"all 0.2s",overflow:"hidden"}),display:"flex"}} onClick={()=>onOpenProject(p.id)}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=DS.accent+"66";e.currentTarget.style.transform="translateY(-1px)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor=DS.borderSubtle;e.currentTarget.style.transform="translateY(0)";}}>
+                  <div style={{width:4,background:hasGraphics?selBrand?.colorAccent||DS.accent:DS.borderMedium,flexShrink:0}}/>
+                  <div style={{flex:1,padding:`${DS.lg}px`,display:"flex",alignItems:"center",gap:DS.lg}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:DS.fsLg,marginBottom:DS.xs+2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
-                      <div style={{fontSize:DS.fsSm-2,color:DS.textMuted,display:"flex",gap:DS.lg,flexWrap:"wrap",alignItems:"center"}}>
-                        {hasContent&&<span style={{display:"flex",alignItems:"center",gap:4}}>📄 {p.subtitles.length} lines</span>}
-                        {hasGraphics&&<span style={{display:"flex",alignItems:"center",gap:4}}>🎨 {p.graphics.length} graphics</span>}
-                        {!hasContent&&!hasGraphics&&<span>No content yet</span>}
-                        <span style={{color:"rgba(255,255,255,0.2)"}}>·</span>
-                        <span>{new Date(p.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</span>
+                      <div style={{fontSize:DS.fsSm-2,color:DS.textMuted,display:"flex",gap:DS.md,flexWrap:"wrap",alignItems:"center"}}>
+                        {hasContent&&<span style={{display:"flex",alignItems:"center",gap:4,background:DS.bgInput,padding:"2px 8px",borderRadius:DS.xs,fontSize:10}}>📄 {p.subtitles.length} lines</span>}
+                        {hasGraphics&&<span style={{display:"flex",alignItems:"center",gap:4,background:DS.positive,padding:"2px 8px",borderRadius:DS.xs,fontSize:10,fontWeight:600}}>🎨 {p.graphics.length}</span>}
+                        {!hasContent&&!hasGraphics&&<span style={{opacity:0.4}}>Empty project</span>}
+                        <span style={{fontSize:10,opacity:0.3}}>{new Date(p.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span>
                       </div>
                     </div>
                     <div style={{display:"flex",gap:DS.sm,alignItems:"center",flexShrink:0}} onClick={e=>e.stopPropagation()}>
-                      <button style={btn({fontSize:DS.fsSm})} onClick={()=>onOpenProject(p.id)}>Open →</button>
-                      <button style={btnIcon({opacity:0.35})} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})} title="Delete project">🗑</button>
+                      <button style={btnCta({fontSize:DS.fsSm-1,padding:"6px 14px"})} onClick={()=>onOpenProject(p.id)}>Open →</button>
+                      <button style={btnIcon({opacity:0.25,fontSize:12})} onClick={()=>confirm(`Delete project "${p.name}"?`,()=>{onDeleteProject(p.id);closeConfirm();})} title="Delete project">🗑</button>
                     </div>
                   </div>
                 </div>
