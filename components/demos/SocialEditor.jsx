@@ -2062,6 +2062,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                     <button style={{...sm,background:showAnim?DS.positive:undefined}} onClick={()=>{if(showAnim){setAnimIdx(null);setTimeout(()=>setAnimIdx(i),50);}else{setAnimIdx(i);}}} title={showAnim?"Replay animation":"Play animation"}>{showAnim?"🔄":"▶"}</button>
                     <button style={{...sm,opacity:isExp?0.6:1}} onClick={()=>!isExp&&exportWebM(g,i)} title="Export as WebM">{isExp?"⏳":"🎞"}</button>
                     <button style={{...sm,background:editingIdx===i?DS.borderMedium:undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)} title="Edit prompt & content">✏</button>
+                    <button style={sm} onClick={()=>{const dup={...JSON.parse(JSON.stringify(g)),id:Date.now(),label:(g.label||"graphic")+"-copy"};const ng=[...graphics.slice(0,i+1),dup,...graphics.slice(i+1)];setGraphics(ng);}} title="Duplicate graphic">⧉</button>
+                    <button style={{...sm,opacity:0.4}} onClick={()=>{if(graphics.length<=1)return;const ng=graphics.filter((_,j)=>j!==i);setGraphics(ng);if(editingIdx===i)setEditingIdx(null);}} title="Delete graphic">🗑</button>
                   </div>
                 </div>
                 {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px",imageRendering:"auto"}}/>}
