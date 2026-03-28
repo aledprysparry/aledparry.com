@@ -705,21 +705,21 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Ghost number — large, centred behind main content
     ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;const gs=easeOut(clamp(p*1.5,0,1));
     ctx.font=`700 ${Math.round(Math.min(W,H)*0.65)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.translate(W/2,H*0.43);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
+    ctx.translate(W/2,H*0.40);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
     // "RULE" label — cascades first (0)
     const ruleLabel=cascade(0);
     ctx.save();ctx.globalAlpha=ruleLabel;ctx.translate(0,(1-ruleLabel)*H*0.03);
     ctx.fillStyle=B.colorPrimary+"66";ctx.font=`600 ${Math.round(44*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";
-    ctx.fillText("— RULE —",W/2,H*0.30);
+    ctx.fillText("— RULE —",W/2,H*0.26);
     ctx.restore();
-    // Big number — punchy bounce in (cascade 0.12)
+    // Big number — punchy bounce in (cascade 0.12), vertically centred
     const numP=cascadeBack(0.12);
-    ctx.save();ctx.globalAlpha=cascade(0.12);ctx.translate(W/2,H*0.52);ctx.scale(numP,numP);
+    ctx.save();ctx.globalAlpha=cascade(0.12);ctx.translate(W/2,H*0.44);ctx.scale(numP,numP);
     ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(200*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
     ctx.fillText("#"+(c.number||"1"),0,0);
     ctx.restore();
     // Body text — slides up last (cascade 0.28)
-    if(c.body){const bodyP=cascade(0.28);ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.04);DT(c.body,W/2,H*0.60,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
+    if(c.body){const bodyP=cascade(0.28);ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.04);DT(c.body,W/2,H*0.58,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
     stamp(ctx,B,W,H,false);  // cream bg → teal logo
   }
   else if(t==="key_point"){
