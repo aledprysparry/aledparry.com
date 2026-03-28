@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const config = { api: { bodyParser: false } };
 export const maxDuration = 120; // Allow 2 minutes for transcription
 
 export async function POST(request: NextRequest) {
