@@ -1621,6 +1621,12 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
   const [prompt,setPrompt]=useState(initPrompt);
   const [tplHint,setTplHint]=useState(g.templateHint||g.template||"any");
   const [localContent,setLocalContent]=useState({...g.content});
+  // Reset state when switching to a different graphic
+  useEffect(()=>{
+    setPrompt(initPrompt);
+    setTplHint(g.templateHint||g.template||"any");
+    setLocalContent({...g.content});
+  },[index]);
   const fields=TMPL_FIELDS[tplHint]||TMPL_FIELDS[g.template]||[];
   const sm=btn();
   const inp=inputS({resize:"vertical"});
