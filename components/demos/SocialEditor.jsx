@@ -9,52 +9,62 @@ import JSZip from "jszip";
 // ═══════════════════════════════════════════════════════════════
 const DS = {
   // ── Backgrounds ──
-  bgPage:    "#0b1320",
-  bgCard:    "rgba(255,255,255,0.04)",
-  bgCardHover: "rgba(255,255,255,0.07)",
-  bgInput:   "rgba(255,255,255,0.06)",
-  bgButton:  "rgba(255,255,255,0.08)",
-  bgModal:   "#141e2e",
-  bgOverlay: "rgba(0,0,0,0.72)",
+  bgPage:    "#0a0f1a",
+  bgCard:    "rgba(255,255,255,0.035)",
+  bgCardHover: "rgba(255,255,255,0.06)",
+  bgCardGlass: "rgba(255,255,255,0.04)",
+  bgInput:   "rgba(255,255,255,0.05)",
+  bgButton:  "rgba(255,255,255,0.07)",
+  bgModal:   "#111827",
+  bgOverlay: "rgba(0,0,0,0.75)",
+  bgSurface: "#131a2a",
   // ── Borders ──
-  borderSubtle: "rgba(255,255,255,0.1)",
-  borderMedium: "rgba(255,255,255,0.15)",
-  borderActive: "rgba(255,255,255,0.2)",
+  borderSubtle: "rgba(255,255,255,0.08)",
+  borderMedium: "rgba(255,255,255,0.12)",
+  borderActive: "rgba(255,255,255,0.22)",
+  borderFocus: "rgba(42,157,143,0.5)",
   // ── Brand colors ──
-  accent:    "#E63946",
+  accent:    "#1a5c5e",
+  accentLight: "#2a7d80",
   primary:   "#1D3557",
   green:     "#2A9D8F",
+  salmon:    "#FB8770",
   // ── Semantic ──
-  positive:       "rgba(42,157,143,0.2)",
-  positiveBorder: "rgba(42,157,143,0.4)",
-  danger:         "rgba(230,57,70,0.15)",
-  dangerBorder:   "rgba(230,57,70,0.35)",
+  positive:       "rgba(42,157,143,0.15)",
+  positiveBorder: "rgba(42,157,143,0.35)",
+  danger:         "rgba(251,135,112,0.12)",
+  dangerBorder:   "rgba(251,135,112,0.3)",
   // ── Text ──
-  textPrimary: "#fff",
-  textSecondary: "rgba(255,255,255,0.55)",
+  textPrimary: "rgba(255,255,255,0.95)",
+  textSecondary: "rgba(255,255,255,0.6)",
   textMuted:   "rgba(255,255,255,0.35)",
+  textAccent:  "#2A9D8F",
   // ── Radius ──
-  rSm: 7, rMd: 10, rLg: 14,
+  rSm: 8, rMd: 12, rLg: 16,
   // ── Spacing ──
   xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32,
   // ── Typography ──
-  font: "Montserrat,Arial,sans-serif",
-  fsXs: 10, fsSm: 12, fsMd: 13, fsLg: 15, fsXl: 20,
+  font: "'DM Sans',Montserrat,Arial,sans-serif",
+  fsXs: 10, fsSm: 11, fsMd: 13, fsLg: 15, fsXl: 20,
+  // ── Transitions ──
+  transQuick: "all 0.12s ease",
+  transMed: "all 0.2s ease",
+  transSlow: "all 0.35s ease",
 };
 
 // ── Reusable style factories ──────────────────────────────────
 // Small button (toolbar, inline actions)
 const btn = (overrides) => ({
   background: DS.bgButton, border: `1px solid ${DS.borderSubtle}`,
-  color: DS.textPrimary, padding: "7px 13px", borderRadius: DS.rSm,
-  cursor: "pointer", fontSize: DS.fsSm, fontFamily: "inherit", fontWeight: 600,
-  transition: "background 0.15s, border-color 0.15s", ...overrides,
+  color: DS.textPrimary, padding: "7px 14px", borderRadius: DS.rSm,
+  cursor: "pointer", fontSize: DS.fsSm, fontFamily: DS.font, fontWeight: 600,
+  transition: DS.transQuick, letterSpacing: "0.01em", ...overrides,
 });
 // CTA / primary action button
 const btnCta = (o) => btn({
-  background: DS.accent, border: `1px solid ${DS.accent}`,
-  padding: "12px 24px", fontSize: DS.fsLg, fontWeight: 700,
-  borderRadius: DS.rMd, ...o,
+  background: DS.accent, border: `1px solid ${DS.accentLight}`,
+  color: "#fff", padding: "12px 28px", fontSize: DS.fsLg, fontWeight: 700,
+  borderRadius: DS.rMd, letterSpacing: "0.02em", ...o,
 });
 // Positive action (save, confirm)
 const btnPositive = (o) => btn({ background: DS.positive, border: `1px solid ${DS.positiveBorder}`, ...o });
@@ -66,29 +76,30 @@ const btnIcon = (o) => btn({ padding: "4px 8px", fontSize: DS.fsXs, ...o });
 // Input / textarea
 const inputS = (overrides) => ({
   width: "100%", background: DS.bgInput, border: `1px solid ${DS.borderSubtle}`,
-  borderRadius: DS.rSm + 1, padding: "10px 12px", color: DS.textPrimary,
-  fontSize: DS.fsMd, fontFamily: "inherit", boxSizing: "border-box", outline: "none",
-  ...overrides,
+  borderRadius: DS.rSm, padding: "10px 13px", color: DS.textPrimary,
+  fontSize: DS.fsMd, fontFamily: DS.font, boxSizing: "border-box", outline: "none",
+  transition: DS.transQuick, ...overrides,
 });
 
 // Card / panel container
 const card = (overrides) => ({
-  background: DS.bgCard, border: `1px solid ${DS.borderSubtle}`,
-  borderRadius: DS.rMd + 2, padding: `${DS.lg}px`, marginBottom: DS.lg,
+  background: DS.bgCardGlass, border: `1px solid ${DS.borderSubtle}`,
+  borderRadius: DS.rMd, padding: `${DS.lg}px`, marginBottom: DS.lg,
+  backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
   ...overrides,
 });
 
 // Field label (uppercase, small)
 const label = (overrides) => ({
   display: "block", fontSize: DS.fsXs, fontWeight: 700, color: DS.textSecondary,
-  letterSpacing: 1, textTransform: "uppercase", marginBottom: DS.xs,
+  letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: DS.xs,
   ...overrides,
 });
 
 // Section heading
 const sectionHead = (overrides) => ({
-  fontWeight: 800, fontSize: 11, color: DS.textMuted,
-  letterSpacing: 1, textTransform: "uppercase", marginBottom: DS.md,
+  fontWeight: 700, fontSize: 10, color: DS.textMuted,
+  letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: DS.md,
   ...overrides,
 });
 
