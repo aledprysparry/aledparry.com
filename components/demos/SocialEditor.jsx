@@ -1858,16 +1858,26 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     await document.fonts.ready;
     const canvas=document.createElement("canvas");
     drawGraphic(canvas,g,brand,previewRatio,1);
-    setPreviews(p=>({...p,[i]:canvas.toDataURL("image/png")}));
+    // Downscale for storage efficiency while keeping sharpness
+    const AR=RATIOS[previewRatio]||RATIOS["16:9"];
+    const thumbW=Math.min(AR.W,1200),thumbH=Math.round(thumbW*(AR.H/AR.W));
+    const thumb=document.createElement("canvas");thumb.width=thumbW;thumb.height=thumbH;
+    const tCtx=thumb.getContext("2d");tCtx.imageSmoothingEnabled=true;tCtx.imageSmoothingQuality="high";
+    tCtx.drawImage(canvas,0,0,thumbW,thumbH);
+    setPreviews(p=>({...p,[i]:thumb.toDataURL("image/png")}));
   },[brand,previewRatio]);
 
   const previewAll=useCallback(async()=>{
     await document.fonts.ready;
-    const batch={};
+    const batch={};const AR=RATIOS[previewRatio]||RATIOS["16:9"];
+    const thumbW=Math.min(AR.W,1200),thumbH=Math.round(thumbW*(AR.H/AR.W));
     graphics.forEach((g,i)=>{
       const canvas=document.createElement("canvas");
       drawGraphic(canvas,g,brand,previewRatio,1);
-      batch[i]=canvas.toDataURL("image/png");
+      const thumb=document.createElement("canvas");thumb.width=thumbW;thumb.height=thumbH;
+      const tCtx=thumb.getContext("2d");tCtx.imageSmoothingEnabled=true;tCtx.imageSmoothingQuality="high";
+      tCtx.drawImage(canvas,0,0,thumbW,thumbH);
+      batch[i]=thumb.toDataURL("image/png");
     });
     setPreviews(p=>({...p,...batch}));
   },[graphics,brand,previewRatio]);
@@ -2044,7 +2054,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                     <button style={{...sm,background:editingIdx===i?DS.borderMedium:undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)} title="Edit prompt & content">✏</button>
                   </div>
                 </div>
-                {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>}
+                {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px",imageRendering:"auto"}}/>}
                 {showAnim&&<GraphicAnimPreview key={JSON.stringify(g.content)+g.typeOverride} g={g} brand={brand} ratio={previewRatio}/>}
               </div>
             );
