@@ -238,9 +238,33 @@ function createDefaultEpisode(episodeNum = 1) {
         correctLetter: "C", correctPrice: "450,000",
         photos: [], heroPhotoIndex: 0, notes: "Strongest reaction property \u2014 Cathays at \u00a3450k will surprise Sian.",
       },
-      emptyRound(4, "Sian", "Nathan"),
-      emptyRound(5, "Sian", "Nathan"),
-      emptyRound(6, "Sian", "Nathan"),
+      {
+        number: 4, propertyAgent: "Sian", guesser: "Nathan",
+        address: "Machen Street, Penarth", location: "Penarth",
+        rightmoveUrl: "https://www.rightmove.co.uk/properties/173540561",
+        beds: 0, type: "", tenure: "", addedDate: "20/03/2026",
+        optionA: "\u00a3289,950", optionB: "\u00a3325,000", optionC: "\u00a3359,950",
+        correctLetter: "B", correctPrice: "325,000",
+        photos: [], heroPhotoIndex: 0, notes: "Guide price \u00a3325,000",
+      },
+      {
+        number: 5, propertyAgent: "Sian", guesser: "Nathan",
+        address: "Jubilee Street, Cardiff", location: "Cardiff",
+        rightmoveUrl: "https://www.rightmove.co.uk/properties/173743049",
+        beds: 0, type: "", tenure: "", addedDate: "26/03/2026",
+        optionA: "\u00a3225,000", optionB: "\u00a3260,000", optionC: "\u00a3295,000",
+        correctLetter: "B", correctPrice: "260,000",
+        photos: [], heroPhotoIndex: 0, notes: "",
+      },
+      {
+        number: 6, propertyAgent: "Sian", guesser: "Nathan",
+        address: "Venice House, Judkin Court, Century Wharf, Cardiff", location: "Century Wharf, Cardiff",
+        rightmoveUrl: "https://www.rightmove.co.uk/properties/161943674",
+        beds: 0, type: "", tenure: "", addedDate: "28/03/2026",
+        optionA: "\u00a3235,000", optionB: "\u00a3270,000", optionC: "\u00a3310,000",
+        correctLetter: "B", correctPrice: "270,000",
+        photos: [], heroPhotoIndex: 0, notes: "Offers in excess of \u00a3270,000 \u2014 reduced on 28/03/2026",
+      },
     ],
   };
 }
@@ -1440,6 +1464,7 @@ const DRAW_FNS = {
 export default function GuessThePrice({ displayMode = false }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
+  const animProgressRef = useRef(0);
   const saveTimerRef = useRef(null);
   const [ratio, setRatio] = useState("16:9");
   const [activeAsset, setActiveAsset] = useState("intro");
@@ -1544,13 +1569,21 @@ export default function GuessThePrice({ displayMode = false }) {
     return () => clearTimeout(saveTimerRef.current);
   }, [dirty, episodes]);
 
+  // Strip large binary data (base64 photos, images) to stay under Vercel's 4.5MB body limit
+  const stripPhotosForServer = (eps) => eps.map(ep => ({
+    ...ep,
+    logoImage: undefined,
+    agentImages: undefined,
+    rounds: ep.rounds.map(r => ({ ...r, photos: [] })),
+  }));
+
   const syncToServer = async () => {
     try {
       setSaveStatus("Syncing…");
       await fetch("/api/gtp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episodes, activeEpisodeId }),
+        body: JSON.stringify({ episodes: stripPhotosForServer(episodes), activeEpisodeId }),
       });
       setSaveStatus("Saved ✓");
       setDirty(false);
@@ -1567,7 +1600,7 @@ export default function GuessThePrice({ displayMode = false }) {
       await fetch(`/api/gtp?snapshot=${encodeURIComponent(name)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episodes, activeEpisodeId }),
+        body: JSON.stringify({ episodes: stripPhotosForServer(episodes), activeEpisodeId }),
       });
       setSaveStatus(`Snapshot "${name}" saved ✓`);
       setDirty(false);
@@ -1732,6 +1765,7 @@ export default function GuessThePrice({ displayMode = false }) {
 
   const [dragPhotoIdx, setDragPhotoIdx] = useState(null);
   const [photoModalIdx, setPhotoModalIdx] = useState(null); // null = closed, number = which photo
+  const [photoManagerOpen, setPhotoManagerOpen] = useState(false);
   const reorderPhotos = (from, to) => {
     if (from === to) return;
     const rd = episode.rounds[currentRound];
@@ -1791,6 +1825,9 @@ export default function GuessThePrice({ displayMode = false }) {
     setActiveAsset("intro");
   }, [scores, episode]);
 
+  // Keep ref in sync for flicker-free animation reads
+  useEffect(() => { animProgressRef.current = animProgress; }, [animProgress]);
+
   const render = useCallback((progress) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1803,16 +1840,16 @@ export default function GuessThePrice({ displayMode = false }) {
     if (!drawFn) return;
     const asset = ASSETS.find(a => a.id === activeAsset);
     if (asset?.animated) {
-      drawFn(ctx, r.W, r.H, S, progress ?? animProgress);
+      drawFn(ctx, r.W, r.H, S, progress ?? animProgressRef.current);
     } else {
       drawFn(ctx, r.W, r.H, S);
     }
-  }, [ratio, activeAsset, S, animProgress]);
+  }, [ratio, activeAsset, S]);
 
   useEffect(() => { render(); }, [render]);
 
   // Auto-play entrance animations (but NOT timer/reveal/lockin — those need user to set values first)
-  const manualPlayAssets = ["intro", "timer", "reveal", "lockin"];
+  const manualPlayAssets = ["timer", "reveal", "lockin"];
   const [sequenceMode, setSequenceMode] = useState(true);
   const sequenceRef = useRef(null);
   useEffect(() => {
@@ -2477,42 +2514,32 @@ export default function GuessThePrice({ displayMode = false }) {
           <input style={inputS()} value={rd.rightmoveUrl || ""} placeholder="https://www.rightmove.co.uk/…" onChange={e => updateRoundField("rightmoveUrl", e.target.value)} />
 
           <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>PHOTOS ({(rd.photos || []).length})</div>
-          {/* Photo upload zone */}
-          <div
-            style={{ marginTop: DS.sm, padding: DS.lg, border: `2px dashed ${DS.borderSubtle}`, borderRadius: DS.rSm, textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}
-            onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = true; inp.onchange = (e) => handlePhotoUpload(e.target.files); inp.click(); }}
-            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = GAME.gold; }}
-            onDragLeave={e => { e.currentTarget.style.borderColor = DS.borderSubtle; }}
-            onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = DS.borderSubtle; handlePhotoUpload(e.dataTransfer.files); }}
-          >
-            <div style={{ fontSize: DS.fsSm, color: DS.textMuted }}>Drop photos here or click to upload</div>
-            <div style={{ fontSize: DS.fsXs, color: DS.textMuted, marginTop: 4 }}>JPG/PNG — drag to reorder</div>
+          {/* Compact upload + manage button */}
+          <div style={{ display: "flex", gap: DS.sm, marginTop: DS.sm }}>
+            <div
+              style={{ flex: 1, padding: `${DS.sm}px ${DS.md}px`, border: `2px dashed ${DS.borderSubtle}`, borderRadius: DS.rSm, textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}
+              onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = true; inp.onchange = (e) => handlePhotoUpload(e.target.files); inp.click(); }}
+              onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = GAME.gold; }}
+              onDragLeave={e => { e.currentTarget.style.borderColor = DS.borderSubtle; }}
+              onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = DS.borderSubtle; handlePhotoUpload(e.dataTransfer.files); }}
+            >
+              <div style={{ fontSize: DS.fsSm, color: DS.textMuted }}>+ Add</div>
+            </div>
+            {(rd.photos || []).length > 0 && (
+              <button onClick={() => setPhotoManagerOpen(true)} style={btnPositive({ padding: "6px 14px", fontSize: DS.fsSm })}>
+                Manage ({(rd.photos || []).length})
+              </button>
+            )}
           </div>
-          {/* Photo thumbnails — draggable to reorder */}
+          {/* Mini preview strip */}
           {(rd.photos || []).length > 0 && (
-            <div style={{ display: "flex", gap: DS.xs, marginTop: DS.sm, flexWrap: "wrap" }}>
-              {(rd.photos || []).map((photo, i) => (
-                <div key={i} draggable style={{
-                    position: "relative", cursor: "grab",
-                    borderLeft: dragPhotoIdx !== null && dragPhotoIdx !== i ? `2px solid transparent` : "none",
-                  }}
-                  onClick={() => setPhotoModalIdx(i)}
-                  onDragStart={() => setDragPhotoIdx(i)}
-                  onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderLeft = `2px solid ${GAME.gold}`; }}
-                  onDragLeave={e => { e.currentTarget.style.borderLeft = "2px solid transparent"; }}
-                  onDrop={e => { e.preventDefault(); e.currentTarget.style.borderLeft = "2px solid transparent"; if (dragPhotoIdx !== null) reorderPhotos(dragPhotoIdx, i); setDragPhotoIdx(null); }}
-                  onDragEnd={() => setDragPhotoIdx(null)}
-                >
-                  <img src={photo} alt={`Photo ${i + 1}`} style={{
-                    width: 56, height: 42, objectFit: "cover", borderRadius: 4,
-                    border: (rd.heroPhotoIndex || 0) === i ? `2px solid ${GAME.gold}` : `2px solid transparent`,
-                    opacity: dragPhotoIdx === i ? 0.4 : 1,
-                  }} />
-                  {(rd.heroPhotoIndex || 0) === i && <div style={{ position: "absolute", top: -4, right: -4, background: GAME.gold, color: GAME.navy, borderRadius: "50%", width: 14, height: 14, fontSize: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>★</div>}
-                  <button onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
-                    style={{ position: "absolute", top: -4, left: -4, background: "#c0392b", color: "#fff", border: "none", borderRadius: "50%", width: 14, height: 14, fontSize: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-                </div>
+            <div style={{ display: "flex", gap: 3, marginTop: DS.sm, overflowX: "auto" }}>
+              {(rd.photos || []).slice(0, 8).map((photo, i) => (
+                <img key={i} src={photo} alt="" onClick={() => { setPhotoManagerOpen(true); }}
+                  style={{ width: 30, height: 22, objectFit: "cover", borderRadius: 3, cursor: "pointer",
+                    border: (rd.heroPhotoIndex || 0) === i ? `2px solid ${GAME.gold}` : `1px solid ${DS.borderSubtle}` }} />
               ))}
+              {(rd.photos || []).length > 8 && <span style={{ fontSize: 9, color: DS.textMuted, alignSelf: "center" }}>+{(rd.photos || []).length - 8}</span>}
             </div>
           )}
 
@@ -2789,7 +2816,69 @@ export default function GuessThePrice({ displayMode = false }) {
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  PHOTO MODAL
+  //  PHOTO MANAGER MODAL — full-screen grid with drag reorder
+  // ═══════════════════════════════════════════════════════════
+  const mgrRd = episode.rounds[currentRound];
+  const mgrPhotos = mgrRd?.photos || [];
+  const photoManager = photoManagerOpen && mgrPhotos.length > 0 ? (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.92)", display: "flex", flexDirection: "column", fontFamily: DS.font }}
+      onClick={() => setPhotoManagerOpen(false)}>
+      {/* Header */}
+      <div style={{ padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${DS.borderSubtle}` }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: DS.textPrimary }}>Photos — Round {(mgrRd?.number || 1)}</span>
+          <span style={{ fontSize: 12, color: DS.textMuted }}>{mgrPhotos.length} photos · Drag to reorder</span>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = true; inp.onchange = (e) => handlePhotoUpload(e.target.files); inp.click(); }}
+            style={btnPositive({ padding: "8px 16px", fontSize: 12 })}>+ Add Photos</button>
+          <button onClick={() => setPhotoManagerOpen(false)}
+            style={btn({ padding: "8px 16px", fontSize: 14 })}>Done</button>
+        </div>
+      </div>
+      {/* Grid */}
+      <div style={{ flex: 1, overflow: "auto", padding: 24 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
+          {mgrPhotos.map((photo, i) => (
+            <div key={i} draggable style={{
+                position: "relative", borderRadius: 8, overflow: "hidden", cursor: "grab",
+                border: dragPhotoIdx === i ? `2px solid ${GAME.gold}` : "2px solid transparent",
+                opacity: dragPhotoIdx === i ? 0.5 : 1,
+                transition: "opacity 0.15s",
+              }}
+              onDragStart={() => setDragPhotoIdx(i)}
+              onDragOver={e => { e.preventDefault(); e.currentTarget.style.border = `2px solid ${GAME.gold}`; }}
+              onDragLeave={e => { e.currentTarget.style.border = "2px solid transparent"; }}
+              onDrop={e => { e.preventDefault(); e.currentTarget.style.border = "2px solid transparent"; if (dragPhotoIdx !== null) reorderPhotos(dragPhotoIdx, i); setDragPhotoIdx(null); }}
+              onDragEnd={() => setDragPhotoIdx(null)}
+            >
+              <img src={photo} alt={`Photo ${i + 1}`} style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }}
+                onClick={() => { setPhotoManagerOpen(false); setPhotoModalIdx(i); }} />
+              {/* Number badge */}
+              <div style={{ position: "absolute", top: 6, left: 6, background: "rgba(0,0,0,0.7)", color: "#fff", borderRadius: 4, padding: "2px 6px", fontSize: 11, fontWeight: 700 }}>{i + 1}</div>
+              {/* Hero badge */}
+              {(mgrRd?.heroPhotoIndex || 0) === i && (
+                <div style={{ position: "absolute", top: 6, right: 6, background: GAME.gold, color: GAME.navy, borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 800 }}>★ HERO</div>
+              )}
+              {/* Bottom actions */}
+              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "6px 8px", background: "linear-gradient(transparent, rgba(0,0,0,0.8))", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button onClick={(e) => { e.stopPropagation(); updateRoundField("heroPhotoIndex", i); }}
+                  style={{ background: (mgrRd?.heroPhotoIndex || 0) === i ? GAME.gold : "rgba(255,255,255,0.15)", border: "none", color: (mgrRd?.heroPhotoIndex || 0) === i ? "#000" : "#fff", borderRadius: 4, padding: "3px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+                  {(mgrRd?.heroPhotoIndex || 0) === i ? "Hero ★" : "Set Hero"}
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
+                  style={{ background: "rgba(192,57,43,0.8)", border: "none", color: "#fff", borderRadius: 4, padding: "3px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  // ═══════════════════════════════════════════════════════════
+  //  PHOTO MODAL — single image viewer
   // ═══════════════════════════════════════════════════════════
   const photoModalRd = episode.rounds[currentRound];
   const photoModalPhotos = photoModalRd?.photos || [];
@@ -2848,6 +2937,7 @@ export default function GuessThePrice({ displayMode = false }) {
   //  EDITOR MODE RENDER
   // ═══════════════════════════════════════════════════════════
   return (<>
+    {photoManager}
     {photoModal}
     <div style={{ fontFamily: DS.font, background: DS.bgPage, color: DS.textPrimary, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
 
@@ -2974,7 +3064,7 @@ export default function GuessThePrice({ displayMode = false }) {
         <nav style={{ width: 160, flexShrink: 0, padding: `${DS.md}px ${DS.sm}px`, borderRight: `1px solid ${DS.borderSubtle}`, display: "flex", flexDirection: "column", gap: DS.xs, overflowY: "auto" }}>
           <div style={sectionHead({ marginBottom: DS.sm })}>Assets</div>
           {ASSETS.map(a => (
-            <button key={a.id} onClick={() => { setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
+            <button key={a.id} onClick={() => { cancelAnimationFrame(animRef.current); clearTimeout(sequenceRef.current); setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
               style={{ ...btn({ padding: "8px 12px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textPrimary }) }}>
               <span style={{ fontSize: 14 }}>{a.icon}</span>
               <span style={{ fontSize: DS.fsSm }}>{a.label}</span>
