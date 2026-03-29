@@ -167,27 +167,29 @@ function emptyRound(n, propertyAgent, guesser) {
     beds: 0, type: "", tenure: "", addedDate: "",
     optionA: "", optionB: "", optionC: "",
     correctLetter: "A", correctPrice: "",
-    photos: [],        // base64 dataURL strings (max 5, compressed to 800px)
+    photos: [],        // base64 dataURL strings (compressed, up to 20)
     heroPhotoIndex: 0, // which photo is the main graphic
     notes: "",
   };
 }
 
-// Compress uploaded photo to max 800px wide for localStorage efficiency
-function compressPhoto(file) {
+// Compress uploaded photo — adaptive quality based on existing photo count
+function compressPhoto(file, existingCount = 0) {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const maxW = 800;
+        const highCount = existingCount > 10;
+        const maxW = highCount ? 600 : 800;
+        const quality = highCount ? 0.6 : 0.75;
         const scale = Math.min(1, maxW / img.width);
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         const cx = canvas.getContext("2d");
         cx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.75));
+        resolve(canvas.toDataURL("image/jpeg", quality));
       };
       img.src = e.target.result;
     };
@@ -245,9 +247,14 @@ function loadEpisodes() {
   catch { return null; }
 }
 
+let _saveWarning = null; // surfaced via setSaveStatus if set
 function saveEpisodes(episodes, activeId) {
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ episodes, activeEpisodeId: activeId })); }
-  catch { /* quota exceeded */ }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ episodes, activeEpisodeId: activeId }));
+    _saveWarning = null;
+  } catch {
+    _saveWarning = "Storage full — remove some photos";
+  }
 }
 
 // EPISODE is kept as a module-level ref so draw functions can read it without props
@@ -266,6 +273,21 @@ const ASSETS = [
   { id: "reveal",    label: "Price Reveal",    icon: "\ud83c\udf89", animated: true },
   { id: "scoreboard",label: "Scoreboard",      icon: "\ud83c\udfc6", animated: false },
 ];
+
+// ═══════════════════════════════════════════════════════════════
+//  LIVE MODE — flow + touch detection
+// ═══════════════════════════════════════════════════════════════
+const LIVE_FLOW = ["property", "prompt", "options", "lockin", "timer", "reveal", "scoreboard"];
+
+let _touchStart = null;
+function detectGesture(sx, sy, ex, ey, elapsed) {
+  const dx = ex - sx, dy = ey - sy;
+  if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return "tap";
+  if (elapsed > 500) return null;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50)
+    return dx > 0 ? "swipe-right" : "swipe-left";
+  return null;
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  CANVAS HELPERS
@@ -620,6 +642,89 @@ function drawProperty(ctx, W, H, S) {
     ctx.font = `500 ${sz(W, H, 0.02)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.goldLight;
     ctx.fillText(S.optionLocation || "", ax, by + sz(W, H, 0.02));
+  }
+
+  drawStamp(ctx, W, H);
+}
+
+// ── Live mode: Photo gallery with Ken Burns entrance ──
+function drawPropertyGallery(ctx, W, H, S, photoSrc, animT, photoIdx, totalPhotos) {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const safe = safeZone(W, H);
+  const heroImg = photoSrc ? getCachedImage(photoSrc) : null;
+
+  if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
+    const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
+    // Ken Burns: subtle zoom + horizontal pan
+    const zoomScale = 1.0 + 0.08 * animT;
+    const panX = (animT - 0.5) * W * 0.02;
+    const baseScale = Math.max(W / iw, H / ih) * zoomScale;
+    const dw = iw * baseScale, dh = ih * baseScale;
+    ctx.drawImage(heroImg, (W - dw) / 2 + panX, (H - dh) / 2, dw, dh);
+  } else {
+    // No photo placeholder
+    drawBg(ctx, W, H);
+    ctx.font = `600 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("No photo", W / 2, H / 2);
+  }
+
+  // Bottom gradient overlay
+  const grad = ctx.createLinearGradient(0, H * 0.45, 0, H);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(0.5, "rgba(0,0,0,0.35)");
+  grad.addColorStop(1, "rgba(0,0,0,0.8)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Address bar at bottom
+  const barH = H * 0.14;
+  const pad = W * 0.03;
+  const barY = ar === "portrait" ? safe.contentBottom - barH : H - barH - pad;
+
+  // Round badge
+  const bSize = Math.min(W, H) * 0.06;
+  const bx = pad + bSize;
+  const by = barY + barH / 2;
+  ctx.fillStyle = GAME.gold;
+  ctx.beginPath();
+  ctx.arc(bx, by, bSize / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = `700 ${Math.round(bSize * 0.5)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`R${S.propRound || 1}`, bx, by);
+
+  // Address
+  const ax = bx + bSize;
+  ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = BRAND.colorText;
+  ctx.textAlign = "left";
+  ctx.fillText(S.propAddress || "", ax, by - sz(W, H, 0.015));
+  // Location
+  ctx.font = `500 ${sz(W, H, 0.02)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = GAME.goldLight;
+  ctx.fillText(S.optionLocation || "", ax, by + sz(W, H, 0.02));
+
+  // Photo counter pill — top right
+  if (totalPhotos > 1) {
+    const pillText = `${photoIdx + 1} / ${totalPhotos}`;
+    ctx.font = `600 ${sz(W, H, 0.018)}px 'DM Sans', sans-serif`;
+    const tw = ctx.measureText(pillText).width;
+    const px = W - pad - tw - 20;
+    const py = pad + 12;
+    roundRect(ctx, px, py - 10, tw + 20, 24, 12);
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(pillText, px + (tw + 20) / 2, py + 2);
   }
 
   drawStamp(ctx, W, H);
@@ -1126,6 +1231,17 @@ export default function GuessThePrice() {
   const [saveStatus, setSaveStatus] = useState("");
   const [dirty, setDirty] = useState(false);
 
+  // ── Live mode state ──
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveStep, setLiveStep] = useState(0);
+  const [livePhotoIndex, setLivePhotoIndex] = useState(0);
+  const [overlayVisible, setOverlayVisible] = useState(true);
+  const [photoAnimProgress, setPhotoAnimProgress] = useState(1);
+  const photoAnimRef = useRef(null);
+  const transitionRef = useRef(null);
+  const offscreenA = useRef(null);
+  const offscreenB = useRef(null);
+
   // Get current episode object
   const episode = episodes.find(e => e.id === activeEpisodeId) || EPISODE;
 
@@ -1336,14 +1452,15 @@ export default function GuessThePrice() {
     const rd = episode.rounds[currentRound];
     if (!rd) return;
     const existing = rd.photos || [];
-    const remaining = 5 - existing.length;
-    if (remaining <= 0) return;
+    const remaining = 20 - existing.length;
+    if (remaining <= 0) { setSaveStatus("Max 20 photos per round"); setTimeout(() => setSaveStatus(""), 3000); return; }
     const toProcess = Array.from(files).slice(0, remaining);
-    const compressed = await Promise.all(toProcess.map(f => compressPhoto(f)));
+    const compressed = await Promise.all(toProcess.map(f => compressPhoto(f, existing.length)));
     const newPhotos = [...existing, ...compressed];
     updateRoundField("photos", newPhotos);
-    // Pre-cache for canvas
     newPhotos.forEach(p => getCachedImage(p));
+    // Check for quota warning
+    if (_saveWarning) { setSaveStatus(_saveWarning); setTimeout(() => setSaveStatus(""), 5000); }
   };
 
   const removePhoto = (idx) => {
@@ -1355,6 +1472,22 @@ export default function GuessThePrice() {
     if ((rd.heroPhotoIndex || 0) >= photos.length) {
       updateRoundField("heroPhotoIndex", Math.max(0, photos.length - 1));
     }
+  };
+
+  const [dragPhotoIdx, setDragPhotoIdx] = useState(null);
+  const reorderPhotos = (from, to) => {
+    if (from === to) return;
+    const rd = episode.rounds[currentRound];
+    if (!rd) return;
+    const photos = [...(rd.photos || [])];
+    const [moved] = photos.splice(from, 1);
+    photos.splice(to, 0, moved);
+    let hero = rd.heroPhotoIndex || 0;
+    if (from === hero) hero = to;
+    else if (from < hero && to >= hero) hero--;
+    else if (from > hero && to <= hero) hero++;
+    updateRoundField("photos", photos);
+    updateRoundField("heroPhotoIndex", hero);
   };
 
   const loadRound = useCallback((n) => {
@@ -1700,6 +1833,201 @@ export default function GuessThePrice() {
   }, [episode, currentRound]);
 
   // ═══════════════════════════════════════════════════════════
+  //  LIVE MODE
+  // ═══════════════════════════════════════════════════════════
+  const enterLiveMode = () => {
+    setLiveMode(true);
+    setLiveStep(0);
+    setLivePhotoIndex(0);
+    setOverlayVisible(true);
+    setPhotoAnimProgress(1);
+    setRatio("16:9");
+    setActiveAsset("property");
+    loadRound(currentRound + 1);
+    // Request fullscreen (iPad Safari uses webkit prefix)
+    const el = document.documentElement;
+    if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.requestFullscreen) el.requestFullscreen();
+  };
+
+  const exitLiveMode = () => {
+    setLiveMode(false);
+    cancelAnimationFrame(photoAnimRef.current);
+    cancelAnimationFrame(transitionRef.current);
+    if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    else if (document.exitFullscreen) document.exitFullscreen();
+  };
+
+  // Listen for fullscreen exit via system gesture
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        setLiveMode(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFsChange);
+      document.removeEventListener("webkitfullscreenchange", onFsChange);
+    };
+  }, []);
+
+  // Prevent page scroll in live mode
+  useEffect(() => {
+    if (!liveMode) return;
+    const prevent = (e) => e.preventDefault();
+    document.addEventListener("touchmove", prevent, { passive: false });
+    return () => document.removeEventListener("touchmove", prevent);
+  }, [liveMode]);
+
+  // Photo entrance animation
+  useEffect(() => {
+    if (!liveMode || LIVE_FLOW[liveStep] !== "property") return;
+    cancelAnimationFrame(photoAnimRef.current);
+    setPhotoAnimProgress(0);
+    const start = performance.now();
+    const dur = 2000;
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = easeOutExpo(t);
+      setPhotoAnimProgress(eased);
+      if (t < 1) photoAnimRef.current = requestAnimationFrame(tick);
+    };
+    photoAnimRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(photoAnimRef.current);
+  }, [liveMode, liveStep, livePhotoIndex]);
+
+  // Asset cross-fade transition
+  const transitionToAsset = (newAsset) => {
+    const canvas = canvasRef.current;
+    if (!canvas) { setActiveAsset(newAsset); return; }
+    const r2 = RATIOS[ratio];
+
+    // Capture current frame
+    if (!offscreenA.current) offscreenA.current = document.createElement("canvas");
+    offscreenA.current.width = r2.W;
+    offscreenA.current.height = r2.H;
+    offscreenA.current.getContext("2d").drawImage(canvas, 0, 0);
+
+    // Render new asset to offscreen B
+    if (!offscreenB.current) offscreenB.current = document.createElement("canvas");
+    offscreenB.current.width = r2.W;
+    offscreenB.current.height = r2.H;
+    const ctxB = offscreenB.current.getContext("2d");
+    ctxB.clearRect(0, 0, r2.W, r2.H);
+    const drawFn = DRAW_FNS[newAsset];
+    if (drawFn) {
+      const asset = ASSETS.find(a => a.id === newAsset);
+      if (asset?.animated) drawFn(ctxB, r2.W, r2.H, S, 0);
+      else drawFn(ctxB, r2.W, r2.H, S);
+    }
+
+    setActiveAsset(newAsset);
+
+    // Cross-fade 400ms
+    cancelAnimationFrame(transitionRef.current);
+    const start = performance.now();
+    const dur = 400;
+    const ctx = canvas.getContext("2d");
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / dur);
+      ctx.clearRect(0, 0, r2.W, r2.H);
+      ctx.globalAlpha = 1 - t;
+      ctx.drawImage(offscreenA.current, 0, 0);
+      ctx.globalAlpha = t;
+      ctx.drawImage(offscreenB.current, 0, 0);
+      ctx.globalAlpha = 1;
+      if (t < 1) transitionRef.current = requestAnimationFrame(tick);
+    };
+    transitionRef.current = requestAnimationFrame(tick);
+  };
+
+  // Live step navigation
+  const liveProceed = () => {
+    const next = Math.min(liveStep + 1, LIVE_FLOW.length - 1);
+    if (next === liveStep) return;
+    setLiveStep(next);
+    const newAsset = LIVE_FLOW[next];
+    transitionToAsset(newAsset);
+    // Auto-play animated assets after transition
+    if (newAsset === "timer" || newAsset === "reveal") {
+      setTimeout(() => playAnimation(), 450);
+    }
+  };
+
+  const liveGoBack = () => {
+    const prev = Math.max(liveStep - 1, 0);
+    if (prev === liveStep) return;
+    setLiveStep(prev);
+    setLivePhotoIndex(0);
+    transitionToAsset(LIVE_FLOW[prev]);
+    cancelAnimationFrame(animRef.current);
+    setIsPlaying(false);
+  };
+
+  const liveLoadRound = (roundNum) => {
+    loadRound(roundNum);
+    setLiveStep(0);
+    setLivePhotoIndex(0);
+    transitionToAsset("property");
+  };
+
+  // Touch handlers for canvas in live mode
+  const handleTouchStart = (e) => {
+    if (!liveMode) return;
+    const t = e.touches[0];
+    _touchStart = { x: t.clientX, y: t.clientY, time: Date.now() };
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!liveMode || !_touchStart) return;
+    const t = e.changedTouches[0];
+    const gesture = detectGesture(_touchStart.x, _touchStart.y, t.clientX, t.clientY, Date.now() - _touchStart.time);
+    _touchStart = null;
+    if (!gesture) return;
+
+    if (gesture === "tap") {
+      setOverlayVisible(v => !v);
+      return;
+    }
+
+    if (LIVE_FLOW[liveStep] === "property") {
+      const rd = episode.rounds[currentRound];
+      const photos = rd?.photos || [];
+      if (gesture === "swipe-left" && photos.length > 0) {
+        setLivePhotoIndex(i => Math.min(i + 1, photos.length - 1));
+      } else if (gesture === "swipe-right" && photos.length > 0) {
+        setLivePhotoIndex(i => Math.max(i - 1, 0));
+      }
+    } else {
+      if (gesture === "swipe-left") liveProceed();
+      else if (gesture === "swipe-right") liveGoBack();
+    }
+  };
+
+  // Modified render for live mode photo gallery
+  const liveRender = useCallback(() => {
+    if (!liveMode || LIVE_FLOW[liveStep] !== "property") return false;
+    const canvas = canvasRef.current;
+    if (!canvas) return false;
+    const r2 = RATIOS[ratio];
+    if (canvas.width !== r2.W || canvas.height !== r2.H) {
+      canvas.width = r2.W;
+      canvas.height = r2.H;
+    }
+    const ctx = canvas.getContext("2d");
+    const rd = episode.rounds[currentRound];
+    const photos = rd?.photos || [];
+    const src = photos[livePhotoIndex] || null;
+    drawPropertyGallery(ctx, r2.W, r2.H, S, src, photoAnimProgress, livePhotoIndex, photos.length);
+    return true;
+  }, [liveMode, liveStep, ratio, currentRound, livePhotoIndex, photoAnimProgress, S, episode]);
+
+  // Trigger live render when photo anim progresses
+  useEffect(() => { liveRender(); }, [liveRender]);
+
+  // ═══════════════════════════════════════════════════════════
   //  CONTROLS
   // ═══════════════════════════════════════════════════════════
   const renderControls = () => {
@@ -1760,7 +2088,7 @@ export default function GuessThePrice() {
           <div style={{ ...label(), marginTop: DS.sm }}>Rightmove URL</div>
           <input style={inputS()} value={rd.rightmoveUrl || ""} placeholder="https://www.rightmove.co.uk/…" onChange={e => updateRoundField("rightmoveUrl", e.target.value)} />
 
-          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>PHOTOS ({(rd.photos || []).length}/5)</div>
+          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>PHOTOS ({(rd.photos || []).length})</div>
           {/* Photo upload zone */}
           <div
             style={{ marginTop: DS.sm, padding: DS.lg, border: `2px dashed ${DS.borderSubtle}`, borderRadius: DS.rSm, textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}
@@ -1770,16 +2098,27 @@ export default function GuessThePrice() {
             onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = DS.borderSubtle; handlePhotoUpload(e.dataTransfer.files); }}
           >
             <div style={{ fontSize: DS.fsSm, color: DS.textMuted }}>Drop photos here or click to upload</div>
-            <div style={{ fontSize: DS.fsXs, color: DS.textMuted, marginTop: 4 }}>JPG/PNG, max 5 photos</div>
+            <div style={{ fontSize: DS.fsXs, color: DS.textMuted, marginTop: 4 }}>JPG/PNG — drag to reorder</div>
           </div>
-          {/* Photo thumbnails */}
+          {/* Photo thumbnails — draggable to reorder */}
           {(rd.photos || []).length > 0 && (
             <div style={{ display: "flex", gap: DS.xs, marginTop: DS.sm, flexWrap: "wrap" }}>
               {(rd.photos || []).map((photo, i) => (
-                <div key={i} style={{ position: "relative", cursor: "pointer" }} onClick={() => updateRoundField("heroPhotoIndex", i)}>
+                <div key={i} draggable style={{
+                    position: "relative", cursor: "grab",
+                    borderLeft: dragPhotoIdx !== null && dragPhotoIdx !== i ? `2px solid transparent` : "none",
+                  }}
+                  onClick={() => updateRoundField("heroPhotoIndex", i)}
+                  onDragStart={() => setDragPhotoIdx(i)}
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderLeft = `2px solid ${GAME.gold}`; }}
+                  onDragLeave={e => { e.currentTarget.style.borderLeft = "2px solid transparent"; }}
+                  onDrop={e => { e.preventDefault(); e.currentTarget.style.borderLeft = "2px solid transparent"; if (dragPhotoIdx !== null) reorderPhotos(dragPhotoIdx, i); setDragPhotoIdx(null); }}
+                  onDragEnd={() => setDragPhotoIdx(null)}
+                >
                   <img src={photo} alt={`Photo ${i + 1}`} style={{
                     width: 56, height: 42, objectFit: "cover", borderRadius: 4,
                     border: (rd.heroPhotoIndex || 0) === i ? `2px solid ${GAME.gold}` : `2px solid transparent`,
+                    opacity: dragPhotoIdx === i ? 0.4 : 1,
                   }} />
                   {(rd.heroPhotoIndex || 0) === i && <div style={{ position: "absolute", top: -4, right: -4, background: GAME.gold, color: GAME.navy, borderRadius: "50%", width: 14, height: 14, fontSize: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>★</div>}
                   <button onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
@@ -1868,6 +2207,93 @@ export default function GuessThePrice() {
   const round = episode.rounds[currentRound];
   const isRoundEmpty = (rd) => !rd.address;
 
+  // ═══════════════════════════════════════════════════════════
+  //  LIVE MODE RENDER
+  // ═══════════════════════════════════════════════════════════
+  if (liveMode) {
+    const rd = episode.rounds[currentRound];
+    const photos = rd?.photos || [];
+    const currentFlowAsset = LIVE_FLOW[liveStep];
+
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 9998, background: "#000", fontFamily: DS.font, touchAction: "none" }}>
+        {/* Fullscreen canvas */}
+        <canvas ref={canvasRef} width={r.W} height={r.H}
+          style={{ width: "100vw", height: "100vh", objectFit: "contain", display: "block" }}
+          onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} />
+
+        {/* Floating overlay */}
+        {overlayVisible && (
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9999, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", padding: `12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px` }}>
+
+            {/* Round selector */}
+            <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 10 }}>
+              {episode.rounds.map((rd2, i) => (
+                <button key={i} onClick={() => !isRoundEmpty(rd2) && liveLoadRound(i + 1)}
+                  style={{ padding: "6px 14px", fontSize: 13, fontWeight: 700, border: "none", borderRadius: 20, cursor: isRoundEmpty(rd2) ? "default" : "pointer",
+                    background: currentRound === i ? GAME.gold : isRoundEmpty(rd2) ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.12)",
+                    color: currentRound === i ? "#000" : isRoundEmpty(rd2) ? "rgba(255,255,255,0.2)" : "#fff",
+                    opacity: isRoundEmpty(rd2) ? 0.4 : 1 }}>
+                  R{i + 1}
+                </button>
+              ))}
+            </div>
+
+            {/* Flow step dots */}
+            <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 12 }}>
+              {LIVE_FLOW.map((step, i) => (
+                <div key={i} onClick={() => { setLiveStep(i); transitionToAsset(step); if (step === "timer" || step === "reveal") setTimeout(() => playAnimation(), 450); }}
+                  style={{ width: liveStep === i ? 24 : 8, height: 8, borderRadius: 4, cursor: "pointer", transition: "all 0.2s",
+                    background: i < liveStep ? "rgba(251,135,112,0.4)" : i === liveStep ? GAME.gold : "rgba(255,255,255,0.2)" }} />
+              ))}
+            </div>
+
+            {/* Nav + Scores */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+              <button onClick={liveGoBack} style={{ padding: "8px 16px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer" }}>Back</button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{episode.agents[0]}</span>
+                <span style={{ background: GAME.gold, color: "#000", fontWeight: 800, padding: "2px 10px", borderRadius: 12, fontSize: 16 }}>{scores[0]}</span>
+                <button onClick={() => addScore(0)} style={{ padding: "4px 8px", fontSize: 11, border: "none", borderRadius: 6, background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer" }}>+1</button>
+              </div>
+
+              <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>vs</span>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{episode.agents[1]}</span>
+                <span style={{ background: GAME.gold, color: "#000", fontWeight: 800, padding: "2px 10px", borderRadius: 12, fontSize: 16 }}>{scores[1]}</span>
+                <button onClick={() => addScore(1)} style={{ padding: "4px 8px", fontSize: 11, border: "none", borderRadius: 6, background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer" }}>+1</button>
+              </div>
+
+              <button onClick={liveProceed} style={{ padding: "8px 16px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: GAME.gold, color: "#000", cursor: "pointer" }}>Next</button>
+            </div>
+
+            {/* Photo dots (property step only) */}
+            {currentFlowAsset === "property" && photos.length > 1 && (
+              <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 10 }}>
+                {photos.map((_, i) => (
+                  <div key={i} onClick={() => setLivePhotoIndex(i)}
+                    style={{ width: livePhotoIndex === i ? 20 : 6, height: 6, borderRadius: 3, cursor: "pointer", transition: "all 0.2s",
+                      background: livePhotoIndex === i ? GAME.gold : "rgba(255,255,255,0.3)" }} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Exit button */}
+        <button onClick={exitLiveMode}
+          style={{ position: "fixed", top: 12, right: 12, zIndex: 10000, padding: "6px 14px", fontSize: 12, fontWeight: 700, border: "none", borderRadius: 8, background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.7)", cursor: "pointer", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
+          EXIT
+        </button>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  EDITOR MODE RENDER
+  // ═══════════════════════════════════════════════════════════
   return (
     <div style={{ fontFamily: DS.font, background: DS.bgPage, color: DS.textPrimary, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
 
@@ -1886,6 +2312,10 @@ export default function GuessThePrice() {
           <button onClick={() => syncToServer()} style={btn({ padding: "4px 12px", fontSize: DS.fsXs })}>Save</button>
           <button onClick={() => { const name = `Ep${episode.episode}_${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}`; saveSnapshot(name); }}
             style={btn({ padding: "4px 12px", fontSize: DS.fsXs })}>Snapshot</button>
+          <button onClick={enterLiveMode}
+            style={btn({ padding: "4px 14px", fontSize: DS.fsXs, fontWeight: 800, background: "rgba(251,135,112,0.15)", border: `1px solid rgba(251,135,112,0.3)`, color: GAME.gold, letterSpacing: "0.1em" })}>
+            LIVE
+          </button>
           <span style={{ width: 1, height: 20, background: DS.borderSubtle }} />
           {Object.entries(RATIOS).map(([key, val]) => (
             <button key={key} onClick={() => setRatio(key)}
