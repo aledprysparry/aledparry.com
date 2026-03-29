@@ -1619,6 +1619,7 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // ── Push current state to live display ──
   const [liveConnected, setLiveConnected] = useState(false);
+  const livePushRef = useRef(null);
   const pushToLive = async (overrideAsset, overrideS) => {
     try {
       const rd = episode.rounds[currentRound] || {};
@@ -1642,6 +1643,14 @@ export default function GuessThePrice({ displayMode = false }) {
       setLiveConnected(false);
     }
   };
+
+  // Auto-sync to /live when admin state changes (debounced)
+  useEffect(() => {
+    if (!liveConnected || displayMode || liveMode) return;
+    clearTimeout(livePushRef.current);
+    livePushRef.current = setTimeout(() => pushToLive(), 300);
+    return () => clearTimeout(livePushRef.current);
+  }, [activeAsset, currentRound, S, scores]);
 
   // ── Helper: sync S state from a round ──
   const syncSFromRound = (round, ep, sc) => {
@@ -2675,6 +2684,15 @@ export default function GuessThePrice({ displayMode = false }) {
   const displayPollRef = useRef(null);
   const displayAnimRef = useRef(null);
   const lastTsRef = useRef(0);
+  const [dispPhotoIdx, setDispPhotoIdx] = useState(0);
+  const dispPhotoTimerRef = useRef(null);
+  const dispPhotoAnimRef = useRef(null);
+  const [dispPhotoAnimT, setDispPhotoAnimT] = useState(1);
+  const [dispShowUI, setDispShowUI] = useState(true);
+  const dispUITimerRef = useRef(null);
+  const dispTouchRef = useRef(null);
+  const dispAutoPlayRef = useRef(true);
+  const dispResumeRef = useRef(null);
 
   useEffect(() => {
     if (!displayMode) return;
@@ -2727,17 +2745,21 @@ export default function GuessThePrice({ displayMode = false }) {
     if (!drawFn) return;
     const asset = ASSETS.find(a => a.id === ds.asset);
 
-    // For property gallery with photos
+    // For property gallery with photos — don't render here, handled by photo gallery effect
     if (ds.asset === "property" && ds.photos && ds.photos.length > 0) {
-      const src = ds.photos[ds.heroPhotoIndex || 0] || null;
-      drawPropertyGallery(ctx, r2.W, r2.H, ds.S, src, 1, ds.heroPhotoIndex || 0, ds.photos.length);
+      // Reset photo index when asset changes to property
+      setDispPhotoIdx(0);
+      setDispPhotoAnimT(1);
+      dispAutoPlayRef.current = true;
       return;
     }
 
+    // Clear photo timer when not on property
+    clearInterval(dispPhotoTimerRef.current);
+
     if (asset?.animated) {
-      // Animate over 3 seconds
       cancelAnimationFrame(displayAnimRef.current);
-      const dur = ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000 : 3000;
+      const dur = ds.asset === "intro" ? 6000 : ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000 : 3000;
       const start = performance.now();
       const tick = (now) => {
         const p = Math.min(1, (now - start) / dur);
@@ -2751,14 +2773,115 @@ export default function GuessThePrice({ displayMode = false }) {
     }
   }, [displayMode, displayState]);
 
+  // Display mode: photo gallery auto-play + render
+  useEffect(() => {
+    if (!displayMode || !displayState) return;
+    const ds = displayState;
+    if (ds.asset !== "property" || !ds.photos || ds.photos.length === 0) return;
+    const photos = ds.photos;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const r2 = RATIOS["16:9"];
+    if (canvas.width !== r2.W || canvas.height !== r2.H) { canvas.width = r2.W; canvas.height = r2.H; }
+
+    // Draw current photo
+    const src = photos[dispPhotoIdx] || null;
+    drawPropertyGallery(canvas.getContext("2d"), r2.W, r2.H, ds.S, src, dispPhotoAnimT, dispPhotoIdx, photos.length);
+
+    // Auto-advance timer
+    clearInterval(dispPhotoTimerRef.current);
+    if (dispAutoPlayRef.current && photos.length > 1) {
+      const secPerPhoto = (ds.S?.photoDuration || 5) * 1000;
+      dispPhotoTimerRef.current = setInterval(() => {
+        setDispPhotoIdx(prev => {
+          const next = (prev + 1) % photos.length;
+          // Animate entrance
+          setDispPhotoAnimT(0);
+          const start = performance.now();
+          const animTick = (now) => {
+            const t = Math.min(1, (now - start) / 400);
+            setDispPhotoAnimT(t);
+            if (t < 1) dispPhotoAnimRef.current = requestAnimationFrame(animTick);
+          };
+          cancelAnimationFrame(dispPhotoAnimRef.current);
+          dispPhotoAnimRef.current = requestAnimationFrame(animTick);
+          return next;
+        });
+      }, secPerPhoto);
+    }
+    return () => clearInterval(dispPhotoTimerRef.current);
+  }, [displayMode, displayState, dispPhotoIdx, dispPhotoAnimT]);
+
+  // Display mode touch handlers for photo gallery swipe
+  const dispHandleTouchStart = (e) => {
+    dispTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+  };
+  const dispHandleTouchEnd = (e) => {
+    if (!dispTouchRef.current || !displayState) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - dispTouchRef.current.x;
+    const dt = Date.now() - dispTouchRef.current.time;
+    dispTouchRef.current = null;
+    if (dt > 500 || Math.abs(dx) < 40) return; // not a swipe
+
+    const photos = displayState.photos || [];
+    if (displayState.asset !== "property" || photos.length <= 1) return;
+
+    // Pause auto-play on swipe
+    dispAutoPlayRef.current = false;
+    clearInterval(dispPhotoTimerRef.current);
+    clearTimeout(dispResumeRef.current);
+
+    if (dx < -40) setDispPhotoIdx(prev => Math.min(prev + 1, photos.length - 1));
+    else if (dx > 40) setDispPhotoIdx(prev => Math.max(prev - 1, 0));
+
+    // Animate entrance
+    setDispPhotoAnimT(0);
+    const start = performance.now();
+    const animTick = (now) => {
+      const p = Math.min(1, (now - start) / 400);
+      setDispPhotoAnimT(p);
+      if (p < 1) dispPhotoAnimRef.current = requestAnimationFrame(animTick);
+    };
+    cancelAnimationFrame(dispPhotoAnimRef.current);
+    dispPhotoAnimRef.current = requestAnimationFrame(animTick);
+
+    // Resume auto-play after 10 seconds
+    dispResumeRef.current = setTimeout(() => { dispAutoPlayRef.current = true; setDispPhotoAnimT(t => t); }, 10000);
+  };
+
+  // Show/hide UI on mouse/touch activity
+  const dispShowUIBriefly = () => {
+    setDispShowUI(true);
+    clearTimeout(dispUITimerRef.current);
+    dispUITimerRef.current = setTimeout(() => setDispShowUI(false), 3000);
+  };
+
   if (displayMode) {
     return (
-      <div style={{ position: "fixed", inset: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "fixed", inset: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none" }}
+        onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}
+        onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
         <canvas ref={canvasRef} width={1920} height={1080}
           style={{ width: "100vw", height: "100vh", objectFit: "contain", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
+          </div>
+        )}
+        {/* Fullscreen button */}
+        {dispShowUI && (
+          <button onClick={(e) => { e.stopPropagation(); const el = document.documentElement; if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); }}
+            style={{ position: "absolute", bottom: 20, right: 20, background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer", fontFamily: DS.font, transition: "opacity 0.3s", backdropFilter: "blur(8px)" }}>
+            Fullscreen
+          </button>
+        )}
+        {/* Photo dots */}
+        {dispShowUI && displayState?.asset === "property" && (displayState?.photos?.length || 0) > 1 && (
+          <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
+            {displayState.photos.map((_, i) => (
+              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i === dispPhotoIdx ? GAME.gold : "rgba(255,255,255,0.3)", transition: "background 0.2s" }} />
+            ))}
           </div>
         )}
       </div>
