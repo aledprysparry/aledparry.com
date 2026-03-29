@@ -1905,7 +1905,18 @@ export default function GuessThePrice({ displayMode = false }) {
     }
   }, [ratio, activeAsset, S]);
 
+  const renderRef = useRef(render);
+  useEffect(() => { renderRef.current = render; }, [render]);
+
   useEffect(() => { render(); }, [render]);
+
+  // Stop running animation when ratio changes so canvas redraws at new size
+  useEffect(() => {
+    if (isPlaying) {
+      cancelAnimationFrame(animRef.current);
+      setIsPlaying(false);
+    }
+  }, [ratio]);
 
   // Auto-play entrance animations (but NOT timer/reveal/lockin — those need user to set values first)
   const manualPlayAssets = ["timer", "reveal", "lockin"];
@@ -1930,7 +1941,7 @@ export default function GuessThePrice({ displayMode = false }) {
     // Reset to start if animation already finished
     if (animProgress >= 0.99) {
       setAnimProgress(0);
-      render(0);
+      renderRef.current(0);
     }
     setIsPlaying(true);
     const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? (S.photoDuration || 5) * Math.max(1, (episode.rounds[currentRound]?.photos?.length || 1)) : activeAsset === "intro" ? 6 : 3) * 1000;
@@ -1939,7 +1950,7 @@ export default function GuessThePrice({ displayMode = false }) {
       const elapsed = now - start;
       const p = Math.min(1, elapsed / duration);
       setAnimProgress(p);
-      render(p);
+      renderRef.current(p);
       if (p < 1) {
         animRef.current = requestAnimationFrame(tick);
       } else {
@@ -1947,7 +1958,7 @@ export default function GuessThePrice({ displayMode = false }) {
       }
     };
     animRef.current = requestAnimationFrame(tick);
-  }, [isPlaying, activeAsset, S, render]);
+  }, [isPlaying, activeAsset, S]);
 
   // Play full sequence: Lock-In → Countdown → Reveal
   const playSequence = useCallback(() => {
