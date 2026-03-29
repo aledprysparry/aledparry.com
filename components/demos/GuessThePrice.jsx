@@ -2173,6 +2173,8 @@ export default function GuessThePrice({ displayMode = false }) {
       // Persist scores to episode
       setEpisodes(eps => eps.map(ep => ep.id === activeEpisodeId ? { ...ep, scores: n } : ep));
       setDirty(true);
+      // Push immediately — auto-sync is disabled in liveMode
+      setTimeout(() => pushToLive(), 60);
       return n;
     });
   };
