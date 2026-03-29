@@ -22,12 +22,15 @@ const MasteryCompanion = dynamic(() => import("@/components/demos/MasteryCompani
 const PMADemo = dynamic(() => import("@/components/demos/PMA"), { ssr: false, loading: () => <DemoLoading /> });
 // @ts-ignore
 const KeepItLocal = dynamic(() => import("@/components/demos/KeepItLocal"), { ssr: false, loading: () => <DemoLoading /> });
+// @ts-ignore
+const GuessThePrice = dynamic(() => import("@/components/demos/GuessThePrice"), { ssr: false, loading: () => <DemoLoading /> });
 
 const componentMap: Record<string, React.ComponentType> = {
   SocialEditor,
   MasteryCompanion,
   PMA: PMADemo,
   KeepItLocal,
+  GuessThePrice,
 };
 
 interface Props {

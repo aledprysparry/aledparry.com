@@ -39,6 +39,15 @@ export const demos: DemoEntry[] = [
     componentPath: "SocialEditor",
   },
   {
+    clientSlug: "cpshomes",
+    clientName: "CPS Homes",
+    toolSlug: "guessprice",
+    toolName: "Guess the Price",
+    description:
+      "Graphics generator for the Guess the Price social video format — property frames, A/B/C options, reveals, and scoreboards.",
+    componentPath: "GuessThePrice",
+  },
+  {
     clientSlug: "aledparry",
     clientName: "Aled Parry",
     toolSlug: "mastery",
