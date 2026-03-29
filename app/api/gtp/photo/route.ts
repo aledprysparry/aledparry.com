@@ -1,7 +1,7 @@
-import { put } from "@vercel/blob";
+import { put, getDownloadUrl } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
-// POST /api/gtp/photo — upload a base64 photo, returns a blob URL
+// POST /api/gtp/photo — upload a base64 photo, returns a publicly accessible URL
 export async function POST(req: Request) {
   try {
     const { photo, episodeId, round, index } = await req.json();
@@ -20,7 +20,10 @@ export async function POST(req: Request) {
       contentType: ext === "png" ? "image/png" : "image/jpeg",
     });
 
-    return NextResponse.json({ url: blob.url });
+    // Get a download URL that's accessible without auth
+    const downloadUrl = await getDownloadUrl(blob.url);
+
+    return NextResponse.json({ url: downloadUrl });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Upload failed";
     return NextResponse.json({ error: msg }, { status: 500 });
