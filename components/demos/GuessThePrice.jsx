@@ -625,15 +625,20 @@ function drawProperty(ctx, W, H, S, progress) {
 
   const safe = safeZone(W, H);
 
-  // Draw hero photo as background if available
+  // Draw photos — cycles through all photos during animation
   const rd = EPISODE.rounds ? EPISODE.rounds[S.propRound - 1] : null;
-  const heroSrc = rd && rd.photos && rd.photos[rd.heroPhotoIndex || 0];
-  const heroImg = heroSrc ? getCachedImage(heroSrc) : null;
-  const ep = easeOutExpo(Math.min(1, p / 0.5));
+  const photos = rd?.photos || [];
+  const numPhotos = Math.max(1, photos.length);
+  // Each photo gets equal portion of the animation timeline
+  const photoIdx = Math.min(numPhotos - 1, Math.floor(p * numPhotos * 0.999));
+  const photoLocalP = (p * numPhotos - photoIdx); // 0-1 within this photo's time
+  const currentSrc = photos[photoIdx] || photos[rd?.heroPhotoIndex || 0];
+  const heroImg = currentSrc ? getCachedImage(currentSrc) : null;
+  const ep = easeOutExpo(Math.min(1, photoLocalP / 0.3));
   if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
-    // Cover-fit with Ken Burns zoom entrance
+    // Cover-fit with Ken Burns zoom entrance per photo
     const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
-    const zoomScale = 1.0 + 0.06 * (1 - ep);
+    const zoomScale = 1.0 + 0.04 * photoLocalP; // gentle zoom during display
     const scale = Math.max(W / iw, H / ih) * zoomScale;
     const dw = iw * scale, dh = ih * scale;
     ctx.save();
@@ -1810,7 +1815,7 @@ export default function GuessThePrice({ displayMode = false }) {
       render(0);
     }
     setIsPlaying(true);
-    const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : 3) * 1000;
+    const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? 15 : 3) * 1000;
     const start = performance.now();
     const tick = (now) => {
       const elapsed = now - start;
@@ -1938,7 +1943,7 @@ export default function GuessThePrice({ displayMode = false }) {
     if (!asset?.animated) { exportPNG(); return; }
 
     setExportStatus("Recording...");
-    const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : 3) * 1000;
+    const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? 15 : 3) * 1000;
     const fps = 30;
     const stream = canvas.captureStream(fps);
     const chunks = [];
