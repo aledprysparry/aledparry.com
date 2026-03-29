@@ -2866,11 +2866,11 @@ export default function GuessThePrice({ displayMode = false }) {
 
   if (displayMode) {
     return (
-      <div style={{ position: "fixed", inset: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none" }}
+      <div style={{ position: "fixed", inset: 0, background: GAME.navy, display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
         onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}
         onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
         <canvas ref={canvasRef} width={1920} height={1080}
-          style={{ width: "100vw", height: "100vh", objectFit: "contain", display: "block" }} />
+          style={{ width: "100vw", height: "100vh", objectFit: "cover", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
