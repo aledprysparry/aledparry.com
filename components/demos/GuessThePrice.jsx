@@ -102,10 +102,11 @@ function loadFont(name) {
 //  ASPECT RATIOS
 // ═══════════════════════════════════════════════════════════════
 const RATIOS = {
-  "16:9": { W:1920, H:1080, label:"16:9", hint:"YouTube / Premiere" },
-  "4:3":  { W:1440, H:1080, label:"4:3",  hint:"iPad / Presentation" },
-  "1:1":  { W:1080, H:1080, label:"1:1",  hint:"Instagram Feed"     },
-  "9:16": { W:1080, H:1920, label:"9:16", hint:"TikTok / Reels"     },
+  "16:9":    { W:1920, H:1080, label:"16:9",     hint:"YouTube / Premiere" },
+  "iPad Pro":{ W:2388, H:1668, label:"iPad Pro",  hint:"iPad Pro 11\u2033 / 13\u2033" },
+  "4:3":     { W:1440, H:1080, label:"4:3",       hint:"iPad / Presentation" },
+  "1:1":     { W:1080, H:1080, label:"1:1",       hint:"Instagram Feed"     },
+  "9:16":    { W:1080, H:1920, label:"9:16",      hint:"TikTok / Reels"     },
 };
 
 // ═══════════════════════════════════════════════════════════════
