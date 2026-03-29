@@ -687,7 +687,9 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
   }
-  const barP = easeOutExpo(Math.min(1, p / 0.02));
+  // Bar appears when the second photo starts (first photo is clean full-screen)
+  const barStart = numPhotos > 1 ? 1 / numPhotos : 0;
+  const barP = easeOutExpo(Math.min(1, Math.max(0, (p - barStart) / 0.02)));
 
   const barSlide = H * 0.03 * (1 - barP);
   ctx.save();
