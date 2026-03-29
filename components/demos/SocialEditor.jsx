@@ -2024,6 +2024,24 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           <div><div style={{fontSize:DS.fsSm,fontWeight:600}}>Attach video for live preview</div><div style={{fontSize:11,color:DS.textMuted}}>Drop your .mp4 or .mov to see graphics overlaid on video</div></div>
         </div>
       )}
+      {/* Thumbnail strip — horizontal scroll of graphic previews */}
+      {graphics.length>0&&Object.keys(previews).length>0&&(
+        <div style={{marginBottom:DS.md,overflowX:"auto",whiteSpace:"nowrap",paddingBottom:DS.xs,scrollbarWidth:"thin"}}>
+          <div style={{display:"inline-flex",gap:6}}>
+            {graphics.map((g,i)=>{
+              const meta=TMPL[g.template]||{label:"?",type:"?"};
+              const isOv=(g.typeOverride||meta.type)==="overlay";
+              return(
+                <div key={i} onClick={()=>setEditingIdx(editingIdx===i?null:i)}
+                  style={{width:80,height:45,borderRadius:6,overflow:"hidden",border:`2px solid ${editingIdx===i?"#2A9D8F":selected.has(i)?"rgba(255,255,255,0.2)":"transparent"}`,cursor:"pointer",flexShrink:0,position:"relative",background:previews[i]?"#111":"repeating-conic-gradient(#333 0% 25%,#222 0% 50%) 0 0/12px 12px",transition:"border-color 0.15s"}}>
+                  {previews[i]&&<img src={previews[i]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.7)",fontSize:8,padding:"1px 4px",color:isOv?"#2A9D8F":"#FB8770",fontWeight:700,textTransform:"uppercase"}}>{meta.label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {/* Filter + sort bar */}
       <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
         <select value={filterTpl} onChange={e=>setFilterTpl(e.target.value)}
@@ -2175,7 +2193,7 @@ function ExportTab({project,brand,updateProject}){
   const [prog,setProg]=useState({done:0,total:0,pct:0});
   const [captionMode,setCaptionMode]=useState("composite"); // composite | individual
   const [includeCaptions,setIncludeCaptions]=useState(false);
-  const [gfxMode,setGfxMode]=useState("both"); // png | webm | both
+  const [gfxMode,setGfxMode]=useState("premiere"); // premiere | png | webm | pngseq | composite | both
   const cvs=useRef(document.createElement("canvas"));
 
   const selectedRatios=Object.entries(ratios).filter(([,v])=>v).map(([k])=>k);
@@ -2279,7 +2297,7 @@ function ExportTab({project,brand,updateProject}){
         await exportAssetPNG(drawEndboard,`${String(selectedGfx.length+1).padStart(2,"0")}_endboard`);
       }
       // PNG Sequences (for Premiere Pro)
-      if(gfxMode==="pngseq"){
+      if(gfxMode==="premiere"||gfxMode==="pngseq"){
         setPhase(`${ratio} — rendering PNG sequences…`);
         const zip=new JSZip();
         // Helper: render a drawFn as PNG sequence into a zip folder
@@ -2343,7 +2361,7 @@ function ExportTab({project,brand,updateProject}){
         tick(done+1);
       }
       // Premiere XML for graphics (always include with pngseq, composite, or webm)
-      if(gfxMode==="pngseq"||gfxMode==="composite"||gfxMode==="webm"||gfxMode==="both"){
+      if(gfxMode==="premiere"||gfxMode==="pngseq"||gfxMode==="composite"||gfxMode==="webm"||gfxMode==="both"){
         const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
         dlText(gfxXml,`${pn}_${prefix}graphics_sequence.xml`);
       }
@@ -2418,7 +2436,7 @@ function ExportTab({project,brand,updateProject}){
         <div style={{marginBottom:DS.lg+2}}>
           <div style={sectionHead()}>GRAPHICS EXPORT FORMAT</div>
           <div style={{display:"flex",gap:DS.sm}}>
-            {[["png","🖼 Stills (PNG)","Static images"],["webm","🎞 Animated (WebM)","Individual transparent videos"],["pngseq","🎬 PNG Sequence","Frames for Premiere"],["composite","🎬 Composite","One video, all graphics timed"],["both","📦 Both","Stills + WebMs"]].map(([mode,title,desc])=>(
+            {[["premiere","🎬 Premiere Ready (Recommended)","PNG sequences + XML timecodes"],["png","🖼 Stills (PNG)","Static images for review"],["webm","🎞 Animated (WebM)","Individual transparent videos"],["pngseq","🎬 PNG Sequence","Numbered frames in zip"],["composite","🎥 Composite Video","One video, all graphics timed"],["both","📦 Everything","Stills + WebMs + sequences"]].map(([mode,title,desc])=>(
               <button key={mode} style={{flex:1,background:gfxMode===mode?DS.positive:DS.bgCard,border:`1px solid ${gfxMode===mode?DS.positiveBorder:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md}px`,cursor:"pointer",color:DS.textPrimary,fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setGfxMode(mode)}>
                 <div style={{fontWeight:800,fontSize:DS.fsMd,marginBottom:3}}>{title}</div>
                 <div style={{fontSize:11,color:DS.textMuted,lineHeight:1.4}}>{desc}</div>
@@ -2486,7 +2504,7 @@ function ExportTab({project,brand,updateProject}){
               <div style={{fontWeight:700,fontSize:13,marginBottom:3,color:"#2A9D8F"}}>{r} — {RATIOS[r].W}×{RATIOS[r].H}</div>
               <div style={{fontSize:12,opacity:0.6,display:"flex",gap:16,flexWrap:"wrap"}}>
                 <span>1 title card</span>
-                <span>{selectedGfx.length} graphic{selectedGfx.length!==1?"s":""}{gfxMode==="png"?" (PNG)":gfxMode==="webm"?" (WebM)":gfxMode==="pngseq"?" (PNG sequence)":" (PNG + WebM)"}</span>
+                <span>{selectedGfx.length} graphic{selectedGfx.length!==1?"s":""}{gfxMode==="premiere"?" (Premiere Ready)":gfxMode==="png"?" (PNG)":gfxMode==="webm"?" (WebM)":gfxMode==="pngseq"?" (PNG sequence)":gfxMode==="composite"?" (Composite)":gfxMode==="both"?" (Everything)":""}</span>
                 <span>1 endboard</span>
                 {includeCaptions&&<span>{captionMode==="composite"?"1 caption WebM":`${subtitles.length} caption WebMs`}</span>}
                 <span>1 Premiere XML sequence</span>
