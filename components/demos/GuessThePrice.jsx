@@ -950,6 +950,13 @@ function drawOptions(ctx, W, H, S, progress) {
     ctx.restore(); // pill animation
   }
 
+  // Disclaimer
+  ctx.font = `400 ${sz(W, H, 0.014)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("* Price subject to change. April 2026", W / 2, H - sz(W, H, 0.025));
+
   drawStamp(ctx, W, H);
 }
 
@@ -1156,6 +1163,13 @@ function drawReveal(ctx, W, H, S, progress) {
       ctx.fillText("CORRECT PRICE", W / 2, centerY + sz(W, H, ar === "portrait" ? 0.26 : 0.23));
     }
   }
+
+  // Disclaimer
+  ctx.font = `400 ${sz(W, H, 0.014)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText("* Price subject to change. April 2026", W / 2, H - sz(W, H, 0.025));
 
   drawAccentBars(ctx, W, H);
   drawStamp(ctx, W, H);
