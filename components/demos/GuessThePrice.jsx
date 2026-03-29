@@ -1628,8 +1628,7 @@ export default function GuessThePrice({ displayMode = false }) {
   const pushToLive = async (overrideAsset, overrideS) => {
     try {
       const rd = episode.rounds[currentRound] || {};
-      // Send max 3 photos to stay under body limit — /live only needs current display
-      const livePhotos = (rd.photos || []).slice(0, 3);
+      const livePhotos = (rd.photos || []).filter(p => p?.startsWith("/api") || p?.startsWith("http"));
       await fetch("/api/gtp/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1639,8 +1638,8 @@ export default function GuessThePrice({ displayMode = false }) {
           S: overrideS || S,
           scores,
           agents: episode.agents,
-          agentImages: [],
-          logoImage: "",
+          agentImages: (episode.agentImages || []).filter(u => u?.startsWith("/api") || u?.startsWith("http")),
+          logoImage: (episode.logoImage?.startsWith("/api") || episode.logoImage?.startsWith("http")) ? episode.logoImage : "",
           photos: livePhotos,
           heroPhotoIndex: rd.heroPhotoIndex || 0,
         }),
