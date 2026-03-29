@@ -2731,7 +2731,7 @@ export default function GuessThePrice({ displayMode = false }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ds = displayState;
-    const r2 = RATIOS["16:9"];
+    const r2 = { W: Math.round(window.innerWidth * window.devicePixelRatio), H: Math.round(window.innerHeight * window.devicePixelRatio) };
     canvas.width = r2.W;
     canvas.height = r2.H;
     const ctx = canvas.getContext("2d");
@@ -2786,7 +2786,7 @@ export default function GuessThePrice({ displayMode = false }) {
     const photos = ds.photos;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const r2 = RATIOS["16:9"];
+    const r2 = { W: Math.round(window.innerWidth * window.devicePixelRatio), H: Math.round(window.innerHeight * window.devicePixelRatio) };
     if (canvas.width !== r2.W || canvas.height !== r2.H) { canvas.width = r2.W; canvas.height = r2.H; }
 
     // Draw current photo
@@ -2867,8 +2867,8 @@ export default function GuessThePrice({ displayMode = false }) {
       <div style={{ position: "fixed", inset: 0, background: GAME.navy, display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
         onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}
         onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
-        <canvas ref={canvasRef} width={1920} height={1080}
-          style={{ width: "100vw", height: "100vh", objectFit: "contain", display: "block" }} />
+        <canvas ref={canvasRef} width={Math.round(window.innerWidth * window.devicePixelRatio)} height={Math.round(window.innerHeight * window.devicePixelRatio)}
+          style={{ width: "100vw", height: "100vh", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
