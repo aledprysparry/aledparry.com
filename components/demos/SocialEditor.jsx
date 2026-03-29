@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, AlignmentType, BorderStyle, WidthType, ShadingType } from "docx";
 import JSZip from "jszip";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile } from "@ffmpeg/util";
 
 // ═══════════════════════════════════════════════════════════════
 //  DESIGN SYSTEM — shared tokens for consistent UI
@@ -1239,6 +1241,36 @@ async function recordPNGSequence(g,brand,ratio,onProgress){
 //  RECORDING
 // ═══════════════════════════════════════════════════════════════
 const FPS=25;
+
+// ── FFmpeg.wasm — WebM → MOV conversion (single-threaded, no special headers needed) ──
+let _ffmpeg=null;
+async function getFFmpeg(){
+  if(_ffmpeg&&_ffmpeg.loaded) return _ffmpeg;
+  _ffmpeg=new FFmpeg();
+  // Load single-threaded core from CDN (cached after first load, ~31MB)
+  await _ffmpeg.load({
+    coreURL:"https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
+    wasmURL:"https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
+  });
+  return _ffmpeg;
+}
+
+async function webmToMov(webmBlob, filename="output.mov", onProgress){
+  const ff=await getFFmpeg();
+  const inputName="input.webm";
+  const outputName=filename.replace(/\.[^.]+$/,"")+".mov";
+  // Write WebM to ffmpeg virtual filesystem
+  await ff.writeFile(inputName, await fetchFile(webmBlob));
+  if(onProgress) ff.on("progress",({progress})=>onProgress(progress));
+  // Convert: MOV container with PNG codec (preserves alpha channel)
+  // -c:v png = lossless with alpha, Premiere imports natively
+  await ff.exec(["-i",inputName,"-c:v","png","-pix_fmt","rgba","-an",outputName]);
+  const data=await ff.readFile(outputName);
+  // Clean up
+  await ff.deleteFile(inputName);
+  await ff.deleteFile(outputName);
+  return new Blob([data.buffer],{type:"video/quicktime"});
+}
 const MIME=()=>MediaRecorder.isTypeSupported("video/webm;codecs=vp9")?"video/webm;codecs=vp9":"video/webm";
 
 function recordGraphic(g,brand,ratio){
@@ -2206,6 +2238,8 @@ function ExportTab({project,brand,updateProject}){
   const [prog,setProg]=useState({done:0,total:0,pct:0});
   const [captionMode,setCaptionMode]=useState("composite"); // composite | individual
   const [includeCaptions,setIncludeCaptions]=useState(false);
+  const [convertMov,setConvertMov]=useState(false);
+  const [ffmpegLoading,setFfmpegLoading]=useState(false);
   const [gfxMode,setGfxMode]=useState("premiere"); // premiere | png | webm | pngseq | composite | both
   const cvs=useRef(document.createElement("canvas"));
 
@@ -2263,6 +2297,21 @@ function ExportTab({project,brand,updateProject}){
     });
     const buf=await Packer.toBlob(doc);
     dl(buf,`${(project.name||"cue-sheet").replace(/\s+/g,"_")}_cue_sheet.docx`);
+  };
+
+  // Helper: download blob, optionally converting WebM→MOV first
+  const dlBlob=async(blob,name)=>{
+    if(convertMov&&name.endsWith(".webm")){
+      const movName=name.replace(/\.webm$/,".mov");
+      setPhase(p=>`Converting to MOV: ${movName.split("/").pop()}…`);
+      try{
+        if(!_ffmpeg||!_ffmpeg.loaded){setFfmpegLoading(true);await getFFmpeg();setFfmpegLoading(false);}
+        const movBlob=await webmToMov(blob,movName);
+        dl(movBlob,movName);
+        return;
+      }catch(e){console.warn("MOV conversion failed, falling back to WebM:",e);}
+    }
+    dl(blob,name);
   };
 
   const runExport=async()=>{
@@ -2358,7 +2407,7 @@ function ExportTab({project,brand,updateProject}){
         for(let i=0;i<selectedGfx.length;i++){
           try{
             const blob=await recordGraphic(selectedGfx[i],brand,ratio);
-            dl(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}_animated.webm`);
+            await dlBlob(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}_animated.webm`);
           }catch(e){console.error("WebM export failed for graphic",i,e);}
           tick(done+1);
           await new Promise(r=>setTimeout(r,200));
@@ -2370,7 +2419,7 @@ function ExportTab({project,brand,updateProject}){
         const compositeBlob=await recordCompositeVideo(selectedGfx,exportBrand,ratio,pct=>{
           setProg(p=>({...p,pct:(done/totalSteps)+(pct/totalSteps)}));
         });
-        dl(compositeBlob,`${pn}_${prefix}all_graphics_composite.webm`);
+        await dlBlob(compositeBlob,`${pn}_${prefix}all_graphics_composite.webm`);
         tick(done+1);
       }
       // Premiere XML for graphics (always include with pngseq, composite, or webm)
@@ -2384,7 +2433,7 @@ function ExportTab({project,brand,updateProject}){
         const blob=await recordCompositeCaption(subtitles,brand,captionStyle,ratio,pct=>{
           setProg(p=>({...p,pct:(done/totalSteps)+(pct/totalSteps)}));
         });
-        dl(blob,`${prefix}${pn}_captions_composite.webm`);
+        await dlBlob(blob,`${prefix}${pn}_captions_composite.webm`);
         tick(done+1);
         // Also export Premiere XML so editor knows clip is one file starting at 00:00
         const xml=generatePremiereXML(subtitles,ratio,prefix);
@@ -2393,7 +2442,7 @@ function ExportTab({project,brand,updateProject}){
         setPhase(`${ratio} — rendering individual caption WebMs…`);
         for(let i=0;i<subtitles.length;i++){
           const blob=await recordCaption(subtitles[i],brand,captionStyle,ratio);
-          dl(blob,`${prefix}caption_${String(subtitles[i].index).padStart(3,"0")}.webm`);
+          await dlBlob(blob,`${prefix}caption_${String(subtitles[i].index).padStart(3,"0")}.webm`);
           tick(done+1);
           await new Promise(r=>setTimeout(r,150));
         }
@@ -2470,6 +2519,14 @@ function ExportTab({project,brand,updateProject}){
               </button>
             ))}
           </div>
+          {/* MOV conversion toggle — only show for webm/both/composite modes */}
+          {(gfxMode==="webm"||gfxMode==="both"||gfxMode==="composite")&&(
+            <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 0",marginTop:DS.xs}} onClick={()=>setConvertMov(v=>!v)}>
+              <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${convertMov?"#FB8770":"rgba(255,255,255,0.18)"}`,background:convertMov?"#FB8770":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{convertMov&&"✓"}</div>
+              <span style={{fontWeight:700,fontSize:13}}>Convert to MOV</span>
+              <span style={{fontSize:11,opacity:0.45}}>Premiere-native format with transparency (PNG codec). First use downloads ~31MB engine.</span>
+            </div>
+          )}
         </div>
       )}
 

@@ -10,6 +10,8 @@
     "add-demo": "node scripts/add-demo.mjs"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.3.1",
     "clsx": "^2.1.1",
