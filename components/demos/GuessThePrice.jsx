@@ -3013,15 +3013,13 @@ export default function GuessThePrice({ displayMode = false }) {
     if (!drawFn) return;
     const asset = ASSETS.find(a => a.id === ds.asset);
 
-    if (asset?.animated) {
-      cancelAnimationFrame(displayAnimRef.current);
-      const numPhotos = Math.max(1, ds.roundData?.photos?.length || 1);
-      const dur = ds.asset === "intro" ? 6000
-        : ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000
-        : ds.asset === "property" ? (ds.S?.photoDuration || 5) * numPhotos * 1000
-        : 3000;
+    cancelAnimationFrame(displayAnimRef.current);
 
-      const runAnimation = (startTime) => {
+    if (ds.asset === "property") {
+      // Property: loop photo cycle continuously
+      const numPhotos = Math.max(1, ds.roundData?.photos?.length || 1);
+      const dur = (ds.S?.photoDuration || 5) * numPhotos * 1000;
+      const runLoop = (startTime) => {
         const tick = (now) => {
           const p = Math.min(1, (now - startTime) / dur);
           const r2now = { W: Math.round(screen.width * window.devicePixelRatio), H: Math.round(screen.height * window.devicePixelRatio) };
@@ -3029,18 +3027,15 @@ export default function GuessThePrice({ displayMode = false }) {
           const cx = canvas.getContext("2d");
           cx.clearRect(0, 0, r2now.W, r2now.H);
           drawFn(cx, r2now.W, r2now.H, ds.S, p);
-          if (p < 1) {
-            displayAnimRef.current = requestAnimationFrame(tick);
-          } else if (ds.asset === "property") {
-            // Loop property photo cycle
-            runAnimation(performance.now());
-          }
+          if (p < 1) displayAnimRef.current = requestAnimationFrame(tick);
+          else runLoop(performance.now());
         };
         displayAnimRef.current = requestAnimationFrame(tick);
       };
-      runAnimation(performance.now());
+      runLoop(performance.now());
     } else {
-      drawFn(ctx, r2.W, r2.H, ds.S);
+      // All other assets: render at final frame (p=1) and hold
+      drawFn(ctx, r2.W, r2.H, ds.S, 1);
     }
   }, [displayMode, displayState]);
 
