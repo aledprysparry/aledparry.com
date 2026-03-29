@@ -3024,13 +3024,12 @@ export default function GuessThePrice({ displayMode = false }) {
   useEffect(() => {
     if (!displayMode || !displayState) return;
     const ds = displayState;
-    // Only include fields that matter for each asset — avoids restarting animations needlessly
+    // Key determines whether to restart the animation
+    // Use ts for sequence assets so each push replays the animation
     const newKey = ds.asset === "property" ? `property_${ds.round}`
-      : ds.asset === "lockin" ? `lockin_${ds.round}_${ds.S?.lockLetter || ""}`
       : ds.asset === "scoreboard" ? `scoreboard_${ds.round}_${(ds.scores || []).join(",")}`
-      : `${ds.asset}_${ds.round}`;
+      : `${ds.asset}_${ds.round}_${ds.ts}`;
     if (newKey === displayKeyRef.current) {
-      // Same slide, same data — skip entirely. Don't interrupt running animations.
       return;
     }
     displayKeyRef.current = newKey;
@@ -3091,7 +3090,7 @@ export default function GuessThePrice({ displayMode = false }) {
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
         onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}>
         <canvas ref={canvasRef}
-          style={{ display: "block", maxWidth: "100%", maxHeight: "100%" }} />
+          style={{ display: "block", width: "100vw", height: "100dvh" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
