@@ -1748,13 +1748,13 @@ export default function GuessThePrice({ displayMode = false }) {
       // Instant same-browser delivery via BroadcastChannel
       try { const bc = new BroadcastChannel(GTP_CHANNEL_NAME); bc.postMessage(state); bc.close(); } catch {}
 
-      // Persist to blob for cross-device
-      await fetch("/api/gtp/live", {
+      // Persist to server for cross-device (fire and forget — don't block)
+      fetch("/api/gtp/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state),
-      });
-      setLiveConnected(true);
+      }).then(() => setLiveConnected(true)).catch(() => setLiveConnected(false));
+      if (!liveConnected) setLiveConnected(true);
     } catch {
       setLiveConnected(false);
     }
@@ -3053,10 +3053,10 @@ export default function GuessThePrice({ displayMode = false }) {
 
   if (displayMode) {
     return (
-      <div style={{ position: "fixed", inset: 0, background: GAME.navy, display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
+      <div style={{ position: "fixed", inset: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
         onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}>
         <canvas ref={canvasRef} width={Math.round(window.innerWidth * window.devicePixelRatio)} height={Math.round(window.innerHeight * window.devicePixelRatio)}
-          style={{ width: "100vw", height: "100vh", display: "block" }} />
+          style={{ width: "100vw", height: "100dvh", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
