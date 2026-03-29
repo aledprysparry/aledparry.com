@@ -2988,7 +2988,8 @@ export default function GuessThePrice({ displayMode = false }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ds = displayState;
-    const r2 = { W: Math.round(screen.width * window.devicePixelRatio), H: Math.round(screen.height * window.devicePixelRatio) };
+    const dpr = window.devicePixelRatio || 1;
+    const r2 = { W: Math.round(window.innerWidth * dpr), H: Math.round(window.innerHeight * dpr) };
     canvas.width = r2.W;
     canvas.height = r2.H;
     const ctx = canvas.getContext("2d");
@@ -3022,7 +3023,8 @@ export default function GuessThePrice({ displayMode = false }) {
       const runLoop = (startTime) => {
         const tick = (now) => {
           const p = Math.min(1, (now - startTime) / dur);
-          const r2now = { W: Math.round(screen.width * window.devicePixelRatio), H: Math.round(screen.height * window.devicePixelRatio) };
+          const dpr2 = window.devicePixelRatio || 1;
+          const r2now = { W: Math.round(window.innerWidth * dpr2), H: Math.round(window.innerHeight * dpr2) };
           if (canvas.width !== r2now.W || canvas.height !== r2now.H) { canvas.width = r2now.W; canvas.height = r2now.H; }
           const cx = canvas.getContext("2d");
           cx.clearRect(0, 0, r2now.W, r2now.H);
@@ -3048,10 +3050,10 @@ export default function GuessThePrice({ displayMode = false }) {
 
   if (displayMode) {
     return (
-      <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden", WebkitUserSelect: "none", userSelect: "none" }}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
         onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}>
-        <canvas ref={canvasRef} width={Math.round(screen.width * window.devicePixelRatio)} height={Math.round(screen.height * window.devicePixelRatio)}
-          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "block", objectFit: "fill" }} />
+        <canvas ref={canvasRef}
+          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
