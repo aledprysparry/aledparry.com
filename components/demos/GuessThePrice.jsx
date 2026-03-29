@@ -1125,33 +1125,37 @@ function drawReveal(ctx, W, H, S, progress) {
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
 
-    // Letter — scale in with elastic
+    // Letter — scale in with elastic, WHITE with coloured glow
     if (rp > 0.05) {
       const letterP = Math.min(1, (rp - 0.05) / 0.3);
       const scale = easeOutBack(letterP);
       const letterSz = sz(W, H, ar === "portrait" ? 0.30 : 0.22) * scale;
       ctx.save();
       ctx.shadowColor = cc;
-      ctx.shadowBlur = sz(W, H, 0.06) * Math.min(1, rp * 2);
+      ctx.shadowBlur = sz(W, H, 0.08) * Math.min(1, rp * 2);
       ctx.font = `800 ${Math.round(letterSz)}px 'DM Sans', sans-serif`;
-      ctx.fillStyle = cc;
+      ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(cl, W / 2, centerY - sz(W, H, 0.02));
+      ctx.fillText(cl, W / 2, centerY - sz(W, H, 0.04));
       ctx.restore();
     }
 
-    // Price — fade up
+    // Price — fade up, BIGGER
     if (rp > 0.45) {
       const priceP = Math.min(1, (rp - 0.45) / 0.25);
       const a = easeOutExpo(priceP);
-      const priceSz = sz(W, H, ar === "portrait" ? 0.09 : 0.07);
-      ctx.font = `700 ${priceSz}px 'DM Sans', sans-serif`;
+      const priceSz = sz(W, H, ar === "portrait" ? 0.12 : 0.09);
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.4)";
+      ctx.shadowBlur = priceSz * 0.1;
+      ctx.font = `800 ${priceSz}px 'DM Sans', sans-serif`;
       ctx.fillStyle = `rgba(255,255,255,${a})`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      const priceY = centerY + sz(W, H, ar === "portrait" ? 0.18 : 0.15);
+      const priceY = centerY + sz(W, H, ar === "portrait" ? 0.18 : 0.14);
       ctx.fillText(`\u00a3${cp}`, W / 2, priceY + (1 - a) * sz(W, H, 0.02));
+      ctx.restore();
     }
 
     // "CORRECT PRICE" label
