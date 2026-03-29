@@ -2982,20 +2982,15 @@ export default function GuessThePrice({ displayMode = false }) {
     return () => { clearInterval(displayPollRef.current); try { bc?.close(); } catch {} };
   }, [displayMode]);
 
-  // Render display canvas when state changes — uses SAME draw functions as editor
+  // Keep a ref to the current display state so the animation loop always reads the latest
+  const displayStateRef = useRef(null);
+  const displayKeyRef = useRef(""); // tracks asset+round to detect actual slide changes
+  useEffect(() => { displayStateRef.current = displayState; }, [displayState]);
+
+  // Update EPISODE data whenever display state changes (without restarting animations)
   useEffect(() => {
     if (!displayMode || !displayState) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
     const ds = displayState;
-    const dpr = window.devicePixelRatio || 1;
-    const r2 = { W: Math.round(window.innerWidth * dpr), H: Math.round(window.innerHeight * dpr) };
-    canvas.width = r2.W;
-    canvas.height = r2.H;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, r2.W, r2.H);
-
-    // Update module-level EPISODE with full round data from server
     const roundIdx = (ds.round || 1) - 1;
     const updatedRounds = [...(EPISODE.rounds || [])];
     if (ds.roundData) {
@@ -3009,36 +3004,83 @@ export default function GuessThePrice({ displayMode = false }) {
       logoImage: ds.logoImage || "",
       rounds: updatedRounds,
     };
+  }, [displayMode, displayState]);
+
+  // Render display canvas — only restarts animation when asset or round changes
+  useEffect(() => {
+    if (!displayMode || !displayState) return;
+    const ds = displayState;
+    // Include lock letter and scores so resets/changes within the same asset are detected
+    const newKey = `${ds.asset}_${ds.round}_${ds.S?.lockLetter || ""}_${ds.S?.revealLetter || ""}_${(ds.scores || []).join(",")}`;
+    if (newKey === displayKeyRef.current) {
+      // Same slide — just re-draw static assets with updated S (scores etc.)
+      if (ds.asset !== "property") {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const dpr = window.devicePixelRatio || 1;
+        const r2 = { W: Math.round(window.innerWidth * dpr), H: Math.round(window.innerHeight * dpr) };
+        canvas.width = r2.W;
+        canvas.height = r2.H;
+        const drawFn = DRAW_FNS[ds.asset];
+        if (drawFn) drawFn(canvas.getContext("2d"), r2.W, r2.H, ds.S, 1);
+      }
+      return;
+    }
+    displayKeyRef.current = newKey;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const r2 = { W: Math.round(window.innerWidth * dpr), H: Math.round(window.innerHeight * dpr) };
+    canvas.width = r2.W;
+    canvas.height = r2.H;
 
     const drawFn = DRAW_FNS[ds.asset];
     if (!drawFn) return;
-    const asset = ASSETS.find(a => a.id === ds.asset);
 
     cancelAnimationFrame(displayAnimRef.current);
 
     if (ds.asset === "property") {
-      // Property: loop photo cycle continuously
-      const numPhotos = Math.max(1, ds.roundData?.photos?.length || 1);
-      const dur = (ds.S?.photoDuration || 5) * numPhotos * 1000;
+      // Property: loop photo cycle continuously, reads latest S from ref
       const runLoop = (startTime) => {
         const tick = (now) => {
+          const curDs = displayStateRef.current;
+          if (!curDs || curDs.asset !== "property") return; // asset changed, stop
+          const numPhotos = Math.max(1, curDs.roundData?.photos?.length || 1);
+          const dur = (curDs.S?.photoDuration || 5) * numPhotos * 1000;
           const p = Math.min(1, (now - startTime) / dur);
           const dpr2 = window.devicePixelRatio || 1;
           const r2now = { W: Math.round(window.innerWidth * dpr2), H: Math.round(window.innerHeight * dpr2) };
           if (canvas.width !== r2now.W || canvas.height !== r2now.H) { canvas.width = r2now.W; canvas.height = r2now.H; }
           const cx = canvas.getContext("2d");
           cx.clearRect(0, 0, r2now.W, r2now.H);
-          drawFn(cx, r2now.W, r2now.H, ds.S, p);
+          DRAW_FNS.property(cx, r2now.W, r2now.H, curDs.S, p);
           if (p < 1) displayAnimRef.current = requestAnimationFrame(tick);
           else runLoop(performance.now());
         };
         displayAnimRef.current = requestAnimationFrame(tick);
       };
       runLoop(performance.now());
+    } else if (["lockin", "timer", "reveal"].includes(ds.asset)) {
+      // Sequence assets: play entrance animation then hold at final frame
+      const dur = ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000 : 3000;
+      const start = performance.now();
+      const tick = (now) => {
+        const p = Math.min(1, (now - start) / dur);
+        const dpr2 = window.devicePixelRatio || 1;
+        const r2now = { W: Math.round(window.innerWidth * dpr2), H: Math.round(window.innerHeight * dpr2) };
+        if (canvas.width !== r2now.W || canvas.height !== r2now.H) { canvas.width = r2now.W; canvas.height = r2now.H; }
+        const cx = canvas.getContext("2d");
+        cx.clearRect(0, 0, r2now.W, r2now.H);
+        drawFn(cx, r2now.W, r2now.H, ds.S, p);
+        if (p < 1) displayAnimRef.current = requestAnimationFrame(tick);
+      };
+      displayAnimRef.current = requestAnimationFrame(tick);
     } else {
       // All other assets: render at final frame (p=1) and hold
-      drawFn(ctx, r2.W, r2.H, ds.S, 1);
+      drawFn(canvas.getContext("2d"), r2.W, r2.H, ds.S, 1);
     }
+    return () => cancelAnimationFrame(displayAnimRef.current);
   }, [displayMode, displayState]);
 
   // Show/hide UI on mouse/touch activity
