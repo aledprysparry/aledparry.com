@@ -2296,6 +2296,18 @@ export default function GuessThePrice({ displayMode = false }) {
     EPISODE = episode;
     let fileCount = 0;
 
+    // Export intro slide
+    setExportStatus("Exporting intro…");
+    canvas.width = rat.W;
+    canvas.height = rat.H;
+    const introCtx = canvas.getContext("2d");
+    introCtx.clearRect(0, 0, rat.W, rat.H);
+    DRAW_FNS.intro(introCtx, rat.W, rat.H, S, 1);
+    const introBlob = await new Promise(res => canvas.toBlob(res, "image/png"));
+    if (introBlob) zip.file("00_intro.png", introBlob);
+    fileCount++;
+    await new Promise(r => setTimeout(r, 50));
+
     for (let ri = 0; ri < rounds.length; ri++) {
       const round = rounds[ri];
       if (!round.address && !round.optionA) continue;
