@@ -1,4 +1,4 @@
-import { put, list, del, get } from "@vercel/blob";
+import { put, list, get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 const LIVE_PREFIX = "gtp/live/";
@@ -8,7 +8,7 @@ async function getLiveState(): Promise<string | null> {
     const { blobs } = await list({ prefix: LIVE_PREFIX });
     if (!blobs.length) return null;
     const result = await get(blobs[blobs.length - 1].url, { access: "private" });
-    if (!result) return null;
+    if (!result || result.statusCode !== 200) return null;
     return new Response(result.stream).text();
   } catch {
     return null;
@@ -47,12 +47,10 @@ export async function POST(req: Request) {
     };
     const json = JSON.stringify(state);
 
-    // Overwrite the single live state blob
-    const { blobs } = await list({ prefix: LIVE_PREFIX });
-    if (blobs.length > 0) {
-      await del(blobs.map((b) => b.url));
-    }
-    await put(LIVE_PREFIX + "state.json", json, { access: "private" });
+    await put(LIVE_PREFIX + "state.json", json, {
+      access: "private",
+      allowOverwrite: true,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {

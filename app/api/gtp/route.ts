@@ -1,4 +1,4 @@
-import { put, list, del, get } from "@vercel/blob";
+import { put, list, get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 const LATEST_PREFIX = "gtp/latest/";
@@ -7,7 +7,7 @@ const SNAPSHOT_PREFIX = "gtp/snapshots/";
 async function fetchBlob(blobUrl: string): Promise<string | null> {
   try {
     const result = await get(blobUrl, { access: "private" });
-    if (!result) return null;
+    if (!result || result.statusCode !== 200) return null;
     return new Response(result.stream).text();
   } catch {
     return null;
@@ -87,11 +87,10 @@ export async function POST(req: Request) {
     };
     const json = JSON.stringify(data);
 
-    const { blobs: latestBlobs } = await list({ prefix: LATEST_PREFIX });
-    if (latestBlobs.length > 0) {
-      await del(latestBlobs.map((b) => b.url));
-    }
-    await put(LATEST_PREFIX + "data.json", json, { access: "private" });
+    await put(LATEST_PREFIX + "data.json", json, {
+      access: "private",
+      allowOverwrite: true,
+    });
 
     if (snapshotName) {
       const ts = new Date().toISOString().replace(/[:.]/g, "-");
@@ -100,6 +99,7 @@ export async function POST(req: Request) {
         .slice(0, 50);
       await put(`${SNAPSHOT_PREFIX}${ts}_${safeName}.json`, json, {
         access: "private",
+        allowOverwrite: true,
       });
     }
 

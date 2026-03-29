@@ -18,6 +18,7 @@ export async function POST(req: Request) {
     const blob = await put(filename, buffer, {
       access: "private",
       contentType: ext === "png" ? "image/png" : "image/jpeg",
+      allowOverwrite: true,
     });
 
     // Return a proxy URL that serves the private blob through our API
