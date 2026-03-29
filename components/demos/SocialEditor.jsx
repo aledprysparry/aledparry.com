@@ -1945,6 +1945,17 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   };
 
   const [editingIdx,setEditingIdx]=useState(null);
+  const [dragIdx,setDragIdx]=useState(null);
+  const [dragOverIdx,setDragOverIdx]=useState(null);
+  const handleDrop=(fromIdx,toIdx)=>{
+    if(fromIdx===toIdx||fromIdx==null||toIdx==null) return;
+    const ng=[...graphics];
+    const [moved]=ng.splice(fromIdx,1);
+    ng.splice(toIdx,0,moved);
+    // Update timecodes to match new order (optional — keeps manual reorder)
+    updateProject({graphics:ng,selected:ng.map((_,i)=>i),previews:{}});
+    setDragIdx(null);setDragOverIdx(null);
+  };
   const [regenLoading,setRegenLoading]=useState(false);
 
   const regenerateSegment=async(i,prompt,templateHint)=>{
@@ -2085,8 +2096,10 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           {graphics.map((g,i)=>{
             const meta=TMPL[g.template]||{label:g.template,type:"?"};const sel=selected.has(i);const effectiveType=g.typeOverride||meta.type||"fullscreen";const isOv=effectiveType==="overlay";const isExp=exporting.has(i);const showAnim=animIdx===i;
             return(
-              <div key={i} style={{marginBottom:8}}>
-                <div style={{background:sel?DS.bgCardHover:"rgba(255,255,255,0.025)",border:`1px solid ${editingIdx===i?DS.positiveBorder:sel?DS.borderActive:DS.borderSubtle}`,borderRadius:DS.rMd+2,padding:"11px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}} onClick={()=>setSelected(s=>{const n=new Set(s);n.has(i)?n.delete(i):n.add(i);return n;})}>
+              <div key={i} style={{marginBottom:8,opacity:dragIdx===i?0.4:1,transform:dragOverIdx===i?"translateY(4px)":"none",transition:"transform 0.15s,opacity 0.15s"}}
+                draggable onDragStart={e=>{setDragIdx(i);e.dataTransfer.effectAllowed="move";}} onDragEnd={()=>{setDragIdx(null);setDragOverIdx(null);}} onDragOver={e=>{e.preventDefault();setDragOverIdx(i);}} onDrop={e=>{e.preventDefault();handleDrop(dragIdx,i);}}>
+                <div style={{background:sel?DS.bgCardHover:"rgba(255,255,255,0.025)",border:`1px solid ${dragOverIdx===i&&dragIdx!==i?"#2A9D8F":editingIdx===i?DS.positiveBorder:sel?DS.borderActive:DS.borderSubtle}`,borderRadius:DS.rMd+2,padding:"11px 13px",cursor:"grab",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}} onClick={()=>setSelected(s=>{const n=new Set(s);n.has(i)?n.delete(i):n.add(i);return n;})}>
+                  <div style={{cursor:"grab",color:DS.textMuted,fontSize:14,flexShrink:0,lineHeight:1,userSelect:"none"}} title="Drag to reorder">⠿</div>
                   <div style={{width:19,height:19,borderRadius:5,border:`2px solid ${sel?brand.colorPositive:"rgba(255,255,255,0.18)"}`,background:sel?brand.colorPositive:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,flexShrink:0,fontWeight:700}}>{sel&&"✓"}</div>
                   <div style={{width:5,height:38,borderRadius:3,background:isOv?brand.colorPositive:tplBg(g.template),flexShrink:0}}/>
                   <div style={{flex:1,minWidth:0}}>
@@ -2431,6 +2444,20 @@ function ExportTab({project,brand,updateProject}){
 
   return(
     <div>
+      {/* Quick Export — one-click with current settings */}
+      {selectedGfx.length>0&&(
+        <div style={{marginBottom:DS.xl,display:"flex",gap:DS.md,alignItems:"stretch"}}>
+          <button onClick={runExport} style={{flex:1,background:`linear-gradient(135deg,${brand.colorPrimary||"#1a5c5e"},${brand.colorForest||"#4a6741"})`,border:"none",borderRadius:DS.rLg,padding:`${DS.xl}px`,cursor:"pointer",color:"#fff",fontFamily:"inherit",transition:"all 0.2s",textAlign:"left"}}>
+            <div style={{fontSize:22,fontWeight:900,marginBottom:4}}>⚡ Quick Export</div>
+            <div style={{fontSize:12,opacity:0.8}}>{selectedGfx.length} graphics · {selectedRatios.join(" · ")} · {gfxMode==="premiere"?"Premiere Ready":gfxMode}</div>
+          </button>
+          <div style={{background:DS.bgCard,border:`1px solid ${DS.borderSubtle}`,borderRadius:DS.rLg,padding:`${DS.md}px ${DS.lg}px`,display:"flex",flexDirection:"column",justifyContent:"center",minWidth:140}}>
+            <div style={{fontSize:10,textTransform:"uppercase",fontWeight:700,color:DS.textMuted,marginBottom:4}}>Format</div>
+            <div style={{fontSize:13,fontWeight:700}}>{gfxMode==="premiere"?"Premiere Ready":gfxMode==="png"?"PNG Stills":gfxMode==="webm"?"WebM":gfxMode==="pngseq"?"PNG Seq":gfxMode==="composite"?"Composite":"Everything"}</div>
+          </div>
+        </div>
+      )}
+
       {/* Graphics export mode */}
       {selectedGfx.length>0&&(
         <div style={{marginBottom:DS.lg+2}}>
