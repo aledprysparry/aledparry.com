@@ -144,11 +144,13 @@ const GAME = {
 //  IMAGE CACHE
 // ═══════════════════════════════════════════════════════════════
 const IMG_CACHE = {};
+let _imgLoadCallback = null; // set by component to trigger re-render on image load
 function getCachedImage(src) {
   if (!src) return null;
   if (IMG_CACHE[src]) return IMG_CACHE[src].complete ? IMG_CACHE[src] : null;
   const img = new Image();
   img.crossOrigin = "anonymous";
+  img.onload = () => { if (_imgLoadCallback) _imgLoadCallback(); };
   img.src = src;
   IMG_CACHE[src] = img;
   return img.complete ? img : null;
@@ -1344,6 +1346,13 @@ export default function GuessThePrice({ displayMode = false }) {
     timerDuration: 3,
   });
 
+  // ── Image load trigger — forces re-render when cached images finish loading ──
+  const [, setImgTick] = useState(0);
+  useEffect(() => {
+    _imgLoadCallback = () => setImgTick(t => t + 1);
+    return () => { _imgLoadCallback = null; };
+  }, []);
+
   // ── Load from localStorage on mount ──
   useEffect(() => {
     loadFont("DM Sans");
@@ -1554,9 +1563,7 @@ export default function GuessThePrice({ displayMode = false }) {
     const rd = episode.rounds[currentRound];
     if (!rd) return;
     const existing = rd.photos || [];
-    const remaining = 20 - existing.length;
-    if (remaining <= 0) { setSaveStatus("Max 20 photos per round"); setTimeout(() => setSaveStatus(""), 3000); return; }
-    const toProcess = Array.from(files).slice(0, remaining);
+    const toProcess = Array.from(files);
     const compressed = await Promise.all(toProcess.map(f => compressPhoto(f, existing.length)));
     const newPhotos = [...existing, ...compressed];
     updateRoundField("photos", newPhotos);
