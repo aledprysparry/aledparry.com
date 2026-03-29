@@ -2870,7 +2870,7 @@ export default function GuessThePrice({ displayMode = false }) {
         onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}
         onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
         <canvas ref={canvasRef} width={1920} height={1080}
-          style={{ width: "100vw", height: "100vh", objectFit: "cover", display: "block" }} />
+          style={{ width: "100vw", height: "100vh", objectFit: "contain", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
