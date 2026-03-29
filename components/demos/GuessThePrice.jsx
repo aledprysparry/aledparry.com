@@ -3074,10 +3074,10 @@ export default function GuessThePrice({ displayMode = false }) {
     const currentFlowAsset = LIVE_FLOW[liveStep];
 
     return (
-      <div style={{ position: "fixed", inset: 0, zIndex: 9998, background: "#000", fontFamily: DS.font, touchAction: "none" }}>
-        {/* Fullscreen canvas */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 9998, background: "#000", fontFamily: DS.font, touchAction: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Fullscreen canvas — letterboxed to maintain aspect ratio */}
         <canvas ref={canvasRef} width={r.W} height={r.H}
-          style={{ width: "100vw", height: "100vh", objectFit: "contain", display: "block" }}
+          style={{ maxWidth: "100vw", maxHeight: "100vh", width: `min(100vw, calc(100vh * ${r.W / r.H}))`, height: `min(100vh, calc(100vw * ${r.H / r.W}))`, display: "block" }}
           onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} />
 
         {/* Floating overlay */}
