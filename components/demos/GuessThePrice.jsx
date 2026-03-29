@@ -2140,8 +2140,8 @@ export default function GuessThePrice({ displayMode = false }) {
                     // Auto-show scoreboard after reveal
                     sequenceRef.current = setTimeout(() => {
                       setActiveAsset("scoreboard");
-                      setAnimProgress(0);
-                      setTimeout(() => playAnimation(), 100);
+                      setAnimProgress(1);
+                      renderRef.current(1);
                     }, 1500);
                   }
                 };
