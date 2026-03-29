@@ -2949,8 +2949,7 @@ function ProjectView({project,brand,updateProject,onBack}){
           <input ref={fileRef} type="file" accept=".srt,.txt,.mp4,.mov,.m4a,.mp3,.wav,.webm,.ogg" style={{display:"none"}} onChange={e=>e.target.files[0]&&handleFile(e.target.files[0])}/>
         </div>
 
-        {/* Title card panel — always visible */}
-        <TitleCardPanel project={project} brand={brand} updateProject={updateProject}/>
+        {/* Title card + endboard now live in the graphics timeline as regular segments */}
 
         {/* Tab content */}
         {!hasSRT
