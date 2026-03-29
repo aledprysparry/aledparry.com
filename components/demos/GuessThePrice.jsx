@@ -3037,46 +3037,39 @@ export default function GuessThePrice({ displayMode = false }) {
 
     cancelAnimationFrame(displayAnimRef.current);
 
-    if (ds.asset === "property") {
-      // Property: loop photo cycle continuously, reads latest S from ref
-      const runLoop = (startTime) => {
-        const tick = (now) => {
-          const curDs = displayStateRef.current;
-          if (!curDs || curDs.asset !== "property") return; // asset changed, stop
-          const numPhotos = Math.max(1, curDs.roundData?.photos?.length || 1);
-          const dur = (curDs.S?.photoDuration || 5) * numPhotos * 1000;
-          const p = Math.min(1, (now - startTime) / dur);
-          const dpr2 = window.devicePixelRatio || 1;
-          const r2now = { W: Math.round(window.innerWidth * dpr2), H: Math.round(window.innerHeight * dpr2) };
-          if (canvas.width !== r2now.W || canvas.height !== r2now.H) { canvas.width = r2now.W; canvas.height = r2now.H; }
-          const cx = canvas.getContext("2d");
-          cx.clearRect(0, 0, r2now.W, r2now.H);
-          DRAW_FNS.property(cx, r2now.W, r2now.H, curDs.S, p);
-          if (p < 1) displayAnimRef.current = requestAnimationFrame(tick);
-          else runLoop(performance.now());
-        };
-        displayAnimRef.current = requestAnimationFrame(tick);
-      };
-      runLoop(performance.now());
-    } else if (["lockin", "timer", "reveal"].includes(ds.asset)) {
-      // Sequence assets: play entrance animation then hold at final frame
-      const dur = ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000 : 3000;
-      const start = performance.now();
+    // Calculate animation duration per asset
+    const numPhotos = Math.max(1, ds.roundData?.photos?.length || 1);
+    const dur = ds.asset === "intro" ? 6000
+      : ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000
+      : ds.asset === "property" ? (ds.S?.photoDuration || 5) * numPhotos * 1000
+      : 3000;
+
+    // All assets play their entrance animation, then hold at p=1
+    // Property loops continuously after finishing
+    const runAnimation = (startTime) => {
       const tick = (now) => {
-        const p = Math.min(1, (now - start) / dur);
+        const curDs = displayStateRef.current;
+        if (!curDs || curDs.asset !== ds.asset) return; // asset changed, stop
+        const p = Math.min(1, (now - startTime) / dur);
         const dpr2 = window.devicePixelRatio || 1;
         const r2now = { W: Math.round(window.innerWidth * dpr2), H: Math.round(window.innerHeight * dpr2) };
         if (canvas.width !== r2now.W || canvas.height !== r2now.H) { canvas.width = r2now.W; canvas.height = r2now.H; }
         const cx = canvas.getContext("2d");
         cx.clearRect(0, 0, r2now.W, r2now.H);
-        drawFn(cx, r2now.W, r2now.H, ds.S, p);
-        if (p < 1) displayAnimRef.current = requestAnimationFrame(tick);
+        // Property reads latest S from ref for live data updates
+        const drawS = ds.asset === "property" ? (displayStateRef.current?.S || ds.S) : ds.S;
+        drawFn(cx, r2now.W, r2now.H, drawS, p);
+        if (p < 1) {
+          displayAnimRef.current = requestAnimationFrame(tick);
+        } else if (ds.asset === "property") {
+          // Property: loop photo cycle
+          runAnimation(performance.now());
+        }
+        // All other assets: animation stops at p=1, holding the final frame
       };
       displayAnimRef.current = requestAnimationFrame(tick);
-    } else {
-      // All other assets: render at final frame (p=1) and hold
-      drawFn(canvas.getContext("2d"), r2.W, r2.H, ds.S, 1);
-    }
+    };
+    runAnimation(performance.now());
     return () => cancelAnimationFrame(displayAnimRef.current);
   }, [displayMode, displayState]);
 
