@@ -1224,7 +1224,7 @@ const DRAW_FNS = {
 // ═══════════════════════════════════════════════════════════════
 //  MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════
-export default function GuessThePrice() {
+export default function GuessThePrice({ displayMode = false }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const saveTimerRef = useRef(null);
@@ -1355,6 +1355,32 @@ export default function GuessThePrice() {
     } catch {
       setSaveStatus("Snapshot failed");
       setTimeout(() => setSaveStatus(""), 5000);
+    }
+  };
+
+  // ── Push current state to live display ──
+  const [liveConnected, setLiveConnected] = useState(false);
+  const pushToLive = async (overrideAsset, overrideS) => {
+    try {
+      const rd = episode.rounds[currentRound] || {};
+      await fetch("/api/gtp/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          asset: overrideAsset || activeAsset,
+          round: currentRound + 1,
+          S: overrideS || S,
+          scores,
+          agents: episode.agents,
+          agentImages: episode.agentImages || [],
+          logoImage: episode.logoImage || "",
+          photos: rd.photos || [],
+          heroPhotoIndex: rd.heroPhotoIndex || 0,
+        }),
+      });
+      setLiveConnected(true);
+    } catch {
+      setLiveConnected(false);
     }
   };
 
@@ -2234,6 +2260,103 @@ export default function GuessThePrice() {
   const isRoundEmpty = (rd) => !rd.address;
 
   // ═══════════════════════════════════════════════════════════
+  //  DISPLAY MODE — fullscreen canvas, polls /api/gtp/live
+  // ═══════════════════════════════════════════════════════════
+  const [displayState, setDisplayState] = useState(null);
+  const displayPollRef = useRef(null);
+  const displayAnimRef = useRef(null);
+  const lastTsRef = useRef(0);
+
+  useEffect(() => {
+    if (!displayMode) return;
+    loadFont("DM Sans");
+    loadFont("Lora");
+    getCachedImage(BRAND.logoUrl);
+    getCachedImage(BRAND.logoUrlLight);
+
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/gtp/live");
+        const data = await res.json();
+        if (data.ts && data.ts !== lastTsRef.current) {
+          lastTsRef.current = data.ts;
+          setDisplayState(data);
+          // Pre-cache any images
+          if (data.logoImage) getCachedImage(data.logoImage);
+          (data.agentImages || []).forEach(u => u && getCachedImage(u));
+          (data.photos || []).forEach(u => u && getCachedImage(u));
+        }
+      } catch { /* retry next poll */ }
+    };
+    poll();
+    displayPollRef.current = setInterval(poll, 500);
+    return () => clearInterval(displayPollRef.current);
+  }, [displayMode]);
+
+  // Render display canvas when state changes
+  useEffect(() => {
+    if (!displayMode || !displayState) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ds = displayState;
+    const r2 = RATIOS["16:9"];
+    canvas.width = r2.W;
+    canvas.height = r2.H;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, r2.W, r2.H);
+
+    // Update module-level EPISODE for draw functions
+    EPISODE = {
+      ...EPISODE,
+      agents: ds.agents || ["Agent 1", "Agent 2"],
+      agentImages: ds.agentImages || ["", ""],
+      logoImage: ds.logoImage || "",
+      rounds: EPISODE.rounds || [],
+    };
+
+    const drawFn = DRAW_FNS[ds.asset];
+    if (!drawFn) return;
+    const asset = ASSETS.find(a => a.id === ds.asset);
+
+    // For property gallery with photos
+    if (ds.asset === "property" && ds.photos && ds.photos.length > 0) {
+      const src = ds.photos[ds.heroPhotoIndex || 0] || null;
+      drawPropertyGallery(ctx, r2.W, r2.H, ds.S, src, 1, ds.heroPhotoIndex || 0, ds.photos.length);
+      return;
+    }
+
+    if (asset?.animated) {
+      // Animate over 3 seconds
+      cancelAnimationFrame(displayAnimRef.current);
+      const dur = ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000 : 3000;
+      const start = performance.now();
+      const tick = (now) => {
+        const p = Math.min(1, (now - start) / dur);
+        ctx.clearRect(0, 0, r2.W, r2.H);
+        drawFn(ctx, r2.W, r2.H, ds.S, p);
+        if (p < 1) displayAnimRef.current = requestAnimationFrame(tick);
+      };
+      displayAnimRef.current = requestAnimationFrame(tick);
+    } else {
+      drawFn(ctx, r2.W, r2.H, ds.S);
+    }
+  }, [displayMode, displayState]);
+
+  if (displayMode) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <canvas ref={canvasRef} width={1920} height={1080}
+          style={{ width: "100vw", height: "100vh", objectFit: "contain", display: "block" }} />
+        {!displayState && (
+          <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
+            Waiting for controller...
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
   //  LIVE MODE RENDER
   // ═══════════════════════════════════════════════════════════
   if (liveMode) {
@@ -2481,9 +2604,14 @@ export default function GuessThePrice() {
           )}
           <button onClick={exportRound} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export Round</button>
           <button onClick={exportPDF} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>iPad PDF</button>
+          <span style={{ width: 1, height: 24, background: DS.borderSubtle }} />
+          <button onClick={() => pushToLive()}
+            style={btn({ padding: "8px 20px", fontSize: DS.fsSm, fontWeight: 800, background: liveConnected ? "rgba(131,163,129,0.2)" : "rgba(251,135,112,0.15)", border: `1px solid ${liveConnected ? "rgba(131,163,129,0.3)" : "rgba(251,135,112,0.3)"}`, color: liveConnected ? BRAND.colorPositive : GAME.gold })}>
+            {liveConnected ? "Push to Live \u2713" : "Push to Live"}
+          </button>
         </div>
         {exportStatus && <span style={{ fontSize: DS.fsSm, color: GAME.gold }}>{exportStatus}</span>}
-        <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>{r.W} &times; {r.H} &middot; {activeAsset}</div>
+        <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>{r.W} &times; {r.H} &middot; {activeAsset}{liveConnected && " \u00b7 LIVE"}</div>
       </footer>
     </div>
   );
