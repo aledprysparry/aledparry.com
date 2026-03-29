@@ -1762,33 +1762,51 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // Upload a base64 photo to Vercel Blob, returns proxy URL
   const uploadPhotoToBlob = async (base64, roundIdx, photoIdx) => {
-    try {
-      const res = await fetch("/api/gtp/photo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photo: base64, episodeId: activeEpisodeId, round: roundIdx, index: photoIdx }),
-      });
-      const data = await res.json();
-      if (data.url) return data.url;
-    } catch {}
-    return base64; // fallback to base64 if upload fails
+    const res = await fetch("/api/gtp/photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photo: base64, episodeId: activeEpisodeId, round: roundIdx, index: photoIdx }),
+    });
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+    const data = await res.json();
+    if (!data.url) throw new Error("No URL returned");
+    return data.url;
   };
 
-  // Handle photo upload for current round — compress, upload to blob, store URL
+  // Handle photo upload — compress each, upload to blob one at a time, add to round as each completes
   const handlePhotoUpload = async (files) => {
     const rd = episode.rounds[currentRound];
     if (!rd) return;
-    const existing = rd.photos || [];
+    const roundIdx = currentRound;
     const toProcess = Array.from(files);
-    setSaveStatus(`Uploading ${toProcess.length} photo${toProcess.length > 1 ? "s" : ""}…`);
-    const compressed = await Promise.all(toProcess.map(f => compressPhoto(f, existing.length)));
-    const urls = await Promise.all(compressed.map((b64, i) => uploadPhotoToBlob(b64, currentRound, existing.length + i)));
-    const newPhotos = [...existing, ...urls];
-    updateRoundField("photos", newPhotos);
-    newPhotos.forEach(p => getCachedImage(p));
-    setSaveStatus(`${toProcess.length} photo${toProcess.length > 1 ? "s" : ""} added`);
-    setTimeout(() => setSaveStatus(""), 3000);
-    if (_saveWarning) { setSaveStatus(_saveWarning); setTimeout(() => setSaveStatus(""), 5000); }
+    const total = toProcess.length;
+    let uploaded = 0;
+    let failed = 0;
+    setSaveStatus(`Uploading 0/${total}…`);
+    for (const file of toProcess) {
+      try {
+        const b64 = await compressPhoto(file, uploaded);
+        const url = await uploadPhotoToBlob(b64, roundIdx, Date.now());
+        // Add each photo to the round immediately as it uploads
+        setEpisodes(prev => prev.map(ep => {
+          if (ep.id !== activeEpisodeId) return ep;
+          const rounds = [...ep.rounds];
+          if (rounds[roundIdx]) {
+            rounds[roundIdx] = { ...rounds[roundIdx], photos: [...(rounds[roundIdx].photos || []), url] };
+          }
+          return { ...ep, rounds };
+        }));
+        setDirty(true);
+        getCachedImage(url);
+        uploaded++;
+      } catch {
+        failed++;
+      }
+      setSaveStatus(`Uploading ${uploaded + failed}/${total}…`);
+    }
+    const msg = failed > 0 ? `${uploaded} added, ${failed} failed` : `${uploaded} photo${uploaded > 1 ? "s" : ""} added`;
+    setSaveStatus(msg);
+    setTimeout(() => setSaveStatus(""), 4000);
   };
 
   const removePhoto = (idx) => {
