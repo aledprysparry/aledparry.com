@@ -2292,25 +2292,22 @@ export default function GuessThePrice({ displayMode = false }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const assetsToExport = [
-      { asset: "property", suffix: "property" },
-      { asset: "options",  suffix: "options" },
-      { asset: "reveal",   suffix: "reveal" },
-    ];
-
     const rounds = episode.rounds || [];
-    const total = rounds.length * assetsToExport.length;
-    let done = 0;
+    EPISODE = episode;
+    let fileCount = 0;
 
     for (let ri = 0; ri < rounds.length; ri++) {
       const round = rounds[ri];
-      if (!round.address && !round.optionA) continue; // skip empty rounds
-      // Build S for this round
+      if (!round.address && !round.optionA) continue;
       const roundS = {
         ...S,
         propRound: round.number,
         propAddress: round.address,
         optionLocation: round.location,
+        propBeds: round.beds || 0,
+        propType: round.type || "",
+        propTenure: round.tenure || "",
+        propAddedDate: round.addedDate || "",
         optionA: round.optionA,
         optionB: round.optionB,
         optionC: round.optionC,
@@ -2320,13 +2317,29 @@ export default function GuessThePrice({ displayMode = false }) {
         lockLetter: round.correctLetter,
       };
 
-      // Temporarily update EPISODE round pointer for draw functions
-      const prevRound = currentRound;
-      EPISODE = episode;
+      const photos = round.photos || [];
+      const numPhotos = Math.max(1, photos.length);
 
-      for (const { asset, suffix } of assetsToExport) {
-        done++;
-        setExportStatus(`Exporting R${ri + 1} ${suffix}… (${done}/${total})`);
+      // Export each photo as a separate property slide
+      for (let pi = 0; pi < numPhotos; pi++) {
+        fileCount++;
+        setExportStatus(`R${ri + 1} photo ${pi + 1}/${numPhotos}…`);
+        canvas.width = rat.W;
+        canvas.height = rat.H;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, rat.W, rat.H);
+        // Set progress so drawProperty shows this specific photo
+        const progress = numPhotos > 1 ? (pi + 0.5) / numPhotos : 1;
+        DRAW_FNS.property(ctx, rat.W, rat.H, roundS, progress);
+        const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+        if (blob) zip.file(`R${ri + 1}_photo_${pi + 1}.png`, blob);
+        await new Promise(r => setTimeout(r, 50));
+      }
+
+      // Export options + reveal
+      for (const { asset, suffix } of [{ asset: "options", suffix: "options" }, { asset: "reveal", suffix: "reveal" }]) {
+        fileCount++;
+        setExportStatus(`R${ri + 1} ${suffix}…`);
         canvas.width = rat.W;
         canvas.height = rat.H;
         const ctx = canvas.getContext("2d");
@@ -2338,10 +2351,8 @@ export default function GuessThePrice({ displayMode = false }) {
           else drawFn(ctx, rat.W, rat.H, roundS);
         }
         const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
-        if (blob) {
-          zip.file(`R${ri + 1}_${suffix}.png`, blob);
-        }
-        await new Promise(r => setTimeout(r, 50)); // brief yield
+        if (blob) zip.file(`R${ri + 1}_${suffix}.png`, blob);
+        await new Promise(r => setTimeout(r, 50));
       }
     }
 
