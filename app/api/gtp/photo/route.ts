@@ -1,7 +1,7 @@
-import { put, getDownloadUrl } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
-// POST /api/gtp/photo — upload a base64 photo, returns a publicly accessible URL
+// POST /api/gtp/photo — upload a base64 photo, returns a proxy URL for browser access
 export async function POST(req: Request) {
   try {
     const { photo, episodeId, round, index } = await req.json();
@@ -20,10 +20,10 @@ export async function POST(req: Request) {
       contentType: ext === "png" ? "image/png" : "image/jpeg",
     });
 
-    // Get a download URL that's accessible without auth
-    const downloadUrl = await getDownloadUrl(blob.url);
+    // Return a proxy URL that serves the private blob through our API
+    const proxyUrl = `/api/gtp/img?url=${encodeURIComponent(blob.url)}`;
 
-    return NextResponse.json({ url: downloadUrl });
+    return NextResponse.json({ url: proxyUrl });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Upload failed";
     return NextResponse.json({ error: msg }, { status: 500 });
