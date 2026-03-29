@@ -1762,6 +1762,7 @@ export default function GuessThePrice({ displayMode = false }) {
     }));
     setAnimProgress(0);
     setIsPlaying(false);
+    setActiveAsset("intro");
   }, [scores, episode]);
 
   const render = useCallback((progress) => {
@@ -1786,6 +1787,8 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // Auto-play entrance animations (but NOT timer/reveal/lockin — those need user to set values first)
   const manualPlayAssets = ["timer", "reveal", "lockin"];
+  const [sequenceMode, setSequenceMode] = useState(true);
+  const sequenceRef = useRef(null);
   useEffect(() => {
     if (displayMode || liveMode) return;
     const asset = ASSETS.find(a => a.id === activeAsset);
@@ -1822,6 +1825,66 @@ export default function GuessThePrice({ displayMode = false }) {
     };
     animRef.current = requestAnimationFrame(tick);
   }, [isPlaying, activeAsset, S, render]);
+
+  // Play full sequence: Lock-In → Countdown → Reveal
+  const playSequence = useCallback(() => {
+    clearTimeout(sequenceRef.current);
+    setActiveAsset("lockin");
+    setAnimProgress(0);
+    setIsPlaying(true);
+    const lockDur = 3000;
+    const timerDur = (S.timerDuration || 3) * 1000;
+    const revealDur = 3000;
+
+    // Phase 1: Lock-In
+    const start1 = performance.now();
+    const tick1 = (now) => {
+      const p = Math.min(1, (now - start1) / lockDur);
+      setAnimProgress(p);
+      render(p);
+      if (p < 1) { animRef.current = requestAnimationFrame(tick1); }
+      else {
+        // Phase 2: Countdown
+        sequenceRef.current = setTimeout(() => {
+          setActiveAsset("timer");
+          setAnimProgress(0);
+          const start2 = performance.now();
+          const tick2 = (now2) => {
+            const p2 = Math.min(1, (now2 - start2) / timerDur);
+            setAnimProgress(p2);
+            render(p2);
+            if (p2 < 1) { animRef.current = requestAnimationFrame(tick2); }
+            else {
+              // Phase 3: Reveal
+              sequenceRef.current = setTimeout(() => {
+                setActiveAsset("reveal");
+                setAnimProgress(0);
+                const start3 = performance.now();
+                const tick3 = (now3) => {
+                  const p3 = Math.min(1, (now3 - start3) / revealDur);
+                  setAnimProgress(p3);
+                  render(p3);
+                  if (p3 < 1) { animRef.current = requestAnimationFrame(tick3); }
+                  else {
+                    setIsPlaying(false);
+                    // Auto-show scoreboard after reveal
+                    sequenceRef.current = setTimeout(() => {
+                      setActiveAsset("scoreboard");
+                      setAnimProgress(0);
+                      setTimeout(() => playAnimation(), 100);
+                    }, 1500);
+                  }
+                };
+                animRef.current = requestAnimationFrame(tick3);
+              }, 300);
+            }
+          };
+          animRef.current = requestAnimationFrame(tick2);
+        }, 300);
+      }
+    };
+    animRef.current = requestAnimationFrame(tick1);
+  }, [S, render, playAnimation]);
 
   const addScore = (idx) => {
     setScores(prev => {
@@ -2443,6 +2506,18 @@ export default function GuessThePrice({ displayMode = false }) {
                   color: "#fff",
                 })}>{l}</button>
             ))}
+          </div>
+          <div style={{ marginTop: DS.xl, borderTop: `1px solid ${DS.borderSubtle}`, paddingTop: DS.lg }}>
+            <label style={{ display: "flex", alignItems: "center", gap: DS.sm, cursor: "pointer", fontSize: DS.fsSm, color: DS.textSecondary }}>
+              <input type="checkbox" checked={sequenceMode} onChange={e => setSequenceMode(e.target.checked)}
+                style={{ accentColor: GAME.gold, width: 16, height: 16 }} />
+              Full Sequence (Lock → Timer → Reveal → Score)
+            </label>
+            {sequenceMode && (
+              <button onClick={playSequence} style={btnCta({ marginTop: DS.md, padding: "10px 20px", fontSize: DS.fsSm, width: "100%" })}>
+                Play Full Sequence
+              </button>
+            )}
           </div>
         </>);
       case "timer":
