@@ -270,27 +270,10 @@ function createDefaultEpisode(episodeNum = 1) {
   };
 }
 
-// Clean up broken URLs — keep only base64 data URLs
-function cleanPhotos(data) {
-  if (!data || !data.episodes) return data;
-  data.episodes = data.episodes.map(ep => ({
-    ...ep,
-    rounds: ep.rounds.map(r => ({
-      ...r,
-      photos: (r.photos || []).filter(p => p && typeof p === "string" && p.startsWith("data:")),
-    })),
-  }));
-  return data;
-}
-
 function loadEpisodes() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    const cleaned = cleanPhotos(data);
-    localStorage.setItem(LS_KEY, JSON.stringify(cleaned));
-    return cleaned;
+    return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
 
