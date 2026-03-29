@@ -1,4 +1,4 @@
-import { list, get } from "@vercel/blob";
+import { get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 // GET /api/gtp/img?url=<blob-url> — proxy private blob images for browser access
@@ -11,12 +11,12 @@ export async function GET(req: Request) {
     }
 
     const result = await get(blobUrl, { access: "private" });
-    if (!result) {
+    if (!result || result.statusCode !== 200) {
       return new NextResponse("Not found", { status: 404 });
     }
 
     const headers = new Headers();
-    headers.set("Content-Type", result.contentType || "image/jpeg");
+    headers.set("Content-Type", result.blob.contentType || "image/jpeg");
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
 
     return new NextResponse(result.stream, { headers });
