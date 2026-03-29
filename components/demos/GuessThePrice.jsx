@@ -708,8 +708,8 @@ function drawProperty(ctx, W, H, S, progress) {
       ctx.fillText(specText, W / 2, cardY + cardH * 0.78);
     }
   } else {
-    // Landscape/square: bottom bar with specs
-    const barH = H * 0.11;
+    // Landscape/square: compact bottom bar with show logo
+    const barH = H * 0.08;
     const pad = W * 0.03;
     const barY = H - barH - pad;
 
@@ -718,8 +718,8 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.fill();
 
     // Round badge
-    const bSize = Math.min(W, H) * 0.05;
-    const bx = pad + bSize;
+    const bSize = Math.min(W, H) * 0.04;
+    const bx = pad + bSize + pad * 0.3;
     const by = barY + barH / 2;
     ctx.fillStyle = GAME.gold;
     ctx.beginPath();
@@ -731,21 +731,28 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.textBaseline = "middle";
     ctx.fillText(`R${S.propRound || 1}`, bx, by);
 
-    // Address
+    // Address + specs — single line, compact
     const ax = bx + bSize;
-    ctx.font = `700 ${sz(W, H, 0.024)}px 'DM Sans', sans-serif`;
+    ctx.font = `700 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "left";
-    ctx.fillText(S.propAddress, ax, by - sz(W, H, 0.016));
+    ctx.textBaseline = "middle";
+    const addrShort = S.propAddress ? S.propAddress.split(",")[0] : "";
+    const fullInfo = [addrShort, S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
+    ctx.fillText(fullInfo, ax, by);
 
-    // Location + Specs on second line
-    ctx.font = `500 ${sz(W, H, 0.016)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = GAME.goldLight;
-    const infoLine = [S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
-    ctx.fillText(infoLine, ax, by + sz(W, H, 0.012));
+    // Show logo on right side (if uploaded)
+    const showLogoSrc = EPISODE.logoImage;
+    const showLogoImg = showLogoSrc ? getCachedImage(showLogoSrc) : null;
+    if (showLogoImg && showLogoImg.complete && showLogoImg.naturalWidth > 0) {
+      const maxLH = barH * 0.7;
+      const lScale = maxLH / showLogoImg.naturalHeight;
+      const lw = showLogoImg.naturalWidth * lScale;
+      const lh = showLogoImg.naturalHeight * lScale;
+      ctx.drawImage(showLogoImg, W - pad - lw - pad * 0.5, barY + (barH - lh) / 2, lw, lh);
+    }
   }
   ctx.restore(); // barP animation
-  // No CPS logo on property frame — properties aren't listed with CPS
 }
 
 // ── Live mode: Photo gallery with Ken Burns entrance ──
@@ -1711,6 +1718,7 @@ export default function GuessThePrice({ displayMode = false }) {
   };
 
   const [dragPhotoIdx, setDragPhotoIdx] = useState(null);
+  const [photoModalIdx, setPhotoModalIdx] = useState(null); // null = closed, number = which photo
   const reorderPhotos = (from, to) => {
     if (from === to) return;
     const rd = episode.rounds[currentRound];
@@ -2460,7 +2468,7 @@ export default function GuessThePrice({ displayMode = false }) {
                     position: "relative", cursor: "grab",
                     borderLeft: dragPhotoIdx !== null && dragPhotoIdx !== i ? `2px solid transparent` : "none",
                   }}
-                  onClick={() => updateRoundField("heroPhotoIndex", i)}
+                  onClick={() => setPhotoModalIdx(i)}
                   onDragStart={() => setDragPhotoIdx(i)}
                   onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderLeft = `2px solid ${GAME.gold}`; }}
                   onDragLeave={e => { e.currentTarget.style.borderLeft = "2px solid transparent"; }}
@@ -2753,9 +2761,66 @@ export default function GuessThePrice({ displayMode = false }) {
   }
 
   // ═══════════════════════════════════════════════════════════
+  //  PHOTO MODAL
+  // ═══════════════════════════════════════════════════════════
+  const photoModalRd = episode.rounds[currentRound];
+  const photoModalPhotos = photoModalRd?.photos || [];
+  const photoModal = photoModalIdx !== null && photoModalPhotos.length > 0 ? (
+    <div style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: DS.font }}
+      onClick={() => setPhotoModalIdx(null)}>
+      {/* Close */}
+      <button onClick={() => setPhotoModalIdx(null)}
+        style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", fontSize: 20, width: 40, height: 40, borderRadius: "50%", cursor: "pointer" }}>X</button>
+
+      {/* Main image */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: 20 }} onClick={e => e.stopPropagation()}>
+        {/* Prev */}
+        <button onClick={() => setPhotoModalIdx(Math.max(0, photoModalIdx - 1))}
+          style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", fontSize: 24, width: 48, height: 48, borderRadius: "50%", cursor: "pointer", flexShrink: 0, opacity: photoModalIdx > 0 ? 1 : 0.2 }}>
+          ‹
+        </button>
+        <img src={photoModalPhotos[photoModalIdx]} alt="" style={{ maxWidth: "calc(100% - 140px)", maxHeight: "calc(100vh - 200px)", objectFit: "contain", borderRadius: 8, margin: "0 16px" }} />
+        {/* Next */}
+        <button onClick={() => setPhotoModalIdx(Math.min(photoModalPhotos.length - 1, photoModalIdx + 1))}
+          style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", fontSize: 24, width: 48, height: 48, borderRadius: "50%", cursor: "pointer", flexShrink: 0, opacity: photoModalIdx < photoModalPhotos.length - 1 ? 1 : 0.2 }}>
+          ›
+        </button>
+      </div>
+
+      {/* Bottom bar: thumbnails + actions */}
+      <div style={{ padding: "12px 20px", background: "rgba(0,0,0,0.5)", width: "100%", display: "flex", alignItems: "center", gap: 12 }} onClick={e => e.stopPropagation()}>
+        {/* Thumbnail strip */}
+        <div style={{ display: "flex", gap: 6, flex: 1, overflowX: "auto" }}>
+          {photoModalPhotos.map((ph, i) => (
+            <img key={i} src={ph} alt="" onClick={() => setPhotoModalIdx(i)}
+              style={{ width: 56, height: 42, objectFit: "cover", borderRadius: 4, cursor: "pointer",
+                border: i === photoModalIdx ? `2px solid ${GAME.gold}` : "2px solid transparent",
+                opacity: i === photoModalIdx ? 1 : 0.5 }} />
+          ))}
+        </div>
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <button onClick={() => { updateRoundField("heroPhotoIndex", photoModalIdx); }}
+            style={{ padding: "6px 14px", fontSize: 12, fontWeight: 700, border: "none", borderRadius: 6, cursor: "pointer",
+              background: (photoModalRd?.heroPhotoIndex || 0) === photoModalIdx ? GAME.gold : "rgba(255,255,255,0.1)",
+              color: (photoModalRd?.heroPhotoIndex || 0) === photoModalIdx ? "#000" : "#fff" }}>
+            {(photoModalRd?.heroPhotoIndex || 0) === photoModalIdx ? "Hero ★" : "Set as Hero"}
+          </button>
+          <button onClick={() => { removePhoto(photoModalIdx); setPhotoModalIdx(Math.min(photoModalIdx, photoModalPhotos.length - 2)); if (photoModalPhotos.length <= 1) setPhotoModalIdx(null); }}
+            style={{ padding: "6px 14px", fontSize: 12, fontWeight: 700, border: "none", borderRadius: 6, background: "rgba(192,57,43,0.8)", color: "#fff", cursor: "pointer" }}>
+            Delete
+          </button>
+        </div>
+        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", flexShrink: 0 }}>{photoModalIdx + 1} / {photoModalPhotos.length}</span>
+      </div>
+    </div>
+  ) : null;
+
+  // ═══════════════════════════════════════════════════════════
   //  EDITOR MODE RENDER
   // ═══════════════════════════════════════════════════════════
-  return (
+  return (<>
+    {photoModal}
     <div style={{ fontFamily: DS.font, background: DS.bgPage, color: DS.textPrimary, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
 
       {/* HEADER */}
@@ -2936,5 +3001,5 @@ export default function GuessThePrice({ displayMode = false }) {
         <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>{r.W} &times; {r.H} &middot; {activeAsset}{liveConnected && " \u00b7 LIVE"}</div>
       </footer>
     </div>
-  );
+  </>);
 }
