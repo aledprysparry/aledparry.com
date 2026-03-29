@@ -1856,10 +1856,11 @@ export default function GuessThePrice({ displayMode = false }) {
     if (displayMode || liveMode) return;
     const asset = ASSETS.find(a => a.id === activeAsset);
     if (asset?.animated && !isPlaying && !manualPlayAssets.includes(activeAsset)) {
+      animProgressRef.current = 0;
       const t = setTimeout(() => playAnimation(), 100);
       return () => clearTimeout(t);
     }
-  }, [activeAsset]);
+  }, [activeAsset, currentRound]);
 
   const playAnimation = useCallback(() => {
     if (isPlaying) {
