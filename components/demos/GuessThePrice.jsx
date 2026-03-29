@@ -269,27 +269,14 @@ function createDefaultEpisode(episodeNum = 1) {
   };
 }
 
-// Migrate old private blob URLs to proxy URLs
-function migratePhotoUrl(url) {
-  if (!url || typeof url !== "string") return url;
-  if (url.startsWith("/api/gtp/img") || url.startsWith("data:")) return url;
-  if (url.includes("private.blob.vercel-storage.com")) {
-    // Strip ?download=1 and wrap in proxy
-    const clean = url.replace(/\?download=1$/, "");
-    return `/api/gtp/img?url=${encodeURIComponent(clean)}`;
-  }
-  return url;
-}
-
-function migrateEpisodes(data) {
+// Clean up broken URLs — keep only base64 data URLs
+function cleanPhotos(data) {
   if (!data || !data.episodes) return data;
   data.episodes = data.episodes.map(ep => ({
     ...ep,
-    logoImage: migratePhotoUrl(ep.logoImage),
-    agentImages: (ep.agentImages || []).map(migratePhotoUrl),
     rounds: ep.rounds.map(r => ({
       ...r,
-      photos: (r.photos || []).map(migratePhotoUrl),
+      photos: (r.photos || []).filter(p => p && typeof p === "string" && p.startsWith("data:")),
     })),
   }));
   return data;
@@ -300,10 +287,9 @@ function loadEpisodes() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    const migrated = migrateEpisodes(data);
-    // Save migrated data back
-    localStorage.setItem(LS_KEY, JSON.stringify(migrated));
-    return migrated;
+    const cleaned = cleanPhotos(data);
+    localStorage.setItem(LS_KEY, JSON.stringify(cleaned));
+    return cleaned;
   } catch { return null; }
 }
 
@@ -1658,8 +1644,8 @@ export default function GuessThePrice({ displayMode = false }) {
   const pushToLive = async (overrideAsset, overrideS) => {
     try {
       const rd = episode.rounds[currentRound] || {};
-      // Only send URL-based photos (not base64) to stay under body limit
-      const urlPhotos = (rd.photos || []).filter(p => p?.startsWith("http"));
+      // Send max 3 photos to stay under body limit — /live only needs current display
+      const livePhotos = (rd.photos || []).slice(0, 3);
       await fetch("/api/gtp/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1669,9 +1655,9 @@ export default function GuessThePrice({ displayMode = false }) {
           S: overrideS || S,
           scores,
           agents: episode.agents,
-          agentImages: (episode.agentImages || []).map(img => img?.startsWith("http") ? img : ""),
-          logoImage: episode.logoImage?.startsWith("http") ? episode.logoImage : "",
-          photos: urlPhotos,
+          agentImages: [],
+          logoImage: "",
+          photos: livePhotos,
           heroPhotoIndex: rd.heroPhotoIndex || 0,
         }),
       });
@@ -1790,42 +1776,19 @@ export default function GuessThePrice({ displayMode = false }) {
     setDirty(true);
   };
 
-  // Upload a base64 photo to Vercel Blob, returns URL
-  const uploadPhotoToBlob = async (base64, roundNum, index) => {
-    try {
-      const res = await fetch("/api/gtp/photo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photo: base64, episodeId: activeEpisodeId, round: roundNum, index }),
-      });
-      if (!res.ok) {
-        console.warn("Photo upload failed:", res.status);
-        return base64;
-      }
-      const data = await res.json();
-      return data.url || base64;
-    } catch (err) {
-      console.warn("Photo upload error:", err);
-      return base64;
-    }
-  };
-
-  // Handle photo upload for current round
+  // Handle photo upload for current round — simple base64 in localStorage
   const handlePhotoUpload = async (files) => {
     const rd = episode.rounds[currentRound];
     if (!rd) return;
     const existing = rd.photos || [];
     const toProcess = Array.from(files);
-    setSaveStatus("Uploading photos...");
+    setSaveStatus("Processing...");
     const compressed = await Promise.all(toProcess.map(f => compressPhoto(f, existing.length)));
-    // Upload to Vercel Blob for cloud backup
-    const urls = await Promise.all(compressed.map((b64, i) => uploadPhotoToBlob(b64, rd.number, existing.length + i)));
-    const newPhotos = [...existing, ...urls];
+    const newPhotos = [...existing, ...compressed];
     updateRoundField("photos", newPhotos);
     newPhotos.forEach(p => getCachedImage(p));
-    setSaveStatus(`${toProcess.length} photo${toProcess.length > 1 ? "s" : ""} uploaded`);
+    setSaveStatus(`${toProcess.length} photo${toProcess.length > 1 ? "s" : ""} added`);
     setTimeout(() => setSaveStatus(""), 3000);
-    // Check for quota warning
     if (_saveWarning) { setSaveStatus(_saveWarning); setTimeout(() => setSaveStatus(""), 5000); }
   };
 
