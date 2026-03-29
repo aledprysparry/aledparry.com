@@ -1678,6 +1678,8 @@ export default function GuessThePrice({ displayMode = false }) {
       lockLetter: round.correctLetter,
       score1: sc ? sc[0] : 0,
       score2: sc ? sc[1] : 0,
+      timerDuration: ep.timerDuration ?? prev.timerDuration ?? 3,
+      photoDuration: ep.photoDuration ?? prev.photoDuration ?? 5,
     }));
   };
 
@@ -1700,7 +1702,7 @@ export default function GuessThePrice({ displayMode = false }) {
           correctPrice: newS.revealPrice,
         };
       }
-      return { ...ep, show: newS.showTitle, episode: newS.introEpisode, rounds, scores };
+      return { ...ep, show: newS.showTitle, episode: newS.introEpisode, rounds, scores, timerDuration: newS.timerDuration, photoDuration: newS.photoDuration };
     }));
     setDirty(true);
   }, [activeEpisodeId, currentRound, scores]);
