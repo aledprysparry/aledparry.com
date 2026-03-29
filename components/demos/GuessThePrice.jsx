@@ -808,17 +808,31 @@ function drawPrompt(ctx, W, H, _S, progress) {
 
   // Subtle dark vignette for readability over footage
   const vig = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7);
-  vig.addColorStop(0, "rgba(0,0,0,0.15)");
-  vig.addColorStop(1, "rgba(0,0,0,0.5)");
+  vig.addColorStop(0, "rgba(0,0,0,0.2)");
+  vig.addColorStop(1, "rgba(0,0,0,0.6)");
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
+
+  // Animated "?" — scales up and fades, with glow
+  const qMarkP = easeOutExpo(Math.min(1, p / 0.6));
+  ctx.save();
+  ctx.globalAlpha = 0.12 * qMarkP;
+  ctx.translate(W / 2, H * 0.42);
+  ctx.rotate((1 - qMarkP) * -0.2);
+  const qMarkSz = sz(W, H, 0.8) * (0.6 + 0.4 * qMarkP);
+  ctx.font = `800 ${Math.round(qMarkSz)}px 'Lora', serif`;
+  ctx.fillStyle = GAME.gold;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("?", 0, 0);
+  ctx.restore();
 
   // Main question — HUGE — fades + scales in
   const textP = easeOutExpo(Math.min(1, p / 0.5));
   ctx.save();
   ctx.globalAlpha = textP;
-  const qY = ar === "portrait" ? safeTop + safeH * 0.25 : H * 0.35;
-  const qs = sz(W, H, ar === "portrait" ? 0.10 : 0.085);
+  const qY = ar === "portrait" ? safeTop + safeH * 0.25 : H * 0.32;
+  const qs = sz(W, H, ar === "portrait" ? 0.11 : 0.095);
   ctx.font = `700 ${qs}px 'Lora', serif`;
   ctx.fillStyle = BRAND.colorWarm;
   ctx.textAlign = "center";
@@ -893,18 +907,22 @@ function drawOptions(ctx, W, H, S, progress) {
   // Subtle background for overlay context
   drawBg(ctx, W, H);
 
-  // Round header — within safe zone
-  const headerY = ar === "portrait" ? safeTop + safeH * 0.05 : H * 0.10;
-  ctx.font = `700 ${sz(W, H, 0.035)}px 'DM Sans', sans-serif`;
+  // Round header — within safe zone, with glow
+  const headerY = ar === "portrait" ? safeTop + safeH * 0.05 : H * 0.08;
+  ctx.save();
+  ctx.shadowColor = GAME.gold;
+  ctx.shadowBlur = 15;
+  ctx.font = `800 ${sz(W, H, 0.04)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(`ROUND ${S.propRound || 1}`, W / 2, headerY);
+  ctx.restore();
 
-  // Location
+  // Location — brighter
   ctx.font = `500 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.fillText(S.optionLocation || "", W / 2, headerY + sz(W, H, 0.045));
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillText(S.optionLocation || "", W / 2, headerY + sz(W, H, 0.05));
 
   // Option pills — BIG, full-width, safe-zone aware
   const opts = [
@@ -930,39 +948,48 @@ function drawOptions(ctx, W, H, S, progress) {
     ctx.globalAlpha = pillP;
     ctx.translate(slideX, 0);
 
-    // Pill with rounded ends
+    // Pill with drop shadow
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.4)";
+    ctx.shadowBlur = oh * 0.3;
+    ctx.shadowOffsetY = oh * 0.08;
     ctx.fillStyle = o.color;
     roundRect(ctx, pad, oy, ow, oh, oh / 2);
     ctx.fill();
+    ctx.restore();
 
-    // Subtle inner shadow at top
-    const innerGrad = ctx.createLinearGradient(0, oy, 0, oy + oh * 0.3);
-    innerGrad.addColorStop(0, "rgba(255,255,255,0.12)");
-    innerGrad.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = innerGrad;
+    // Glossy highlight on top half
+    const glossGrad = ctx.createLinearGradient(0, oy, 0, oy + oh * 0.5);
+    glossGrad.addColorStop(0, "rgba(255,255,255,0.18)");
+    glossGrad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = glossGrad;
     roundRect(ctx, pad, oy, ow, oh, oh / 2);
     ctx.fill();
 
-    // Letter badge — left side
-    const br = oh * 0.38;
+    // Letter badge — left side, bigger
+    const br = oh * 0.40;
     const bx2 = pad + oh / 2;
     const by2 = oy + oh / 2;
-    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.beginPath();
     ctx.arc(bx2, by2, br, 0, Math.PI * 2);
     ctx.fill();
-    ctx.font = `800 ${Math.round(br * 1.2)}px 'DM Sans', sans-serif`;
+    ctx.font = `800 ${Math.round(br * 1.3)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(o.letter, bx2, by2);
 
-    // Price — large, centered in remaining space
+    // Price — BOLD, centered, with shadow
     const priceX = pad + oh + (ow - oh) / 2;
-    ctx.font = `700 ${Math.round(oh * 0.48)}px 'DM Sans', sans-serif`;
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.3)";
+    ctx.shadowBlur = 6;
+    ctx.font = `800 ${Math.round(oh * 0.52)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
-    ctx.fillText(o.price || "---", priceX, by2);
+    ctx.fillText(o.price || "---", priceX, by2 + oh * 0.02);
+    ctx.restore();
     ctx.restore(); // pill animation
   }
 
@@ -988,43 +1015,48 @@ function drawLockIn(ctx, W, H, S, progress) {
   // Center content within safe zone in portrait
   const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.45;
 
-  // Large glow behind letter
+  // Large DRAMATIC glow behind letter
   ctx.save();
-  ctx.globalAlpha = 0.15;
-  const glow = ctx.createRadialGradient(W / 2, centerY, 0, W / 2, centerY, sz(W, H, 0.35));
-  glow.addColorStop(0, letterColor);
+  ctx.globalAlpha = 0.25;
+  const glow = ctx.createRadialGradient(W / 2, centerY, 0, W / 2, centerY, sz(W, H, 0.45));
+  glow.addColorStop(0, GAME.gold);
+  glow.addColorStop(0.5, letterColor);
   glow.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
 
-  // Agent name — fades in
+  // Agent name — BIG, bold, fades in
   const nameP = easeOutExpo(Math.min(1, p / 0.3));
   ctx.save();
   ctx.globalAlpha = nameP;
-  ctx.font = `600 ${sz(W, H, 0.04)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 10;
+  ctx.font = `800 ${sz(W, H, 0.05)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(S.lockAgent || "Agent", W / 2, centerY - sz(W, H, 0.18));
+  ctx.fillText((S.lockAgent || "Agent").toUpperCase(), W / 2, centerY - sz(W, H, 0.20));
 
-  // "LOCKS IN" label
-  ctx.font = `700 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
+  // "LOCKS IN" label — with glow
+  ctx.shadowColor = GAME.gold;
+  ctx.shadowBlur = 12;
+  ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = GAME.gold;
-  ctx.fillText("LOCKS IN", W / 2, centerY - sz(W, H, 0.12));
+  ctx.fillText("LOCKS IN", W / 2, centerY - sz(W, H, 0.13));
   ctx.restore();
 
-  // Giant letter — scale in with elastic bounce
+  // Giant letter — WHITE with coloured glow, scale in with elastic
   const letterLP = Math.min(1, Math.max(0, (p - 0.25) / 0.5));
   const letterScale = easeOutBack(letterLP);
-  const letterSz = sz(W, H, ar === "portrait" ? 0.35 : 0.28) * letterScale;
+  const letterSz = sz(W, H, ar === "portrait" ? 0.38 : 0.30) * letterScale;
   if (letterLP > 0) {
     ctx.save();
     ctx.globalAlpha = Math.min(1, letterLP * 2);
     ctx.shadowColor = letterColor;
-    ctx.shadowBlur = sz(W, H, 0.04);
+    ctx.shadowBlur = sz(W, H, 0.08);
     ctx.font = `800 ${Math.round(letterSz)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = letterColor;
+    ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(letter, W / 2, centerY + sz(W, H, 0.05));
@@ -1047,28 +1079,42 @@ function drawTimer(ctx, W, H, S, progress) {
   const totalSec = S.timerDuration || 3;
   const elapsed = progress * totalSec;
   const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.40 : H * 0.47;
-  const ringR = sz(W, H, 0.18);
+  const ringR = sz(W, H, 0.22);
 
   if (elapsed < totalSec) {
     const displayNum = Math.ceil(totalSec - elapsed);
     const inPhase = elapsed % 1;
 
-    // Outer ring — fading background ring
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = sz(W, H, 0.015);
+    // Background glow pulse
+    ctx.save();
+    ctx.globalAlpha = 0.08 + Math.sin(inPhase * Math.PI) * 0.06;
+    const tGlow = ctx.createRadialGradient(W / 2, centerY, 0, W / 2, centerY, ringR * 2);
+    tGlow.addColorStop(0, GAME.gold);
+    tGlow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tGlow;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
+    // Outer ring — thicker
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.lineWidth = sz(W, H, 0.02);
     ctx.beginPath();
     ctx.arc(W / 2, centerY, ringR, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Progress ring — salmon, fills clockwise
+    // Progress ring — salmon with glow, fills clockwise
+    ctx.save();
+    ctx.shadowColor = GAME.gold;
+    ctx.shadowBlur = sz(W, H, 0.03);
     ctx.strokeStyle = GAME.gold;
-    ctx.lineWidth = sz(W, H, 0.015);
+    ctx.lineWidth = sz(W, H, 0.02);
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.arc(W / 2, centerY, ringR, -Math.PI / 2, -Math.PI / 2 + inPhase * Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
 
-    // Number — elastic scale on each beat
+    // Number — elastic scale on each beat, BIGGER
     const beatScale = 1 + Math.max(0, 0.4 * Math.pow(1 - inPhase * 2.5, 3));
     const numSz = sz(W, H, 0.22) * Math.max(1, beatScale);
     ctx.save();
@@ -1206,15 +1252,17 @@ function drawScoreboard(ctx, W, H, S, progress) {
   const a1 = EPISODE.agents[0], a2 = EPISODE.agents[1];
   const s1 = S.score1 ?? 0, s2 = S.score2 ?? 0;
 
-  // Title — fades in
+  // Title — fades in with glow
   const titleP = easeOutExpo(Math.min(1, p / 0.3));
   ctx.save();
   ctx.globalAlpha = titleP;
-  ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
+  ctx.shadowColor = GAME.gold;
+  ctx.shadowBlur = 15;
+  ctx.font = `800 ${sz(W, H, 0.04)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("SCOREBOARD", W / 2, ar === "portrait" ? safeTop + safeH * 0.06 : H * 0.15);
+  ctx.fillText("SCOREBOARD", W / 2, ar === "portrait" ? safeTop + safeH * 0.06 : H * 0.12);
   ctx.restore();
 
   if (ar === "portrait") {
