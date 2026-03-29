@@ -1907,6 +1907,7 @@ function LiveVideoPreview({videoUrl,graphics,brand,ratio,onSeek}){
       <div style={{position:"relative",paddingBottom:ratio==="9:16"?"177.78%":ratio==="1:1"?"100%":"56.25%"}}>
         <video ref={videoRef} src={videoUrl} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",objectFit:"contain",background:"#000"}}
           onLoadedMetadata={e=>setDuration(e.target.duration)}
+          onError={()=>{}} // Suppress blob URL errors after refresh
           onClick={togglePlay}
           playsInline muted/>
         {showOverlay&&<canvas ref={canvasRef} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",pointerEvents:"none"}}/>}
@@ -2149,7 +2150,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   return(
     <div>
       {/* Live Video Preview — shows when video is attached */}
-      {project.videoUrl&&graphics.length>0&&(
+      {project.videoUrl&&project.videoUrl.startsWith("blob:")&&graphics.length>0&&(
         <LiveVideoPreview videoUrl={project.videoUrl} graphics={graphics} brand={brand} ratio={previewRatio}
           onSeek={t=>{/* Could highlight the graphic at this timecode */}}/>
       )}
@@ -3123,7 +3124,8 @@ function ProjectView({project,brand,updateProject,onBack}){
   const [tab,setTab]=useState("graphics");
   const [previewRatio,setPreviewRatio]=useState("16:9");
   const fileRef=useRef();
-  // API key check removed — server-side proxy handles AI calls
+  // Clear stale blob URLs on mount (blob URLs don't survive page refresh)
+  useEffect(()=>{if(project.videoUrl&&project.videoUrl.startsWith("blob:"))updateProject({videoUrl:null,videoName:null});},[]);// eslint-disable-line
 
   const [transcribing,setTranscribing]=useState(false);
   const [transcribeError,setTranscribeError]=useState("");
