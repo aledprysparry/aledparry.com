@@ -2323,6 +2323,278 @@ function CaptionsTab({project,brand,updateProject,previewRatio}){
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  POSTER TAB — AI-generated social media posters
+// ═══════════════════════════════════════════════════════════════
+const POSTER_RATIOS={"16:9":{W:1920,H:1080,label:"YouTube / LinkedIn"},"1:1":{W:1080,H:1080,label:"Instagram Feed"},"4:5":{W:1080,H:1350,label:"Instagram Feed (tall)"},"9:16":{W:1080,H:1920,label:"Stories / Reels"}};
+const POSTER_TONES=[{id:"shocking",label:"Shocking",icon:"⚡",desc:"Bold stat or surprising claim"},{id:"relatable",label:"Relatable",icon:"💬",desc:"Speaks to everyday experience"},{id:"informative",label:"Informative",icon:"📊",desc:"Clear, authoritative, data-driven"}];
+
+const POSTER_PROMPT=`You are a social media copywriter creating poster text variations. Given a topic, audience, and goal, generate exactly 3 copy variations.
+
+Return ONLY a valid JSON array. No markdown, no preamble.
+
+Each item: {"tone":"shocking"|"relatable"|"informative","hook":"BOLD HEADLINE (max 8 words, all caps)","subtext":"supporting line (max 15 words)","cta":"call to action (max 4 words)"}
+
+Rules:
+- Hook must create tension: question, contradiction, or surprising stat
+- Never start with "Did you know"
+- Never use "we" or "our" — talk TO the audience
+- Each variation must be structurally different
+- CTA is an action verb phrase: "Watch now", "Learn more", "Get the facts"
+- Keep all text SHORT — readable at phone thumbnail size in 1.5 seconds`;
+
+function drawPoster(canvas,poster,brand,ratio){
+  const AR=POSTER_RATIOS[ratio]||POSTER_RATIOS["1:1"];
+  const W=AR.W,H=AR.H;canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext("2d");
+  const sc=Math.min(W,H)/1080;
+  const B=brand||{};
+  const FF=B.fontFamily||"DM Sans";
+  const FFS=B.fontSerif||"Lora";
+  const CW=B.colorWarm||"#f0e1d3";
+  const R=Math.round((B.cornerRadius||20)*sc);
+  const isPortrait=H>W;
+  const PAD=Math.round((isPortrait?60:80)*sc);
+
+  // Background — brand primary colour
+  ctx.fillStyle=B.colorPrimary||"#1a5c5e";ctx.fillRect(0,0,W,H);
+
+  // Subtle wavy texture
+  ctx.save();ctx.globalAlpha=0.06;ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
+  for(let i=0;i<5;i++){const off=i*W*0.22;ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
+  ctx.restore();
+
+  // Content layout
+  const tone=poster.tone||"informative";
+  const accentCol=tone==="shocking"?B.colorAccent||"#FB8770":tone==="relatable"?B.colorPositive||"#83A381":B.colorPrimary||"#1a5c5e";
+
+  if(isPortrait){
+    // 9:16 / 4:5 — vertical stack centred
+    const safeTop=ratio==="9:16"?220:60;
+    const safeBot=ratio==="9:16"?420:60;
+    const contentH=H-safeTop-safeBot;
+    let y=safeTop+contentH*0.15;
+
+    // Tone badge
+    const toneLabel=POSTER_TONES.find(t=>t.id===tone);
+    ctx.font=`600 ${Math.round(22*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle="rgba(255,255,255,0.4)";ctx.textAlign="center";ctx.textBaseline="top";
+    ctx.fillText((toneLabel?.icon||"")+" "+(toneLabel?.label||tone).toUpperCase(),W/2,y);
+    y+=Math.round(50*sc);
+
+    // Hook — big serif
+    ctx.font=`800 ${Math.round(72*sc)}px "${FFS}","serif"`;ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="top";
+    const hookLines=wrapText(ctx,poster.hook||"HOOK TEXT",W-PAD*2);
+    hookLines.forEach(line=>{ctx.fillText(line,W/2,y);y+=Math.round(82*sc);});
+    y+=Math.round(20*sc);
+
+    // Accent rule
+    const ruleW=Math.round(80*sc);
+    ctx.fillStyle=accentCol;ctx.fillRect(W/2-ruleW/2,y,ruleW,Math.round(4*sc));
+    y+=Math.round(40*sc);
+
+    // Subtext
+    ctx.font=`400 ${Math.round(36*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle="rgba(255,255,255,0.75)";
+    const subLines=wrapText(ctx,poster.subtext||"Supporting text here",W-PAD*3);
+    subLines.forEach(line=>{ctx.fillText(line,W/2,y);y+=Math.round(44*sc);});
+    y+=Math.round(40*sc);
+
+    // CTA button
+    const ctaText=poster.cta||"Learn more";
+    ctx.font=`700 ${Math.round(28*sc)}px "${FF}","Arial",sans-serif`;
+    const ctaW=ctx.measureText(ctaText).width+Math.round(60*sc);
+    const ctaH=Math.round(56*sc);const ctaX=W/2-ctaW/2;
+    rrPath(ctx,ctaX,y,ctaW,ctaH,Math.round(ctaH/2));ctx.fillStyle=accentCol;ctx.fill();
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ctaText,W/2,y+ctaH/2);
+  } else {
+    // 16:9 / 1:1 — left-aligned editorial
+    let y=H*0.18;
+    const textW=isPortrait?W-PAD*2:W*0.6;
+
+    // Tone badge
+    const toneLabel=POSTER_TONES.find(t=>t.id===tone);
+    ctx.font=`600 ${Math.round(20*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle="rgba(255,255,255,0.4)";ctx.textAlign="left";ctx.textBaseline="top";
+    ctx.fillText((toneLabel?.icon||"")+" "+(toneLabel?.label||tone).toUpperCase(),PAD,y);
+    y+=Math.round(44*sc);
+
+    // Hook — big serif
+    ctx.font=`800 ${Math.round(80*sc)}px "${FFS}","serif"`;ctx.fillStyle="#fff";ctx.textAlign="left";ctx.textBaseline="top";
+    const hookLines=wrapText(ctx,poster.hook||"HOOK TEXT",textW);
+    hookLines.forEach(line=>{ctx.fillText(line,PAD,y);y+=Math.round(90*sc);});
+    y+=Math.round(10*sc);
+
+    // Accent rule
+    ctx.fillStyle=accentCol;ctx.fillRect(PAD,y,Math.round(80*sc),Math.round(4*sc));
+    y+=Math.round(36*sc);
+
+    // Subtext
+    ctx.font=`400 ${Math.round(32*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle="rgba(255,255,255,0.7)";ctx.textAlign="left";
+    const subLines=wrapText(ctx,poster.subtext||"Supporting text here",textW);
+    subLines.forEach(line=>{ctx.fillText(line,PAD,y);y+=Math.round(40*sc);});
+    y+=Math.round(30*sc);
+
+    // CTA button
+    const ctaText=poster.cta||"Learn more";
+    ctx.font=`700 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
+    const ctaW=ctx.measureText(ctaText).width+Math.round(50*sc);
+    const ctaH=Math.round(48*sc);
+    rrPath(ctx,PAD,y,ctaW,ctaH,Math.round(ctaH/2));ctx.fillStyle=accentCol;ctx.fill();
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ctaText,PAD+ctaW/2,y+ctaH/2);
+  }
+
+  // Brand logo stamp
+  stamp(ctx,B,W,H,H>W*1.2);
+}
+
+// Simple word wrap helper for poster text
+function wrapText(ctx,text,maxW){
+  const words=text.split(" ");const lines=[];let line="";
+  for(const w of words){
+    const test=line?line+" "+w:w;
+    if(ctx.measureText(test).width>maxW&&line){lines.push(line);line=w;}
+    else line=test;
+  }
+  if(line)lines.push(line);
+  return lines;
+}
+
+function PosterTab({project,brand,updateProject}){
+  const [topic,setTopic]=useState("");
+  const [audience,setAudience]=useState("");
+  const [goal,setGoal]=useState("");
+  const [variations,setVariations]=useState(project.posters||[]);
+  const [generating,setGenerating]=useState(false);
+  const [error,setError]=useState("");
+  const [previews,setPreviews]=useState({});
+  const [selectedRatio,setSelectedRatio]=useState("1:1");
+
+  // Generate previews when variations or ratio change
+  useEffect(()=>{
+    if(!variations.length)return;
+    const batch={};
+    variations.forEach((v,i)=>{
+      const c=document.createElement("canvas");
+      drawPoster(c,v,brand,selectedRatio);
+      batch[i]=c.toDataURL("image/png");
+    });
+    setPreviews(batch);
+  },[variations,selectedRatio,brand]);
+
+  const generate=async()=>{
+    if(!topic.trim()){setError("Enter a topic first");return;}
+    setGenerating(true);setError("");
+    try{
+      const raw=await callAI({system:POSTER_PROMPT,messages:[{role:"user",content:`Topic: ${topic}\nAudience: ${audience||"general"}\nGoal: ${goal||"engagement"}\nBrand: ${brand.name||"CPS Homes"}`}],max_tokens:1500});
+      const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      setVariations(parsed);
+      updateProject({posters:parsed});
+    }catch(e){setError("Generation failed: "+e.message);}
+    setGenerating(false);
+  };
+
+  const exportPoster=async(poster,i)=>{
+    const pn=project.name.replace(/\s+/g,"_");
+    for(const [ratio,ar] of Object.entries(POSTER_RATIOS)){
+      const c=document.createElement("canvas");
+      drawPoster(c,poster,brand,ratio);
+      await new Promise(res=>{c.toBlob(blob=>{
+        if(blob)dl(blob,`${pn}_poster_${poster.tone}_${ratio.replace(":","x")}.png`);
+        res();
+      },"image/png");});
+      await new Promise(r=>setTimeout(r,200));
+    }
+  };
+
+  const exportAll=async()=>{
+    for(let i=0;i<variations.length;i++) await exportPoster(variations[i],i);
+  };
+
+  return(
+    <div>
+      {/* Input form */}
+      <div style={card({padding:DS.lg,marginBottom:DS.lg})}>
+        <div style={sectionHead()}>Generate Social Posters</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:DS.md,marginBottom:DS.md}}>
+          <div>
+            <div style={label()}>Topic *</div>
+            <input style={inputS({width:"100%"})} value={topic} onChange={e=>setTopic(e.target.value)} placeholder="e.g. Rent increases in Wales 2026"/>
+          </div>
+          <div>
+            <div style={label()}>Audience</div>
+            <input style={inputS({width:"100%"})} value={audience} onChange={e=>setAudience(e.target.value)} placeholder="e.g. Landlords in Cardiff"/>
+          </div>
+          <div>
+            <div style={label()}>Goal</div>
+            <input style={inputS({width:"100%"})} value={goal} onChange={e=>setGoal(e.target.value)} placeholder="e.g. Drive video views"/>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:DS.md,alignItems:"center"}}>
+          <button style={{background:brand.colorAccent||DS.accent,border:"none",borderRadius:11,padding:"12px 32px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:generating?0.6:1}} onClick={generate} disabled={generating}>
+            {generating?"🔄 Generating…":"✨ Generate 3 Variations"}
+          </button>
+          {error&&<span style={{color:DS.accent,fontSize:DS.fsSm}}>{error}</span>}
+        </div>
+      </div>
+
+      {/* Ratio picker */}
+      {variations.length>0&&(
+        <div style={{display:"flex",gap:DS.sm,marginBottom:DS.lg,alignItems:"center"}}>
+          <span style={label({marginBottom:0})}>Preview ratio:</span>
+          {Object.entries(POSTER_RATIOS).map(([k,v])=>(
+            <button key={k} style={btn({background:selectedRatio===k?DS.borderActive:DS.bgButton,fontSize:12,padding:"5px 12px",fontWeight:selectedRatio===k?700:500})} onClick={()=>setSelectedRatio(k)}>
+              {k} <span style={{fontSize:10,opacity:0.6}}>{v.label}</span>
+            </button>
+          ))}
+          <button style={{...btnPositive({padding:"8px 18px",fontSize:DS.fsSm,marginLeft:"auto"}),fontWeight:700}} onClick={exportAll}>
+            ⬇ Export All ({Object.keys(POSTER_RATIOS).length*variations.length} PNGs)
+          </button>
+        </div>
+      )}
+
+      {/* Poster grid */}
+      {variations.length>0&&(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:DS.lg}}>
+          {variations.map((v,i)=>{
+            const toneInfo=POSTER_TONES.find(t=>t.id===v.tone)||{icon:"📄",label:v.tone};
+            return(
+              <div key={i} style={card({padding:0,overflow:"hidden"})}>
+                {/* Preview image */}
+                {previews[i]&&<img src={previews[i]} alt={v.hook} style={{width:"100%",display:"block",borderRadius:`${DS.rMd}px ${DS.rMd}px 0 0`}}/>}
+                {/* Content */}
+                <div style={{padding:DS.md}}>
+                  <div style={{display:"flex",alignItems:"center",gap:DS.sm,marginBottom:DS.sm}}>
+                    <span style={{fontSize:18}}>{toneInfo.icon}</span>
+                    <span style={{fontWeight:700,fontSize:DS.fsSm,textTransform:"uppercase",letterSpacing:"0.05em"}}>{toneInfo.label}</span>
+                  </div>
+                  <div style={{fontWeight:700,fontSize:DS.fsMd,marginBottom:DS.xs,fontFamily:`"${brand.fontSerif||"Lora"}",serif`}}>{v.hook}</div>
+                  <div style={{fontSize:DS.fsSm,color:DS.textSecondary,marginBottom:DS.sm}}>{v.subtext}</div>
+                  <div style={{display:"flex",gap:DS.sm}}>
+                    <button style={btnPositive({padding:"6px 14px",fontSize:11})} onClick={()=>exportPoster(v,i)}>⬇ Export 4 sizes</button>
+                    <button style={btn({padding:"6px 14px",fontSize:11})} onClick={()=>{
+                      const edited=prompt("Edit hook:",v.hook);
+                      if(edited!==null){const nv=[...variations];nv[i]={...v,hook:edited};setVariations(nv);updateProject({posters:nv});}
+                    }}>✏ Edit</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!variations.length&&!generating&&(
+        <div style={emptyState({padding:"60px 0"})}>
+          <div style={{fontSize:42,marginBottom:DS.md}}>🖼</div>
+          <div style={{fontSize:DS.fsLg,fontWeight:700}}>Social Media Poster Studio</div>
+          <div style={{fontSize:DS.fsSm,color:DS.textMuted,marginTop:DS.xs,maxWidth:400}}>
+            Enter a topic above and AI will generate 3 copy variations — each rendered as 4 poster sizes ready for Instagram, TikTok, LinkedIn, and YouTube.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  EXPORT TAB
 // ═══════════════════════════════════════════════════════════════
 function ExportTab({project,brand,updateProject}){
@@ -2924,7 +3196,7 @@ function ProjectView({project,brand,updateProject,onBack}){
 
       {/* Tab bar */}
       <div style={S.tabbar}>
-        {[["graphics","🎨 Graphics"],["export","📦 Export"]].map(([k,l])=>(
+        {[["graphics","🎨 Graphics"],["posters","🖼 Posters"],["export","📦 Export"]].map(([k,l])=>(
           <button key={k} style={S.tab(tab===k)} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
@@ -2952,7 +3224,9 @@ function ProjectView({project,brand,updateProject,onBack}){
         {/* Title card + endboard now live in the graphics timeline as regular segments */}
 
         {/* Tab content */}
-        {!hasSRT
+        {tab==="posters"
+          ?<PosterTab project={project} brand={brand} updateProject={updateProject}/>
+          :!hasSRT
           ?<div style={{...emptyState({padding:"60px 0"}),cursor:"pointer",border:`2px dashed ${DS.borderMedium}`,borderRadius:DS.rLg,transition:"all 0.2s"}}
               onClick={()=>fileRef.current.click()}
               onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=brand.colorAccent;e.currentTarget.style.background="rgba(230,57,70,0.05)";}}
