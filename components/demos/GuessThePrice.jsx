@@ -829,35 +829,90 @@ function drawPropertyGallery(ctx, W, H, S, photoSrc, animT, photoIdx, totalPhoto
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Address bar at bottom
-  const barH = H * 0.14;
+  // Build spec text from S fields
+  const specParts = [];
+  if (S.propBeds) specParts.push(`${S.propBeds} bed`);
+  if (S.propType) specParts.push(S.propType);
+  if (S.propTenure) specParts.push(S.propTenure);
+  if (S.propAddedDate) specParts.push(`Added ${S.propAddedDate}`);
+  const specText = specParts.join("  \u00b7  ");
+
   const pad = W * 0.03;
-  const barY = ar === "portrait" ? safe.contentBottom - barH : H - barH - pad;
 
-  // Round badge
-  const bSize = Math.min(W, H) * 0.06;
-  const bx = pad + bSize;
-  const by = barY + barH / 2;
-  ctx.fillStyle = GAME.gold;
-  ctx.beginPath();
-  ctx.arc(bx, by, bSize / 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.font = `700 ${Math.round(bSize * 0.5)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(`R${S.propRound || 1}`, bx, by);
+  if (ar === "portrait") {
+    // Portrait: card-style bar
+    const cardH = H * 0.10;
+    const cardY = safe.contentBottom - cardH - W * 0.03;
 
-  // Address
-  const ax = bx + bSize;
-  ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = BRAND.colorText;
-  ctx.textAlign = "left";
-  ctx.fillText(S.propAddress || "", ax, by - sz(W, H, 0.015));
-  // Location
-  ctx.font = `500 ${sz(W, H, 0.02)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = GAME.goldLight;
-  ctx.fillText(S.optionLocation || "", ax, by + sz(W, H, 0.02));
+    ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
+    roundRect(ctx, pad, cardY, W - pad * 2, cardH, BRAND.cornerRadius);
+    ctx.fill();
+
+    const bSize = W * 0.09;
+    const bx = W / 2;
+    const by = cardY - bSize * 0.6;
+    ctx.fillStyle = GAME.gold;
+    ctx.beginPath();
+    ctx.arc(bx, by, bSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = `700 ${Math.round(bSize * 0.45)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`R${S.propRound || 1}`, bx, by);
+
+    ctx.font = `700 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = BRAND.colorText;
+    ctx.fillText(S.propAddress || "", W / 2, cardY + cardH * 0.32);
+    ctx.font = `500 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = GAME.goldLight;
+    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.58);
+    if (specText) {
+      ctx.font = `500 ${sz(W, H, 0.016)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillText(specText, W / 2, cardY + cardH * 0.78);
+    }
+  } else {
+    // Landscape/square: compact bar with logo
+    const barH = H * 0.08;
+    const barY = H - barH - pad;
+
+    ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
+    roundRect(ctx, pad, barY, W - pad * 2, barH, BRAND.cornerRadius);
+    ctx.fill();
+
+    const bSize = Math.min(W, H) * 0.04;
+    const bx = pad + bSize + pad * 0.3;
+    const by = barY + barH / 2;
+    ctx.fillStyle = GAME.gold;
+    ctx.beginPath();
+    ctx.arc(bx, by, bSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = `700 ${Math.round(bSize * 0.5)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`R${S.propRound || 1}`, bx, by);
+
+    const ax = bx + bSize;
+    ctx.font = `700 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = BRAND.colorText;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    const addrShort = S.propAddress ? S.propAddress.split(",")[0] : "";
+    const fullInfo = [addrShort, S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
+    ctx.fillText(fullInfo, ax, by);
+
+    // Show logo on right side
+    const showLogoImg = EPISODE.logoImage ? getCachedImage(EPISODE.logoImage) : null;
+    if (showLogoImg && showLogoImg.complete && showLogoImg.naturalWidth > 0) {
+      const maxLH = barH * 0.7;
+      const lScale = maxLH / showLogoImg.naturalHeight;
+      const lw = showLogoImg.naturalWidth * lScale;
+      const lh = showLogoImg.naturalHeight * lScale;
+      ctx.drawImage(showLogoImg, W - pad - lw - pad * 0.5, barY + (barH - lh) / 2, lw, lh);
+    }
+  }
 
   // Photo counter pill — top right
   if (totalPhotos > 1) {
@@ -874,7 +929,6 @@ function drawPropertyGallery(ctx, W, H, S, photoSrc, animT, photoIdx, totalPhoto
     ctx.textBaseline = "middle";
     ctx.fillText(pillText, px + (tw + 20) / 2, py + 2);
   }
-  // No CPS logo — properties aren't listed with CPS
 }
 
 function drawPrompt(ctx, W, H, _S, progress) {
@@ -1712,6 +1766,10 @@ export default function GuessThePrice({ displayMode = false }) {
       propRound: round.number,
       propAddress: round.address,
       optionLocation: round.location,
+      propBeds: round.beds || 0,
+      propType: round.type || "",
+      propTenure: round.tenure || "",
+      propAddedDate: round.addedDate || "",
       optionA: round.optionA,
       optionB: round.optionB,
       optionC: round.optionC,
@@ -1916,6 +1974,10 @@ export default function GuessThePrice({ displayMode = false }) {
       propRound: round.number,
       propAddress: round.address,
       optionLocation: round.location,
+      propBeds: round.beds || 0,
+      propType: round.type || "",
+      propTenure: round.tenure || "",
+      propAddedDate: round.addedDate || "",
       optionA: round.optionA,
       optionB: round.optionB,
       optionC: round.optionC,
