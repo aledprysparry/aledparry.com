@@ -687,7 +687,7 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
   }
-  const barP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.1) / 0.4)));
+  const barP = easeOutExpo(Math.min(1, p / 0.02));
 
   const barSlide = H * 0.03 * (1 - barP);
   ctx.save();
