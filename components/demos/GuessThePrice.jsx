@@ -2141,7 +2141,15 @@ export default function GuessThePrice({ displayMode = false }) {
                     sequenceRef.current = setTimeout(() => {
                       setActiveAsset("scoreboard");
                       setAnimProgress(1);
-                      renderRef.current(1);
+                      // Draw scoreboard directly — renderRef still has stale activeAsset
+                      const canvas = canvasRef.current;
+                      if (canvas) {
+                        const rat = RATIOS[ratio];
+                        if (canvas.width !== rat.W || canvas.height !== rat.H) { canvas.width = rat.W; canvas.height = rat.H; }
+                        const cx = canvas.getContext("2d");
+                        cx.clearRect(0, 0, rat.W, rat.H);
+                        DRAW_FNS.scoreboard(cx, rat.W, rat.H, S, 1);
+                      }
                     }, 1500);
                   }
                 };
@@ -3013,17 +3021,7 @@ export default function GuessThePrice({ displayMode = false }) {
     // Include lock letter and scores so resets/changes within the same asset are detected
     const newKey = `${ds.asset}_${ds.round}_${ds.S?.lockLetter || ""}_${ds.S?.revealLetter || ""}_${(ds.scores || []).join(",")}`;
     if (newKey === displayKeyRef.current) {
-      // Same slide — just re-draw static assets with updated S (scores etc.)
-      if (ds.asset !== "property") {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const dpr = window.devicePixelRatio || 1;
-        const r2 = { W: Math.round(window.innerWidth * dpr), H: Math.round(window.innerHeight * dpr) };
-        canvas.width = r2.W;
-        canvas.height = r2.H;
-        const drawFn = DRAW_FNS[ds.asset];
-        if (drawFn) drawFn(canvas.getContext("2d"), r2.W, r2.H, ds.S, 1);
-      }
+      // Same slide, same data — skip entirely. Don't interrupt running animations.
       return;
     }
     displayKeyRef.current = newKey;
