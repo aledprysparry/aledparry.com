@@ -3030,8 +3030,7 @@ export default function GuessThePrice({ displayMode = false }) {
     if (!canvas) return;
     const dpr = window.devicePixelRatio || 1;
     const r2 = { W: Math.round(window.innerWidth * dpr), H: Math.round(window.innerHeight * dpr) };
-    canvas.width = r2.W;
-    canvas.height = r2.H;
+    if (canvas.width !== r2.W || canvas.height !== r2.H) { canvas.width = r2.W; canvas.height = r2.H; }
 
     const drawFn = DRAW_FNS[ds.asset];
     if (!drawFn) return;
