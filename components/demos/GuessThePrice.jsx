@@ -611,18 +611,20 @@ function drawProperty(ctx, W, H, S, progress) {
   ctx.globalAlpha = barP;
   ctx.translate(0, barSlide);
 
+  // Get property specs from round data (reuse rd from hero photo section above)
+  const specParts = [];
+  if (rd?.beds) specParts.push(`${rd.beds} bed`);
+  if (rd?.type) specParts.push(rd.type);
+  if (rd?.tenure) specParts.push(rd.tenure);
+  const specText = specParts.join("  \u00b7  ");
+
   if (ar === "portrait") {
-    // Vertical: slim card — positioned above the 420px bottom danger zone
-    const cardH = H * 0.08;
+    const cardH = H * 0.10;
     const pad = Math.max(W * 0.05, safe.left);
     const cardY = safe.contentBottom - cardH - W * 0.03;
 
     ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
     roundRect(ctx, pad, cardY, W - pad * 2, cardH, BRAND.cornerRadius);
-    ctx.fill();
-
-    ctx.fillStyle = GAME.gold;
-    roundRect(ctx, pad, cardY, W - pad * 2, 4, BRAND.cornerRadius);
     ctx.fill();
 
     // Round badge
@@ -639,28 +641,31 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.textBaseline = "middle";
     ctx.fillText(`R${S.propRound || 1}`, bx, by);
 
-    // Address — centered
-    ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
+    // Address
+    ctx.font = `700 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "center";
-    ctx.fillText(S.propAddress.split(",")[0], W / 2, cardY + cardH * 0.4);
+    ctx.fillText(S.propAddress.split(",")[0], W / 2, cardY + cardH * 0.30);
 
     // Location
-    ctx.font = `500 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
+    ctx.font = `500 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.goldLight;
-    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.72);
+    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.55);
+
+    // Specs
+    if (specText) {
+      ctx.font = `500 ${sz(W, H, 0.016)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillText(specText, W / 2, cardY + cardH * 0.78);
+    }
   } else {
-    // Landscape/square: slim bottom bar — no logo
-    const barH = H * 0.09;
+    // Landscape/square: bottom bar with specs
+    const barH = H * 0.11;
     const pad = W * 0.03;
     const barY = H - barH - pad;
 
     ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
     roundRect(ctx, pad, barY, W - pad * 2, barH, BRAND.cornerRadius);
-    ctx.fill();
-
-    ctx.fillStyle = GAME.gold;
-    roundRect(ctx, pad, barY, W - pad * 2, 4, BRAND.cornerRadius);
     ctx.fill();
 
     // Round badge
@@ -679,15 +684,16 @@ function drawProperty(ctx, W, H, S, progress) {
 
     // Address
     const ax = bx + bSize;
-    ctx.font = `700 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
+    ctx.font = `700 ${sz(W, H, 0.024)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "left";
-    ctx.fillText(S.propAddress, ax, by - sz(W, H, 0.01));
+    ctx.fillText(S.propAddress, ax, by - sz(W, H, 0.016));
 
-    // Location
-    ctx.font = `500 ${sz(W, H, 0.018)}px 'DM Sans', sans-serif`;
+    // Location + Specs on second line
+    ctx.font = `500 ${sz(W, H, 0.016)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.goldLight;
-    ctx.fillText(S.optionLocation || "", ax, by + sz(W, H, 0.016));
+    const infoLine = [S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
+    ctx.fillText(infoLine, ax, by + sz(W, H, 0.012));
   }
   ctx.restore(); // barP animation
   // No CPS logo on property frame — properties aren't listed with CPS
@@ -1644,6 +1650,17 @@ export default function GuessThePrice({ displayMode = false }) {
   }, [ratio, activeAsset, S, animProgress]);
 
   useEffect(() => { render(); }, [render]);
+
+  // Auto-play animation when switching to any animated asset
+  useEffect(() => {
+    if (displayMode || liveMode) return;
+    const asset = ASSETS.find(a => a.id === activeAsset);
+    if (asset?.animated && !isPlaying) {
+      // Small delay to let render settle, then auto-play
+      const t = setTimeout(() => playAnimation(), 100);
+      return () => clearTimeout(t);
+    }
+  }, [activeAsset]);
 
   const playAnimation = useCallback(() => {
     if (isPlaying) {
