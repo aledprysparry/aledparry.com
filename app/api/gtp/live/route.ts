@@ -1,13 +1,11 @@
-import { put, list, get } from "@vercel/blob";
+import { put, get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
-const LIVE_PREFIX = "gtp/live/";
+const LIVE_PATH = "gtp/live/state.json";
 
 async function getLiveState(): Promise<string | null> {
   try {
-    const { blobs } = await list({ prefix: LIVE_PREFIX });
-    if (!blobs.length) return null;
-    const result = await get(blobs[blobs.length - 1].url, { access: "private" });
+    const result = await get(LIVE_PATH, { access: "private" });
     if (!result || result.statusCode !== 200) return null;
     return new Response(result.stream).text();
   } catch {
@@ -47,7 +45,7 @@ export async function POST(req: Request) {
     };
     const json = JSON.stringify(state);
 
-    await put(LIVE_PREFIX + "state.json", json, {
+    await put(LIVE_PATH, json, {
       access: "private",
       allowOverwrite: true,
     });

@@ -1807,11 +1807,15 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // Upload a base64 photo to Vercel Blob, returns proxy URL
   const uploadPhotoToBlob = async (base64, roundIdx, photoIdx) => {
-    const res = await fetch("/api/gtp/photo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ photo: base64, episodeId: activeEpisodeId, round: roundIdx, index: photoIdx }),
-    });
+    // Convert base64 to binary blob for upload (avoids 33% base64 inflation + 413 errors)
+    const resp = await fetch(base64);
+    const blob = await resp.blob();
+    const form = new FormData();
+    form.append("photo", blob, blob.type === "image/png" ? "photo.png" : "photo.jpg");
+    form.append("episodeId", String(activeEpisodeId));
+    form.append("round", String(roundIdx));
+    form.append("index", String(photoIdx));
+    const res = await fetch("/api/gtp/photo", { method: "POST", body: form });
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
     const data = await res.json();
     if (!data.url) throw new Error("No URL returned");
@@ -2930,44 +2934,60 @@ export default function GuessThePrice({ displayMode = false }) {
     }
   }, [displayMode, displayState]);
 
-  // Display mode: photo gallery auto-play + render
+  // Display mode: photo gallery draw (rAF-driven, not in a heavy useEffect)
+  const dispDrawRef = useRef({ ds: null, photoIdx: 0, animT: 1 });
+  useEffect(() => {
+    dispDrawRef.current = { ds: displayState, photoIdx: dispPhotoIdx, animT: dispPhotoAnimT };
+  }, [displayState, dispPhotoIdx, dispPhotoAnimT]);
+
   useEffect(() => {
     if (!displayMode || !displayState) return;
     const ds = displayState;
     if (ds.asset !== "property" || !ds.photos || ds.photos.length === 0) return;
+    let rafId;
+    const draw = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const { ds: curDs, photoIdx, animT } = dispDrawRef.current;
+      if (!curDs || curDs.asset !== "property") return;
+      const photos = curDs.photos || [];
+      if (photos.length === 0) return;
+      const r2 = { W: Math.round(window.innerWidth * window.devicePixelRatio), H: Math.round(window.innerHeight * window.devicePixelRatio) };
+      if (canvas.width !== r2.W || canvas.height !== r2.H) { canvas.width = r2.W; canvas.height = r2.H; }
+      const src = photos[photoIdx] || null;
+      drawPropertyGallery(canvas.getContext("2d"), r2.W, r2.H, curDs.S, src, animT, photoIdx, photos.length);
+      rafId = requestAnimationFrame(draw);
+    };
+    rafId = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafId);
+  }, [displayMode, displayState?.asset, displayState?.photos?.length]);
+
+  // Display mode: photo auto-advance timer (separate from draw loop)
+  useEffect(() => {
+    if (!displayMode || !displayState) return;
+    const ds = displayState;
+    if (ds.asset !== "property" || !ds.photos || ds.photos.length <= 1) return;
+    if (!dispAutoPlayRef.current) return;
     const photos = ds.photos;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const r2 = { W: Math.round(window.innerWidth * window.devicePixelRatio), H: Math.round(window.innerHeight * window.devicePixelRatio) };
-    if (canvas.width !== r2.W || canvas.height !== r2.H) { canvas.width = r2.W; canvas.height = r2.H; }
-
-    // Draw current photo
-    const src = photos[dispPhotoIdx] || null;
-    drawPropertyGallery(canvas.getContext("2d"), r2.W, r2.H, ds.S, src, dispPhotoAnimT, dispPhotoIdx, photos.length);
-
-    // Auto-advance timer
-    clearInterval(dispPhotoTimerRef.current);
-    if (dispAutoPlayRef.current && photos.length > 1) {
-      const secPerPhoto = (ds.S?.photoDuration || 5) * 1000;
-      dispPhotoTimerRef.current = setInterval(() => {
-        setDispPhotoIdx(prev => {
-          const next = (prev + 1) % photos.length;
-          // Animate entrance
-          setDispPhotoAnimT(0);
-          const start = performance.now();
-          const animTick = (now) => {
-            const t = Math.min(1, (now - start) / 400);
-            setDispPhotoAnimT(t);
-            if (t < 1) dispPhotoAnimRef.current = requestAnimationFrame(animTick);
-          };
-          cancelAnimationFrame(dispPhotoAnimRef.current);
-          dispPhotoAnimRef.current = requestAnimationFrame(animTick);
-          return next;
-        });
-      }, secPerPhoto);
-    }
-    return () => clearInterval(dispPhotoTimerRef.current);
-  }, [displayMode, displayState, dispPhotoIdx, dispPhotoAnimT]);
+    const secPerPhoto = (ds.S?.photoDuration || 5) * 1000;
+    const timer = setInterval(() => {
+      setDispPhotoIdx(prev => {
+        const next = (prev + 1) % photos.length;
+        setDispPhotoAnimT(0);
+        const start = performance.now();
+        const animTick = (now) => {
+          const t = Math.min(1, (now - start) / 400);
+          setDispPhotoAnimT(t);
+          if (t < 1) dispPhotoAnimRef.current = requestAnimationFrame(animTick);
+        };
+        cancelAnimationFrame(dispPhotoAnimRef.current);
+        dispPhotoAnimRef.current = requestAnimationFrame(animTick);
+        return next;
+      });
+    }, secPerPhoto);
+    dispPhotoTimerRef.current = timer;
+    return () => clearInterval(timer);
+  }, [displayMode, displayState?.asset, displayState?.photos?.length, displayState?.S?.photoDuration]);
 
   // Display mode touch handlers for photo gallery swipe
   const dispHandleTouchStart = (e) => {
