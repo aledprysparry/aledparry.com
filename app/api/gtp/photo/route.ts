@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const filename = `gtp/photos/ep${episodeId || "0"}_r${round || "0"}_${index || Date.now()}.${ext}`;
 
     const blob = await put(filename, buffer, {
-      access: "public",
+      access: "private",
       contentType: ext === "png" ? "image/png" : "image/jpeg",
     });
 
