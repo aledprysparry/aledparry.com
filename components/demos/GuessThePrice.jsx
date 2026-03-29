@@ -3033,13 +3033,15 @@ export default function GuessThePrice({ displayMode = false }) {
       return;
     }
     displayKeyRef.current = newKey;
+    if (ds.asset !== "property") setDispPaused(false); // reset pause on slide change
 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Use the SAME canvas dimensions as the editor for pixel-perfect matching
-    const cW = ds.canvasW || 1920;
-    const cH = ds.canvasH || 1080;
+    // Render at screen dimensions — draw functions are ratio-adaptive
+    const dpr = window.devicePixelRatio || 1;
+    const cW = Math.round(window.innerWidth * dpr);
+    const cH = Math.round(window.innerHeight * dpr);
     if (canvas.width !== cW || canvas.height !== cH) { canvas.width = cW; canvas.height = cH; }
 
     const drawFn = DRAW_FNS[ds.asset];
@@ -3056,14 +3058,24 @@ export default function GuessThePrice({ displayMode = false }) {
 
     // All assets play their entrance animation, then hold at p=1
     // Property loops continuously after finishing
+    let pausedAt = null; // tracks when pause started for resuming
     const runAnimation = (startTime) => {
       const tick = (now) => {
         const curDs = displayStateRef.current;
         if (!curDs || curDs.asset !== ds.asset) return; // asset changed, stop
+
+        // Pause support for property: hold at current frame
+        if (ds.asset === "property" && dispPausedRef.current) {
+          if (!pausedAt) pausedAt = now;
+          displayAnimRef.current = requestAnimationFrame(tick);
+          return;
+        }
+        // Resume: adjust start time by pause duration
+        if (pausedAt) { startTime += (now - pausedAt); pausedAt = null; }
+
         const p = Math.min(1, (now - startTime) / dur);
         const cx = canvas.getContext("2d");
         cx.clearRect(0, 0, cW, cH);
-        // Property reads latest S from ref for live data updates
         const drawS = ds.asset === "property" ? (displayStateRef.current?.S || ds.S) : ds.S;
         drawFn(cx, cW, cH, drawS, p);
         if (p < 1) {
@@ -3078,6 +3090,18 @@ export default function GuessThePrice({ displayMode = false }) {
     return () => cancelAnimationFrame(displayAnimRef.current);
   }, [displayMode, displayState]);
 
+  // Display: tap to pause/resume property photo loop
+  const [dispPaused, setDispPaused] = useState(false);
+  const dispPausedRef = useRef(false);
+  useEffect(() => { dispPausedRef.current = dispPaused; }, [dispPaused]);
+
+  const dispHandleTap = () => {
+    if (displayState?.asset === "property") {
+      setDispPaused(p => !p);
+    }
+    dispShowUIBriefly();
+  };
+
   // Show/hide UI on mouse/touch activity
   const dispShowUIBriefly = () => {
     setDispShowUI(true);
@@ -3087,10 +3111,10 @@ export default function GuessThePrice({ displayMode = false }) {
 
   if (displayMode) {
     return (
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
-        onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
+        onMouseMove={dispShowUIBriefly} onClick={dispHandleTap}>
         <canvas ref={canvasRef}
-          style={{ display: "block", width: "100vw", height: "100dvh" }} />
+          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
@@ -3102,6 +3126,12 @@ export default function GuessThePrice({ displayMode = false }) {
             style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.5)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontFamily: DS.font }}>
             &#x26F6;
           </button>
+        )}
+        {/* Pause indicator — shows briefly when tapping to pause/resume on property */}
+        {dispPaused && displayState?.asset === "property" && (
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", background: "rgba(0,0,0,0.5)", borderRadius: 16, padding: "16px 24px", color: "#fff", fontFamily: DS.font, fontSize: 18, fontWeight: 700, pointerEvents: "none" }}>
+            PAUSED — tap to resume
+          </div>
         )}
       </div>
     );
