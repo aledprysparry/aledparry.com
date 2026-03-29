@@ -269,9 +269,42 @@ function createDefaultEpisode(episodeNum = 1) {
   };
 }
 
+// Migrate old private blob URLs to proxy URLs
+function migratePhotoUrl(url) {
+  if (!url || typeof url !== "string") return url;
+  if (url.startsWith("/api/gtp/img") || url.startsWith("data:")) return url;
+  if (url.includes("private.blob.vercel-storage.com")) {
+    // Strip ?download=1 and wrap in proxy
+    const clean = url.replace(/\?download=1$/, "");
+    return `/api/gtp/img?url=${encodeURIComponent(clean)}`;
+  }
+  return url;
+}
+
+function migrateEpisodes(data) {
+  if (!data || !data.episodes) return data;
+  data.episodes = data.episodes.map(ep => ({
+    ...ep,
+    logoImage: migratePhotoUrl(ep.logoImage),
+    agentImages: (ep.agentImages || []).map(migratePhotoUrl),
+    rounds: ep.rounds.map(r => ({
+      ...r,
+      photos: (r.photos || []).map(migratePhotoUrl),
+    })),
+  }));
+  return data;
+}
+
 function loadEpisodes() {
-  try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; }
-  catch { return null; }
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    const migrated = migrateEpisodes(data);
+    // Save migrated data back
+    localStorage.setItem(LS_KEY, JSON.stringify(migrated));
+    return migrated;
+  } catch { return null; }
 }
 
 let _saveWarning = null; // surfaced via setSaveStatus if set
