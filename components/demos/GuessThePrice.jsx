@@ -265,14 +265,14 @@ let EPISODE = createDefaultEpisode();
 //  ASSET TYPES
 // ═══════════════════════════════════════════════════════════════
 const ASSETS = [
-  { id: "intro",     label: "Intro Title",    icon: "\u25b6", animated: false },
-  { id: "property",  label: "Property Frame",  icon: "\ud83c\udfe0", animated: false },
-  { id: "prompt",    label: "Audience Prompt", icon: "\u2753", animated: false },
-  { id: "options",   label: "A/B/C Options",   icon: "\ud83c\udfaf", animated: false },
-  { id: "lockin",    label: "Lock-In",         icon: "\ud83d\udd12", animated: false },
+  { id: "intro",     label: "Intro Title",    icon: "\u25b6", animated: true },
+  { id: "property",  label: "Property Frame",  icon: "\ud83c\udfe0", animated: true },
+  { id: "prompt",    label: "Audience Prompt", icon: "\u2753", animated: true },
+  { id: "options",   label: "A/B/C Options",   icon: "\ud83c\udfaf", animated: true },
+  { id: "lockin",    label: "Lock-In",         icon: "\ud83d\udd12", animated: true },
   { id: "timer",     label: "Countdown",       icon: "\u23f1", animated: true },
   { id: "reveal",    label: "Price Reveal",    icon: "\ud83c\udf89", animated: true },
-  { id: "scoreboard",label: "Scoreboard",      icon: "\ud83c\udfc6", animated: false },
+  { id: "scoreboard",label: "Scoreboard",      icon: "\ud83c\udfc6", animated: true },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -382,7 +382,8 @@ function easeOutExpo(t) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
 //  DRAW FUNCTIONS — social-first, ratio-adaptive
 // ═══════════════════════════════════════════════════════════════
 
-function drawIntro(ctx, W, H, S) {
+function drawIntro(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
   drawBg(ctx, W, H);
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
@@ -425,19 +426,30 @@ function drawIntro(ctx, W, H, S) {
   const titleAreaTop = ar === "portrait" ? safeTop + safeH * 0.02 : H * 0.06;
   const titleAreaH = ar === "portrait" ? safeH * 0.35 : H * 0.38;
 
+  // Entrance timing: logo 0-0.4, headshots 0.3-0.7, VS 0.5-0.8
+  const logoP = Math.min(1, p / 0.4);
+  const headshotP = Math.min(1, Math.max(0, (p - 0.3) / 0.4));
+  const vsP = Math.min(1, Math.max(0, (p - 0.5) / 0.3));
+
   if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
     // ── Custom logo PNG — contain-fit in title area ──
     const maxLogoW = W * 0.65;
     const maxLogoH = titleAreaH;
     const iw = logoImg.naturalWidth, ih = logoImg.naturalHeight;
-    const logoScale = Math.min(maxLogoW / iw, maxLogoH / ih);
+    const eLogoP = easeOutExpo(logoP);
+    const logoScale = Math.min(maxLogoW / iw, maxLogoH / ih) * (0.85 + 0.15 * eLogoP);
     const dw = iw * logoScale, dh = ih * logoScale;
+    ctx.save();
+    ctx.globalAlpha = eLogoP;
     ctx.drawImage(logoImg, (W - dw) / 2, titleAreaTop + (titleAreaH - dh) / 2, dw, dh);
+    ctx.restore();
   } else {
     // ── Fallback: canvas-drawn title ──
+    const eLogoP = easeOutExpo(logoP);
     const guessY = ar === "portrait" ? safeTop + safeH * 0.08 : H * 0.18;
     const guessS = sz(W, H, ar === "portrait" ? 0.045 : 0.038);
     ctx.save();
+    ctx.globalAlpha = eLogoP;
     ctx.font = `800 ${guessS}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
@@ -527,32 +539,40 @@ function drawIntro(ctx, W, H, S) {
     ctx.fillText(name, x, y + headR + headR * 0.3);
   };
 
-  drawHeadshot(leftX, vsY, EPISODE.agentImages?.[0], EPISODE.agents[0], 0);
-  drawHeadshot(rightX, vsY, EPISODE.agentImages?.[1], EPISODE.agents[1], 1);
+  const eHP = easeOutExpo(headshotP);
+  const slideOffset = W * 0.15 * (1 - eHP);
+  ctx.save();
+  ctx.globalAlpha = eHP;
+  drawHeadshot(leftX - slideOffset, vsY, EPISODE.agentImages?.[0], EPISODE.agents[0], 0);
+  drawHeadshot(rightX + slideOffset, vsY, EPISODE.agentImages?.[1], EPISODE.agents[1], 1);
+  ctx.restore();
 
   // ── "VS" badge in center ──
-  const vsR = sz(W, H, ar === "portrait" ? 0.045 : 0.035);
-  // Dark circle background
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(W / 2, vsY, vsR, 0, Math.PI * 2);
-  ctx.fillStyle = GAME.navy;
-  ctx.fill();
-  ctx.strokeStyle = GAME.gold;
-  ctx.lineWidth = vsR * 0.12;
-  ctx.stroke();
-  ctx.restore();
-  // VS text
-  ctx.font = `900 ${vsR * 0.85}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = GAME.gold;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("VS", W / 2, vsY);
+  const eVP = easeOutBack(vsP);
+  const vsR = sz(W, H, ar === "portrait" ? 0.045 : 0.035) * eVP;
+  if (vsP > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, vsP * 2);
+    ctx.beginPath();
+    ctx.arc(W / 2, vsY, vsR, 0, Math.PI * 2);
+    ctx.fillStyle = GAME.navy;
+    ctx.fill();
+    ctx.strokeStyle = GAME.gold;
+    ctx.lineWidth = vsR * 0.12;
+    ctx.stroke();
+    ctx.font = `900 ${vsR * 0.85}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("VS", W / 2, vsY);
+    ctx.restore();
+  }
 
   drawStamp(ctx, W, H);
 }
 
-function drawProperty(ctx, W, H, S) {
+function drawProperty(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   if (!S.propAddress) return;
   const ar = aspect(W, H);
@@ -563,12 +583,17 @@ function drawProperty(ctx, W, H, S) {
   const rd = EPISODE.rounds ? EPISODE.rounds[S.propRound - 1] : null;
   const heroSrc = rd && rd.photos && rd.photos[rd.heroPhotoIndex || 0];
   const heroImg = heroSrc ? getCachedImage(heroSrc) : null;
+  const ep = easeOutExpo(Math.min(1, p / 0.5));
   if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
-    // Cover-fit the photo
+    // Cover-fit with Ken Burns zoom entrance
     const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
-    const scale = Math.max(W / iw, H / ih);
+    const zoomScale = 1.0 + 0.06 * (1 - ep);
+    const scale = Math.max(W / iw, H / ih) * zoomScale;
     const dw = iw * scale, dh = ih * scale;
+    ctx.save();
+    ctx.globalAlpha = ep;
     ctx.drawImage(heroImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    ctx.restore();
     // Darken bottom for readability
     const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
     grad.addColorStop(0, "rgba(0,0,0,0)");
@@ -577,6 +602,12 @@ function drawProperty(ctx, W, H, S) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
   }
+  const barP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.3) / 0.5)));
+
+  const barSlide = H * 0.03 * (1 - barP);
+  ctx.save();
+  ctx.globalAlpha = barP;
+  ctx.translate(0, barSlide);
 
   if (ar === "portrait") {
     // Vertical: slim card — positioned above the 420px bottom danger zone
@@ -656,6 +687,7 @@ function drawProperty(ctx, W, H, S) {
     ctx.fillStyle = GAME.goldLight;
     ctx.fillText(S.optionLocation || "", ax, by + sz(W, H, 0.016));
   }
+  ctx.restore(); // barP animation
   // No CPS logo on property frame — properties aren't listed with CPS
 }
 
@@ -741,7 +773,8 @@ function drawPropertyGallery(ctx, W, H, S, photoSrc, animT, photoIdx, totalPhoto
   // No CPS logo — properties aren't listed with CPS
 }
 
-function drawPrompt(ctx, W, H) {
+function drawPrompt(ctx, W, H, _S, progress) {
+  const p = progress ?? 1;
   drawBg(ctx, W, H);
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
@@ -758,7 +791,10 @@ function drawPrompt(ctx, W, H) {
   ctx.fillText("?", W / 2, H * 0.48);
   ctx.restore();
 
-  // Main question — HUGE
+  // Main question — HUGE — fades + scales in
+  const textP = easeOutExpo(Math.min(1, p / 0.5));
+  ctx.save();
+  ctx.globalAlpha = textP;
   const qY = ar === "portrait" ? safeTop + safeH * 0.25 : H * 0.40;
   const qs = sz(W, H, ar === "portrait" ? 0.10 : 0.085);
   ctx.font = `700 ${qs}px 'Lora', serif`;
@@ -776,6 +812,7 @@ function drawPrompt(ctx, W, H) {
   ctx.font = `500 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.45)";
   ctx.fillText("Choose A, B, or C", W / 2, ar === "portrait" ? safeTop + safeH * 0.40 : H * 0.52);
+  ctx.restore();
 
   // Option pills — larger, with more presence
   const isVert = ar === "portrait";
@@ -816,7 +853,8 @@ function drawPrompt(ctx, W, H) {
   drawStamp(ctx, W, H);
 }
 
-function drawOptions(ctx, W, H, S) {
+function drawOptions(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
@@ -856,7 +894,15 @@ function drawOptions(ctx, W, H, S) {
 
   for (let i = 0; i < 3; i++) {
     const o = opts[i];
+    // Staggered entrance: each pill slides in from right
+    const pillDelay = 0.15 + i * 0.15;
+    const pillP = easeOutExpo(Math.min(1, Math.max(0, (p - pillDelay) / 0.4)));
+    const slideX = W * 0.1 * (1 - pillP);
     const oy = startY + i * (oh + og);
+
+    ctx.save();
+    ctx.globalAlpha = pillP;
+    ctx.translate(slideX, 0);
 
     // Pill with rounded ends
     ctx.fillStyle = o.color;
@@ -891,12 +937,14 @@ function drawOptions(ctx, W, H, S) {
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.fillText(o.price || "---", priceX, by2);
+    ctx.restore(); // pill animation
   }
 
   drawStamp(ctx, W, H);
 }
 
-function drawLockIn(ctx, W, H, S) {
+function drawLockIn(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
   drawBg(ctx, W, H);
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
@@ -917,7 +965,10 @@ function drawLockIn(ctx, W, H, S) {
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
 
-  // Agent name — big
+  // Agent name — fades in
+  const nameP = easeOutExpo(Math.min(1, p / 0.3));
+  ctx.save();
+  ctx.globalAlpha = nameP;
   ctx.font = `600 ${sz(W, H, 0.04)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.textAlign = "center";
@@ -928,16 +979,24 @@ function drawLockIn(ctx, W, H, S) {
   ctx.font = `700 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = GAME.gold;
   ctx.fillText("LOCKS IN", W / 2, centerY - sz(W, H, 0.12));
-
-  // Giant letter
-  const letterSz = sz(W, H, ar === "portrait" ? 0.35 : 0.28);
-  ctx.save();
-  ctx.shadowColor = letterColor;
-  ctx.shadowBlur = sz(W, H, 0.04);
-  ctx.font = `800 ${letterSz}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = letterColor;
-  ctx.fillText(letter, W / 2, centerY + sz(W, H, 0.05));
   ctx.restore();
+
+  // Giant letter — scale in with elastic bounce
+  const letterLP = Math.min(1, Math.max(0, (p - 0.25) / 0.5));
+  const letterScale = easeOutBack(letterLP);
+  const letterSz = sz(W, H, ar === "portrait" ? 0.35 : 0.28) * letterScale;
+  if (letterLP > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, letterLP * 2);
+    ctx.shadowColor = letterColor;
+    ctx.shadowBlur = sz(W, H, 0.04);
+    ctx.font = `800 ${Math.round(letterSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = letterColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(letter, W / 2, centerY + sz(W, H, 0.05));
+    ctx.restore();
+  }
 
   // Salmon underline
   const ulW = W * 0.15;
@@ -1092,7 +1151,8 @@ function drawReveal(ctx, W, H, S, progress) {
   drawStamp(ctx, W, H);
 }
 
-function drawScoreboard(ctx, W, H, S) {
+function drawScoreboard(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
   drawBg(ctx, W, H);
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
@@ -1102,12 +1162,16 @@ function drawScoreboard(ctx, W, H, S) {
   const a1 = EPISODE.agents[0], a2 = EPISODE.agents[1];
   const s1 = S.score1 ?? 0, s2 = S.score2 ?? 0;
 
-  // Title
+  // Title — fades in
+  const titleP = easeOutExpo(Math.min(1, p / 0.3));
+  ctx.save();
+  ctx.globalAlpha = titleP;
   ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText("SCOREBOARD", W / 2, ar === "portrait" ? safeTop + safeH * 0.06 : H * 0.15);
+  ctx.restore();
 
   if (ar === "portrait") {
     // Vertical: stack the two agent cards within safe zone
