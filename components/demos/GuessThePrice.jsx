@@ -484,13 +484,18 @@ function drawIntro(ctx, W, H, S, progress) {
   // ── VS section — DRAMATIC, big headshots, tight layout ──
   const vsY = ar === "portrait" ? safeTop + safeH * 0.55 : H * 0.62;
   const headR = sz(W, H, ar === "portrait" ? 0.13 : 0.10); // MUCH bigger headshots
-  const spread = ar === "portrait" ? W * 0.30 : W * 0.24;
+  const spread = ar === "portrait" ? W * 0.24 : W * 0.18;
 
   const leftX = W / 2 - spread;
   const rightX = W / 2 + spread;
 
-  // Draw headshot with glow ring, shadow, and name
+  // Get current round to determine roles
+  const introRound = EPISODE.rounds ? EPISODE.rounds[(S.propRound || 1) - 1] : null;
+
+  // Draw headshot with glow ring, shadow, name, and role icon
   const drawHeadshot = (x, y, imgUrl, name, idx) => {
+    const isGuesser = introRound && introRound.guesser === name;
+    const isPropertyAgent = introRound && introRound.propertyAgent === name;
     const img = imgUrl ? getCachedImage(imgUrl) : null;
 
     // Dramatic shadow behind circle
@@ -542,6 +547,7 @@ function drawIntro(ctx, W, H, S, progress) {
 
     // Name — BIG and bold
     const nameS = sz(W, H, ar === "portrait" ? 0.05 : 0.042);
+    const nameY = y + headR + headR * 0.2;
     ctx.save();
     ctx.shadowColor = "rgba(0,0,0,0.5)";
     ctx.shadowBlur = 8;
@@ -549,8 +555,30 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(name.toUpperCase(), x, y + headR + headR * 0.2);
+    ctx.fillText(name.toUpperCase(), x, nameY);
     ctx.restore();
+
+    // Role badge — pill with label
+    const badgeY = nameY + nameS * 1.4;
+    const badgeS = sz(W, H, 0.015);
+    const badgeText = isGuesser ? "GUESSING" : isPropertyAgent ? "THEIR PROPERTY" : "";
+    if (badgeText) {
+      ctx.save();
+      ctx.font = `700 ${badgeS}px 'DM Sans', sans-serif`;
+      const tw = ctx.measureText(badgeText).width;
+      const pillW = tw + badgeS * 2;
+      const pillH = badgeS * 2;
+      // Pill background
+      ctx.fillStyle = isGuesser ? GAME.gold : "rgba(255,255,255,0.15)";
+      roundRect(ctx, x - pillW / 2, badgeY - pillH / 2, pillW, pillH, pillH / 2);
+      ctx.fill();
+      // Text
+      ctx.fillStyle = isGuesser ? "#000" : "rgba(255,255,255,0.7)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(badgeText, x, badgeY);
+      ctx.restore();
+    }
   };
 
   const eHP = easeOutExpo(headshotP);
