@@ -183,8 +183,8 @@ function compressPhoto(file, existingCount = 0) {
       const img = new Image();
       img.onload = () => {
         const highCount = existingCount > 10;
-        const maxW = highCount ? 1024 : 1280;
-        const quality = highCount ? 0.75 : 0.8;
+        const maxW = highCount ? 960 : 1280;
+        const quality = highCount ? 0.7 : 0.75;
         const scale = Math.min(1, maxW / img.width);
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
@@ -1623,6 +1623,8 @@ export default function GuessThePrice({ displayMode = false }) {
   const pushToLive = async (overrideAsset, overrideS) => {
     try {
       const rd = episode.rounds[currentRound] || {};
+      // Only send URL-based photos (not base64) to stay under body limit
+      const urlPhotos = (rd.photos || []).filter(p => p?.startsWith("http"));
       await fetch("/api/gtp/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1632,9 +1634,9 @@ export default function GuessThePrice({ displayMode = false }) {
           S: overrideS || S,
           scores,
           agents: episode.agents,
-          agentImages: episode.agentImages || [],
-          logoImage: episode.logoImage || "",
-          photos: rd.photos || [],
+          agentImages: (episode.agentImages || []).map(img => img?.startsWith("http") ? img : ""),
+          logoImage: episode.logoImage?.startsWith("http") ? episode.logoImage : "",
+          photos: urlPhotos,
           heroPhotoIndex: rd.heroPhotoIndex || 0,
         }),
       });
@@ -1761,10 +1763,15 @@ export default function GuessThePrice({ displayMode = false }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ photo: base64, episodeId: activeEpisodeId, round: roundNum, index }),
       });
+      if (!res.ok) {
+        console.warn("Photo upload failed:", res.status);
+        return base64;
+      }
       const data = await res.json();
-      return data.url || base64; // fallback to base64 if upload fails
-    } catch {
-      return base64; // fallback to base64
+      return data.url || base64;
+    } catch (err) {
+      console.warn("Photo upload error:", err);
+      return base64;
     }
   };
 
