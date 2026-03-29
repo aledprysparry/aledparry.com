@@ -777,43 +777,45 @@ function drawPropertyGallery(ctx, W, H, S, photoSrc, animT, photoIdx, totalPhoto
 
 function drawPrompt(ctx, W, H, _S, progress) {
   const p = progress ?? 1;
-  drawBg(ctx, W, H);
-  drawAccentBars(ctx, W, H);
+  // Transparent background — this is an overlay for the video edit
+  ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
   const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
   const safeTop = ar === "portrait" ? safe.contentTop : 0;
 
-  // Giant "?" behind
-  ctx.save();
-  ctx.font = `800 ${sz(W, H, 1.2)}px 'Lora', serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.03)";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("?", W / 2, H * 0.48);
-  ctx.restore();
+  // Subtle dark vignette for readability over footage
+  const vig = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7);
+  vig.addColorStop(0, "rgba(0,0,0,0.15)");
+  vig.addColorStop(1, "rgba(0,0,0,0.5)");
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
 
   // Main question — HUGE — fades + scales in
   const textP = easeOutExpo(Math.min(1, p / 0.5));
   ctx.save();
   ctx.globalAlpha = textP;
-  const qY = ar === "portrait" ? safeTop + safeH * 0.25 : H * 0.40;
+  const qY = ar === "portrait" ? safeTop + safeH * 0.25 : H * 0.35;
   const qs = sz(W, H, ar === "portrait" ? 0.10 : 0.085);
   ctx.font = `700 ${qs}px 'Lora', serif`;
   ctx.fillStyle = BRAND.colorWarm;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  // Text shadow for readability over footage
+  ctx.shadowColor = "rgba(0,0,0,0.6)";
+  ctx.shadowBlur = qs * 0.15;
   if (ar === "portrait") {
     ctx.fillText("Which one", W / 2, qY - qs * 0.55);
     ctx.fillText("is it?", W / 2, qY + qs * 0.55);
   } else {
     ctx.fillText("Which one is it?", W / 2, qY);
   }
+  ctx.shadowColor = "transparent";
 
   // Subtitle
   ctx.font = `500 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
-  ctx.fillText("Choose A, B, or C", W / 2, ar === "portrait" ? safeTop + safeH * 0.40 : H * 0.52);
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.fillText("Choose A, B, or C", W / 2, ar === "portrait" ? safeTop + safeH * 0.40 : H * 0.47);
   ctx.restore();
 
   // Option pills — larger, with more presence
@@ -1094,8 +1096,8 @@ function drawReveal(ctx, W, H, S, progress) {
     ctx.fillText("THE ANSWER IS...", W / 2, centerY);
 
     // Animated dots
-    const dots = Math.floor(tp * 4) % 4;
-    ctx.fillText(".".repeat(dots), W / 2, centerY + sz(W, H, 0.06));
+    const dots = Math.max(0, Math.floor(tp * 4) % 4);
+    if (dots > 0) ctx.fillText(".".repeat(dots), W / 2, centerY + sz(W, H, 0.06));
   } else {
     const rp = (progress - 0.35) / 0.65;
 
