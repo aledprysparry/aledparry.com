@@ -1560,6 +1560,50 @@ export default function GuessThePrice({ displayMode = false }) {
     return () => clearTimeout(t);
   }, []);
 
+  // ── Migrate any base64 images to blob URLs on mount ──
+  const migratedRef = useRef(false);
+  useEffect(() => {
+    if (migratedRef.current || displayMode || episodes.length === 0) return;
+    migratedRef.current = true;
+    const isBase64 = (s) => s && typeof s === "string" && s.startsWith("data:");
+    const needsMigration = episodes.some(ep =>
+      isBase64(ep.logoImage) ||
+      (ep.agentImages || []).some(isBase64) ||
+      ep.rounds.some(r => (r.photos || []).some(isBase64))
+    );
+    if (!needsMigration) return;
+    (async () => {
+      setSaveStatus("Migrating images…");
+      let changed = false;
+      const updated = await Promise.all(episodes.map(async (ep) => {
+        let logo = ep.logoImage;
+        if (isBase64(logo)) {
+          try { logo = await uploadPhotoToBlob(logo, "logo", 0); changed = true; } catch {}
+        }
+        const agentImgs = await Promise.all((ep.agentImages || []).map(async (img, i) => {
+          if (isBase64(img)) { try { const u = await uploadPhotoToBlob(img, "agent", i); changed = true; return u; } catch {} }
+          return img;
+        }));
+        const rounds = await Promise.all(ep.rounds.map(async (r, ri) => {
+          const photos = await Promise.all((r.photos || []).map(async (p, pi) => {
+            if (isBase64(p)) { try { const u = await uploadPhotoToBlob(p, ri, pi); changed = true; return u; } catch {} }
+            return p;
+          }));
+          return { ...r, photos };
+        }));
+        return { ...ep, logoImage: logo, agentImages: agentImgs, rounds };
+      }));
+      if (changed) {
+        setEpisodes(updated);
+        setDirty(true);
+        setSaveStatus("Images migrated ✓");
+      } else {
+        setSaveStatus("");
+      }
+      setTimeout(() => setSaveStatus(""), 3000);
+    })();
+  }, [episodes, displayMode]);
+
   // ── Auto-save to localStorage when episodes change ──
   useEffect(() => {
     if (episodes.length > 0 && activeEpisodeId) {
