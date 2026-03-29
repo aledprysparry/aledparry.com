@@ -969,8 +969,8 @@ function drawOptions(ctx, W, H, S, progress) {
   const og = ar === "portrait" ? safeH * 0.025 : H * 0.035;
   // Center the 3 pills vertically in available space
   const totalPillH = 3 * oh + 2 * og;
-  const availTop = ar === "portrait" ? safeTop + safeH * 0.18 : H * 0.22;
-  const availBottom = ar === "portrait" ? safe.contentBottom - safeH * 0.05 : H * 0.82;
+  const availTop = ar === "portrait" ? safeTop + safeH * 0.18 : H * 0.24;
+  const availBottom = ar === "portrait" ? safe.contentBottom - safeH * 0.05 : H * 0.85;
   const startY = availTop + ((availBottom - availTop) - totalPillH) / 2;
 
   for (let i = 0; i < 3; i++) {
