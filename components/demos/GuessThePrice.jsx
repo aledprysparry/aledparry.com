@@ -570,7 +570,7 @@ function drawIntro(ctx, W, H, S, progress) {
     // Role badge — pill with label
     const badgeY = nameY + nameS * 1.4;
     const badgeS = sz(W, H, 0.015);
-    const badgeText = isGuesser ? "GUESSING" : isPropertyAgent ? "THEIR PROPERTY" : "";
+    const badgeText = isGuesser ? "GUESSING" : isPropertyAgent ? "PROPERTY CHOICE" : "";
     if (badgeText) {
       ctx.save();
       ctx.font = `700 ${badgeS}px 'DM Sans', sans-serif`;
@@ -971,6 +971,8 @@ function drawOptions(ctx, W, H, S, progress) {
   // Location — brighter
   ctx.font = `500 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillText(S.optionLocation || "", W / 2, headerY + sz(W, H, 0.05));
 
   // Option pills — BIG, full-width, safe-zone aware
@@ -1205,7 +1207,7 @@ function drawReveal(ctx, W, H, S, progress) {
   const cc = colors[cl] || GAME.gold;
   const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.38 : H * 0.42;
 
-  // Phase 1 (0–0.35): tension — "THE ANSWER IS..."
+  // Phase 1 (0–0.35): tension — "THE LISTING PRICE IS..."
   // Phase 2 (0.35–1): reveal with glow
   if (progress < 0.35) {
     const tp = progress / 0.35;
@@ -1221,7 +1223,7 @@ function drawReveal(ctx, W, H, S, progress) {
     ctx.fillStyle = `rgba(255,255,255,${0.5 + tp * 0.3})`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("THE ANSWER IS...", W / 2, centerY);
+    ctx.fillText("THE LISTING PRICE IS...", W / 2, centerY);
 
     // Animated dots
     const dots = Math.max(0, Math.floor(tp * 4) % 4);
@@ -1808,7 +1810,7 @@ export default function GuessThePrice({ displayMode = false }) {
   useEffect(() => { render(); }, [render]);
 
   // Auto-play entrance animations (but NOT timer/reveal/lockin — those need user to set values first)
-  const manualPlayAssets = ["timer", "reveal", "lockin"];
+  const manualPlayAssets = ["intro", "timer", "reveal", "lockin"];
   const [sequenceMode, setSequenceMode] = useState(true);
   const sequenceRef = useRef(null);
   useEffect(() => {
@@ -1851,19 +1853,34 @@ export default function GuessThePrice({ displayMode = false }) {
   // Play full sequence: Lock-In → Countdown → Reveal
   const playSequence = useCallback(() => {
     clearTimeout(sequenceRef.current);
+    cancelAnimationFrame(animRef.current);
     setActiveAsset("lockin");
     setAnimProgress(0);
     setIsPlaying(true);
     const lockDur = 3000;
     const timerDur = (S.timerDuration || 3) * 1000;
     const revealDur = 3000;
+    const r = RATIOS[ratio];
+
+    // Direct draw helper — avoids stale render closure
+    const drawDirect = (assetId, progress) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      if (canvas.width !== r.W || canvas.height !== r.H) {
+        canvas.width = r.W; canvas.height = r.H;
+      }
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, r.W, r.H);
+      const fn = DRAW_FNS[assetId];
+      if (fn) fn(ctx, r.W, r.H, S, progress);
+    };
 
     // Phase 1: Lock-In
     const start1 = performance.now();
     const tick1 = (now) => {
       const p = Math.min(1, (now - start1) / lockDur);
       setAnimProgress(p);
-      render(p);
+      drawDirect("lockin", p);
       if (p < 1) { animRef.current = requestAnimationFrame(tick1); }
       else {
         // Phase 2: Countdown
@@ -1874,7 +1891,7 @@ export default function GuessThePrice({ displayMode = false }) {
           const tick2 = (now2) => {
             const p2 = Math.min(1, (now2 - start2) / timerDur);
             setAnimProgress(p2);
-            render(p2);
+            drawDirect("timer", p2);
             if (p2 < 1) { animRef.current = requestAnimationFrame(tick2); }
             else {
               // Phase 3: Reveal
@@ -1885,7 +1902,7 @@ export default function GuessThePrice({ displayMode = false }) {
                 const tick3 = (now3) => {
                   const p3 = Math.min(1, (now3 - start3) / revealDur);
                   setAnimProgress(p3);
-                  render(p3);
+                  drawDirect("reveal", p3);
                   if (p3 < 1) { animRef.current = requestAnimationFrame(tick3); }
                   else {
                     setIsPlaying(false);
@@ -1906,7 +1923,7 @@ export default function GuessThePrice({ displayMode = false }) {
       }
     };
     animRef.current = requestAnimationFrame(tick1);
-  }, [S, render, playAnimation]);
+  }, [S, ratio, playAnimation]);
 
   const addScore = (idx) => {
     setScores(prev => {
@@ -2946,7 +2963,7 @@ export default function GuessThePrice({ displayMode = false }) {
 
       {/* STATUS STRIP */}
       <div style={{ padding: `${DS.xs}px ${DS.xl}px`, borderBottom: `1px solid ${DS.borderSubtle}`, fontSize: DS.fsSm, color: DS.textMuted, background: "rgba(11,29,58,0.2)" }}>
-        Round {round.number} of 6 &middot; {round.address ? round.address.split(",")[0] : "\u2014"} &middot; {round.guesser} guesses {round.propertyAgent}&apos;s property
+        Round {round.number} of 6 &middot; {round.address ? round.address.split(",")[0] : "\u2014"} &middot; {round.guesser} guesses {round.propertyAgent}&apos;s property choice
       </div>
 
       {/* MAIN */}
