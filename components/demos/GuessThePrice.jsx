@@ -170,6 +170,7 @@ function createDefaultEpisode(episodeNum = 1) {
     brand: "CPS Homes",
     episode: episodeNum,
     agents: ["Sian", "Nathan"],
+    agentImages: ["", ""],
     scores: [0, 0],
     createdAt: new Date().toISOString(),
     rounds: [
@@ -309,73 +310,152 @@ function drawIntro(ctx, W, H, S) {
   const safe = safeZone(W, H);
   const unit = sz(W, H, 1);
 
-  // Large decorative "?" watermark behind content
+  // ── Dynamic background texture ──
+  // Large question marks scattered as watermarks
   ctx.save();
-  ctx.font = `800 ${Math.round(unit * 0.7)}px 'Lora', serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.03)";
+  ctx.globalAlpha = 0.025;
+  ctx.font = `800 ${Math.round(unit * 0.35)}px 'Lora', serif`;
+  ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("?", W / 2, H * 0.5);
+  ctx.fillText("?", W * 0.15, H * 0.25);
+  ctx.fillText("?", W * 0.85, H * 0.75);
+  ctx.font = `800 ${Math.round(unit * 0.55)}px 'Lora', serif`;
+  ctx.fillText("?", W * 0.5, H * 0.48);
   ctx.restore();
 
-  // In portrait, distribute content within safe zone (220px top – 420px bottom)
-  // Safe content area: safe.contentTop to safe.contentBottom
+  // ── Diagonal energy stripe ──
+  ctx.save();
+  ctx.globalAlpha = 0.04;
+  ctx.fillStyle = GAME.gold;
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.55);
+  ctx.lineTo(W, H * 0.35);
+  ctx.lineTo(W, H * 0.42);
+  ctx.lineTo(0, H * 0.62);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
   const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
   const safeTop = ar === "portrait" ? safe.contentTop : 0;
 
-  // Show title — BIG, warm cream
-  const titleY = ar === "portrait" ? safeTop + safeH * 0.18 : H * 0.30;
-  const ts = sz(W, H, ar === "portrait" ? 0.09 : 0.08);
-  ctx.font = `700 ${ts}px 'Lora', serif`;
-  ctx.fillStyle = BRAND.colorWarm;
+  // ── "GUESS THE" — smaller, uppercase, tracked ──
+  const guessY = ar === "portrait" ? safeTop + safeH * 0.08 : H * 0.18;
+  const guessS = sz(W, H, ar === "portrait" ? 0.045 : 0.038);
+  ctx.save();
+  ctx.font = `800 ${guessS}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.letterSpacing = `${Math.round(guessS * 0.35)}px`;
+  ctx.fillText("GUESS THE", W / 2, guessY);
+  ctx.restore();
 
-  // Word-wrap title for portrait
-  const title = S.showTitle || EPISODE.show;
-  const words = title.split(" ");
-  if (ar === "portrait" && ctx.measureText(title).width > W * 0.85) {
-    const mid = Math.ceil(words.length / 2);
-    ctx.fillText(words.slice(0, mid).join(" "), W / 2, titleY - ts * 0.6);
-    ctx.fillText(words.slice(mid).join(" "), W / 2, titleY + ts * 0.6);
-  } else {
-    ctx.fillText(title, W / 2, titleY);
-  }
+  // ── "PRICE" — massive, logo-style, Lora serif ──
+  const priceY = ar === "portrait" ? safeTop + safeH * 0.20 : H * 0.34;
+  const priceS = sz(W, H, ar === "portrait" ? 0.16 : 0.14);
+  ctx.save();
+  ctx.font = `900 ${priceS}px 'Lora', serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  // Text with warm cream fill + subtle shadow
+  ctx.shadowColor = "rgba(0,0,0,0.3)";
+  ctx.shadowBlur = priceS * 0.08;
+  ctx.shadowOffsetY = priceS * 0.03;
+  ctx.fillStyle = BRAND.colorWarm;
+  ctx.fillText("PRICE", W / 2, priceY);
+  ctx.shadowColor = "transparent";
+  ctx.restore();
 
-  // Salmon divider
-  const divW = W * 0.2;
+  // ── Salmon accent line under "PRICE" ──
+  const lineY = priceY + priceS * 0.45;
+  const lineW = W * 0.25;
   ctx.fillStyle = GAME.gold;
-  roundRect(ctx, W / 2 - divW / 2, (ar === "portrait" ? safeTop + safeH * 0.30 : H * 0.40), divW, 4, 2);
+  roundRect(ctx, W / 2 - lineW / 2, lineY, lineW, Math.max(3, H * 0.004), 2);
   ctx.fill();
 
-  // Episode label
-  const epY = ar === "portrait" ? safeTop + safeH * 0.36 : H * 0.46;
-  ctx.font = `600 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = GAME.gold;
-  ctx.letterSpacing = "0.15em";
-  ctx.fillText(`EPISODE ${S.introEpisode || EPISODE.episode}`, W / 2, epY);
+  // ── VS section with agent headshots ──
+  const vsY = ar === "portrait" ? safeTop + safeH * 0.48 : H * 0.58;
+  const headR = sz(W, H, ar === "portrait" ? 0.09 : 0.065); // headshot circle radius
+  const spread = ar === "portrait" ? W * 0.28 : W * 0.18;
 
-  // Agent names — large, impactful
-  const nameY = ar === "portrait" ? safeTop + safeH * 0.52 : H * 0.58;
-  const ns = sz(W, H, ar === "portrait" ? 0.065 : 0.05);
-  ctx.font = `700 ${ns}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = BRAND.colorText;
-  if (ar === "portrait") {
-    ctx.fillText(EPISODE.agents[0], W / 2, nameY - ns * 0.8);
-    ctx.font = `500 ${sz(W, H, 0.03)}px 'Lora', serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
-    ctx.fillText("vs", W / 2, nameY);
-    ctx.font = `700 ${ns}px 'DM Sans', sans-serif`;
+  // Left agent (agent 1)
+  const leftX = W / 2 - spread;
+  const rightX = W / 2 + spread;
+
+  // Draw headshot circles
+  const drawHeadshot = (x, y, imgUrl, name, idx) => {
+    const img = imgUrl ? getCachedImage(imgUrl) : null;
+
+    // Outer ring — salmon glow
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, headR + headR * 0.12, 0, Math.PI * 2);
+    ctx.strokeStyle = GAME.gold;
+    ctx.lineWidth = headR * 0.06;
+    ctx.stroke();
+    ctx.restore();
+
+    // Circle clip for image
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, headR, 0, Math.PI * 2);
+    ctx.closePath();
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.clip();
+      // Cover-fit the image into the circle
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      const scale = Math.max(headR * 2 / iw, headR * 2 / ih);
+      const dw = iw * scale, dh = ih * scale;
+      ctx.drawImage(img, x - dw / 2, y - dh / 2, dw, dh);
+    } else {
+      // Placeholder — gradient circle with initial
+      const pg = ctx.createRadialGradient(x, y, 0, x, y, headR);
+      pg.addColorStop(0, idx === 0 ? BRAND.colorAccent : BRAND.colorPositive);
+      pg.addColorStop(1, idx === 0 ? "#c2564a" : "#5a7a58");
+      ctx.fillStyle = pg;
+      ctx.fill();
+      // Initial letter
+      ctx.font = `800 ${headR * 0.9}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(name.charAt(0).toUpperCase(), x, y);
+    }
+    ctx.restore();
+
+    // Name below headshot
+    const nameS = sz(W, H, ar === "portrait" ? 0.04 : 0.032);
+    ctx.font = `700 ${nameS}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
-    ctx.fillText(EPISODE.agents[1], W / 2, nameY + ns * 0.8);
-  } else {
-    ctx.fillText(`${EPISODE.agents[0]}  vs  ${EPISODE.agents[1]}`, W / 2, nameY);
-  }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(name, x, y + headR + headR * 0.3);
+  };
 
-  // Brand name — subtle, within safe zone
-  ctx.font = `500 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.3)";
-  ctx.fillText(EPISODE.brand, W / 2, ar === "portrait" ? safeTop + safeH * 0.72 : H * 0.72);
+  drawHeadshot(leftX, vsY, EPISODE.agentImages?.[0], EPISODE.agents[0], 0);
+  drawHeadshot(rightX, vsY, EPISODE.agentImages?.[1], EPISODE.agents[1], 1);
+
+  // ── "VS" badge in center ──
+  const vsR = sz(W, H, ar === "portrait" ? 0.045 : 0.035);
+  // Dark circle background
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(W / 2, vsY, vsR, 0, Math.PI * 2);
+  ctx.fillStyle = GAME.navy;
+  ctx.fill();
+  ctx.strokeStyle = GAME.gold;
+  ctx.lineWidth = vsR * 0.12;
+  ctx.stroke();
+  ctx.restore();
+  // VS text
+  ctx.font = `900 ${vsR * 0.85}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = GAME.gold;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("VS", W / 2, vsY);
 
   drawStamp(ctx, W, H);
 }
@@ -1362,8 +1442,14 @@ export default function GuessThePrice() {
         return (<>
           <div style={label()}>Show Title</div>
           <input style={inputS()} value={S.showTitle} onChange={e => updateS("showTitle", e.target.value)} />
-          <div style={{ ...label(), marginTop: DS.lg }}>Episode Number</div>
-          <input style={inputS({ width: 80 })} type="number" value={S.introEpisode} onChange={e => updateS("introEpisode", +e.target.value)} />
+          <div style={{ ...label(), marginTop: DS.lg }}>{episode.agents[0]} Headshot</div>
+          <input style={inputS()} placeholder="Paste image URL or drag image…" value={episode.agentImages?.[0] || ""}
+            onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: [e.target.value, ep.agentImages?.[1] || ""] } : ep)); setDirty(true); }} />
+          {episode.agentImages?.[0] && <img src={episode.agentImages[0]} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", marginTop: DS.xs, border: `2px solid ${GAME.gold}` }} alt="" />}
+          <div style={{ ...label(), marginTop: DS.lg }}>{episode.agents[1]} Headshot</div>
+          <input style={inputS()} placeholder="Paste image URL or drag image…" value={episode.agentImages?.[1] || ""}
+            onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: [ep.agentImages?.[0] || "", e.target.value] } : ep)); setDirty(true); }} />
+          {episode.agentImages?.[1] && <img src={episode.agentImages[1]} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", marginTop: DS.xs, border: `2px solid ${GAME.gold}` }} alt="" />}
         </>);
       case "property":
         return (<>
