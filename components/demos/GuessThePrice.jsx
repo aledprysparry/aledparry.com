@@ -579,8 +579,8 @@ function drawProperty(ctx, W, H, S) {
   }
 
   if (ar === "portrait") {
-    // Vertical: full-width card — positioned above the 420px bottom danger zone
-    const cardH = H * 0.12;
+    // Vertical: slim card — positioned above the 420px bottom danger zone
+    const cardH = H * 0.08;
     const pad = Math.max(W * 0.05, safe.left);
     const cardY = safe.contentBottom - cardH - W * 0.03;
 
@@ -588,13 +588,12 @@ function drawProperty(ctx, W, H, S) {
     roundRect(ctx, pad, cardY, W - pad * 2, cardH, BRAND.cornerRadius);
     ctx.fill();
 
-    // Salmon top edge
     ctx.fillStyle = GAME.gold;
-    roundRect(ctx, pad, cardY, W - pad * 2, 5, BRAND.cornerRadius);
+    roundRect(ctx, pad, cardY, W - pad * 2, 4, BRAND.cornerRadius);
     ctx.fill();
 
-    // Round badge — large
-    const bSize = W * 0.11;
+    // Round badge
+    const bSize = W * 0.09;
     const bx = W / 2;
     const by = cardY - bSize * 0.6;
     ctx.fillStyle = GAME.gold;
@@ -607,19 +606,19 @@ function drawProperty(ctx, W, H, S) {
     ctx.textBaseline = "middle";
     ctx.fillText(`R${S.propRound || 1}`, bx, by);
 
-    // Address — centered, large
-    ctx.font = `700 ${sz(W, H, 0.035)}px 'DM Sans', sans-serif`;
+    // Address — centered
+    ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "center";
-    ctx.fillText(S.propAddress.split(",")[0], W / 2, cardY + cardH * 0.35);
+    ctx.fillText(S.propAddress.split(",")[0], W / 2, cardY + cardH * 0.4);
 
     // Location
-    ctx.font = `500 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
+    ctx.font = `500 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.goldLight;
-    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.65);
+    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.72);
   } else {
-    // Landscape/square: bottom bar
-    const barH = H * 0.14;
+    // Landscape/square: slim bottom bar — no logo
+    const barH = H * 0.09;
     const pad = W * 0.03;
     const barY = H - barH - pad;
 
@@ -628,11 +627,11 @@ function drawProperty(ctx, W, H, S) {
     ctx.fill();
 
     ctx.fillStyle = GAME.gold;
-    roundRect(ctx, pad, barY, W - pad * 2, 5, BRAND.cornerRadius);
+    roundRect(ctx, pad, barY, W - pad * 2, 4, BRAND.cornerRadius);
     ctx.fill();
 
     // Round badge
-    const bSize = Math.min(W, H) * 0.06;
+    const bSize = Math.min(W, H) * 0.05;
     const bx = pad + bSize;
     const by = barY + barH / 2;
     ctx.fillStyle = GAME.gold;
@@ -647,18 +646,17 @@ function drawProperty(ctx, W, H, S) {
 
     // Address
     const ax = bx + bSize;
-    ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
+    ctx.font = `700 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "left";
-    ctx.fillText(S.propAddress, ax, by - sz(W, H, 0.015));
+    ctx.fillText(S.propAddress, ax, by - sz(W, H, 0.01));
 
     // Location
-    ctx.font = `500 ${sz(W, H, 0.02)}px 'DM Sans', sans-serif`;
+    ctx.font = `500 ${sz(W, H, 0.018)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.goldLight;
-    ctx.fillText(S.optionLocation || "", ax, by + sz(W, H, 0.02));
+    ctx.fillText(S.optionLocation || "", ax, by + sz(W, H, 0.016));
   }
-
-  drawStamp(ctx, W, H);
+  // No CPS logo on property frame — properties aren't listed with CPS
 }
 
 // ── Live mode: Photo gallery with Ken Burns entrance ──
@@ -740,8 +738,7 @@ function drawPropertyGallery(ctx, W, H, S, photoSrc, animT, photoIdx, totalPhoto
     ctx.textBaseline = "middle";
     ctx.fillText(pillText, px + (tw + 20) / 2, py + 2);
   }
-
-  drawStamp(ctx, W, H);
+  // No CPS logo — properties aren't listed with CPS
 }
 
 function drawPrompt(ctx, W, H) {
@@ -853,9 +850,9 @@ function drawOptions(ctx, W, H, S) {
   ];
 
   const ow = W - pad * 2;
-  const oh = ar === "portrait" ? safeH * 0.14 : H * 0.18;
+  const oh = ar === "portrait" ? safeH * 0.14 : H * 0.15;
   const og = ar === "portrait" ? safeH * 0.03 : H * 0.04;
-  const startY = ar === "portrait" ? safeTop + safeH * 0.20 : H * 0.28;
+  const startY = ar === "portrait" ? safeTop + safeH * 0.20 : H * 0.24;
 
   for (let i = 0; i < 3; i++) {
     const o = opts[i];
@@ -989,18 +986,19 @@ function drawTimer(ctx, W, H, S, progress) {
     ctx.fillStyle = BRAND.colorWarm;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(String(displayNum), W / 2, centerY);
+    ctx.fillText(String(displayNum), W / 2, centerY + numSz * 0.05);
     ctx.restore();
   } else {
     // REVEAL — punchy
     ctx.save();
     ctx.shadowColor = GAME.gold;
     ctx.shadowBlur = sz(W, H, 0.06);
-    ctx.font = `800 ${sz(W, H, 0.12)}px 'DM Sans', sans-serif`;
+    const revSz = sz(W, H, 0.12);
+    ctx.font = `800 ${revSz}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("REVEAL!", W / 2, centerY);
+    ctx.fillText("REVEAL!", W / 2, centerY + revSz * 0.03);
     ctx.restore();
   }
   drawStamp(ctx, W, H);
