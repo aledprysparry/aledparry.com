@@ -392,19 +392,28 @@ function drawIntro(ctx, W, H, S, progress) {
   const safe = safeZone(W, H);
   const unit = sz(W, H, 1);
 
-  // ── Dynamic background texture ──
-  // Large question marks scattered as watermarks
-  ctx.save();
-  ctx.globalAlpha = 0.025;
-  ctx.font = `800 ${Math.round(unit * 0.35)}px 'Lora', serif`;
-  ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("?", W * 0.15, H * 0.25);
-  ctx.fillText("?", W * 0.85, H * 0.75);
-  ctx.font = `800 ${Math.round(unit * 0.55)}px 'Lora', serif`;
-  ctx.fillText("?", W * 0.5, H * 0.48);
-  ctx.restore();
+  // ── Animated question marks — drift, rotate, pulse ──
+  const qMarks = [
+    { x: 0.12, y: 0.22, size: 0.30, rot: -0.15, drift: -0.04 },
+    { x: 0.88, y: 0.72, size: 0.28, rot: 0.12, drift: -0.03 },
+    { x: 0.50, y: 0.46, size: 0.50, rot: 0.08, drift: -0.05 },
+    { x: 0.30, y: 0.65, size: 0.18, rot: -0.2, drift: -0.02 },
+    { x: 0.75, y: 0.30, size: 0.22, rot: 0.18, drift: -0.035 },
+  ];
+  for (const q of qMarks) {
+    ctx.save();
+    const qAlpha = 0.02 + 0.02 * Math.sin(p * Math.PI * 2 + q.x * 10);
+    ctx.globalAlpha = qAlpha;
+    const yOff = q.drift * p * H;
+    ctx.translate(W * q.x, H * q.y + yOff);
+    ctx.rotate(q.rot + p * 0.3 * q.rot);
+    ctx.font = `800 ${Math.round(unit * q.size)}px 'Lora', serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("?", 0, 0);
+    ctx.restore();
+  }
 
   // ── Diagonal energy stripe ──
   ctx.save();
