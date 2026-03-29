@@ -2157,6 +2157,85 @@ export default function GuessThePrice({ displayMode = false }) {
     setTimeout(() => setExportStatus(""), 2000);
   }, [S, ratio, render]);
 
+  // ── Export all rounds as ZIP ──
+  const exportAllZIP = useCallback(async () => {
+    setExportStatus("Loading ZIP library…");
+    if (!window.JSZip) {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      document.head.appendChild(script);
+      await new Promise((res, rej) => { script.onload = res; script.onerror = rej; });
+    }
+    const zip = new window.JSZip();
+    const rat = RATIOS[ratio];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const assetsToExport = [
+      { asset: "property", suffix: "property" },
+      { asset: "options",  suffix: "options" },
+      { asset: "reveal",   suffix: "reveal" },
+    ];
+
+    const rounds = episode.rounds || [];
+    const total = rounds.length * assetsToExport.length;
+    let done = 0;
+
+    for (let ri = 0; ri < rounds.length; ri++) {
+      const round = rounds[ri];
+      if (!round.address && !round.optionA) continue; // skip empty rounds
+      // Build S for this round
+      const roundS = {
+        ...S,
+        propRound: round.number,
+        propAddress: round.address,
+        optionLocation: round.location,
+        optionA: round.optionA,
+        optionB: round.optionB,
+        optionC: round.optionC,
+        revealLetter: round.correctLetter,
+        revealPrice: round.correctPrice,
+        lockAgent: round.guesser,
+        lockLetter: round.correctLetter,
+      };
+
+      // Temporarily update EPISODE round pointer for draw functions
+      const prevRound = currentRound;
+      EPISODE = episode;
+
+      for (const { asset, suffix } of assetsToExport) {
+        done++;
+        setExportStatus(`Exporting R${ri + 1} ${suffix}… (${done}/${total})`);
+        canvas.width = rat.W;
+        canvas.height = rat.H;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, rat.W, rat.H);
+        const drawFn = DRAW_FNS[asset];
+        if (drawFn) {
+          const ad = ASSETS.find(a => a.id === asset);
+          if (ad?.animated) drawFn(ctx, rat.W, rat.H, roundS, 1);
+          else drawFn(ctx, rat.W, rat.H, roundS);
+        }
+        const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+        if (blob) {
+          zip.file(`R${ri + 1}_${suffix}.png`, blob);
+        }
+        await new Promise(r => setTimeout(r, 50)); // brief yield
+      }
+    }
+
+    setExportStatus("Building ZIP…");
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = `gtp_ep${episode.episode || 1}_all_rounds.zip`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setExportStatus("Done ✓");
+    render();
+    setTimeout(() => setExportStatus(""), 3000);
+  }, [S, ratio, render, episode, currentRound]);
+
   // ── Export iPad PDF cheat sheet ──
   const exportPDF = useCallback(async () => {
     const rd = episode.rounds[currentRound];
@@ -3306,6 +3385,7 @@ export default function GuessThePrice({ displayMode = false }) {
             <button onClick={exportWebM} style={btnPositive({ padding: "8px 20px", fontSize: DS.fsSm })}>Export WebM</button>
           )}
           <button onClick={exportRound} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export Round</button>
+          <button onClick={exportAllZIP} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export All (ZIP)</button>
           <button onClick={exportPDF} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>iPad PDF</button>
           <span style={{ width: 1, height: 24, background: DS.borderSubtle }} />
           <button onClick={() => pushToLive()}
