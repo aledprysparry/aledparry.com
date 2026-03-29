@@ -481,50 +481,58 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.fill();
   }
 
-  // ── VS section with agent headshots ──
-  const vsY = ar === "portrait" ? safeTop + safeH * 0.48 : H * 0.58;
-  const headR = sz(W, H, ar === "portrait" ? 0.09 : 0.065); // headshot circle radius
-  const spread = ar === "portrait" ? W * 0.28 : W * 0.18;
+  // ── VS section — DRAMATIC, big headshots, tight layout ──
+  const vsY = ar === "portrait" ? safeTop + safeH * 0.55 : H * 0.62;
+  const headR = sz(W, H, ar === "portrait" ? 0.13 : 0.10); // MUCH bigger headshots
+  const spread = ar === "portrait" ? W * 0.30 : W * 0.24;
 
-  // Left agent (agent 1)
   const leftX = W / 2 - spread;
   const rightX = W / 2 + spread;
 
-  // Draw headshot circles
+  // Draw headshot with glow ring, shadow, and name
   const drawHeadshot = (x, y, imgUrl, name, idx) => {
     const img = imgUrl ? getCachedImage(imgUrl) : null;
 
-    // Outer ring — salmon glow
+    // Dramatic shadow behind circle
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = headR * 0.5;
+    ctx.shadowOffsetY = headR * 0.1;
+    ctx.beginPath();
+    ctx.arc(x, y, headR, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.01)";
+    ctx.fill();
+    ctx.restore();
+
+    // Thick outer glow ring
     ctx.save();
     ctx.beginPath();
-    ctx.arc(x, y, headR + headR * 0.12, 0, Math.PI * 2);
+    ctx.arc(x, y, headR + headR * 0.08, 0, Math.PI * 2);
     ctx.strokeStyle = GAME.gold;
-    ctx.lineWidth = headR * 0.06;
+    ctx.lineWidth = headR * 0.08;
+    ctx.shadowColor = GAME.gold;
+    ctx.shadowBlur = headR * 0.3;
     ctx.stroke();
     ctx.restore();
 
-    // Circle clip for image
+    // Image or placeholder
     ctx.save();
     ctx.beginPath();
     ctx.arc(x, y, headR, 0, Math.PI * 2);
     ctx.closePath();
-
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.clip();
-      // Cover-fit the image into the circle
       const iw = img.naturalWidth, ih = img.naturalHeight;
       const scale = Math.max(headR * 2 / iw, headR * 2 / ih);
       const dw = iw * scale, dh = ih * scale;
       ctx.drawImage(img, x - dw / 2, y - dh / 2, dw, dh);
     } else {
-      // Placeholder — gradient circle with initial
       const pg = ctx.createRadialGradient(x, y, 0, x, y, headR);
       pg.addColorStop(0, idx === 0 ? BRAND.colorAccent : BRAND.colorPositive);
       pg.addColorStop(1, idx === 0 ? "#c2564a" : "#5a7a58");
       ctx.fillStyle = pg;
       ctx.fill();
-      // Initial letter
-      ctx.font = `800 ${headR * 0.9}px 'DM Sans', sans-serif`;
+      ctx.font = `800 ${headR * 0.8}px 'DM Sans', sans-serif`;
       ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -532,37 +540,45 @@ function drawIntro(ctx, W, H, S, progress) {
     }
     ctx.restore();
 
-    // Name below headshot
-    const nameS = sz(W, H, ar === "portrait" ? 0.04 : 0.032);
-    ctx.font = `700 ${nameS}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = BRAND.colorText;
+    // Name — BIG and bold
+    const nameS = sz(W, H, ar === "portrait" ? 0.05 : 0.042);
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 8;
+    ctx.font = `800 ${nameS}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(name, x, y + headR + headR * 0.3);
+    ctx.fillText(name.toUpperCase(), x, y + headR + headR * 0.2);
+    ctx.restore();
   };
 
   const eHP = easeOutExpo(headshotP);
-  const slideOffset = W * 0.15 * (1 - eHP);
+  const slideOffset = W * 0.2 * (1 - eHP);
   ctx.save();
   ctx.globalAlpha = eHP;
   drawHeadshot(leftX - slideOffset, vsY, EPISODE.agentImages?.[0], EPISODE.agents[0], 0);
   drawHeadshot(rightX + slideOffset, vsY, EPISODE.agentImages?.[1], EPISODE.agents[1], 1);
   ctx.restore();
 
-  // ── "VS" badge in center ──
+  // ── "VS" badge — BIGGER, more dramatic ──
   const eVP = easeOutBack(vsP);
-  const vsR = sz(W, H, ar === "portrait" ? 0.045 : 0.035) * eVP;
+  const vsR = sz(W, H, ar === "portrait" ? 0.06 : 0.05) * eVP;
   if (vsP > 0) {
     ctx.save();
     ctx.globalAlpha = Math.min(1, vsP * 2);
+    // Glow behind VS
+    ctx.shadowColor = GAME.gold;
+    ctx.shadowBlur = vsR * 0.8;
     ctx.beginPath();
     ctx.arc(W / 2, vsY, vsR, 0, Math.PI * 2);
     ctx.fillStyle = GAME.navy;
     ctx.fill();
     ctx.strokeStyle = GAME.gold;
-    ctx.lineWidth = vsR * 0.12;
+    ctx.lineWidth = vsR * 0.1;
     ctx.stroke();
-    ctx.font = `900 ${vsR * 0.85}px 'DM Sans', sans-serif`;
+    ctx.shadowColor = "transparent";
+    ctx.font = `900 ${vsR * 0.9}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
