@@ -1072,14 +1072,6 @@ function drawOptions(ctx, W, H, S, progress) {
     ctx.fillText(o.price || "---", priceX, by2 + oh * 0.02);
     ctx.restore();
 
-    // Correct answer marker — small dot, editor/admin only
-    if (o.letter === S.revealLetter && S._editorMode) {
-      const dotR = oh * 0.04;
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.beginPath();
-      ctx.arc(pad + ow - oh * 0.3, by2, dotR, 0, Math.PI * 2);
-      ctx.fill();
-    }
     ctx.restore(); // pill animation
   }
 
@@ -2588,12 +2580,17 @@ export default function GuessThePrice({ displayMode = false }) {
         return <p style={{ color: DS.textMuted, fontSize: DS.fsSm }}>No editable fields &mdash; this card is fixed.</p>;
       case "options":
         return (<>
-          <div style={label()}>Option A</div>
-          <input style={inputS()} value={S.optionA} onChange={e => updateS("optionA", e.target.value)} />
-          <div style={{ ...label(), marginTop: DS.lg }}>Option B</div>
-          <input style={inputS()} value={S.optionB} onChange={e => updateS("optionB", e.target.value)} />
-          <div style={{ ...label(), marginTop: DS.lg }}>Option C</div>
-          <input style={inputS()} value={S.optionC} onChange={e => updateS("optionC", e.target.value)} />
+          {["A", "B", "C"].map(letter => (
+            <div key={letter} style={{ marginTop: letter === "A" ? 0 : DS.md }}>
+              <div style={{ ...label(), display: "flex", alignItems: "center", gap: DS.xs }}>
+                Option {letter}
+                {S.revealLetter === letter && <span style={{ color: GAME.gold, fontSize: 10 }}>CORRECT</span>}
+              </div>
+              <input style={inputS({ borderColor: S.revealLetter === letter ? "rgba(42,157,143,0.5)" : DS.borderSubtle })}
+                value={letter === "A" ? S.optionA : letter === "B" ? S.optionB : S.optionC}
+                onChange={e => updateS(`option${letter}`, e.target.value)} />
+            </div>
+          ))}
           <div style={{ ...label(), marginTop: DS.lg }}>Location</div>
           <input style={inputS()} value={S.optionLocation} onChange={e => updateS("optionLocation", e.target.value)} />
         </>);
