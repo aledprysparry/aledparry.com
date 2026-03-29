@@ -1731,6 +1731,7 @@ export default function GuessThePrice({ displayMode = false }) {
     try {
       const rd = episode.rounds[currentRound] || {};
       const livePhotos = (rd.photos || []).filter(p => p?.startsWith("/api") || p?.startsWith("http"));
+      const r = RATIOS[ratio];
       const state = {
         asset: overrideAsset || activeAsset,
         round: currentRound + 1,
@@ -1742,6 +1743,8 @@ export default function GuessThePrice({ displayMode = false }) {
         photos: livePhotos,
         heroPhotoIndex: rd.heroPhotoIndex || 0,
         roundData: { ...rd, photos: livePhotos },
+        canvasW: r.W,
+        canvasH: r.H,
         ts: Date.now(),
       };
 
@@ -2954,8 +2957,9 @@ export default function GuessThePrice({ displayMode = false }) {
   const dispUITimerRef = useRef(null);
 
   // Handle incoming display state (from BroadcastChannel or poll)
+  // Only accept NEWER timestamps — prevents stale poll data overwriting fresh BroadcastChannel data
   const handleDisplayData = useCallback((data) => {
-    if (!data.ts || data.ts === lastTsRef.current) return;
+    if (!data.ts || data.ts <= lastTsRef.current) return;
     lastTsRef.current = data.ts;
     setDisplayState(data);
     if (data.logoImage) getCachedImage(data.logoImage);
@@ -3018,8 +3022,11 @@ export default function GuessThePrice({ displayMode = false }) {
   useEffect(() => {
     if (!displayMode || !displayState) return;
     const ds = displayState;
-    // Include lock letter and scores so resets/changes within the same asset are detected
-    const newKey = `${ds.asset}_${ds.round}_${ds.S?.lockLetter || ""}_${ds.S?.revealLetter || ""}_${(ds.scores || []).join(",")}`;
+    // Only include fields that matter for each asset — avoids restarting animations needlessly
+    const newKey = ds.asset === "property" ? `property_${ds.round}`
+      : ds.asset === "lockin" ? `lockin_${ds.round}_${ds.S?.lockLetter || ""}`
+      : ds.asset === "scoreboard" ? `scoreboard_${ds.round}_${(ds.scores || []).join(",")}`
+      : `${ds.asset}_${ds.round}`;
     if (newKey === displayKeyRef.current) {
       // Same slide, same data — skip entirely. Don't interrupt running animations.
       return;
@@ -3028,9 +3035,11 @@ export default function GuessThePrice({ displayMode = false }) {
 
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const r2 = { W: Math.round(window.innerWidth * dpr), H: Math.round(window.innerHeight * dpr) };
-    if (canvas.width !== r2.W || canvas.height !== r2.H) { canvas.width = r2.W; canvas.height = r2.H; }
+
+    // Use the SAME canvas dimensions as the editor for pixel-perfect matching
+    const cW = ds.canvasW || 1920;
+    const cH = ds.canvasH || 1080;
+    if (canvas.width !== cW || canvas.height !== cH) { canvas.width = cW; canvas.height = cH; }
 
     const drawFn = DRAW_FNS[ds.asset];
     if (!drawFn) return;
@@ -3051,21 +3060,16 @@ export default function GuessThePrice({ displayMode = false }) {
         const curDs = displayStateRef.current;
         if (!curDs || curDs.asset !== ds.asset) return; // asset changed, stop
         const p = Math.min(1, (now - startTime) / dur);
-        const dpr2 = window.devicePixelRatio || 1;
-        const r2now = { W: Math.round(window.innerWidth * dpr2), H: Math.round(window.innerHeight * dpr2) };
-        if (canvas.width !== r2now.W || canvas.height !== r2now.H) { canvas.width = r2now.W; canvas.height = r2now.H; }
         const cx = canvas.getContext("2d");
-        cx.clearRect(0, 0, r2now.W, r2now.H);
+        cx.clearRect(0, 0, cW, cH);
         // Property reads latest S from ref for live data updates
         const drawS = ds.asset === "property" ? (displayStateRef.current?.S || ds.S) : ds.S;
-        drawFn(cx, r2now.W, r2now.H, drawS, p);
+        drawFn(cx, cW, cH, drawS, p);
         if (p < 1) {
           displayAnimRef.current = requestAnimationFrame(tick);
         } else if (ds.asset === "property") {
-          // Property: loop photo cycle
           runAnimation(performance.now());
         }
-        // All other assets: animation stops at p=1, holding the final frame
       };
       displayAnimRef.current = requestAnimationFrame(tick);
     };
