@@ -160,7 +160,39 @@ function getCachedImage(src) {
 const LS_KEY = "gtp_episodes_v1";
 
 function emptyRound(n, propertyAgent, guesser) {
-  return { number: n, propertyAgent, guesser, address: "", location: "", optionA: "", optionB: "", optionC: "", correctLetter: "A", correctPrice: "" };
+  return {
+    number: n, propertyAgent, guesser,
+    address: "", location: "",
+    rightmoveUrl: "",
+    beds: 0, type: "", tenure: "", addedDate: "",
+    optionA: "", optionB: "", optionC: "",
+    correctLetter: "A", correctPrice: "",
+    photos: [],        // base64 dataURL strings (max 5, compressed to 800px)
+    heroPhotoIndex: 0, // which photo is the main graphic
+    notes: "",
+  };
+}
+
+// Compress uploaded photo to max 800px wide for localStorage efficiency
+function compressPhoto(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 800;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const cx = canvas.getContext("2d");
+        cx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function createDefaultEpisode(episodeNum = 1) {
@@ -174,9 +206,33 @@ function createDefaultEpisode(episodeNum = 1) {
     scores: [0, 0],
     createdAt: new Date().toISOString(),
     rounds: [
-      { number: 1, propertyAgent: "Nathan", guesser: "Sian", address: "Arabella Street, Roath, Cardiff, CF24", location: "Roath, Cardiff", optionA: "\u00a3285,000", optionB: "\u00a3325,000", optionC: "\u00a3369,950", correctLetter: "B", correctPrice: "325,000" },
-      { number: 2, propertyAgent: "Nathan", guesser: "Sian", address: "Pen-Y-Lan Terrace, Penylan, Cardiff, CF23", location: "Penylan, Cardiff", optionA: "\u00a3375,000", optionB: "\u00a3425,000", optionC: "\u00a3450,000", correctLetter: "C", correctPrice: "450,000" },
-      { number: 3, propertyAgent: "Nathan", guesser: "Sian", address: "Rhigos Gardens, Cathays, Cardiff, CF24", location: "Cathays, Cardiff", optionA: "\u00a3299,950", optionB: "\u00a3375,000", optionC: "\u00a3450,000", correctLetter: "C", correctPrice: "450,000" },
+      {
+        number: 1, propertyAgent: "Nathan", guesser: "Sian",
+        address: "Arabella Street, Roath, Cardiff, CF24", location: "Roath, Cardiff",
+        rightmoveUrl: "https://www.rightmove.co.uk/properties/173783180",
+        beds: 3, type: "Terraced", tenure: "Freehold", addedDate: "27/03/2026",
+        optionA: "\u00a3285,000", optionB: "\u00a3325,000", optionC: "\u00a3369,950",
+        correctLetter: "B", correctPrice: "325,000",
+        photos: [], heroPhotoIndex: 0, notes: "",
+      },
+      {
+        number: 2, propertyAgent: "Nathan", guesser: "Sian",
+        address: "Pen-Y-Lan Terrace, Penylan, Cardiff, CF23", location: "Penylan, Cardiff",
+        rightmoveUrl: "https://www.rightmove.co.uk/properties/173735222",
+        beds: 3, type: "End of terrace", tenure: "Freehold", addedDate: "26/03/2026",
+        optionA: "\u00a3375,000", optionB: "\u00a3425,000", optionC: "\u00a3450,000",
+        correctLetter: "C", correctPrice: "450,000",
+        photos: [], heroPhotoIndex: 0, notes: "",
+      },
+      {
+        number: 3, propertyAgent: "Nathan", guesser: "Sian",
+        address: "Rhigos Gardens, Cathays, Cardiff, CF24", location: "Cathays, Cardiff",
+        rightmoveUrl: "https://www.rightmove.co.uk/properties/173648561",
+        beds: 3, type: "Terraced", tenure: "Freehold", addedDate: "24/03/2026",
+        optionA: "\u00a3299,950", optionB: "\u00a3375,000", optionC: "\u00a3450,000",
+        correctLetter: "C", correctPrice: "450,000",
+        photos: [], heroPhotoIndex: 0, notes: "Strongest reaction property \u2014 Cathays at \u00a3450k will surprise Sian.",
+      },
       emptyRound(4, "Sian", "Nathan"),
       emptyRound(5, "Sian", "Nathan"),
       emptyRound(6, "Sian", "Nathan"),
@@ -466,6 +522,25 @@ function drawProperty(ctx, W, H, S) {
   const ar = aspect(W, H);
 
   const safe = safeZone(W, H);
+
+  // Draw hero photo as background if available
+  const rd = EPISODE.rounds ? EPISODE.rounds[S.propRound - 1] : null;
+  const heroSrc = rd && rd.photos && rd.photos[rd.heroPhotoIndex || 0];
+  const heroImg = heroSrc ? getCachedImage(heroSrc) : null;
+  if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
+    // Cover-fit the photo
+    const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
+    const scale = Math.max(W / iw, H / ih);
+    const dw = iw * scale, dh = ih * scale;
+    ctx.drawImage(heroImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    // Darken bottom for readability
+    const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(0.6, "rgba(0,0,0,0.4)");
+    grad.addColorStop(1, "rgba(0,0,0,0.75)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
 
   if (ar === "portrait") {
     // Vertical: full-width card — positioned above the 420px bottom danger zone
@@ -1243,6 +1318,45 @@ export default function GuessThePrice() {
     setDirty(true);
   };
 
+  // Update a field on the current round directly (for property details)
+  const updateRoundField = (field, value) => {
+    setEpisodes(prev => prev.map(ep => {
+      if (ep.id !== activeEpisodeId) return ep;
+      const rounds = [...ep.rounds];
+      if (rounds[currentRound]) {
+        rounds[currentRound] = { ...rounds[currentRound], [field]: value };
+      }
+      return { ...ep, rounds };
+    }));
+    setDirty(true);
+  };
+
+  // Handle photo upload for current round
+  const handlePhotoUpload = async (files) => {
+    const rd = episode.rounds[currentRound];
+    if (!rd) return;
+    const existing = rd.photos || [];
+    const remaining = 5 - existing.length;
+    if (remaining <= 0) return;
+    const toProcess = Array.from(files).slice(0, remaining);
+    const compressed = await Promise.all(toProcess.map(f => compressPhoto(f)));
+    const newPhotos = [...existing, ...compressed];
+    updateRoundField("photos", newPhotos);
+    // Pre-cache for canvas
+    newPhotos.forEach(p => getCachedImage(p));
+  };
+
+  const removePhoto = (idx) => {
+    const rd = episode.rounds[currentRound];
+    if (!rd) return;
+    const photos = [...(rd.photos || [])];
+    photos.splice(idx, 1);
+    updateRoundField("photos", photos);
+    if ((rd.heroPhotoIndex || 0) >= photos.length) {
+      updateRoundField("heroPhotoIndex", Math.max(0, photos.length - 1));
+    }
+  };
+
   const loadRound = useCallback((n) => {
     const idx = n - 1;
     const round = episode.rounds[idx];
@@ -1433,6 +1547,158 @@ export default function GuessThePrice() {
     setTimeout(() => setExportStatus(""), 2000);
   }, [S, ratio, render]);
 
+  // ── Export iPad PDF cheat sheet ──
+  const exportPDF = useCallback(async () => {
+    const rd = episode.rounds[currentRound];
+    if (!rd) return;
+    setExportStatus("Generating PDF…");
+
+    // Dynamically load jsPDF
+    if (!window.jspdf) {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+      document.head.appendChild(script);
+      await new Promise((resolve) => { script.onload = resolve; });
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const PW = 210, pad = 12;
+
+    // Dark background
+    doc.setFillColor(13, 17, 23);
+    doc.rect(0, 0, 210, 297, "F");
+
+    // Gold accent bar
+    doc.setFillColor(251, 135, 112);
+    doc.rect(0, 0, 210, 2, "F");
+
+    let y = 12;
+    doc.setFontSize(9);
+    doc.setTextColor(251, 135, 112);
+    doc.setFont("helvetica", "bold");
+    doc.text("CPS HOMES \u00b7 GUESS THE PRICE", pad, y);
+    y += 6;
+    doc.setFontSize(12);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`ROUND ${rd.number} OF 6  \u00b7  ${rd.propertyAgent.toUpperCase()}'S PROPERTY  \u00b7  ${rd.guesser.toUpperCase()} GUESSES`, pad, y);
+    y += 8;
+
+    // Hero photo
+    if (rd.photos && rd.photos[rd.heroPhotoIndex || 0]) {
+      const imgData = rd.photos[rd.heroPhotoIndex || 0];
+      const fmt = imgData.includes("data:image/png") ? "PNG" : "JPEG";
+      doc.addImage(imgData, fmt, 0, y, PW, 75);
+      y += 78;
+    } else {
+      doc.setFillColor(26, 34, 53);
+      doc.rect(0, y, PW, 60, "F");
+      doc.setTextColor(80, 90, 110);
+      doc.setFontSize(10);
+      doc.text("No photo uploaded", PW / 2, y + 30, { align: "center" });
+      y += 63;
+    }
+
+    // Address + Specs columns
+    const colW = (PW - pad * 3) / 2;
+    doc.setFillColor(20, 26, 40);
+    doc.rect(pad, y, colW, 28, "F");
+    doc.setFontSize(7);
+    doc.setTextColor(251, 135, 112);
+    doc.setFont("helvetica", "bold");
+    doc.text("ADDRESS", pad + 4, y + 6);
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "normal");
+    const addrLines = doc.splitTextToSize(rd.address, colW - 8);
+    doc.text(addrLines, pad + 4, y + 13);
+
+    const col2x = pad * 2 + colW;
+    doc.setFillColor(20, 26, 40);
+    doc.rect(col2x, y, colW, 28, "F");
+    doc.setFontSize(7);
+    doc.setTextColor(251, 135, 112);
+    doc.setFont("helvetica", "bold");
+    doc.text("PROPERTY", col2x + 4, y + 6);
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "normal");
+    doc.text(`${rd.beds || "?"} bed \u00b7 ${rd.type || "TBC"}`, col2x + 4, y + 13);
+    doc.text(rd.tenure || "TBC", col2x + 4, y + 19);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 160, 175);
+    doc.text(`Added ${rd.addedDate || "TBC"}`, col2x + 4, y + 25);
+    y += 32;
+
+    // Price options
+    doc.setFontSize(9);
+    doc.setTextColor(251, 135, 112);
+    doc.setFont("helvetica", "bold");
+    doc.text("PRICE OPTIONS", pad, y);
+    y += 6;
+
+    [{ letter: "A", price: rd.optionA }, { letter: "B", price: rd.optionB }, { letter: "C", price: rd.optionC }].forEach(opt => {
+      const isCorrect = opt.letter === rd.correctLetter;
+      const rowH = 12;
+      if (isCorrect) {
+        doc.setFillColor(251, 135, 112);
+        doc.rect(pad, y, PW - pad * 2, rowH, "F");
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "bold");
+      } else {
+        doc.setFillColor(26, 34, 53);
+        doc.rect(pad, y, PW - pad * 2, rowH, "F");
+        doc.setTextColor(220, 225, 235);
+        doc.setFont("helvetica", "normal");
+      }
+      doc.setFontSize(13);
+      doc.text(opt.letter, pad + 8, y + 8);
+      doc.setFontSize(14);
+      doc.text(opt.price || "TBC", pad + 22, y + 8);
+      if (isCorrect) { doc.setFontSize(9); doc.text("\u2713 CORRECT", PW - pad - 35, y + 8); }
+      y += rowH + 2;
+    });
+    y += 6;
+
+    // Round structure
+    doc.setFillColor(16, 20, 32);
+    doc.rect(pad, y, PW - pad * 2, 48, "F");
+    doc.setFontSize(7);
+    doc.setTextColor(251, 135, 112);
+    doc.setFont("helvetica", "bold");
+    doc.text("ROUND STRUCTURE", pad + 4, y + 6);
+    doc.setTextColor(170, 180, 195);
+    doc.setFont("helvetica", "normal");
+    ["1.  Show property photos", "2.  \"Which one is it?\" audience prompt", "3.  Show A / B / C price options", "4.  15-second countdown timer", `5.  ${rd.guesser} locks in their answer`, "6.  Reveal correct price", "7.  Capture reaction  \u00b7  Update scoreboard"]
+      .forEach((step, i) => { doc.text(step, pad + 4, y + 13 + i * 5); });
+    y += 52;
+
+    // Notes
+    if (rd.notes) {
+      doc.setFillColor(30, 25, 10);
+      doc.setDrawColor(251, 135, 112);
+      doc.setLineWidth(0.5);
+      doc.rect(pad, y, PW - pad * 2, 20, "FD");
+      doc.setFontSize(7);
+      doc.setTextColor(251, 135, 112);
+      doc.setFont("helvetica", "bold");
+      doc.text("NOTES", pad + 4, y + 6);
+      doc.setFontSize(9);
+      doc.setTextColor(220, 225, 235);
+      doc.setFont("helvetica", "normal");
+      doc.text(doc.splitTextToSize(rd.notes, PW - pad * 2 - 8), pad + 4, y + 13);
+    }
+
+    // Bottom bar
+    doc.setFillColor(251, 135, 112);
+    doc.rect(0, 295, 210, 2, "F");
+
+    const safeName = rd.address.replace(/[^a-z0-9]/gi, "_").toLowerCase().slice(0, 30);
+    doc.save(`gtp_r${rd.number}_${safeName}.pdf`);
+    setExportStatus("PDF exported \u2713");
+    setTimeout(() => setExportStatus(""), 3000);
+  }, [episode, currentRound]);
+
   // ═══════════════════════════════════════════════════════════
   //  CONTROLS
   // ═══════════════════════════════════════════════════════════
@@ -1451,15 +1717,82 @@ export default function GuessThePrice() {
             onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: [ep.agentImages?.[0] || "", e.target.value] } : ep)); setDirty(true); }} />
           {episode.agentImages?.[1] && <img src={episode.agentImages[1]} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", marginTop: DS.xs, border: `2px solid ${GAME.gold}` }} alt="" />}
         </>);
-      case "property":
+      case "property": {
+        const rd = episode.rounds[currentRound] || {};
         return (<>
           <div style={label()}>Address</div>
-          <input style={inputS()} value={S.propAddress} onChange={e => updateS("propAddress", e.target.value)} />
-          <div style={{ ...label(), marginTop: DS.lg }}>Location</div>
-          <input style={inputS()} value={S.optionLocation} onChange={e => updateS("optionLocation", e.target.value)} />
-          <div style={{ ...label(), marginTop: DS.lg }}>Round Number</div>
-          <input style={inputS({ width: 80 })} type="number" value={S.propRound} onChange={e => updateS("propRound", +e.target.value)} />
+          <input style={inputS()} value={S.propAddress} onChange={e => { updateS("propAddress", e.target.value); updateRoundField("address", e.target.value); }} />
+          <div style={{ ...label(), marginTop: DS.md }}>Location Label</div>
+          <input style={inputS()} value={S.optionLocation} onChange={e => { updateS("optionLocation", e.target.value); updateRoundField("location", e.target.value); }} />
+
+          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>PROPERTY DETAILS</div>
+          <div style={{ display: "flex", gap: DS.sm, marginTop: DS.sm }}>
+            <div style={{ flex: 1 }}>
+              <div style={label()}>Beds</div>
+              <input style={inputS({ width: "100%" })} type="number" min={0} value={rd.beds || 0} onChange={e => updateRoundField("beds", +e.target.value)} />
+            </div>
+            <div style={{ flex: 2 }}>
+              <div style={label()}>Type</div>
+              <select style={inputS({ width: "100%" })} value={rd.type || ""} onChange={e => updateRoundField("type", e.target.value)}>
+                <option value="">Select…</option>
+                <option>Terraced</option>
+                <option>Semi-detached</option>
+                <option>Detached</option>
+                <option>End of terrace</option>
+                <option>Flat</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: DS.sm, marginTop: DS.sm }}>
+            <div style={{ flex: 1 }}>
+              <div style={label()}>Tenure</div>
+              <select style={inputS({ width: "100%" })} value={rd.tenure || ""} onChange={e => updateRoundField("tenure", e.target.value)}>
+                <option value="">Select…</option>
+                <option>Freehold</option>
+                <option>Leasehold</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={label()}>Added Date</div>
+              <input style={inputS({ width: "100%" })} value={rd.addedDate || ""} placeholder="DD/MM/YYYY" onChange={e => updateRoundField("addedDate", e.target.value)} />
+            </div>
+          </div>
+          <div style={{ ...label(), marginTop: DS.sm }}>Rightmove URL</div>
+          <input style={inputS()} value={rd.rightmoveUrl || ""} placeholder="https://www.rightmove.co.uk/…" onChange={e => updateRoundField("rightmoveUrl", e.target.value)} />
+
+          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>PHOTOS ({(rd.photos || []).length}/5)</div>
+          {/* Photo upload zone */}
+          <div
+            style={{ marginTop: DS.sm, padding: DS.lg, border: `2px dashed ${DS.borderSubtle}`, borderRadius: DS.rSm, textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}
+            onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.multiple = true; inp.onchange = (e) => handlePhotoUpload(e.target.files); inp.click(); }}
+            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = GAME.gold; }}
+            onDragLeave={e => { e.currentTarget.style.borderColor = DS.borderSubtle; }}
+            onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = DS.borderSubtle; handlePhotoUpload(e.dataTransfer.files); }}
+          >
+            <div style={{ fontSize: DS.fsSm, color: DS.textMuted }}>Drop photos here or click to upload</div>
+            <div style={{ fontSize: DS.fsXs, color: DS.textMuted, marginTop: 4 }}>JPG/PNG, max 5 photos</div>
+          </div>
+          {/* Photo thumbnails */}
+          {(rd.photos || []).length > 0 && (
+            <div style={{ display: "flex", gap: DS.xs, marginTop: DS.sm, flexWrap: "wrap" }}>
+              {(rd.photos || []).map((photo, i) => (
+                <div key={i} style={{ position: "relative", cursor: "pointer" }} onClick={() => updateRoundField("heroPhotoIndex", i)}>
+                  <img src={photo} alt={`Photo ${i + 1}`} style={{
+                    width: 56, height: 42, objectFit: "cover", borderRadius: 4,
+                    border: (rd.heroPhotoIndex || 0) === i ? `2px solid ${GAME.gold}` : `2px solid transparent`,
+                  }} />
+                  {(rd.heroPhotoIndex || 0) === i && <div style={{ position: "absolute", top: -4, right: -4, background: GAME.gold, color: GAME.navy, borderRadius: "50%", width: 14, height: 14, fontSize: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>★</div>}
+                  <button onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
+                    style={{ position: "absolute", top: -4, left: -4, background: "#c0392b", color: "#fff", border: "none", borderRadius: "50%", width: 14, height: 14, fontSize: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>NOTES</div>
+          <textarea style={{ ...inputS(), height: 60, resize: "vertical", marginTop: DS.sm }} value={rd.notes || ""} placeholder="Production notes…" onChange={e => updateRoundField("notes", e.target.value)} />
         </>);
+      }
       case "prompt":
         return <p style={{ color: DS.textMuted, fontSize: DS.fsSm }}>No editable fields &mdash; this card is fixed.</p>;
       case "options":
@@ -1691,6 +2024,7 @@ export default function GuessThePrice() {
             <button onClick={exportWebM} style={btnPositive({ padding: "8px 20px", fontSize: DS.fsSm })}>Export WebM</button>
           )}
           <button onClick={exportRound} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export Round</button>
+          <button onClick={exportPDF} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>iPad PDF</button>
         </div>
         {exportStatus && <span style={{ fontSize: DS.fsSm, color: GAME.gold }}>{exportStatus}</span>}
         <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>{r.W} &times; {r.H} &middot; {activeAsset}</div>
