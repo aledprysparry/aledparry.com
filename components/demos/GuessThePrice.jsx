@@ -2088,14 +2088,18 @@ export default function GuessThePrice({ displayMode = false }) {
           <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>FALLBACK TITLE</div>
           <div style={label()}>Show Title</div>
           <input style={inputS()} value={S.showTitle} onChange={e => updateS("showTitle", e.target.value)} />
-          <div style={{ ...label(), marginTop: DS.lg }}>{episode.agents[0]} Headshot</div>
-          <input style={inputS()} placeholder="Paste image URL or drag image…" value={episode.agentImages?.[0] || ""}
-            onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: [e.target.value, ep.agentImages?.[1] || ""] } : ep)); setDirty(true); }} />
-          {episode.agentImages?.[0] && <img src={episode.agentImages[0]} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", marginTop: DS.xs, border: `2px solid ${GAME.gold}` }} alt="" />}
-          <div style={{ ...label(), marginTop: DS.lg }}>{episode.agents[1]} Headshot</div>
-          <input style={inputS()} placeholder="Paste image URL or drag image…" value={episode.agentImages?.[1] || ""}
-            onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: [ep.agentImages?.[0] || "", e.target.value] } : ep)); setDirty(true); }} />
-          {episode.agentImages?.[1] && <img src={episode.agentImages[1]} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", marginTop: DS.xs, border: `2px solid ${GAME.gold}` }} alt="" />}
+          {[0, 1].map(idx => (
+            <div key={idx} style={{ marginTop: DS.lg }}>
+              <div style={label()}>{episode.agents[idx]} Headshot</div>
+              <div style={{ display: "flex", gap: DS.xs, alignItems: "center" }}>
+                <input style={inputS({ flex: 1 })} placeholder="Paste URL…" value={episode.agentImages?.[idx] || ""}
+                  onChange={e => { const imgs = [...(episode.agentImages || ["", ""])]; imgs[idx] = e.target.value; setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: imgs } : ep)); setDirty(true); getCachedImage(e.target.value); }} />
+                <button onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const b64 = await compressPhoto(f, 0); const imgs = [...(episode.agentImages || ["", ""])]; imgs[idx] = b64; setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: imgs } : ep)); setDirty(true); getCachedImage(b64); }; inp.click(); }}
+                  style={btn({ padding: "6px 10px", fontSize: DS.fsXs })}>Upload</button>
+              </div>
+              {episode.agentImages?.[idx] && <img src={episode.agentImages[idx]} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", marginTop: DS.xs, border: `2px solid ${GAME.gold}` }} alt="" />}
+            </div>
+          ))}
         </>);
       case "property": {
         const rd = episode.rounds[currentRound] || {};
