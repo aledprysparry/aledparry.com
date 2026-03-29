@@ -643,7 +643,8 @@ function drawProperty(ctx, W, H, S, progress) {
   const photoLocalP = (p * numPhotos - photoIdx); // 0-1 within this photo's time
   const currentSrc = photos[photoIdx] || photos[rd?.heroPhotoIndex || 0];
   const heroImg = currentSrc ? getCachedImage(currentSrc) : null;
-  const ep = easeOutExpo(Math.min(1, photoLocalP / 0.3));
+  // Fade in for photos after the first — first image shows instantly
+  const ep = photoIdx === 0 ? 1 : easeOutExpo(Math.min(1, photoLocalP / 0.3));
   if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
     // Cover-fit with Ken Burns zoom entrance per photo
     const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
@@ -674,6 +675,7 @@ function drawProperty(ctx, W, H, S, progress) {
   if (rd?.beds) specParts.push(`${rd.beds} bed`);
   if (rd?.type) specParts.push(rd.type);
   if (rd?.tenure) specParts.push(rd.tenure);
+  if (rd?.addedDate) specParts.push(`Added ${rd.addedDate}`);
   const specText = specParts.join("  \u00b7  ");
 
   if (ar === "portrait") {
