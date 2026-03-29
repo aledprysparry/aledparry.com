@@ -2875,11 +2875,11 @@ export default function GuessThePrice({ displayMode = false }) {
             Waiting for controller...
           </div>
         )}
-        {/* Fullscreen button */}
-        {dispShowUI && (
+        {/* Fullscreen button — only when NOT already fullscreen */}
+        {dispShowUI && !document.fullscreenElement && !document.webkitFullscreenElement && (
           <button onClick={(e) => { e.stopPropagation(); const el = document.documentElement; if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); }}
-            style={{ position: "absolute", bottom: 20, right: 20, background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 13, cursor: "pointer", fontFamily: DS.font, transition: "opacity 0.3s", backdropFilter: "blur(8px)" }}>
-            Fullscreen
+            style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.5)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontFamily: DS.font }}>
+            &#x26F6;
           </button>
         )}
         {/* Photo dots */}
