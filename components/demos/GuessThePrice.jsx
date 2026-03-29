@@ -183,8 +183,8 @@ function compressPhoto(file, existingCount = 0) {
       const img = new Image();
       img.onload = () => {
         const highCount = existingCount > 10;
-        const maxW = highCount ? 600 : 800;
-        const quality = highCount ? 0.6 : 0.75;
+        const maxW = highCount ? 1024 : 1280;
+        const quality = highCount ? 0.75 : 0.8;
         const scale = Math.min(1, maxW / img.width);
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
@@ -233,37 +233,37 @@ function createDefaultEpisode(episodeNum = 1) {
         number: 3, propertyAgent: "Nathan", guesser: "Sian",
         address: "Rhigos Gardens, Cathays, Cardiff, CF24", location: "Cathays, Cardiff",
         rightmoveUrl: "https://www.rightmove.co.uk/properties/173648561",
-        beds: 3, type: "Terraced", tenure: "Freehold", addedDate: "24/03/2026",
-        optionA: "\u00a3299,950", optionB: "\u00a3375,000", optionC: "\u00a3450,000",
-        correctLetter: "C", correctPrice: "450,000",
-        photos: [], heroPhotoIndex: 0, notes: "Strongest reaction property \u2014 Cathays at \u00a3450k will surprise Sian.",
+        beds: 4, type: "Terraced", tenure: "Freehold", addedDate: "24/03/2026",
+        optionA: "\u00a3450,000", optionB: "\u00a3375,000", optionC: "\u00a3299,950",
+        correctLetter: "A", correctPrice: "450,000",
+        photos: [], heroPhotoIndex: 0, notes: "4 bed 2 bath \u2014 Cathays at \u00a3450k will surprise Sian.",
       },
       {
         number: 4, propertyAgent: "Sian", guesser: "Nathan",
-        address: "Machen Street, Penarth", location: "Penarth",
+        address: "Machen Street, Penarth, CF64", location: "Penarth",
         rightmoveUrl: "https://www.rightmove.co.uk/properties/173540561",
-        beds: 0, type: "", tenure: "", addedDate: "20/03/2026",
-        optionA: "\u00a3289,950", optionB: "\u00a3325,000", optionC: "\u00a3359,950",
-        correctLetter: "B", correctPrice: "325,000",
+        beds: 2, type: "Terraced", tenure: "Freehold", addedDate: "20/03/2026",
+        optionA: "\u00a3289,950", optionB: "\u00a3359,950", optionC: "\u00a3325,000",
+        correctLetter: "C", correctPrice: "325,000",
         photos: [], heroPhotoIndex: 0, notes: "Guide price \u00a3325,000",
       },
       {
         number: 5, propertyAgent: "Sian", guesser: "Nathan",
-        address: "Jubilee Street, Cardiff", location: "Cardiff",
+        address: "Jubilee Street, Cardiff, CF11", location: "Canton, Cardiff",
         rightmoveUrl: "https://www.rightmove.co.uk/properties/173743049",
-        beds: 0, type: "", tenure: "", addedDate: "26/03/2026",
-        optionA: "\u00a3225,000", optionB: "\u00a3260,000", optionC: "\u00a3295,000",
-        correctLetter: "B", correctPrice: "260,000",
+        beds: 3, type: "Terraced", tenure: "Freehold", addedDate: "26/03/2026",
+        optionA: "\u00a3260,000", optionB: "\u00a3295,000", optionC: "\u00a3225,000",
+        correctLetter: "A", correctPrice: "260,000",
         photos: [], heroPhotoIndex: 0, notes: "",
       },
       {
         number: 6, propertyAgent: "Sian", guesser: "Nathan",
-        address: "Venice House, Judkin Court, Century Wharf, Cardiff", location: "Century Wharf, Cardiff",
+        address: "Venice House, Judkin Court, Century Wharf, Cardiff, CF10", location: "Century Wharf, Cardiff",
         rightmoveUrl: "https://www.rightmove.co.uk/properties/161943674",
-        beds: 0, type: "", tenure: "", addedDate: "28/03/2026",
+        beds: 2, type: "Flat", tenure: "Leasehold", addedDate: "28/03/2026",
         optionA: "\u00a3235,000", optionB: "\u00a3270,000", optionC: "\u00a3310,000",
         correctLetter: "B", correctPrice: "270,000",
-        photos: [], heroPhotoIndex: 0, notes: "Offers in excess of \u00a3270,000 \u2014 reduced on 28/03/2026",
+        photos: [], heroPhotoIndex: 0, notes: "Offers in excess of \u00a3270,000 \u2014 reduced. 2 bed 2 bath flat, 1,247 sq ft.",
       },
     ],
   };
@@ -1071,6 +1071,15 @@ function drawOptions(ctx, W, H, S, progress) {
     ctx.textAlign = "center";
     ctx.fillText(o.price || "---", priceX, by2 + oh * 0.02);
     ctx.restore();
+
+    // Correct answer marker — small dot, editor/admin only
+    if (o.letter === S.revealLetter && S._editorMode) {
+      const dotR = oh * 0.04;
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.beginPath();
+      ctx.arc(pad + ow - oh * 0.3, by2, dotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore(); // pill animation
   }
 
@@ -1516,6 +1525,8 @@ export default function GuessThePrice({ displayMode = false }) {
     score1: 0,
     score2: 0,
     timerDuration: 3,
+    photoDuration: 5,  // seconds per photo
+    _editorMode: !displayMode,
   });
 
   // ── Image load trigger — forces re-render when cached images finish loading ──
@@ -1569,12 +1580,15 @@ export default function GuessThePrice({ displayMode = false }) {
     return () => clearTimeout(saveTimerRef.current);
   }, [dirty, episodes]);
 
-  // Strip large binary data (base64 photos, images) to stay under Vercel's 4.5MB body limit
+  // Strip large base64 data but keep blob URLs (which are small strings)
   const stripPhotosForServer = (eps) => eps.map(ep => ({
     ...ep,
-    logoImage: undefined,
-    agentImages: undefined,
-    rounds: ep.rounds.map(r => ({ ...r, photos: [] })),
+    logoImage: ep.logoImage?.startsWith("http") ? ep.logoImage : undefined,
+    agentImages: ep.agentImages?.map(img => img?.startsWith("http") ? img : undefined),
+    rounds: ep.rounds.map(r => ({
+      ...r,
+      photos: (r.photos || []).filter(p => p?.startsWith("http")),
+    })),
   }));
 
   const syncToServer = async () => {
@@ -1738,16 +1752,36 @@ export default function GuessThePrice({ displayMode = false }) {
     setDirty(true);
   };
 
+  // Upload a base64 photo to Vercel Blob, returns URL
+  const uploadPhotoToBlob = async (base64, roundNum, index) => {
+    try {
+      const res = await fetch("/api/gtp/photo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo: base64, episodeId: activeEpisodeId, round: roundNum, index }),
+      });
+      const data = await res.json();
+      return data.url || base64; // fallback to base64 if upload fails
+    } catch {
+      return base64; // fallback to base64
+    }
+  };
+
   // Handle photo upload for current round
   const handlePhotoUpload = async (files) => {
     const rd = episode.rounds[currentRound];
     if (!rd) return;
     const existing = rd.photos || [];
     const toProcess = Array.from(files);
+    setSaveStatus("Uploading photos...");
     const compressed = await Promise.all(toProcess.map(f => compressPhoto(f, existing.length)));
-    const newPhotos = [...existing, ...compressed];
+    // Upload to Vercel Blob for cloud backup
+    const urls = await Promise.all(compressed.map((b64, i) => uploadPhotoToBlob(b64, rd.number, existing.length + i)));
+    const newPhotos = [...existing, ...urls];
     updateRoundField("photos", newPhotos);
     newPhotos.forEach(p => getCachedImage(p));
+    setSaveStatus(`${toProcess.length} photo${toProcess.length > 1 ? "s" : ""} uploaded`);
+    setTimeout(() => setSaveStatus(""), 3000);
     // Check for quota warning
     if (_saveWarning) { setSaveStatus(_saveWarning); setTimeout(() => setSaveStatus(""), 5000); }
   };
@@ -1874,7 +1908,7 @@ export default function GuessThePrice({ displayMode = false }) {
       render(0);
     }
     setIsPlaying(true);
-    const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? 15 : 3) * 1000;
+    const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? (S.photoDuration || 5) * Math.max(1, (episode.rounds[currentRound]?.photos?.length || 1)) : activeAsset === "intro" ? 6 : 3) * 1000;
     const start = performance.now();
     const tick = (now) => {
       const elapsed = now - start;
@@ -2017,7 +2051,7 @@ export default function GuessThePrice({ displayMode = false }) {
     if (!asset?.animated) { exportPNG(); return; }
 
     setExportStatus("Recording...");
-    const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? 15 : 3) * 1000;
+    const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? (S.photoDuration || 5) * Math.max(1, (episode.rounds[currentRound]?.photos?.length || 1)) : activeAsset === "intro" ? 6 : 3) * 1000;
     const fps = 30;
     const stream = canvas.captureStream(fps);
     const chunks = [];
@@ -2245,6 +2279,7 @@ export default function GuessThePrice({ displayMode = false }) {
   // ═══════════════════════════════════════════════════════════
   const enterLiveMode = () => {
     setLiveMode(true);
+    setS(prev => ({ ...prev, _editorMode: false }));
     setLiveStep(0);
     setLivePhotoIndex(0);
     setOverlayVisible(true);
@@ -2260,6 +2295,7 @@ export default function GuessThePrice({ displayMode = false }) {
 
   const exitLiveMode = () => {
     setLiveMode(false);
+    setS(prev => ({ ...prev, _editorMode: true }));
     cancelAnimationFrame(photoAnimRef.current);
     cancelAnimationFrame(transitionRef.current);
     if (document.webkitExitFullscreen) document.webkitExitFullscreen();
@@ -3096,6 +3132,13 @@ export default function GuessThePrice({ displayMode = false }) {
                 onChange={e => { setAnimProgress(+e.target.value); render(+e.target.value); }}
                 style={{ width: "100%", accentColor: GAME.gold }} />
               <div style={{ fontSize: DS.fsXs, color: DS.textMuted, marginTop: DS.xs }}>{Math.round(animProgress * 100)}%</div>
+              {activeAsset === "property" && (
+                <div style={{ display: "flex", alignItems: "center", gap: DS.sm, marginTop: DS.md, borderTop: `1px solid ${DS.borderSubtle}`, paddingTop: DS.md }}>
+                  <span style={{ fontSize: DS.fsXs, color: DS.textMuted, whiteSpace: "nowrap" }}>Sec/photo</span>
+                  <input style={inputS({ width: 50, padding: "4px 8px", fontSize: DS.fsSm })} type="number" min={2} max={15} value={S.photoDuration || 5}
+                    onChange={e => updateS("photoDuration", +e.target.value)} />
+                </div>
+              )}
             </div>
           )}
         </aside>
