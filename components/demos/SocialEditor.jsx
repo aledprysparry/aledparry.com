@@ -1844,7 +1844,11 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const filteredGraphics=filterTpl?graphics.filter(g=>g.template===filterTpl):graphics;
   const selected=new Set(project.selected||[]);
   const previews=project.previews||{};
-  const setGraphics=gs=>updateProject({graphics:gs,selected:gs.map((_,i)=>i),previews:{}});
+  const setGraphics=gs=>{
+    // Auto-sort by timecode so graphics always appear in video order
+    const sorted=[...gs].sort((a,b)=>(a.timestamp||"").localeCompare(b.timestamp||""));
+    updateProject({graphics:sorted,selected:sorted.map((_,i)=>i),previews:{}});
+  };
   const setSelected=fn=>{const n=fn(selected);updateProject({selected:[...n]});};
   const setPreviews=fn=>updateProject(prev=>({previews:typeof fn==="function"?fn(prev.previews||{}):fn}));
 
