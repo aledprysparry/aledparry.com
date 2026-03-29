@@ -174,6 +174,53 @@ const RATIOS = {
   "9:16": { W:1080, H:1920, label:"9:16", hint:"TikTok / Reels"     },
 };
 
+// Social media safe zones (pixels at 1080x1920 for 9:16)
+// Universal safe area works across TikTok + Instagram Reels
+const SAFE_ZONES = {
+  "9:16": {
+    universal: { top:220, bottom:420, left:60, right:120 }, // works on both platforms (paid)
+    organic:   { top:150, bottom:150, left:60, right:120 }, // organic only
+    tiktok:    { top:108, bottom:420, left:60, right:120 }, // TikTok-specific
+    reels:     { top:150, bottom:150, left:0,  right:0   }, // Reels-specific
+  },
+  "1:1": {
+    universal: { top:40, bottom:40, left:40, right:40 },
+  },
+  "16:9": {
+    universal: { top:40, bottom:40, left:60, right:60 },
+  },
+};
+
+// Get safe content area for a ratio (returns {x, y, w, h} in canvas pixels)
+function getSafeArea(ratio, mode="universal"){
+  const AR=RATIOS[ratio]||RATIOS["16:9"];
+  const sz=(SAFE_ZONES[ratio]||SAFE_ZONES["16:9"])[mode]||SAFE_ZONES["16:9"].universal;
+  return { x:sz.left, y:sz.top, w:AR.W-sz.left-sz.right, h:AR.H-sz.top-sz.bottom };
+}
+
+// Draw safe zone overlay on canvas (debug/preview)
+function drawSafeZoneOverlay(ctx, W, H, ratio){
+  const zones=SAFE_ZONES[ratio]||SAFE_ZONES["16:9"];
+  const u=zones.universal||{top:40,bottom:40,left:40,right:40};
+  // Dim the unsafe areas
+  ctx.save();ctx.fillStyle="rgba(255,0,0,0.12)";
+  ctx.fillRect(0,0,W,u.top);           // top
+  ctx.fillRect(0,H-u.bottom,W,u.bottom); // bottom
+  ctx.fillRect(0,u.top,u.left,H-u.top-u.bottom); // left
+  ctx.fillRect(W-u.right,u.top,u.right,H-u.top-u.bottom); // right
+  ctx.restore();
+  // Safe area border
+  ctx.save();ctx.strokeStyle="rgba(255,255,255,0.35)";ctx.lineWidth=2;ctx.setLineDash([8,6]);
+  ctx.strokeRect(u.left,u.top,W-u.left-u.right,H-u.top-u.bottom);
+  ctx.restore();
+  // Labels
+  ctx.save();ctx.font="bold 22px sans-serif";ctx.fillStyle="rgba(255,255,255,0.4)";ctx.textAlign="center";ctx.textBaseline="middle";
+  if(u.top>60) ctx.fillText("⚠ UI OVERLAY",W/2,u.top/2);
+  if(u.bottom>60) ctx.fillText("⚠ CAPTIONS / MUSIC",W/2,H-u.bottom/2);
+  if(u.right>60) ctx.fillText("⚠",W-u.right/2,H/2);
+  ctx.restore();
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  DEFAULT BRAND / PROJECT
 // ═══════════════════════════════════════════════════════════════
@@ -1528,19 +1575,26 @@ function CaptionPreview({subtitle,brand,captionStyle,ratio}){
   );
 }
 
-function GraphicAnimPreview({g,brand,ratio}){
+function GraphicAnimPreview({g,brand,ratio,showSafeZones=false}){
   const ref=useRef();const rafRef=useRef();const st=useRef(Date.now());
   useEffect(()=>{
     st.current=Date.now();
     const loop=()=>{
-      // p goes 0→1 over 1s (entrance), then keeps rising (waves keep drifting)
+      const r=ratio||"16:9";
       const p=(Date.now()-st.current)/1000;
-      if(ref.current)drawGraphic(ref.current,g,brand,ratio||"16:9",p);
+      if(ref.current){
+        drawGraphic(ref.current,g,brand,r,p);
+        if(showSafeZones){
+          const AR=RATIOS[r]||RATIOS["16:9"];
+          const ctx=ref.current.getContext("2d");
+          drawSafeZoneOverlay(ctx,AR.W,AR.H,r);
+        }
+      }
       rafRef.current=requestAnimationFrame(loop);
     };
     document.fonts.ready.then(()=>{rafRef.current=requestAnimationFrame(loop);});
     return()=>cancelAnimationFrame(rafRef.current);
-  },[g,brand,ratio]);
+  },[g,brand,ratio,showSafeZones]);
   const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
   return(<canvas ref={ref} width={AR.W} height={AR.H} style={{width:"100%",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>);
 }
@@ -1774,6 +1828,7 @@ function LiveVideoPreview({videoUrl,graphics,brand,ratio,onSeek}){
   const [currentTime,setCT]=useState(0);
   const [duration,setDuration]=useState(0);
   const [showOverlay,setShowOverlay]=useState(true);
+  const [showSZ,setShowSZ]=useState(false);
 
   const toSec=ts=>{if(!ts)return 0;const p=ts.split(":").map(Number);return(p[0]||0)*3600+(p[1]||0)*60+(p[2]||0);};
   const fmtTime=s=>{const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m}:${String(sec).padStart(2,"0")}`;};
@@ -1813,6 +1868,8 @@ function LiveVideoPreview({videoUrl,graphics,brand,ratio,onSeek}){
           drawGraphic(tmp,g,brand,ratio,g.progress);
           ctx.drawImage(tmp,0,0);
         });
+        // Safe zone overlay
+        if(showSZ) drawSafeZoneOverlay(ctx,AR.W,AR.H,ratio||"16:9");
       }
       rafRef.current=requestAnimationFrame(loop);
     };
@@ -1874,8 +1931,11 @@ function LiveVideoPreview({videoUrl,graphics,brand,ratio,onSeek}){
           <button onClick={togglePlay} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:"2px 6px"}}>{playing?"⏸":"▶"}</button>
           <span style={{fontSize:11,color:DS.textMuted,fontVariantNumeric:"tabular-nums"}}>{fmtTime(currentTime)} / {fmtTime(duration)}</span>
           <div style={{flex:1}}/>
+          <button onClick={()=>setShowSZ(!showSZ)} style={{background:showSZ?"rgba(251,135,112,0.2)":"transparent",border:`1px solid ${showSZ?"rgba(251,135,112,0.4)":"rgba(255,255,255,0.1)"}`,borderRadius:DS.xs,padding:"3px 10px",color:"#fff",fontSize:11,cursor:"pointer",fontFamily:"inherit"}} title="Show social media safe zones">
+            📐 {showSZ?"Safe ON":"Safe"}
+          </button>
           <button onClick={()=>setShowOverlay(!showOverlay)} style={{background:showOverlay?"rgba(42,157,143,0.2)":"transparent",border:`1px solid ${showOverlay?"rgba(42,157,143,0.4)":"rgba(255,255,255,0.1)"}`,borderRadius:DS.xs,padding:"3px 10px",color:"#fff",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>
-            {showOverlay?"🎨 Overlay ON":"🎨 Overlay OFF"}
+            {showOverlay?"🎨 ON":"🎨 OFF"}
           </button>
         </div>
       </div>
@@ -1894,6 +1954,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const [error,setError]=useState("");
   const [showAdd,setShowAdd]=useState(false);
   const [filterTpl,setFilterTpl]=useState("");
+  const [showSafeZones,setShowSafeZones]=useState(false);
   const cvs=useRef(document.createElement("canvas"));
 
   const graphics=project.graphics;
@@ -2131,7 +2192,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
         <button style={sm} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))} title="Select all">All</button>
         <button style={sm} onClick={()=>setSelected(()=>new Set())} title="Deselect all">None</button>
-        <button style={{...sm,marginLeft:"auto"}} onClick={previewAll} title="Preview all graphics">👁 Preview All</button>
+        <button style={{...sm,marginLeft:"auto",background:showSafeZones?"rgba(251,135,112,0.2)":"transparent",border:showSafeZones?"1px solid rgba(251,135,112,0.4)":"1px solid rgba(255,255,255,0.1)"}} onClick={()=>setShowSafeZones(v=>!v)} title="Toggle safe zone overlay">📐 {showSafeZones?"Safe ON":"Safe"}</button>
+        <button style={sm} onClick={previewAll} title="Preview all graphics">👁 Preview All</button>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export Selected</button>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
         <button style={btnDanger({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Clear all and re-analyse">↺ Re-analyse</button>
@@ -2184,7 +2246,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                   </div>
                 </div>
                 {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px",imageRendering:"auto"}}/>}
-                {showAnim&&<GraphicAnimPreview key={JSON.stringify(g.content)+g.typeOverride} g={g} brand={brand} ratio={previewRatio}/>}
+                {showAnim&&<GraphicAnimPreview key={JSON.stringify(g.content)+g.typeOverride} g={g} brand={brand} ratio={previewRatio} showSafeZones={showSafeZones}/>}
               </div>
             );
           })}
