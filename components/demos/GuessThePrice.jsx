@@ -205,6 +205,7 @@ function createDefaultEpisode(episodeNum = 1) {
     episode: episodeNum,
     agents: ["Sian", "Nathan"],
     agentImages: ["", ""],
+    logoImage: "",  // URL or base64 of custom show logo PNG
     scores: [0, 0],
     createdAt: new Date().toISOString(),
     rounds: [
@@ -418,40 +419,53 @@ function drawIntro(ctx, W, H, S) {
   const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
   const safeTop = ar === "portrait" ? safe.contentTop : 0;
 
-  // ── "GUESS THE" — smaller, uppercase, tracked ──
-  const guessY = ar === "portrait" ? safeTop + safeH * 0.08 : H * 0.18;
-  const guessS = sz(W, H, ar === "portrait" ? 0.045 : 0.038);
-  ctx.save();
-  ctx.font = `800 ${guessS}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = GAME.gold;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.letterSpacing = `${Math.round(guessS * 0.35)}px`;
-  ctx.fillText("GUESS THE", W / 2, guessY);
-  ctx.restore();
+  // ── Logo / Title ──
+  const logoSrc = EPISODE.logoImage;
+  const logoImg = logoSrc ? getCachedImage(logoSrc) : null;
+  const titleAreaTop = ar === "portrait" ? safeTop + safeH * 0.02 : H * 0.06;
+  const titleAreaH = ar === "portrait" ? safeH * 0.35 : H * 0.38;
 
-  // ── "PRICE" — massive, logo-style, Lora serif ──
-  const priceY = ar === "portrait" ? safeTop + safeH * 0.20 : H * 0.34;
-  const priceS = sz(W, H, ar === "portrait" ? 0.16 : 0.14);
-  ctx.save();
-  ctx.font = `900 ${priceS}px 'Lora', serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  // Text with warm cream fill + subtle shadow
-  ctx.shadowColor = "rgba(0,0,0,0.3)";
-  ctx.shadowBlur = priceS * 0.08;
-  ctx.shadowOffsetY = priceS * 0.03;
-  ctx.fillStyle = BRAND.colorWarm;
-  ctx.fillText("PRICE", W / 2, priceY);
-  ctx.shadowColor = "transparent";
-  ctx.restore();
+  if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+    // ── Custom logo PNG — contain-fit in title area ──
+    const maxLogoW = W * 0.65;
+    const maxLogoH = titleAreaH;
+    const iw = logoImg.naturalWidth, ih = logoImg.naturalHeight;
+    const logoScale = Math.min(maxLogoW / iw, maxLogoH / ih);
+    const dw = iw * logoScale, dh = ih * logoScale;
+    ctx.drawImage(logoImg, (W - dw) / 2, titleAreaTop + (titleAreaH - dh) / 2, dw, dh);
+  } else {
+    // ── Fallback: canvas-drawn title ──
+    const guessY = ar === "portrait" ? safeTop + safeH * 0.08 : H * 0.18;
+    const guessS = sz(W, H, ar === "portrait" ? 0.045 : 0.038);
+    ctx.save();
+    ctx.font = `800 ${guessS}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.letterSpacing = `${Math.round(guessS * 0.35)}px`;
+    ctx.fillText("GUESS THE", W / 2, guessY);
+    ctx.restore();
 
-  // ── Salmon accent line under "PRICE" ──
-  const lineY = priceY + priceS * 0.45;
-  const lineW = W * 0.25;
-  ctx.fillStyle = GAME.gold;
-  roundRect(ctx, W / 2 - lineW / 2, lineY, lineW, Math.max(3, H * 0.004), 2);
-  ctx.fill();
+    const priceY = ar === "portrait" ? safeTop + safeH * 0.20 : H * 0.34;
+    const priceS = sz(W, H, ar === "portrait" ? 0.16 : 0.14);
+    ctx.save();
+    ctx.font = `900 ${priceS}px 'Lora', serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.3)";
+    ctx.shadowBlur = priceS * 0.08;
+    ctx.shadowOffsetY = priceS * 0.03;
+    ctx.fillStyle = BRAND.colorWarm;
+    ctx.fillText("PRICE", W / 2, priceY);
+    ctx.shadowColor = "transparent";
+    ctx.restore();
+
+    const lineY = priceY + priceS * 0.45;
+    const lineW = W * 0.25;
+    ctx.fillStyle = GAME.gold;
+    roundRect(ctx, W / 2 - lineW / 2, lineY, lineW, Math.max(3, H * 0.004), 2);
+    ctx.fill();
+  }
 
   // ── VS section with agent headshots ──
   const vsY = ar === "portrait" ? safeTop + safeH * 0.48 : H * 0.58;
@@ -2034,6 +2048,20 @@ export default function GuessThePrice() {
     switch (activeAsset) {
       case "intro":
         return (<>
+          <div style={{ ...sectionHead(), fontSize: DS.fsXs, color: GAME.gold }}>SHOW LOGO</div>
+          <div style={label()}>Logo Image (PNG)</div>
+          <input style={inputS()} placeholder="Paste image URL…" value={episode.logoImage || ""}
+            onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: e.target.value } : ep)); setDirty(true); getCachedImage(e.target.value); }} />
+          <div
+            style={{ marginTop: DS.xs, padding: DS.md, border: `2px dashed ${DS.borderSubtle}`, borderRadius: DS.rSm, textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}
+            onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/png,image/webp"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const b64 = await compressPhoto(f, 0); setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: b64 } : ep)); setDirty(true); getCachedImage(b64); }; inp.click(); }}
+          >
+            <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>or click to upload PNG</div>
+          </div>
+          {episode.logoImage && <img src={episode.logoImage} style={{ maxWidth: "100%", maxHeight: 80, objectFit: "contain", marginTop: DS.sm, borderRadius: 4, background: "rgba(0,0,0,0.3)", padding: 8 }} alt="Logo preview" />}
+          {episode.logoImage && <button onClick={() => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: "" } : ep)); setDirty(true); }} style={btn({ padding: "3px 8px", fontSize: DS.fsXs, color: DS.textMuted, marginTop: DS.xs })}>Remove logo</button>}
+
+          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>FALLBACK TITLE</div>
           <div style={label()}>Show Title</div>
           <input style={inputS()} value={S.showTitle} onChange={e => updateS("showTitle", e.target.value)} />
           <div style={{ ...label(), marginTop: DS.lg }}>{episode.agents[0]} Headshot</div>
