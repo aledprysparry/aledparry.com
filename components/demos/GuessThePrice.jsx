@@ -2078,7 +2078,7 @@ export default function GuessThePrice({ displayMode = false }) {
             onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: e.target.value } : ep)); setDirty(true); getCachedImage(e.target.value); }} />
           <div
             style={{ marginTop: DS.xs, padding: DS.md, border: `2px dashed ${DS.borderSubtle}`, borderRadius: DS.rSm, textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}
-            onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/png,image/webp"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const b64 = await compressPhoto(f, 0); setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: b64 } : ep)); setDirty(true); getCachedImage(b64); }; inp.click(); }}
+            onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/png,image/webp"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const reader = new FileReader(); reader.onload = (re) => { const b64 = re.target.result; setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: b64 } : ep)); setDirty(true); getCachedImage(b64); }; reader.readAsDataURL(f); }; inp.click(); }}
           >
             <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>or click to upload PNG</div>
           </div>
