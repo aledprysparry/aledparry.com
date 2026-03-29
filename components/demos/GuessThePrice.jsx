@@ -1688,12 +1688,12 @@ export default function GuessThePrice({ displayMode = false }) {
 
   useEffect(() => { render(); }, [render]);
 
-  // Auto-play animation when switching to any animated asset
+  // Auto-play entrance animations (but NOT timer/reveal/lockin — those need user to set values first)
+  const manualPlayAssets = ["timer", "reveal", "lockin"];
   useEffect(() => {
     if (displayMode || liveMode) return;
     const asset = ASSETS.find(a => a.id === activeAsset);
-    if (asset?.animated && !isPlaying) {
-      // Small delay to let render settle, then auto-play
+    if (asset?.animated && !isPlaying && !manualPlayAssets.includes(activeAsset)) {
       const t = setTimeout(() => playAnimation(), 100);
       return () => clearTimeout(t);
     }
@@ -1704,6 +1704,11 @@ export default function GuessThePrice({ displayMode = false }) {
       cancelAnimationFrame(animRef.current);
       setIsPlaying(false);
       return;
+    }
+    // Reset to start if animation already finished
+    if (animProgress >= 0.99) {
+      setAnimProgress(0);
+      render(0);
     }
     setIsPlaying(true);
     const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : 3) * 1000;
@@ -2721,7 +2726,12 @@ export default function GuessThePrice({ displayMode = false }) {
           <div style={card()}>{renderControls()}</div>
           {ASSETS.find(a => a.id === activeAsset)?.animated && (
             <div style={card()}>
-              <div style={label()}>Animation Progress</div>
+              <div style={{ display: "flex", gap: DS.sm, marginBottom: DS.sm }}>
+                <button onClick={() => { setAnimProgress(0); setIsPlaying(false); render(0); }} style={btn({ padding: "6px 12px", fontSize: DS.fsXs })}>Reset</button>
+                <button onClick={playAnimation} style={btnCta({ padding: "6px 14px", fontSize: DS.fsXs, flex: 1 })}>
+                  {isPlaying ? "Pause" : animProgress >= 0.99 ? "Replay" : "Play"}
+                </button>
+              </div>
               <input type="range" min={0} max={1} step={0.01} value={animProgress}
                 onChange={e => { setAnimProgress(+e.target.value); render(+e.target.value); }}
                 style={{ width: "100%", accentColor: GAME.gold }} />
