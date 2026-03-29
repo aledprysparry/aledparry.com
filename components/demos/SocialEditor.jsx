@@ -1088,6 +1088,28 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     }
     ctx.restore();
   }
+  else if(t==="title_card"){
+    // Delegate to drawTitleCard with content merged into brand
+    const tcBrand={...brand,
+      titleCardTitle:c.headline||brand.titleCardTitle||"EPISODE TITLE",
+      titleCardSeriesName:c.subheadline||brand.titleCardSeriesName||"",
+      titleCardSubtitle:c.body||brand.titleCardSubtitle||"",
+      titleCardStyle:c.style||brand.titleCardStyle||"split",
+    };
+    drawTitleCard(canvas,tcBrand,ratio,p);
+    return; // drawTitleCard handles its own canvas setup
+  }
+  else if(t==="endboard"){
+    // Delegate to drawEndboard with content merged into brand
+    const ebBrand={...brand,
+      endboardCTA:c.headline||brand.endboardCTA||"Thanks for watching",
+      endboardHandles:c.handle||brand.endboardHandles||"",
+      endboardWebsite:c.website||brand.endboardWebsite||"",
+      endboardStyle:c.style||brand.endboardStyle||"logo",
+    };
+    drawEndboard(canvas,ebBrand,ratio,p);
+    return; // drawEndboard handles its own canvas setup
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1425,6 +1447,7 @@ Templates and content fields (keep ALL text SHORT — readable on mobile in 2 se
 
 // Content field definitions per template (for dynamic edit forms)
 const TMPL_FIELDS={
+  title_card:[{key:"headline",label:"Title",placeholder:"e.g. RENT INCREASES EXPLAINED"},{key:"subheadline",label:"Series name",placeholder:"e.g. Wales 2026"},{key:"body",label:"Subtitle",placeholder:"optional"},{key:"style",label:"Style",placeholder:"bar | centred | split"}],
   myth:[{key:"body",label:"Misconception",placeholder:"max 10 words"}],
   reality:[{key:"body",label:"Correction",placeholder:"max 10 words"}],
   title:[{key:"headline",label:"Headline",placeholder:"max 4 words"},{key:"subheadline",label:"Subheadline",placeholder:"optional"},{key:"body",label:"Detail",placeholder:"optional"},{key:"number",label:"Background number",placeholder:"e.g. 1"}],
@@ -1439,7 +1462,7 @@ const TMPL_FIELDS={
   stat:[{key:"stat",label:"Value",placeholder:"e.g. 2%, 12 months"},{key:"label",label:"Description",placeholder:"max 5 words"}],
   timeline:[{key:"label",label:"Label",placeholder:"max 4 words"}],
   subscribe:[{key:"text",label:"CTA text",placeholder:"e.g. Like & Subscribe"},{key:"body",label:"Handle / channel",placeholder:"optional"}],
-  endboard:[{key:"headline",label:"Headline",placeholder:"e.g. Thanks for watching"},{key:"body",label:"CTA text",placeholder:"optional"},{key:"handle",label:"Handle / website",placeholder:"e.g. @cpshomes"}],
+  endboard:[{key:"headline",label:"Headline",placeholder:"e.g. Thanks for watching"},{key:"body",label:"CTA text",placeholder:"e.g. Like and subscribe for more"},{key:"handle",label:"Social handle",placeholder:"e.g. @cpshomes"},{key:"website",label:"Website",placeholder:"e.g. cpshomes.co.uk"},{key:"style",label:"Style",placeholder:"logo | grid | minimal"}],
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -1522,7 +1545,7 @@ function GraphicAnimPreview({g,brand,ratio}){
   return(<canvas ref={ref} width={AR.W} height={AR.H} style={{width:"100%",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px"}}/>);
 }
 
-const TMPL={myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"},lower_third:{label:"Lower Third",type:"overlay"},advice:{label:"Advice",type:"overlay"},subscribe:{label:"Subscribe",type:"overlay"},endboard:{label:"Endboard",type:"fullscreen"}};
+const TMPL={title_card:{label:"Title Card",type:"fullscreen"},myth:{label:"MYTH",type:"fullscreen"},reality:{label:"REALITY",type:"fullscreen"},title:{label:"Title",type:"fullscreen"},rule_number:{label:"Rule #",type:"fullscreen"},key_point:{label:"Key Point",type:"fullscreen"},fact_box:{label:"Fact Box",type:"overlay"},speech_bubble:{label:"Bubble",type:"overlay"},stat:{label:"Stat",type:"overlay"},timeline:{label:"Timeline",type:"overlay"},landlord_ask:{label:"Landlord Q",type:"overlay"},tenant_ask:{label:"Tenant Q",type:"overlay"},lower_third:{label:"Lower Third",type:"overlay"},advice:{label:"Advice",type:"overlay"},subscribe:{label:"Subscribe",type:"overlay"},endboard:{label:"Endboard",type:"fullscreen"}};
 const CAP_STYLES={karaoke:{label:"Karaoke",icon:"🎤"},popin:{label:"Pop-in",icon:"💥"},tiktok:{label:"TikTok Block",icon:"📱"},fade:{label:"Elegant Fade",icon:"✨"}};
 
 
@@ -1554,6 +1577,7 @@ function AddGraphicModal({brand, onAdd, onClose}){
     if(tpl==="stat") return{stat,label:labelVal};
     if(tpl==="timeline") return{label:headline,markers:markerStr.split(",").map(s=>s.trim()).filter(Boolean)};
     if(tpl==="endboard") return{headline,body,handle:text};
+    if(tpl==="title_card") return{headline,subheadline:body,body:text};
     return{};
   };
 
@@ -1904,7 +1928,16 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           prompt:`At ${ts} — generate a "${tplLabel}" graphic. Context: ${nearby.slice(0,200)}`,
         };
       });
-      setGraphics(enriched);setGStep("review");
+      // Auto-insert title card at start and endboard at end
+      const lastTs=enriched.length>0?enriched[enriched.length-1].timestamp:"00:03:00";
+      const lastSec=(h=>h[0]*3600+h[1]*60+h[2])(lastTs.split(":").map(Number));
+      const endTs=`${String(Math.floor((lastSec+5)/3600)).padStart(2,"0")}:${String(Math.floor(((lastSec+5)%3600)/60)).padStart(2,"0")}:${String((lastSec+5)%60).padStart(2,"0")}`;
+      const withBookends=[
+        {id:Date.now()-1,timestamp:"00:00:00",duration:5,type:"fullscreen",template:"title_card",content:{headline:brand.titleCardTitle||project.name,subheadline:brand.titleCardSeriesName||"",body:brand.titleCardSubtitle||"",style:brand.titleCardStyle||"split"},label:"title-card"},
+        ...enriched,
+        {id:Date.now()+1,timestamp:endTs,duration:6,type:"fullscreen",template:"endboard",content:{headline:brand.endboardCTA||"Thanks for watching",body:"Like and subscribe for more",handle:brand.endboardHandles||"@cpshomes",website:brand.endboardWebsite||"cpshomes.co.uk",style:brand.endboardStyle||"logo"},label:"endboard"},
+      ];
+      setGraphics(withBookends);setGStep("review");
     }catch(e){setError("Analysis failed: "+e.message+(e.message.includes("fetch")?" — check your API key in Settings":""));setGStep("idle");}
   };
 
@@ -2338,13 +2371,11 @@ function ExportTab({project,brand,updateProject}){
         await new Promise(res=>{bc.toBlob(blob=>{if(blob)dl(blob,`${pn}_${prefix}${name}.png`);res();},"image/png");});
         await new Promise(r=>setTimeout(r,200));
       };
-      // Graphics PNGs (+ title card & endboard)
+      // Graphics PNGs (title_card + endboard are now regular graphics in the array)
       if(gfxMode==="png"||gfxMode==="both"){
-        setPhase(`${ratio} — exporting title card…`);
-        await exportAssetPNG(drawTitleCard,"00_title_card");
         setPhase(`${ratio} — exporting graphic PNGs…`);
         for(let i=0;i<selectedGfx.length;i++){
-          drawGraphic(cvs.current,selectedGfx[i],brand,ratio,1);
+          drawGraphic(cvs.current,selectedGfx[i],exportBrand,ratio,1);
           const bleedCvs=addBleed(cvs.current,10);
           await new Promise(res=>{
             bleedCvs.toBlob(blob=>{
@@ -2355,8 +2386,6 @@ function ExportTab({project,brand,updateProject}){
           tick(done+1);
           await new Promise(r=>setTimeout(r,300));
         }
-        setPhase(`${ratio} — exporting endboard…`);
-        await exportAssetPNG(drawEndboard,`${String(selectedGfx.length+1).padStart(2,"0")}_endboard`);
       }
       // PNG Sequences (for Premiere Pro)
       if(gfxMode==="premiere"||gfxMode==="pngseq"){
@@ -2377,23 +2406,18 @@ function ExportTab({project,brand,updateProject}){
         };
         const rp=ratio.replace(":","x");
         // 00 — Title Card
-        setPhase(`${ratio} — title card sequence…`);
-        await renderAssetSeq(drawTitleCard,`${rp}_00_title_card`,4);
-        // Graphics
+        // All graphics (title_card + endboard are now in the array)
         for(let i=0;i<selectedGfx.length;i++){
           const gLabel=selectedGfx[i].label||selectedGfx[i].template;
           const folderName=`${rp}_${String(i+1).padStart(2,"0")}_${gLabel}`;
           const folder=zip.folder(folderName);
           setPhase(`${ratio} — ${gLabel} sequence…`);
-          const frames=await recordPNGSequence(selectedGfx[i],brand,ratio,frac=>{
+          const frames=await recordPNGSequence(selectedGfx[i],exportBrand,ratio,frac=>{
             setProg(p=>({...p,pct:(done+frac)/totalSteps}));
           });
           for(const f of frames) folder.file(f.name,f.blob);
           tick(done+1);
         }
-        // Last — Endboard
-        setPhase(`${ratio} — endboard sequence…`);
-        await renderAssetSeq(drawEndboard,`${rp}_${String(selectedGfx.length+1).padStart(2,"0")}_endboard`,5);
         // Zip it all
         setPhase(`${ratio} — zipping…`);
         const zipBlob=await zip.generateAsync({type:"blob"},meta=>{
