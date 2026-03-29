@@ -1621,6 +1621,25 @@ export default function GuessThePrice({ displayMode = false }) {
     updateRoundField("heroPhotoIndex", hero);
   };
 
+  const [dragRoundIdx, setDragRoundIdx] = useState(null);
+  const reorderRounds = (from, to) => {
+    if (from === to) return;
+    setEpisodes(prev => prev.map(ep => {
+      if (ep.id !== activeEpisodeId) return ep;
+      const rounds = [...ep.rounds];
+      const [moved] = rounds.splice(from, 1);
+      rounds.splice(to, 0, moved);
+      // Renumber
+      rounds.forEach((r, i) => { r.number = i + 1; });
+      return { ...ep, rounds };
+    }));
+    // Keep current round following the moved item
+    if (currentRound === from) setCurrentRound(to);
+    else if (from < currentRound && to >= currentRound) setCurrentRound(currentRound - 1);
+    else if (from > currentRound && to <= currentRound) setCurrentRound(currentRound + 1);
+    setDirty(true);
+  };
+
   const loadRound = useCallback((n) => {
     const idx = n - 1;
     const round = episode.rounds[idx];
@@ -2638,9 +2657,14 @@ export default function GuessThePrice({ displayMode = false }) {
             const isActive = currentRound === i;
             const empty = isRoundEmpty(rd);
             return (
-              <button key={i} onClick={() => !empty && loadRound(i + 1)}
-                style={btn({ padding: "6px 14px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: empty ? 0.4 : 1, cursor: empty ? "not-allowed" : "pointer", letterSpacing: "0.05em" })}>
-                R{i + 1}
+              <button key={i} draggable onClick={() => loadRound(i + 1)}
+                onDragStart={() => setDragRoundIdx(i)}
+                onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderLeft = `2px solid ${GAME.gold}`; }}
+                onDragLeave={e => { e.currentTarget.style.borderLeft = "2px solid transparent"; }}
+                onDrop={e => { e.preventDefault(); e.currentTarget.style.borderLeft = "2px solid transparent"; if (dragRoundIdx !== null) reorderRounds(dragRoundIdx, i); setDragRoundIdx(null); }}
+                onDragEnd={() => setDragRoundIdx(null)}
+                style={btn({ padding: "6px 14px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: dragRoundIdx === i ? 0.4 : empty ? 0.4 : 1, cursor: "grab", letterSpacing: "0.05em", borderLeft: "2px solid transparent" })}>
+                R{i + 1}{!empty && <span style={{ fontSize: 8, opacity: 0.5, marginLeft: 4 }}>{rd.propertyAgent?.charAt(0)}</span>}
               </button>
             );
           })}
