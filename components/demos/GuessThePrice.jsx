@@ -1760,15 +1760,30 @@ export default function GuessThePrice({ displayMode = false }) {
     setDirty(true);
   };
 
-  // Handle photo upload for current round — simple base64 in localStorage
+  // Upload a base64 photo to Vercel Blob, returns proxy URL
+  const uploadPhotoToBlob = async (base64, roundIdx, photoIdx) => {
+    try {
+      const res = await fetch("/api/gtp/photo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo: base64, episodeId: activeEpisodeId, round: roundIdx, index: photoIdx }),
+      });
+      const data = await res.json();
+      if (data.url) return data.url;
+    } catch {}
+    return base64; // fallback to base64 if upload fails
+  };
+
+  // Handle photo upload for current round — compress, upload to blob, store URL
   const handlePhotoUpload = async (files) => {
     const rd = episode.rounds[currentRound];
     if (!rd) return;
     const existing = rd.photos || [];
     const toProcess = Array.from(files);
-    setSaveStatus("Processing...");
+    setSaveStatus(`Uploading ${toProcess.length} photo${toProcess.length > 1 ? "s" : ""}…`);
     const compressed = await Promise.all(toProcess.map(f => compressPhoto(f, existing.length)));
-    const newPhotos = [...existing, ...compressed];
+    const urls = await Promise.all(compressed.map((b64, i) => uploadPhotoToBlob(b64, currentRound, existing.length + i)));
+    const newPhotos = [...existing, ...urls];
     updateRoundField("photos", newPhotos);
     newPhotos.forEach(p => getCachedImage(p));
     setSaveStatus(`${toProcess.length} photo${toProcess.length > 1 ? "s" : ""} added`);
@@ -2474,7 +2489,7 @@ export default function GuessThePrice({ displayMode = false }) {
             onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: e.target.value } : ep)); setDirty(true); getCachedImage(e.target.value); }} />
           <div
             style={{ marginTop: DS.xs, padding: DS.md, border: `2px dashed ${DS.borderSubtle}`, borderRadius: DS.rSm, textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}
-            onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/png,image/webp"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const reader = new FileReader(); reader.onload = (re) => { const b64 = re.target.result; setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: b64 } : ep)); setDirty(true); getCachedImage(b64); }; reader.readAsDataURL(f); }; inp.click(); }}
+            onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/png,image/webp"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const reader = new FileReader(); reader.onload = async (re) => { const b64 = re.target.result; const url = await uploadPhotoToBlob(b64, "logo", 0); setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, logoImage: url } : ep)); setDirty(true); getCachedImage(url); }; reader.readAsDataURL(f); }; inp.click(); }}
           >
             <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>or click to upload PNG</div>
           </div>
@@ -2490,7 +2505,7 @@ export default function GuessThePrice({ displayMode = false }) {
               <div style={{ display: "flex", gap: DS.xs, alignItems: "center" }}>
                 <input style={inputS({ flex: 1 })} placeholder="Paste URL…" value={episode.agentImages?.[idx] || ""}
                   onChange={e => { const imgs = [...(episode.agentImages || ["", ""])]; imgs[idx] = e.target.value; setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: imgs } : ep)); setDirty(true); getCachedImage(e.target.value); }} />
-                <button onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const b64 = await compressPhoto(f, 0); const imgs = [...(episode.agentImages || ["", ""])]; imgs[idx] = b64; setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: imgs } : ep)); setDirty(true); getCachedImage(b64); }; inp.click(); }}
+                <button onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const b64 = await compressPhoto(f, 0); const url = await uploadPhotoToBlob(b64, "agent", idx); const imgs = [...(episode.agentImages || ["", ""])]; imgs[idx] = url; setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, agentImages: imgs } : ep)); setDirty(true); getCachedImage(url); }; inp.click(); }}
                   style={btn({ padding: "6px 10px", fontSize: DS.fsXs })}>Upload</button>
               </div>
               {episode.agentImages?.[idx] && <img src={episode.agentImages[idx]} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", marginTop: DS.xs, border: `2px solid ${GAME.gold}` }} alt="" />}
