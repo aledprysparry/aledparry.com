@@ -290,6 +290,9 @@ function saveEpisodes(episodes, activeId) {
 // EPISODE is kept as a module-level ref so draw functions can read it without props
 let EPISODE = createDefaultEpisode();
 
+// BroadcastChannel for instant same-browser sync between editor and /live
+const GTP_CHANNEL_NAME = "gtp-live-sync";
+
 // ═══════════════════════════════════════════════════════════════
 //  ASSET TYPES
 // ═══════════════════════════════════════════════════════════════
@@ -1727,20 +1730,28 @@ export default function GuessThePrice({ displayMode = false }) {
     try {
       const rd = episode.rounds[currentRound] || {};
       const livePhotos = (rd.photos || []).filter(p => p?.startsWith("/api") || p?.startsWith("http"));
+      const state = {
+        asset: overrideAsset || activeAsset,
+        round: currentRound + 1,
+        S: overrideS || S,
+        scores,
+        agents: episode.agents,
+        agentImages: (episode.agentImages || []).filter(u => u?.startsWith("/api") || u?.startsWith("http")),
+        logoImage: (episode.logoImage?.startsWith("/api") || episode.logoImage?.startsWith("http")) ? episode.logoImage : "",
+        photos: livePhotos,
+        heroPhotoIndex: rd.heroPhotoIndex || 0,
+        roundData: { ...rd, photos: livePhotos },
+        ts: Date.now(),
+      };
+
+      // Instant same-browser delivery via BroadcastChannel
+      try { const bc = new BroadcastChannel(GTP_CHANNEL_NAME); bc.postMessage(state); bc.close(); } catch {}
+
+      // Persist to blob for cross-device
       await fetch("/api/gtp/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          asset: overrideAsset || activeAsset,
-          round: currentRound + 1,
-          S: overrideS || S,
-          scores,
-          agents: episode.agents,
-          agentImages: (episode.agentImages || []).filter(u => u?.startsWith("/api") || u?.startsWith("http")),
-          logoImage: (episode.logoImage?.startsWith("/api") || episode.logoImage?.startsWith("http")) ? episode.logoImage : "",
-          photos: livePhotos,
-          heroPhotoIndex: rd.heroPhotoIndex || 0,
-        }),
+        body: JSON.stringify(state),
       });
       setLiveConnected(true);
     } catch {
@@ -1752,7 +1763,7 @@ export default function GuessThePrice({ displayMode = false }) {
   useEffect(() => {
     if (!liveConnected || displayMode || liveMode) return;
     clearTimeout(livePushRef.current);
-    livePushRef.current = setTimeout(() => pushToLive(), 300);
+    livePushRef.current = setTimeout(() => pushToLive(), 50);
     return () => clearTimeout(livePushRef.current);
   }, [activeAsset, currentRound, S, scores]);
 
@@ -2907,15 +2918,18 @@ export default function GuessThePrice({ displayMode = false }) {
   const displayPollRef = useRef(null);
   const displayAnimRef = useRef(null);
   const lastTsRef = useRef(0);
-  const [dispPhotoIdx, setDispPhotoIdx] = useState(0);
-  const dispPhotoTimerRef = useRef(null);
-  const dispPhotoAnimRef = useRef(null);
-  const [dispPhotoAnimT, setDispPhotoAnimT] = useState(1);
   const [dispShowUI, setDispShowUI] = useState(true);
   const dispUITimerRef = useRef(null);
-  const dispTouchRef = useRef(null);
-  const dispAutoPlayRef = useRef(true);
-  const dispResumeRef = useRef(null);
+
+  // Handle incoming display state (from BroadcastChannel or poll)
+  const handleDisplayData = useCallback((data) => {
+    if (!data.ts || data.ts === lastTsRef.current) return;
+    lastTsRef.current = data.ts;
+    setDisplayState(data);
+    if (data.logoImage) getCachedImage(data.logoImage);
+    (data.agentImages || []).forEach(u => u && getCachedImage(u));
+    ((data.roundData?.photos) || data.photos || []).forEach(u => u && getCachedImage(u));
+  }, []);
 
   useEffect(() => {
     if (!displayMode) return;
@@ -2924,26 +2938,27 @@ export default function GuessThePrice({ displayMode = false }) {
     getCachedImage(BRAND.logoUrl);
     getCachedImage(BRAND.logoUrlLight);
 
+    // BroadcastChannel for instant same-browser sync
+    let bc;
+    try {
+      bc = new BroadcastChannel(GTP_CHANNEL_NAME);
+      bc.onmessage = (e) => handleDisplayData(e.data);
+    } catch {}
+
+    // Polling fallback for cross-device (200ms interval + cache-busting)
     const poll = async () => {
       try {
-        const res = await fetch("/api/gtp/live");
+        const res = await fetch("/api/gtp/live?_=" + Date.now());
         const data = await res.json();
-        if (data.ts && data.ts !== lastTsRef.current) {
-          lastTsRef.current = data.ts;
-          setDisplayState(data);
-          // Pre-cache any images
-          if (data.logoImage) getCachedImage(data.logoImage);
-          (data.agentImages || []).forEach(u => u && getCachedImage(u));
-          (data.photos || []).forEach(u => u && getCachedImage(u));
-        }
-      } catch { /* retry next poll */ }
+        handleDisplayData(data);
+      } catch {}
     };
     poll();
-    displayPollRef.current = setInterval(poll, 500);
-    return () => clearInterval(displayPollRef.current);
+    displayPollRef.current = setInterval(poll, 200);
+    return () => { clearInterval(displayPollRef.current); try { bc?.close(); } catch {} };
   }, [displayMode]);
 
-  // Render display canvas when state changes
+  // Render display canvas when state changes — uses SAME draw functions as editor
   useEffect(() => {
     if (!displayMode || !displayState) return;
     const canvas = canvasRef.current;
@@ -2955,139 +2970,55 @@ export default function GuessThePrice({ displayMode = false }) {
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, r2.W, r2.H);
 
-    // Update module-level EPISODE for draw functions
+    // Update module-level EPISODE with full round data from server
+    const roundIdx = (ds.round || 1) - 1;
+    const updatedRounds = [...(EPISODE.rounds || [])];
+    if (ds.roundData) {
+      while (updatedRounds.length <= roundIdx) updatedRounds.push({ number: updatedRounds.length + 1, photos: [], heroPhotoIndex: 0 });
+      updatedRounds[roundIdx] = ds.roundData;
+    }
     EPISODE = {
       ...EPISODE,
       agents: ds.agents || ["Agent 1", "Agent 2"],
       agentImages: ds.agentImages || ["", ""],
       logoImage: ds.logoImage || "",
-      rounds: EPISODE.rounds || [],
+      rounds: updatedRounds,
     };
 
     const drawFn = DRAW_FNS[ds.asset];
     if (!drawFn) return;
     const asset = ASSETS.find(a => a.id === ds.asset);
 
-    // For property gallery with photos — don't render here, handled by photo gallery effect
-    if (ds.asset === "property" && ds.photos && ds.photos.length > 0) {
-      // Reset photo index when asset changes to property
-      setDispPhotoIdx(0);
-      setDispPhotoAnimT(1);
-      dispAutoPlayRef.current = true;
-      return;
-    }
-
-    // Clear photo timer when not on property
-    clearInterval(dispPhotoTimerRef.current);
-
     if (asset?.animated) {
       cancelAnimationFrame(displayAnimRef.current);
-      const dur = ds.asset === "intro" ? 6000 : ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000 : 3000;
-      const start = performance.now();
-      const tick = (now) => {
-        const p = Math.min(1, (now - start) / dur);
-        ctx.clearRect(0, 0, r2.W, r2.H);
-        drawFn(ctx, r2.W, r2.H, ds.S, p);
-        if (p < 1) displayAnimRef.current = requestAnimationFrame(tick);
+      const numPhotos = Math.max(1, ds.roundData?.photos?.length || 1);
+      const dur = ds.asset === "intro" ? 6000
+        : ds.asset === "timer" ? (ds.S?.timerDuration || 3) * 1000
+        : ds.asset === "property" ? (ds.S?.photoDuration || 5) * numPhotos * 1000
+        : 3000;
+
+      const runAnimation = (startTime) => {
+        const tick = (now) => {
+          const p = Math.min(1, (now - startTime) / dur);
+          const r2now = { W: Math.round(window.innerWidth * window.devicePixelRatio), H: Math.round(window.innerHeight * window.devicePixelRatio) };
+          if (canvas.width !== r2now.W || canvas.height !== r2now.H) { canvas.width = r2now.W; canvas.height = r2now.H; }
+          const cx = canvas.getContext("2d");
+          cx.clearRect(0, 0, r2now.W, r2now.H);
+          drawFn(cx, r2now.W, r2now.H, ds.S, p);
+          if (p < 1) {
+            displayAnimRef.current = requestAnimationFrame(tick);
+          } else if (ds.asset === "property") {
+            // Loop property photo cycle
+            runAnimation(performance.now());
+          }
+        };
+        displayAnimRef.current = requestAnimationFrame(tick);
       };
-      displayAnimRef.current = requestAnimationFrame(tick);
+      runAnimation(performance.now());
     } else {
       drawFn(ctx, r2.W, r2.H, ds.S);
     }
   }, [displayMode, displayState]);
-
-  // Display mode: photo gallery draw (rAF-driven, not in a heavy useEffect)
-  const dispDrawRef = useRef({ ds: null, photoIdx: 0, animT: 1 });
-  useEffect(() => {
-    dispDrawRef.current = { ds: displayState, photoIdx: dispPhotoIdx, animT: dispPhotoAnimT };
-  }, [displayState, dispPhotoIdx, dispPhotoAnimT]);
-
-  useEffect(() => {
-    if (!displayMode || !displayState) return;
-    const ds = displayState;
-    if (ds.asset !== "property" || !ds.photos || ds.photos.length === 0) return;
-    let rafId;
-    const draw = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const { ds: curDs, photoIdx, animT } = dispDrawRef.current;
-      if (!curDs || curDs.asset !== "property") return;
-      const photos = curDs.photos || [];
-      if (photos.length === 0) return;
-      const r2 = { W: Math.round(window.innerWidth * window.devicePixelRatio), H: Math.round(window.innerHeight * window.devicePixelRatio) };
-      if (canvas.width !== r2.W || canvas.height !== r2.H) { canvas.width = r2.W; canvas.height = r2.H; }
-      const src = photos[photoIdx] || null;
-      drawPropertyGallery(canvas.getContext("2d"), r2.W, r2.H, curDs.S, src, animT, photoIdx, photos.length);
-      rafId = requestAnimationFrame(draw);
-    };
-    rafId = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafId);
-  }, [displayMode, displayState?.asset, displayState?.photos?.length]);
-
-  // Display mode: photo auto-advance timer (separate from draw loop)
-  useEffect(() => {
-    if (!displayMode || !displayState) return;
-    const ds = displayState;
-    if (ds.asset !== "property" || !ds.photos || ds.photos.length <= 1) return;
-    if (!dispAutoPlayRef.current) return;
-    const photos = ds.photos;
-    const secPerPhoto = (ds.S?.photoDuration || 5) * 1000;
-    const timer = setInterval(() => {
-      setDispPhotoIdx(prev => {
-        const next = (prev + 1) % photos.length;
-        setDispPhotoAnimT(0);
-        const start = performance.now();
-        const animTick = (now) => {
-          const t = Math.min(1, (now - start) / 400);
-          setDispPhotoAnimT(t);
-          if (t < 1) dispPhotoAnimRef.current = requestAnimationFrame(animTick);
-        };
-        cancelAnimationFrame(dispPhotoAnimRef.current);
-        dispPhotoAnimRef.current = requestAnimationFrame(animTick);
-        return next;
-      });
-    }, secPerPhoto);
-    dispPhotoTimerRef.current = timer;
-    return () => clearInterval(timer);
-  }, [displayMode, displayState?.asset, displayState?.photos?.length, displayState?.S?.photoDuration]);
-
-  // Display mode touch handlers for photo gallery swipe
-  const dispHandleTouchStart = (e) => {
-    dispTouchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
-  };
-  const dispHandleTouchEnd = (e) => {
-    if (!dispTouchRef.current || !displayState) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - dispTouchRef.current.x;
-    const dt = Date.now() - dispTouchRef.current.time;
-    dispTouchRef.current = null;
-    if (dt > 500 || Math.abs(dx) < 40) return; // not a swipe
-
-    const photos = displayState.photos || [];
-    if (displayState.asset !== "property" || photos.length <= 1) return;
-
-    // Pause auto-play on swipe
-    dispAutoPlayRef.current = false;
-    clearInterval(dispPhotoTimerRef.current);
-    clearTimeout(dispResumeRef.current);
-
-    if (dx < -40) setDispPhotoIdx(prev => Math.min(prev + 1, photos.length - 1));
-    else if (dx > 40) setDispPhotoIdx(prev => Math.max(prev - 1, 0));
-
-    // Animate entrance
-    setDispPhotoAnimT(0);
-    const start = performance.now();
-    const animTick = (now) => {
-      const p = Math.min(1, (now - start) / 400);
-      setDispPhotoAnimT(p);
-      if (p < 1) dispPhotoAnimRef.current = requestAnimationFrame(animTick);
-    };
-    cancelAnimationFrame(dispPhotoAnimRef.current);
-    dispPhotoAnimRef.current = requestAnimationFrame(animTick);
-
-    // Resume auto-play after 10 seconds
-    dispResumeRef.current = setTimeout(() => { dispAutoPlayRef.current = true; setDispPhotoAnimT(t => t); }, 10000);
-  };
 
   // Show/hide UI on mouse/touch activity
   const dispShowUIBriefly = () => {
@@ -3099,8 +3030,7 @@ export default function GuessThePrice({ displayMode = false }) {
   if (displayMode) {
     return (
       <div style={{ position: "fixed", inset: 0, background: GAME.navy, display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
-        onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}
-        onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
+        onMouseMove={dispShowUIBriefly} onClick={dispShowUIBriefly}>
         <canvas ref={canvasRef} width={Math.round(window.innerWidth * window.devicePixelRatio)} height={Math.round(window.innerHeight * window.devicePixelRatio)}
           style={{ width: "100vw", height: "100vh", display: "block" }} />
         {!displayState && (
@@ -3114,14 +3044,6 @@ export default function GuessThePrice({ displayMode = false }) {
             style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.5)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontFamily: DS.font }}>
             &#x26F6;
           </button>
-        )}
-        {/* Photo dots */}
-        {dispShowUI && displayState?.asset === "property" && (displayState?.photos?.length || 0) > 1 && (
-          <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
-            {displayState.photos.map((_, i) => (
-              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: i === dispPhotoIdx ? GAME.gold : "rgba(255,255,255,0.3)", transition: "background 0.2s" }} />
-            ))}
-          </div>
         )}
       </div>
     );

@@ -2,6 +2,8 @@ import { put, get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 const LIVE_PATH = "gtp/live/state.json";
+const NO_CACHE = { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" };
+const DEFAULT_STATE = { asset: "intro", round: 1, S: {}, scores: [0, 0], agents: ["Agent 1", "Agent 2"], ts: 0 };
 
 async function getLiveState(): Promise<string | null> {
   try {
@@ -17,12 +19,10 @@ async function getLiveState(): Promise<string | null> {
 export async function GET() {
   try {
     const raw = await getLiveState();
-    if (!raw) {
-      return NextResponse.json({ asset: "intro", round: 1, S: {}, scores: [0, 0], agents: ["Agent 1", "Agent 2"], ts: 0 });
-    }
-    return NextResponse.json(JSON.parse(raw));
+    if (!raw) return NextResponse.json(DEFAULT_STATE, { headers: NO_CACHE });
+    return NextResponse.json(JSON.parse(raw), { headers: NO_CACHE });
   } catch {
-    return NextResponse.json({ asset: "intro", round: 1, S: {}, scores: [0, 0], agents: ["Agent 1", "Agent 2"], ts: 0 });
+    return NextResponse.json(DEFAULT_STATE, { headers: NO_CACHE });
   }
 }
 
@@ -40,8 +40,8 @@ export async function POST(req: Request) {
       logoImage: body.logoImage || "",
       photos: body.photos || [],
       heroPhotoIndex: body.heroPhotoIndex || 0,
-      animProgress: body.animProgress ?? 0,
-      ts: Date.now(),
+      roundData: body.roundData || null,
+      ts: body.ts || Date.now(),
     };
     const json = JSON.stringify(state);
 
