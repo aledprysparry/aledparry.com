@@ -95,15 +95,27 @@ import { CPSHOMES_BRAND, CPSHOMES_FONTS, RATIOS, loadFont } from "@/content/bran
 | **Guess the Price** | `/app/cpshomes/guessprice` | `GuessThePrice.jsx` | Live game show — property price guessing with A/B/C options |
 | **Social Editor** | `/app/cpshomes/socialeditor` | `SocialEditor.jsx` | Graphics generator — social media templates, captions, exports |
 
+## Shared Libraries
+
+| Library | Path | Contents |
+|---------|------|----------|
+| **Design System** | `lib/design-system.ts` | DS tokens, btn, btnCta, btnPositive, inputS, card, label, sectionHead |
+| **Canvas Helpers** | `lib/canvas-helpers.ts` | Easing (easeOutExpo, easeOutBack, easeOutElastic), roundRect, sz, aspect, safeZone, getCachedImage, onImageLoad, loadFont, RATIOS |
+| **Video Export** | `lib/video-export.ts` | FFmpeg.wasm, webmToMov, recordAsset, recordAssetAsMov, WEBM_MIME |
+| **Brand Config** | `content/brands/cpshomes.ts` | CPS Homes colours, fonts, logos, layout tokens |
+
 ## New App Checklist
 
 When creating a new CPS Homes app:
 
-1. Import brand from `content/brands/cpshomes.ts`
-2. Register in `content/demos.config.ts` with `clientSlug: "cpshomes"`
-3. Use `loadFont("DM Sans")` + `loadFont("Lora")` on mount
-4. Use `getCachedImage()` for all image loading (with `_imgLoadCallback` for re-render)
-5. Follow `(ctx, W, H, S, progress)` signature for draw functions
-6. Use `sz(W, H, frac)` for all sizing (responsive across ratios)
-7. Respect safe zones for portrait/square exports
-8. Use Vercel Blob for image storage (not base64 in localStorage)
+1. Import design system: `import { DS, btn, btnCta, inputS, card, label } from "@/lib/design-system"`
+2. Import canvas helpers: `import { sz, aspect, roundRect, safeZone, getCachedImage, onImageLoad, loadFont, easeOutExpo, easeOutBack, RATIOS } from "@/lib/canvas-helpers"`
+3. Import brand: `import { CPSHOMES_BRAND } from "@/content/brands/cpshomes"`
+4. Import video export (if needed): `import { recordAsset, webmToMov } from "@/lib/video-export"`
+5. Register in `content/demos.config.ts` with `clientSlug: "cpshomes"`
+6. Use `loadFont("DM Sans")` + `loadFont("Lora")` on mount
+7. Use `onImageLoad(() => setTick(t => t + 1))` to re-render when images load
+8. Follow `(ctx, W, H, S, progress)` signature for draw functions
+9. Use `sz(W, H, frac)` for all sizing (responsive across ratios)
+10. Respect safe zones for portrait/square exports
+11. Use Vercel Blob for image storage (not base64 in localStorage)
