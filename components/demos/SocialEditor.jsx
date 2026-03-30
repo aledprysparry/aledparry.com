@@ -7,6 +7,26 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 
 // ═══════════════════════════════════════════════════════════════
+//  GLOBAL STYLES — CSS hover/active/reduced-motion (injected once)
+// ═══════════════════════════════════════════════════════════════
+const GLOBAL_STYLES = `
+  .is-btn { transition: all 120ms cubic-bezier(0.16,1,0.3,1); }
+  .is-btn:hover { filter: brightness(1.15); }
+  .is-btn:active { transform: scale(0.97); transition-duration: 0ms; }
+  .is-card { transition: transform 200ms cubic-bezier(0.16,1,0.3,1), box-shadow 200ms cubic-bezier(0.16,1,0.3,1), border-color 120ms cubic-bezier(0.16,1,0.3,1); }
+  .is-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.15) !important; }
+  .is-card:active { transform: translateY(0); transition-duration: 0ms; }
+  .is-input { transition: border-color 120ms cubic-bezier(0.16,1,0.3,1), box-shadow 120ms cubic-bezier(0.16,1,0.3,1); }
+  .is-input:focus { border-color: rgba(42,157,143,0.5) !important; box-shadow: 0 0 0 3px rgba(42,157,143,0.12); }
+  .is-tab { transition: all 200ms cubic-bezier(0.16,1,0.3,1); position: relative; }
+  .is-tab::after { content: ""; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px; background: #2A9D8F; border-radius: 1px; transition: all 200ms cubic-bezier(0.16,1,0.3,1); transform: translateX(-50%); }
+  .is-tab[data-active="true"]::after { width: 70%; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+`;
+
+// ═══════════════════════════════════════════════════════════════
 //  DESIGN SYSTEM — shared tokens for consistent UI
 // ═══════════════════════════════════════════════════════════════
 const DS = {
@@ -48,10 +68,23 @@ const DS = {
   // ── Typography ──
   font: "'DM Sans',Montserrat,Arial,sans-serif",
   fsXs: 10, fsSm: 11, fsMd: 13, fsLg: 15, fsXl: 20,
-  // ── Transitions ──
-  transQuick: "all 0.12s ease",
-  transMed: "all 0.2s ease",
-  transSlow: "all 0.35s ease",
+  // ── Motion tokens ──
+  easeOut: "cubic-bezier(0.16, 1, 0.3, 1)",       // default — exits feel fast
+  easeSnap: "cubic-bezier(0.2, 0, 0, 1)",          // snappy, responsive
+  easeInOut: "cubic-bezier(0.4, 0, 0.2, 1)",       // symmetric
+  easeSpring: "cubic-bezier(0.34, 1.56, 0.64, 1)", // bouncy (use sparingly)
+  // Duration shortcuts
+  durFast: "120ms",
+  durStd: "200ms",
+  durSlow: "350ms",
+  // Composed transitions
+  transQuick: "all 120ms cubic-bezier(0.16, 1, 0.3, 1)",
+  transMed: "all 200ms cubic-bezier(0.16, 1, 0.3, 1)",
+  transSlow: "all 350ms cubic-bezier(0.4, 0, 0.2, 1)",
+  transSnap: "all 120ms cubic-bezier(0.2, 0, 0, 1)",
+  // Specific property transitions (avoid animating layout)
+  transColor: "color 120ms cubic-bezier(0.16,1,0.3,1), background 120ms cubic-bezier(0.16,1,0.3,1), border-color 120ms cubic-bezier(0.16,1,0.3,1)",
+  transTransform: "transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1)",
 };
 
 // ── Reusable style factories ──────────────────────────────────
@@ -60,8 +93,10 @@ const btn = (overrides) => ({
   background: DS.bgButton, border: `1px solid ${DS.borderSubtle}`,
   color: DS.textPrimary, padding: "7px 14px", borderRadius: DS.rSm,
   cursor: "pointer", fontSize: DS.fsSm, fontFamily: DS.font, fontWeight: 600,
-  transition: DS.transQuick, letterSpacing: "0.01em", ...overrides,
+  transition: DS.transQuick, letterSpacing: "0.01em", willChange: "transform", ...overrides,
 });
+// Helper: merge className for CSS hover/active (React inline styles can't do :hover/:active)
+const cx = (...classes) => classes.filter(Boolean).join(" ");
 // CTA / primary action button
 const btnCta = (o) => btn({
   background: DS.accent, border: `1px solid ${DS.accentLight}`,
@@ -4619,6 +4654,13 @@ function App(){
       return {...p,...c};
     }));
   },[activeProjectId]);
+
+  // Inject global motion styles once
+  useEffect(()=>{
+    if(document.getElementById("is-motion-styles"))return;
+    const s=document.createElement("style");s.id="is-motion-styles";s.textContent=GLOBAL_STYLES;document.head.appendChild(s);
+    return()=>s.remove();
+  },[]);
 
   if(view==="brand-edit"){
     const editing=editBrandId?brands.find(b=>b.id===editBrandId):null;
