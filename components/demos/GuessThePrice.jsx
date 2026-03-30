@@ -1093,20 +1093,14 @@ function drawOptions(ctx, W, H, S, progress) {
 
   for (let i = 0; i < 3; i++) {
     const o = opts[i];
-    // Staggered: A at 0.20, B at 0.35, C at 0.50 — bouncy scale from center
+    // Staggered slide-up with fade
     const pillDelay = 0.20 + i * 0.15;
-    const rawP = Math.min(1, Math.max(0, (p - pillDelay) / 0.35));
-    const pillScale = easeOutBack(rawP);
-    const pillAlpha = easeOutExpo(rawP);
-    const oy = startY + i * (oh + og);
-    const pillCX = W / 2;
-    const pillCY = oy + oh / 2;
+    const rawP = easeOutExpo(Math.min(1, Math.max(0, (p - pillDelay) / 0.4)));
+    const slideY = H * 0.06 * (1 - rawP);
+    const oy = startY + i * (oh + og) + slideY;
 
     ctx.save();
-    ctx.globalAlpha = pillAlpha;
-    ctx.translate(pillCX, pillCY);
-    ctx.scale(pillScale, pillScale);
-    ctx.translate(-pillCX, -pillCY);
+    ctx.globalAlpha = rawP;
 
     // Pill with deep shadow
     ctx.save();
@@ -1126,7 +1120,7 @@ function drawOptions(ctx, W, H, S, progress) {
     roundRect(ctx, pad, oy, ow, oh, oh / 2);
     ctx.fill();
 
-    // Letter badge — left, with inner glow
+    // Letter badge — left
     const br = oh * 0.40;
     const bx2 = pad + oh / 2;
     const by2 = oy + oh / 2;
@@ -1134,15 +1128,11 @@ function drawOptions(ctx, W, H, S, progress) {
     ctx.beginPath();
     ctx.arc(bx2, by2, br, 0, Math.PI * 2);
     ctx.fill();
-    ctx.save();
-    ctx.shadowColor = "rgba(255,255,255,0.3)";
-    ctx.shadowBlur = 8;
     ctx.font = `800 ${Math.round(br * 1.3)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(o.letter, bx2, by2);
-    ctx.restore();
 
     // Price — BOLD, centered
     const priceX = pad + oh + (ow - oh) / 2;
@@ -1152,10 +1142,11 @@ function drawOptions(ctx, W, H, S, progress) {
     ctx.font = `800 ${Math.round(oh * 0.52)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
-    ctx.fillText(o.price || "---", priceX, by2 + oh * 0.02);
+    ctx.textBaseline = "middle";
+    ctx.fillText(o.price || "---", priceX, by2);
     ctx.restore();
 
-    ctx.restore(); // scale transform
+    ctx.restore();
   }
 
   // Disclaimer
