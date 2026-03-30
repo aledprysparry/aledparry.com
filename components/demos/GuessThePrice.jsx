@@ -1739,6 +1739,7 @@ export default function GuessThePrice({ displayMode = false }) {
   // ── Push current state to live display ──
   const [liveConnected, setLiveConnected] = useState(false);
   const livePushRef = useRef(null);
+  const pushToLiveRef = useRef(null);
   const pushToLive = async (overrideAsset, overrideS) => {
     try {
       const rd = episode.rounds[currentRound] || {};
@@ -1774,6 +1775,8 @@ export default function GuessThePrice({ displayMode = false }) {
       setLiveConnected(false);
     }
   };
+
+  pushToLiveRef.current = pushToLive;
 
   // Auto-sync to /live when admin state changes (debounced)
   useEffect(() => {
@@ -2673,6 +2676,7 @@ export default function GuessThePrice({ displayMode = false }) {
       ctx.drawImage(offscreenB.current, 0, 0);
       ctx.globalAlpha = 1;
       if (t < 1) transitionRef.current = requestAnimationFrame(tick);
+      else if (liveConnected) pushToLiveRef.current?.(newAsset); // sync to /live after transition (uses ref for latest state)
     };
     transitionRef.current = requestAnimationFrame(tick);
   };
