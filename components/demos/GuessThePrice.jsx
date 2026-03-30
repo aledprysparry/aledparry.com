@@ -1796,6 +1796,8 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // ── Push current state to live display ──
   const [liveConnected, setLiveConnected] = useState(false);
+  const [lastPushOk, setLastPushOk] = useState(null); // null = never, true = ok, false = error
+  const [lastPushTs, setLastPushTs] = useState(0);
   const livePushRef = useRef(null);
   const pushToLiveRef = useRef(null);
   const pushToLive = async (overrideAsset, overrideS) => {
@@ -1822,17 +1824,34 @@ export default function GuessThePrice({ displayMode = false }) {
       // Instant same-browser delivery via BroadcastChannel
       try { const bc = new BroadcastChannel(GTP_CHANNEL_NAME); bc.postMessage(state); bc.close(); } catch {}
 
-      // Persist to server for cross-device (fire and forget — don't block)
+      // Persist to server for cross-device
       fetch("/api/gtp/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state),
-      }).then(() => setLiveConnected(true)).catch(() => setLiveConnected(false));
+      }).then(() => {
+        setLiveConnected(true);
+        setLastPushOk(true);
+        setLastPushTs(Date.now());
+      }).catch(() => {
+        setLiveConnected(false);
+        setLastPushOk(false);
+        setLastPushTs(Date.now());
+      });
       if (!liveConnected) setLiveConnected(true);
     } catch {
       setLiveConnected(false);
+      setLastPushOk(false);
+      setLastPushTs(Date.now());
     }
   };
+
+  // Fade status dot to idle after 5s of no pushes
+  useEffect(() => {
+    if (lastPushOk !== true) return;
+    const t = setTimeout(() => setLastPushOk(null), 5000);
+    return () => clearTimeout(t);
+  }, [lastPushTs]);
 
   pushToLiveRef.current = pushToLive;
 
@@ -3093,7 +3112,11 @@ export default function GuessThePrice({ displayMode = false }) {
     };
     poll();
     displayPollRef.current = setInterval(poll, 200);
-    return () => { clearInterval(displayPollRef.current); try { bc?.close(); } catch {} };
+    // Recalculate CSS letterboxing on resize/orientation change
+    const onResize = () => setDispImgTick(t => t + 1);
+    window.addEventListener("resize", onResize);
+
+    return () => { clearInterval(displayPollRef.current); try { bc?.close(); } catch {} window.removeEventListener("resize", onResize); };
   }, [displayMode]);
 
   // Keep a ref to the current display state so the animation loop always reads the latest
@@ -3138,10 +3161,9 @@ export default function GuessThePrice({ displayMode = false }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Render at screen dimensions — draw functions are ratio-adaptive
-    const dpr = window.devicePixelRatio || 1;
-    const cW = Math.round(window.innerWidth * dpr);
-    const cH = Math.round(window.innerHeight * dpr);
+    // Use admin's canvas dimensions for pixel-identical rendering
+    const cW = ds.canvasW || 1920;
+    const cH = ds.canvasH || 1080;
     if (canvas.width !== cW || canvas.height !== cH) { canvas.width = cW; canvas.height = cH; }
 
     const drawFn = DRAW_FNS[ds.asset];
@@ -3249,13 +3271,23 @@ export default function GuessThePrice({ displayMode = false }) {
     dispUITimerRef.current = setTimeout(() => setDispShowUI(false), 3000);
   };
 
+  // Calculate CSS dimensions for letterboxed canvas
+  const dispCanvasW = displayState?.canvasW || 1920;
+  const dispCanvasH = displayState?.canvasH || 1080;
+  const dispAR = dispCanvasW / dispCanvasH;
+  const screenW = typeof window !== "undefined" ? window.innerWidth : 1920;
+  const screenH = typeof window !== "undefined" ? window.innerHeight : 1080;
+  const screenAR = screenW / screenH;
+  const dispCssW = screenAR > dispAR ? Math.round(screenH * dispAR) : screenW;
+  const dispCssH = screenAR > dispAR ? screenH : Math.round(screenW / dispAR);
+
   if (displayMode) {
     return (
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", cursor: dispShowUI ? "default" : "none", overflow: "hidden", touchAction: "none" }}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", cursor: dispShowUI ? "default" : "none", overflow: "hidden", touchAction: "none" }}
         onMouseMove={dispShowUIBriefly} onMouseDown={(e) => { if (e.detail > 0 && !("ontouchstart" in window)) dispHandleTap(); }}
         onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
         <canvas ref={canvasRef}
-          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "block" }} />
+          style={{ width: dispCssW, height: dispCssH, display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
@@ -3478,6 +3510,7 @@ export default function GuessThePrice({ displayMode = false }) {
   //  EDITOR MODE RENDER
   // ═══════════════════════════════════════════════════════════
   return (<>
+    <style>{`@keyframes gtp-pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
     {photoManager}
     {photoModal}
     <div style={{ fontFamily: DS.font, background: DS.bgPage, color: DS.textPrimary, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -3500,6 +3533,20 @@ export default function GuessThePrice({ displayMode = false }) {
           <button onClick={enterLiveMode}
             style={btn({ padding: "4px 14px", fontSize: DS.fsXs, fontWeight: 800, background: "rgba(251,135,112,0.15)", border: `1px solid rgba(251,135,112,0.3)`, color: GAME.gold, letterSpacing: "0.1em" })}>
             LIVE
+          </button>
+          <button onClick={() => pushToLive()}
+            style={btn({
+              padding: "4px 14px", fontSize: DS.fsXs, fontWeight: 800, display: "flex", alignItems: "center", gap: 6,
+              background: lastPushOk === true ? "rgba(131,163,129,0.2)" : lastPushOk === false ? "rgba(251,135,112,0.15)" : DS.bgButton,
+              border: `1px solid ${lastPushOk === true ? "rgba(131,163,129,0.3)" : lastPushOk === false ? "rgba(251,135,112,0.3)" : DS.borderSubtle}`,
+              color: lastPushOk === true ? BRAND.colorPositive : lastPushOk === false ? GAME.gold : DS.textPrimary,
+            })}>
+            <span style={{
+              width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+              background: lastPushOk === true ? "#4ade80" : lastPushOk === false ? "#ef4444" : "#6b7280",
+              animation: lastPushOk === true ? "gtp-pulse 1.5s ease-in-out infinite" : "none",
+            }} />
+            Push to Live
           </button>
           <span style={{ width: 1, height: 20, background: DS.borderSubtle }} />
           {Object.entries(RATIOS).map(([key, val]) => (
@@ -3658,14 +3705,9 @@ export default function GuessThePrice({ displayMode = false }) {
           <button onClick={exportRound} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export Round</button>
           <button onClick={exportAllZIP} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export All (ZIP)</button>
           <button onClick={exportPDF} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>iPad PDF</button>
-          <span style={{ width: 1, height: 24, background: DS.borderSubtle }} />
-          <button onClick={() => pushToLive()}
-            style={btn({ padding: "8px 20px", fontSize: DS.fsSm, fontWeight: 800, background: liveConnected ? "rgba(131,163,129,0.2)" : "rgba(251,135,112,0.15)", border: `1px solid ${liveConnected ? "rgba(131,163,129,0.3)" : "rgba(251,135,112,0.3)"}`, color: liveConnected ? BRAND.colorPositive : GAME.gold })}>
-            {liveConnected ? "Push to Live \u2713" : "Push to Live"}
-          </button>
         </div>
         {exportStatus && <span style={{ fontSize: DS.fsSm, color: GAME.gold }}>{exportStatus}</span>}
-        <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>{r.W} &times; {r.H} &middot; {activeAsset}{liveConnected && " \u00b7 LIVE"}</div>
+        <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>{r.W} &times; {r.H} &middot; {activeAsset}</div>
       </footer>
     </div>
   </>);
