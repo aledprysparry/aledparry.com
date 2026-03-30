@@ -2134,14 +2134,13 @@ export default function GuessThePrice({ displayMode = false }) {
     }
   }, [ratio]);
 
-  // Auto-play entrance animations (but NOT timer/reveal/lockin — those need user to set values first)
-  const manualPlayAssets = ["timer", "reveal", "lockin"];
+  // Auto-play entrance animations for ALL assets — matches /live behaviour
   const [sequenceMode, setSequenceMode] = useState(true);
   const sequenceRef = useRef(null);
   useEffect(() => {
     if (displayMode || liveMode) return;
     const asset = ASSETS.find(a => a.id === activeAsset);
-    if (asset?.animated && !isPlaying && !manualPlayAssets.includes(activeAsset)) {
+    if (asset?.animated && !isPlaying) {
       animProgressRef.current = 0;
       const t = setTimeout(() => playAnimation(), 100);
       return () => clearTimeout(t);
