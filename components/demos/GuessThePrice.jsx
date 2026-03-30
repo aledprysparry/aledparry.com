@@ -561,7 +561,7 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.stroke();
     ctx.restore();
 
-    // Image or placeholder
+    // Image — only draw if loaded (no placeholder circles)
     ctx.save();
     ctx.beginPath();
     ctx.arc(x, y, headR, 0, Math.PI * 2);
@@ -572,17 +572,6 @@ function drawIntro(ctx, W, H, S, progress) {
       const scale = Math.max(headR * 2 / iw, headR * 2 / ih);
       const dw = iw * scale, dh = ih * scale;
       ctx.drawImage(img, x - dw / 2, y - dh / 2, dw, dh);
-    } else {
-      const pg = ctx.createRadialGradient(x, y, 0, x, y, headR);
-      pg.addColorStop(0, idx === 0 ? BRAND.colorAccent : BRAND.colorPositive);
-      pg.addColorStop(1, idx === 0 ? "#c2564a" : "#5a7a58");
-      ctx.fillStyle = pg;
-      ctx.fill();
-      ctx.font = `800 ${headR * 0.8}px 'DM Sans', sans-serif`;
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(name.charAt(0).toUpperCase(), x, y);
     }
     ctx.restore();
 
