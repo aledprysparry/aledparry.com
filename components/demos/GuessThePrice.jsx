@@ -1747,7 +1747,7 @@ export default function GuessThePrice({ displayMode = false }) {
       const state = {
         asset: overrideAsset || activeAsset,
         round: currentRound + 1,
-        S: overrideS || S,
+        S: { ...(overrideS || S), score1: scores[0], score2: scores[1] },
         scores,
         agents: episode.agents,
         agentImages: (episode.agentImages || []).filter(u => u?.startsWith("/api") || u?.startsWith("http")),
@@ -2182,14 +2182,20 @@ export default function GuessThePrice({ displayMode = false }) {
   const addScore = (idx) => {
     setScores(prev => {
       const n = [...prev]; n[idx]++;
-      // Persist scores to episode
       setEpisodes(eps => eps.map(ep => ep.id === activeEpisodeId ? { ...ep, scores: n } : ep));
       setDirty(true);
-      // Push immediately — auto-sync is disabled in liveMode
-      setTimeout(() => pushToLive(), 60);
       return n;
     });
   };
+
+  // Push score changes to /live even in liveMode (auto-sync is disabled in liveMode)
+  const prevScoresRef = useRef(scores);
+  useEffect(() => {
+    if (prevScoresRef.current[0] !== scores[0] || prevScoresRef.current[1] !== scores[1]) {
+      prevScoresRef.current = scores;
+      if (liveConnected) pushToLive();
+    }
+  }, [scores]);
   const resetScores = () => {
     setScores([0, 0]);
     setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, scores: [0, 0] } : ep));
