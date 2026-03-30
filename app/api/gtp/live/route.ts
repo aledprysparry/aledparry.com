@@ -11,17 +11,17 @@ const DEFAULT_STATE = { asset: "intro", round: 1, S: {}, scores: [0, 0], agents:
 let cachedState: string | null = null;
 let cachedTs = 0;
 
-// GET /api/gtp/live — returns current live display state (from cache or blob)
-export async function GET(req: Request) {
+// GET /api/gtp/live — returns cached state (always prefer cache over blob)
+export async function GET() {
   try {
-    // If we have a recent cache (< 5s old), serve it instantly
-    if (cachedState && (Date.now() - cachedTs) < 5000) {
+    // Always serve from cache if we have it — never blank the display
+    if (cachedState) {
       return new NextResponse(cachedState, {
         headers: { ...NO_CACHE, "Content-Type": "application/json" },
       });
     }
 
-    // Otherwise fetch from blob
+    // Cold start: fetch from blob
     const result = await get(LIVE_PATH, { access: "private" });
     if (!result || result.statusCode !== 200) {
       return NextResponse.json(DEFAULT_STATE, { headers: NO_CACHE });
@@ -33,6 +33,12 @@ export async function GET(req: Request) {
       headers: { ...NO_CACHE, "Content-Type": "application/json" },
     });
   } catch {
+    // On error, serve stale cache if available — better than blank
+    if (cachedState) {
+      return new NextResponse(cachedState, {
+        headers: { ...NO_CACHE, "Content-Type": "application/json" },
+      });
+    }
     return NextResponse.json(DEFAULT_STATE, { headers: NO_CACHE });
   }
 }
@@ -61,19 +67,12 @@ export async function POST(req: Request) {
     cachedTs = Date.now();
 
     // Persist to blob in background (don't block the response)
-    const blobPromise = put(LIVE_PATH, json, {
+    put(LIVE_PATH, json, {
       access: "private",
       allowOverwrite: true,
     }).catch(() => {});
 
-    // Return immediately — don't wait for blob write
-    const response = NextResponse.json({ ok: true });
-
-    // Wait for blob write to complete before the response is fully sent
-    // Using waitUntil-style pattern: fire and forget
-    blobPromise;
-
-    return response;
+    return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ error: msg }, { status: 500 });

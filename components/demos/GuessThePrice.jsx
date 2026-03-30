@@ -1154,10 +1154,10 @@ function drawLockIn(ctx, W, H, S, progress) {
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
-  const letter = S.lockLetter || "B";
+  const letter = S.lockLetter || "";
+  const hasAnswer = letter !== "";
   const colors = { A: GAME.optionA, B: GAME.optionB, C: GAME.optionC };
-  const letterColor = colors[letter] || GAME.gold;
-  // Center content within safe zone in portrait
+  const letterColor = hasAnswer ? (colors[letter] || GAME.gold) : GAME.gold;
   const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.45;
 
   // Large DRAMATIC glow behind letter
@@ -1183,28 +1183,40 @@ function drawLockIn(ctx, W, H, S, progress) {
   ctx.textBaseline = "middle";
   ctx.fillText((S.lockAgent || "Agent").toUpperCase(), W / 2, centerY - sz(W, H, 0.20));
 
-  // "LOCKS IN" label — with glow
+  // Label — changes based on whether answer is selected
   ctx.shadowColor = GAME.gold;
   ctx.shadowBlur = 12;
   ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = GAME.gold;
-  ctx.fillText("LOCKS IN", W / 2, centerY - sz(W, H, 0.13));
+  ctx.fillText(hasAnswer ? "LOCKS IN" : "IS THINKING\u2026", W / 2, centerY - sz(W, H, 0.13));
   ctx.restore();
 
-  // Giant letter — WHITE with coloured glow, scale in with elastic
-  const letterLP = Math.min(1, Math.max(0, (p - 0.25) / 0.5));
-  const letterScale = easeOutBack(letterLP);
-  const letterSz = sz(W, H, ar === "portrait" ? 0.38 : 0.30) * letterScale;
-  if (letterLP > 0) {
+  if (hasAnswer) {
+    // Giant letter — WHITE with coloured glow, scale in with elastic
+    const letterLP = Math.min(1, Math.max(0, (p - 0.25) / 0.5));
+    const letterScale = easeOutBack(letterLP);
+    const letterSz = sz(W, H, ar === "portrait" ? 0.38 : 0.30) * letterScale;
+    if (letterLP > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, letterLP * 2);
+      ctx.shadowColor = letterColor;
+      ctx.shadowBlur = sz(W, H, 0.08);
+      ctx.font = `800 ${Math.round(letterSz)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(letter, W / 2, centerY + sz(W, H, 0.05));
+      ctx.restore();
+    }
+  } else {
+    // "?" placeholder — subtle, waiting for answer
     ctx.save();
-    ctx.globalAlpha = Math.min(1, letterLP * 2);
-    ctx.shadowColor = letterColor;
-    ctx.shadowBlur = sz(W, H, 0.08);
-    ctx.font = `800 ${Math.round(letterSz)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = "#fff";
+    ctx.globalAlpha = 0.3;
+    ctx.font = `800 ${sz(W, H, ar === "portrait" ? 0.30 : 0.22)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(letter, W / 2, centerY + sz(W, H, 0.05));
+    ctx.fillText("?", W / 2, centerY + sz(W, H, 0.05));
     ctx.restore();
   }
 
@@ -1576,7 +1588,7 @@ export default function GuessThePrice({ displayMode = false }) {
     revealLetter: EPISODE.rounds[0].correctLetter,
     revealPrice: EPISODE.rounds[0].correctPrice,
     lockAgent: EPISODE.rounds[0].guesser,
-    lockLetter: EPISODE.rounds[0].correctLetter,
+    lockLetter: "",
     score1: 0,
     score2: 0,
     timerDuration: 3,
@@ -1791,7 +1803,7 @@ export default function GuessThePrice({ displayMode = false }) {
       revealLetter: round.correctLetter,
       revealPrice: round.correctPrice,
       lockAgent: round.guesser,
-      lockLetter: round.correctLetter,
+      lockLetter: "",
       score1: sc ? sc[0] : 0,
       score2: sc ? sc[1] : 0,
       timerDuration: ep.timerDuration ?? prev.timerDuration ?? 3,
@@ -1999,7 +2011,7 @@ export default function GuessThePrice({ displayMode = false }) {
       revealLetter: round.correctLetter,
       revealPrice: round.correctPrice,
       lockAgent: round.guesser,
-      lockLetter: round.correctLetter,
+      lockLetter: "",
       score1: scores[0],
       score2: scores[1],
     }));
@@ -2340,7 +2352,7 @@ export default function GuessThePrice({ displayMode = false }) {
         revealLetter: round.correctLetter,
         revealPrice: round.correctPrice,
         lockAgent: round.guesser,
-        lockLetter: round.correctLetter,
+        lockLetter: "",
       };
 
       const photos = round.photos || [];
