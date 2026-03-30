@@ -62,13 +62,12 @@ const inputS = (o) => ({
   transition: DS.transQuick, ...o,
 });
 const card = (o) => ({
-  background: DS.bgCardGlass, border: `1px solid ${DS.borderSubtle}`,
-  borderRadius: DS.rMd, padding: `${DS.lg}px`, marginBottom: DS.lg,
-  backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", ...o,
+  background: DS.bgCardGlass, border: "none",
+  borderRadius: DS.rMd, padding: `${DS.lg}px`, marginBottom: DS.lg, ...o,
 });
 const label = (o) => ({
-  display: "block", fontSize: DS.fsXs, fontWeight: 700, color: DS.textSecondary,
-  letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: DS.xs, ...o,
+  display: "block", fontSize: DS.fsXs, fontWeight: 600, color: DS.textSecondary,
+  letterSpacing: "0.02em", marginBottom: DS.xs, ...o,
 });
 const sectionHead = (o) => ({
   fontWeight: 700, fontSize: 10, color: DS.textMuted,
@@ -3606,15 +3605,15 @@ export default function GuessThePrice({ displayMode = false }) {
           <button onClick={() => syncToServer()} style={btn({ padding: "4px 12px", fontSize: DS.fsXs })}>Save</button>
           <button onClick={() => { const name = `Ep${episode.episode}_${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}`; saveSnapshot(name); }}
             style={btn({ padding: "4px 12px", fontSize: DS.fsXs })}>Snapshot</button>
-          <span style={{ width: 1, height: 20, background: DS.borderSubtle, margin: `0 ${DS.xs}px` }} />
+          <span style={{ width: DS.sm }} />
           {/* Live group */}
           <button onClick={enterLiveMode}
-            style={btn({ padding: "4px 14px", fontSize: DS.fsXs, fontWeight: 800, background: "rgba(251,135,112,0.15)", border: `1px solid rgba(251,135,112,0.3)`, color: GAME.gold, letterSpacing: "0.1em" })}>
+            style={btn({ padding: "4px 14px", fontSize: DS.fsXs, fontWeight: 600, background: "rgba(251,135,112,0.15)", border: `1px solid rgba(251,135,112,0.3)`, color: GAME.gold })}>
             LIVE
           </button>
           <button onClick={() => pushToLive()}
             style={btn({
-              padding: "4px 14px", fontSize: DS.fsXs, fontWeight: 800, display: "flex", alignItems: "center", gap: 6,
+              padding: "4px 14px", fontSize: DS.fsXs, fontWeight: 600, display: "flex", alignItems: "center", gap: 6,
               background: lastPushOk === true ? "rgba(131,163,129,0.2)" : lastPushOk === false ? "rgba(251,135,112,0.15)" : DS.bgButton,
               border: `1px solid ${lastPushOk === true ? "rgba(131,163,129,0.3)" : lastPushOk === false ? "rgba(251,135,112,0.3)" : DS.borderSubtle}`,
               color: lastPushOk === true ? BRAND.colorPositive : lastPushOk === false ? GAME.gold : DS.textPrimary,
@@ -3626,7 +3625,7 @@ export default function GuessThePrice({ displayMode = false }) {
             }} />
             Push to Live
           </button>
-          <span style={{ width: 1, height: 20, background: DS.borderSubtle, margin: `0 ${DS.xs}px` }} />
+          <span style={{ width: DS.sm }} />
           {/* Ratio group */}
           {Object.entries(RATIOS).map(([key, val]) => (
             <button key={key} onClick={() => setRatio(key)}
@@ -3724,10 +3723,7 @@ export default function GuessThePrice({ displayMode = false }) {
         </div>
       </div>
 
-      {/* STATUS STRIP */}
-      <div style={{ padding: `${DS.xs}px ${DS.xl}px`, borderBottom: `1px solid ${DS.borderSubtle}`, fontSize: DS.fsSm, color: DS.textMuted, background: "rgba(11,29,58,0.2)" }}>
-        Round {round.number} of 6 &middot; {round.address ? round.address.split(",")[0] : "\u2014"} &middot; {round.guesser} guesses {round.propertyAgent}&apos;s property choice
-      </div>
+      {/* Status info merged into round bar above — strip removed */}
 
       {/* MAIN */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
