@@ -2339,20 +2339,25 @@ export default function GuessThePrice({ displayMode = false }) {
     const tick = (now) => {
       const elapsed = now - start;
       const p = Math.min(1, elapsed / duration);
-      render(p);
+      renderRef.current(p);
       if (p < 1) requestAnimationFrame(tick);
       else rec.stop();
     };
     requestAnimationFrame(tick);
-  }, [activeAsset, S, render, exportPNG]);
+  }, [activeAsset, S, exportPNG]);
 
   // ── Batch export round ──
   const exportRound = useCallback(async () => {
     const rn = S.propRound;
     const toExport = [
-      { asset: "property", name: `r${rn}_property.png` },
-      { asset: "options",  name: `r${rn}_options.png` },
-      { asset: "reveal",   name: `r${rn}_reveal_hold.png` },
+      { asset: "roundtitle", name: `r${rn}_01_round_title.png` },
+      { asset: "property",   name: `r${rn}_02_property.png` },
+      { asset: "prompt",     name: `r${rn}_03_prompt.png` },
+      { asset: "options",    name: `r${rn}_04_options.png` },
+      { asset: "lockin",     name: `r${rn}_05_lockin.png` },
+      { asset: "timer",      name: `r${rn}_06_timer.png` },
+      { asset: "reveal",     name: `r${rn}_07_reveal.png` },
+      { asset: "scoreboard", name: `r${rn}_08_scoreboard.png` },
     ];
     for (let i = 0; i < toExport.length; i++) {
       setExportStatus(`Exporting ${i + 1}/${toExport.length}\u2026`);
@@ -2365,11 +2370,7 @@ export default function GuessThePrice({ displayMode = false }) {
       const ctx = canvas.getContext("2d");
       ctx.clearRect(0, 0, rat.W, rat.H);
       const drawFn = DRAW_FNS[asset];
-      if (drawFn) {
-        const ad = ASSETS.find(a => a.id === asset);
-        if (ad?.animated) drawFn(ctx, rat.W, rat.H, S, 1);
-        else drawFn(ctx, rat.W, rat.H, S);
-      }
+      if (drawFn) drawFn(ctx, rat.W, rat.H, S, 1);
       await new Promise(resolve => {
         canvas.toBlob(blob => {
           if (blob) {
@@ -2437,46 +2438,63 @@ export default function GuessThePrice({ displayMode = false }) {
         revealLetter: round.correctLetter,
         revealPrice: round.correctPrice,
         lockAgent: round.guesser,
-        lockLetter: "",
+        lockLetter: round.correctLetter,
       };
-
+      const rn = ri + 1;
       const photos = round.photos || [];
       const numPhotos = Math.max(1, photos.length);
 
-      // Export each photo as a separate property slide
-      for (let pi = 0; pi < numPhotos; pi++) {
+      // Helper: render an asset to PNG and add to ZIP
+      const exportAsset = async (assetId, filename, overrideS) => {
         fileCount++;
-        setExportStatus(`R${ri + 1} photo ${pi + 1}/${numPhotos}…`);
+        setExportStatus(`R${rn} ${assetId}…`);
         canvas.width = rat.W;
         canvas.height = rat.H;
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, rat.W, rat.H);
-        // Set progress so drawProperty shows this specific photo
+        const fn = DRAW_FNS[assetId];
+        if (fn) fn(ctx, rat.W, rat.H, overrideS || roundS, 1);
+        const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+        if (blob) zip.file(filename, blob);
+        await new Promise(r => setTimeout(r, 50));
+      };
+
+      // Full show sequence per round:
+      // 1. Round title
+      await exportAsset("roundtitle", `R${rn}_01_round_title.png`);
+
+      // 2. Each property photo as a slide
+      for (let pi = 0; pi < numPhotos; pi++) {
+        fileCount++;
+        setExportStatus(`R${rn} photo ${pi + 1}/${numPhotos}…`);
+        canvas.width = rat.W;
+        canvas.height = rat.H;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, rat.W, rat.H);
         const progress = numPhotos > 1 ? (pi + 0.5) / numPhotos : 1;
         DRAW_FNS.property(ctx, rat.W, rat.H, roundS, progress);
         const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
-        if (blob) zip.file(`R${ri + 1}_photo_${pi + 1}.png`, blob);
+        if (blob) zip.file(`R${rn}_02_photo_${pi + 1}.png`, blob);
         await new Promise(r => setTimeout(r, 50));
       }
 
-      // Export options + reveal
-      for (const { asset, suffix } of [{ asset: "options", suffix: "options" }, { asset: "reveal", suffix: "reveal" }]) {
-        fileCount++;
-        setExportStatus(`R${ri + 1} ${suffix}…`);
-        canvas.width = rat.W;
-        canvas.height = rat.H;
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, rat.W, rat.H);
-        const drawFn = DRAW_FNS[asset];
-        if (drawFn) {
-          const ad = ASSETS.find(a => a.id === asset);
-          if (ad?.animated) drawFn(ctx, rat.W, rat.H, roundS, 1);
-          else drawFn(ctx, rat.W, rat.H, roundS);
-        }
-        const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
-        if (blob) zip.file(`R${ri + 1}_${suffix}.png`, blob);
-        await new Promise(r => setTimeout(r, 50));
-      }
+      // 3. Prompt ("Which one is it?")
+      await exportAsset("prompt", `R${rn}_03_prompt.png`);
+
+      // 4. A/B/C Options
+      await exportAsset("options", `R${rn}_04_options.png`);
+
+      // 5. Lock-in (with answer)
+      await exportAsset("lockin", `R${rn}_05_lockin.png`);
+
+      // 6. Timer (at completion)
+      await exportAsset("timer", `R${rn}_06_timer.png`);
+
+      // 7. Price Reveal
+      await exportAsset("reveal", `R${rn}_07_reveal.png`);
+
+      // 8. Scoreboard
+      await exportAsset("scoreboard", `R${rn}_08_scoreboard.png`);
     }
 
     setExportStatus("Building ZIP…");
