@@ -2757,7 +2757,7 @@ export default function GuessThePrice({ displayMode = false }) {
     loadRound(roundNum);
     setLiveStep(0);
     setLivePhotoIndex(0);
-    transitionToAsset("property");
+    transitionToAsset("roundtitle");
   };
 
   // Touch handlers for canvas in live mode
