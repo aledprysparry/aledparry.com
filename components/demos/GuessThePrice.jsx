@@ -1039,33 +1039,38 @@ function drawOptions(ctx, W, H, S, progress) {
   const safe = safeZone(W, H);
   const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
   const safeTop = ar === "portrait" ? safe.contentTop : 0;
-
-  // Full-canvas card — use safe margins for padding
   const pad = ar === "portrait" ? Math.max(W * 0.06, safe.left) : W * 0.04;
 
-  // Subtle background for overlay context
   drawBg(ctx, W, H);
 
-  // Round header — within safe zone, with glow
-  const headerY = ar === "portrait" ? safeTop + safeH * 0.05 : H * 0.08;
+  // "WHICH ONE IS IT?" — dramatic entrance, fades in first
+  const headerY = ar === "portrait" ? safeTop + safeH * 0.04 : H * 0.06;
+  const titleP = easeOutExpo(Math.min(1, p / 0.3));
   ctx.save();
+  ctx.globalAlpha = titleP;
   ctx.shadowColor = GAME.gold;
-  ctx.shadowBlur = 15;
-  ctx.font = `800 ${sz(W, H, 0.04)}px 'DM Sans', sans-serif`;
+  ctx.shadowBlur = 25;
+  ctx.font = `800 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`ROUND ${S.propRound || 1}  \u00b7  ${S.optionLocation || ""}`, W / 2, headerY);
+  ctx.restore();
+
+  const questionP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.05) / 0.3)));
+  ctx.save();
+  ctx.globalAlpha = questionP;
+  ctx.shadowColor = GAME.gold;
+  ctx.shadowBlur = 30;
+  const qScale = 0.8 + 0.2 * easeOutBack(questionP);
+  ctx.font = `800 ${sz(W, H, 0.05) * qScale}px 'Lora', serif`;
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(`ROUND ${S.propRound || 1}`, W / 2, headerY);
+  ctx.fillText("Which one is it?", W / 2, headerY + sz(W, H, 0.06));
   ctx.restore();
 
-  // Location — brighter
-  ctx.font = `500 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(S.optionLocation || "", W / 2, headerY + sz(W, H, 0.05));
-
-  // Option pills — BIG, full-width, safe-zone aware
+  // Option pills — staggered scale-up from center with bounce
   const opts = [
     { letter: "A", price: S.optionA, color: GAME.optionA },
     { letter: "B", price: S.optionB, color: GAME.optionB },
@@ -1073,78 +1078,86 @@ function drawOptions(ctx, W, H, S, progress) {
   ];
 
   const ow = W - pad * 2;
-  const oh = ar === "portrait" ? safeH * 0.13 : H * 0.14;
-  const og = ar === "portrait" ? safeH * 0.025 : H * 0.035;
-  // Center the 3 pills vertically in available space
+  const oh = ar === "portrait" ? safeH * 0.13 : H * 0.16;
+  const og = ar === "portrait" ? safeH * 0.03 : H * 0.04;
   const totalPillH = 3 * oh + 2 * og;
-  const availTop = ar === "portrait" ? safeTop + safeH * 0.18 : H * 0.24;
-  const availBottom = ar === "portrait" ? safe.contentBottom - safeH * 0.05 : H * 0.85;
+  const availTop = ar === "portrait" ? safeTop + safeH * 0.20 : H * 0.24;
+  const availBottom = ar === "portrait" ? safe.contentBottom - safeH * 0.05 : H * 0.90;
   const startY = availTop + ((availBottom - availTop) - totalPillH) / 2;
 
   for (let i = 0; i < 3; i++) {
     const o = opts[i];
-    // Staggered entrance: each pill slides in from right
-    const pillDelay = 0.15 + i * 0.15;
-    const pillP = easeOutExpo(Math.min(1, Math.max(0, (p - pillDelay) / 0.4)));
-    const slideX = W * 0.1 * (1 - pillP);
+    // Staggered: A at 0.20, B at 0.35, C at 0.50 — bouncy scale from center
+    const pillDelay = 0.20 + i * 0.15;
+    const rawP = Math.min(1, Math.max(0, (p - pillDelay) / 0.35));
+    const pillScale = easeOutBack(rawP);
+    const pillAlpha = easeOutExpo(rawP);
     const oy = startY + i * (oh + og);
+    const pillCX = W / 2;
+    const pillCY = oy + oh / 2;
 
     ctx.save();
-    ctx.globalAlpha = pillP;
-    ctx.translate(slideX, 0);
+    ctx.globalAlpha = pillAlpha;
+    ctx.translate(pillCX, pillCY);
+    ctx.scale(pillScale, pillScale);
+    ctx.translate(-pillCX, -pillCY);
 
-    // Pill with drop shadow
+    // Pill with deep shadow
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.4)";
-    ctx.shadowBlur = oh * 0.3;
-    ctx.shadowOffsetY = oh * 0.08;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = oh * 0.4;
+    ctx.shadowOffsetY = oh * 0.1;
     ctx.fillStyle = o.color;
     roundRect(ctx, pad, oy, ow, oh, oh / 2);
     ctx.fill();
     ctx.restore();
 
-    // Glossy highlight on top half
-    const glossGrad = ctx.createLinearGradient(0, oy, 0, oy + oh * 0.5);
-    glossGrad.addColorStop(0, "rgba(255,255,255,0.18)");
+    // Glossy highlight
+    const glossGrad = ctx.createLinearGradient(0, oy, 0, oy + oh * 0.45);
+    glossGrad.addColorStop(0, "rgba(255,255,255,0.22)");
     glossGrad.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = glossGrad;
     roundRect(ctx, pad, oy, ow, oh, oh / 2);
     ctx.fill();
 
-    // Letter badge — left side, bigger
+    // Letter badge — left, with inner glow
     const br = oh * 0.40;
     const bx2 = pad + oh / 2;
     const by2 = oy + oh / 2;
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
     ctx.beginPath();
     ctx.arc(bx2, by2, br, 0, Math.PI * 2);
     ctx.fill();
+    ctx.save();
+    ctx.shadowColor = "rgba(255,255,255,0.3)";
+    ctx.shadowBlur = 8;
     ctx.font = `800 ${Math.round(br * 1.3)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(o.letter, bx2, by2);
+    ctx.restore();
 
-    // Price — BOLD, centered, with shadow
+    // Price — BOLD, centered
     const priceX = pad + oh + (ow - oh) / 2;
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.3)";
-    ctx.shadowBlur = 6;
+    ctx.shadowColor = "rgba(0,0,0,0.4)";
+    ctx.shadowBlur = 8;
     ctx.font = `800 ${Math.round(oh * 0.52)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.fillText(o.price || "---", priceX, by2 + oh * 0.02);
     ctx.restore();
 
-    ctx.restore(); // pill animation
+    ctx.restore(); // scale transform
   }
 
   // Disclaimer
-  ctx.font = `400 ${sz(W, H, 0.014)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.25)";
+  ctx.font = `400 ${sz(W, H, 0.013)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("* Price subject to change. April 2026", W / 2, H - sz(W, H, 0.025));
+  ctx.fillText("* Listing price at time of recording", W / 2, H - sz(W, H, 0.02));
 
   drawStamp(ctx, W, H);
 }
