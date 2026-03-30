@@ -3261,13 +3261,6 @@ export default function GuessThePrice({ displayMode = false }) {
             Waiting for controller...
           </div>
         )}
-        {/* Fullscreen button — only when NOT already fullscreen */}
-        {dispShowUI && !document.fullscreenElement && !document.webkitFullscreenElement && (
-          <button onClick={(e) => { e.stopPropagation(); const el = document.documentElement; if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); }}
-            style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.5)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontFamily: DS.font }}>
-            &#x26F6;
-          </button>
-        )}
       </div>
     );
   }
