@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { getFFmpeg, webmToMov, recordAsset, WEBM_MIME } from "@/lib/video-export";
+// Dynamic import — FFmpeg.wasm (~31MB) only loaded when user exports MOV
+const loadVideoExport = () => import("@/lib/video-export");
 
 // ═══════════════════════════════════════════════════════════════
 //  DESIGN SYSTEM — shared tokens (mirrors Social Editor)
@@ -2331,6 +2332,7 @@ export default function GuessThePrice({ displayMode = false }) {
     if (!drawFn) return;
     const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? (S.photoDuration || 5) * Math.max(1, (episode.rounds[currentRound]?.photos?.length || 1)) : activeAsset === "intro" ? 6 : 3) * 1000;
     setExportStatus("Recording…");
+    const { recordAsset, webmToMov } = await loadVideoExport();
     const webm = await recordAsset(drawFn, r.W, r.H, S, duration);
     setExportStatus("Converting to MOV…");
     const mov = await webmToMov(webm, `gtp_${activeAsset}_r${S.propRound}.mov`);
@@ -2472,10 +2474,11 @@ export default function GuessThePrice({ displayMode = false }) {
         setExportStatus(`R${rn} ${assetId} (recording)…`);
         const fn = DRAW_FNS[assetId];
         if (!fn) return;
-        const webm = await recordAsset(fn, rat.W, rat.H, overrideS || roundS, durMs);
+        const ve = await loadVideoExport();
+        const webm = await ve.recordAsset(fn, rat.W, rat.H, overrideS || roundS, durMs);
         if (exportCancelRef.current) return;
         setExportStatus(`R${rn} ${assetId} (MOV)…`);
-        const mov = await webmToMov(webm, filename);
+        const mov = await ve.webmToMov(webm, filename);
         zip.file(filename, mov);
       };
 
@@ -3584,6 +3587,10 @@ export default function GuessThePrice({ displayMode = false }) {
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
       ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+      /* Respect reduced motion preference */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      }
     `}</style>
     {photoManager}
     {photoModal}
