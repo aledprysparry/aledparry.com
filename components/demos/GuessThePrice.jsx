@@ -1616,6 +1616,8 @@ export default function GuessThePrice({ displayMode = false }) {
   const [animProgress, setAnimProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [exportStatus, setExportStatus] = useState("");
+  const [exportProgress, setExportProgress] = useState(0); // 0-1 for progress bar
+  const exportCancelRef = useRef(false);
 
   // ── Episode state ──
   const [episodes, setEpisodes] = useState([]);
@@ -1935,6 +1937,7 @@ export default function GuessThePrice({ displayMode = false }) {
   };
 
   const switchToEpisode = (ep) => {
+    if (dirty && !window.confirm("You have unsaved changes. Switch episode anyway?")) return;
     setActiveEpisodeId(ep.id);
     EPISODE = ep;
     setCurrentRound(0);
@@ -2387,6 +2390,8 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // ── Export all rounds as ZIP ──
   const exportAllZIP = useCallback(async () => {
+    exportCancelRef.current = false;
+    setExportProgress(0);
     setExportStatus("Loading ZIP library…");
     if (!window.JSZip) {
       const script = document.createElement("script");
@@ -2402,8 +2407,14 @@ export default function GuessThePrice({ displayMode = false }) {
     const rounds = episode.rounds || [];
     EPISODE = episode;
     let fileCount = 0;
+    // Count total files for progress tracking
+    const activeRounds = rounds.filter(r => r.address || r.optionA);
+    const totalPhotos = activeRounds.reduce((sum, r) => sum + Math.max(1, (r.photos || []).length), 0);
+    const totalFiles = 1 + activeRounds.length * 15 + totalPhotos; // intro + stills + MOVs + photos
+    const tick = () => { fileCount++; setExportProgress(fileCount / totalFiles); };
 
     // Export intro slide
+    tick();
     setExportStatus("Exporting intro…");
     canvas.width = rat.W;
     canvas.height = rat.H;
@@ -2441,7 +2452,8 @@ export default function GuessThePrice({ displayMode = false }) {
 
       // Helper: render an asset to PNG still and add to ZIP
       const exportStill = async (assetId, filename, overrideS) => {
-        fileCount++;
+        if (exportCancelRef.current) return;
+        tick();
         setExportStatus(`R${rn} ${assetId} (still)…`);
         canvas.width = rat.W;
         canvas.height = rat.H;
@@ -2451,17 +2463,19 @@ export default function GuessThePrice({ displayMode = false }) {
         if (fn) fn(ctx, rat.W, rat.H, overrideS || roundS, 1);
         const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
         if (blob) zip.file(filename, blob);
-        await new Promise(r => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 30));
       };
 
       // Helper: record an animated asset as MOV and add to ZIP
       const exportAnimated = async (assetId, filename, durMs, overrideS) => {
-        fileCount++;
+        if (exportCancelRef.current) return;
+        tick();
         setExportStatus(`R${rn} ${assetId} (recording)…`);
         const fn = DRAW_FNS[assetId];
         if (!fn) return;
         const webm = await recordAsset(fn, rat.W, rat.H, overrideS || roundS, durMs);
-        setExportStatus(`R${rn} ${assetId} (converting MOV)…`);
+        if (exportCancelRef.current) return;
+        setExportStatus(`R${rn} ${assetId} (MOV)…`);
         const mov = await webmToMov(webm, filename);
         zip.file(filename, mov);
       };
@@ -2473,7 +2487,8 @@ export default function GuessThePrice({ displayMode = false }) {
 
       // 2. Each property photo as a still slide
       for (let pi = 0; pi < numPhotos; pi++) {
-        fileCount++;
+        if (exportCancelRef.current) break;
+        tick();
         setExportStatus(`R${rn} photo ${pi + 1}/${numPhotos}…`);
         canvas.width = rat.W;
         canvas.height = rat.H;
@@ -2510,7 +2525,16 @@ export default function GuessThePrice({ displayMode = false }) {
       await exportStill("scoreboard", `R${rn}_08_scoreboard.png`);
     }
 
+    if (exportCancelRef.current) {
+      setExportStatus("Cancelled");
+      setExportProgress(0);
+      render();
+      setTimeout(() => setExportStatus(""), 2000);
+      return;
+    }
+
     setExportStatus("Building ZIP…");
+    setExportProgress(0.95);
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(zipBlob);
@@ -2518,8 +2542,9 @@ export default function GuessThePrice({ displayMode = false }) {
     a.click();
     URL.revokeObjectURL(a.href);
     setExportStatus("Done ✓");
+    setExportProgress(1);
     render();
-    setTimeout(() => setExportStatus(""), 3000);
+    setTimeout(() => { setExportStatus(""); setExportProgress(0); }, 3000);
   }, [S, ratio, render, episode, currentRound]);
 
   // ── Export iPad PDF cheat sheet ──
@@ -3561,9 +3586,12 @@ export default function GuessThePrice({ displayMode = false }) {
           {dirty && !saveStatus && <span style={{ fontSize: DS.fsXs, color: DS.textMuted }}>unsaved</span>}
         </div>
         <div style={{ display: "flex", gap: DS.xs, alignItems: "center" }}>
+          {/* Save group */}
           <button onClick={() => syncToServer()} style={btn({ padding: "4px 12px", fontSize: DS.fsXs })}>Save</button>
           <button onClick={() => { const name = `Ep${episode.episode}_${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}`; saveSnapshot(name); }}
             style={btn({ padding: "4px 12px", fontSize: DS.fsXs })}>Snapshot</button>
+          <span style={{ width: 1, height: 20, background: DS.borderSubtle, margin: `0 ${DS.xs}px` }} />
+          {/* Live group */}
           <button onClick={enterLiveMode}
             style={btn({ padding: "4px 14px", fontSize: DS.fsXs, fontWeight: 800, background: "rgba(251,135,112,0.15)", border: `1px solid rgba(251,135,112,0.3)`, color: GAME.gold, letterSpacing: "0.1em" })}>
             LIVE
@@ -3582,10 +3610,11 @@ export default function GuessThePrice({ displayMode = false }) {
             }} />
             Push to Live
           </button>
-          <span style={{ width: 1, height: 20, background: DS.borderSubtle }} />
+          <span style={{ width: 1, height: 20, background: DS.borderSubtle, margin: `0 ${DS.xs}px` }} />
+          {/* Ratio group */}
           {Object.entries(RATIOS).map(([key, val]) => (
             <button key={key} onClick={() => setRatio(key)}
-              style={btn({ background: ratio === key ? DS.accent : DS.bgButton, border: ratio === key ? `1px solid ${DS.accentLight}` : `1px solid ${DS.borderSubtle}`, padding: "5px 12px", fontSize: DS.fsXs })}>
+              style={btn({ background: ratio === key ? DS.accent : DS.bgButton, border: ratio === key ? `1px solid ${DS.accentLight}` : `1px solid ${DS.borderSubtle}`, padding: "5px 10px", fontSize: 9 })}>
               {val.label}
             </button>
           ))}
@@ -3740,7 +3769,20 @@ export default function GuessThePrice({ displayMode = false }) {
           <button onClick={exportAllZIP} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export All (ZIP)</button>
           <button onClick={exportPDF} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>iPad PDF</button>
         </div>
-        {exportStatus && <span style={{ fontSize: DS.fsSm, color: GAME.gold }}>{exportStatus}</span>}
+        {exportStatus && (
+          <div style={{ display: "flex", alignItems: "center", gap: DS.sm, flex: 1, justifyContent: "center" }}>
+            {exportProgress > 0 && exportProgress < 1 && (
+              <div style={{ width: 120, height: 6, borderRadius: 3, background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
+                <div style={{ width: `${Math.round(exportProgress * 100)}%`, height: "100%", background: GAME.gold, borderRadius: 3, transition: "width 0.2s ease" }} />
+              </div>
+            )}
+            <span style={{ fontSize: DS.fsSm, color: GAME.gold }}>{exportStatus}</span>
+            {exportProgress > 0 && exportProgress < 1 && (
+              <button onClick={() => { exportCancelRef.current = true; }}
+                style={btn({ padding: "2px 8px", fontSize: DS.fsXs, color: DS.textMuted, borderColor: "rgba(255,255,255,0.1)" })}>Cancel</button>
+            )}
+          </div>
+        )}
         <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>{r.W} &times; {r.H} &middot; {activeAsset}</div>
       </footer>
     </div>
