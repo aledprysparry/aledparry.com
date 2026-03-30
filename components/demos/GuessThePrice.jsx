@@ -345,15 +345,15 @@ function drawStamp(ctx, W, H) {
   const logo = getCachedImage(BRAND.logoUrlLight);
   if (!logo || !logo.complete || !logo.naturalWidth) return;
   const ar = H > W ? "portrait" : W === H ? "square" : "landscape";
-  // Bigger logo on social ratios, standard on landscape
-  const logoScale = ar === "portrait" ? 0.22 : ar === "square" ? 0.20 : BRAND.logoSize;
+  // Smaller logo to avoid overlapping content
+  const logoScale = ar === "portrait" ? 0.18 : ar === "square" ? 0.16 : 0.10;
   const logoW = W * logoScale;
   const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
-  const pad = W * 0.05; // moved in from edge (was 0.03)
-  const bottomPad = ar === "portrait" ? Math.round(420 * (W / 1080)) + pad : pad;
+  const padR = W * 0.03;
+  const padB = ar === "portrait" ? Math.round(420 * (W / 1080)) + padR : H * 0.02;
   ctx.save();
   ctx.globalAlpha = BRAND.logoOpacity;
-  ctx.drawImage(logo, W - logoW - pad, H - logoH - bottomPad, logoW, logoH);
+  ctx.drawImage(logo, W - logoW - padR, H - logoH - padB, logoW, logoH);
   ctx.restore();
 }
 
@@ -2038,9 +2038,10 @@ export default function GuessThePrice({ displayMode = false }) {
     const photos = [...(rd.photos || [])];
     photos.splice(idx, 1);
     updateRoundField("photos", photos);
-    if ((rd.heroPhotoIndex || 0) >= photos.length) {
-      updateRoundField("heroPhotoIndex", Math.max(0, photos.length - 1));
-    }
+    let hero = rd.heroPhotoIndex || 0;
+    if (idx < hero) hero--; // photo before hero deleted — shift hero left
+    if (hero >= photos.length) hero = Math.max(0, photos.length - 1); // hero at end
+    if (hero !== (rd.heroPhotoIndex || 0)) updateRoundField("heroPhotoIndex", hero);
   };
 
   const [dragPhotoIdx, setDragPhotoIdx] = useState(null);
@@ -3365,12 +3366,14 @@ export default function GuessThePrice({ displayMode = false }) {
               ))}
             </div>
 
-            {/* Flow step dots */}
-            <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 12 }}>
+            {/* Flow step dots — 44px min touch targets */}
+            <div style={{ display: "flex", gap: 2, justifyContent: "center", marginBottom: 12 }}>
               {LIVE_FLOW.map((step, i) => (
                 <div key={i} onClick={() => { setLiveStep(i); transitionToAsset(step); if (step === "timer" || step === "reveal") setTimeout(() => playAnimation(), 450); }}
-                  style={{ width: liveStep === i ? 24 : 8, height: 8, borderRadius: 4, cursor: "pointer", transition: "all 0.2s",
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: 44, minHeight: 44, cursor: "pointer" }}>
+                  <div style={{ width: liveStep === i ? 24 : 10, height: 10, borderRadius: 5, transition: "all 0.2s",
                     background: i < liveStep ? "rgba(251,135,112,0.4)" : i === liveStep ? GAME.gold : "rgba(255,255,255,0.2)" }} />
+                </div>
               ))}
             </div>
 
@@ -3381,7 +3384,7 @@ export default function GuessThePrice({ displayMode = false }) {
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{episode.agents[0]}</span>
                 <span style={{ background: GAME.gold, color: "#000", fontWeight: 800, padding: "2px 10px", borderRadius: 12, fontSize: 16 }}>{scores[0]}</span>
-                <button onClick={() => addScore(0)} style={{ padding: "4px 8px", fontSize: 11, border: "none", borderRadius: 6, background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer" }}>+1</button>
+                <button onClick={() => addScore(0)} style={{ padding: "8px 14px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: "rgba(255,255,255,0.15)", color: "#fff", cursor: "pointer", minWidth: 44, minHeight: 44 }}>+1</button>
               </div>
 
               <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>vs</span>
@@ -3389,7 +3392,7 @@ export default function GuessThePrice({ displayMode = false }) {
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{episode.agents[1]}</span>
                 <span style={{ background: GAME.gold, color: "#000", fontWeight: 800, padding: "2px 10px", borderRadius: 12, fontSize: 16 }}>{scores[1]}</span>
-                <button onClick={() => addScore(1)} style={{ padding: "4px 8px", fontSize: 11, border: "none", borderRadius: 6, background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer" }}>+1</button>
+                <button onClick={() => addScore(1)} style={{ padding: "8px 14px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: "rgba(255,255,255,0.15)", color: "#fff", cursor: "pointer", minWidth: 44, minHeight: 44 }}>+1</button>
               </div>
 
               <button onClick={liveProceed} style={{ padding: "8px 16px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: GAME.gold, color: "#000", cursor: "pointer" }}>Next</button>
@@ -3397,11 +3400,13 @@ export default function GuessThePrice({ displayMode = false }) {
 
             {/* Photo dots (property step only) */}
             {currentFlowAsset === "property" && photos.length > 1 && (
-              <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 10 }}>
+              <div style={{ display: "flex", gap: 2, justifyContent: "center", marginTop: 8 }}>
                 {photos.map((_, i) => (
                   <div key={i} onClick={() => setLivePhotoIndex(i)}
-                    style={{ width: livePhotoIndex === i ? 20 : 6, height: 6, borderRadius: 3, cursor: "pointer", transition: "all 0.2s",
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: 36, minHeight: 36, cursor: "pointer" }}>
+                    <div style={{ width: livePhotoIndex === i ? 20 : 8, height: 8, borderRadius: 4, transition: "all 0.2s",
                       background: livePhotoIndex === i ? GAME.gold : "rgba(255,255,255,0.3)" }} />
+                  </div>
                 ))}
               </div>
             )}
