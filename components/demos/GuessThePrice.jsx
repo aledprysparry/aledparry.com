@@ -540,52 +540,57 @@ function drawIntro(ctx, W, H, S, progress) {
     const img = imgUrl ? getCachedImage(imgUrl) : null;
     const imgReady = img && img.complete && img.naturalWidth > 0;
 
-    // Dramatic shadow behind circle
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = headR * 0.5;
-    ctx.shadowOffsetY = headR * 0.1;
-    ctx.beginPath();
-    ctx.arc(x, y, headR, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(0,0,0,0.01)";
-    ctx.fill();
-    ctx.restore();
+    // Only show headshot elements when image is loaded (or no image URL set)
+    const showCircle = imgReady || !imgUrl;
 
-    // Thick outer glow ring
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x, y, headR + headR * 0.08, 0, Math.PI * 2);
-    ctx.strokeStyle = GAME.gold;
-    ctx.lineWidth = headR * 0.08;
-    ctx.shadowColor = GAME.gold;
-    ctx.shadowBlur = headR * 0.3;
-    ctx.stroke();
-    ctx.restore();
-
-    // Image or styled placeholder
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(x, y, headR, 0, Math.PI * 2);
-    ctx.closePath();
-    if (imgReady) {
-      ctx.clip();
-      const iw = img.naturalWidth, ih = img.naturalHeight;
-      const scale = Math.max(headR * 2 / iw, headR * 2 / ih);
-      const dw = iw * scale, dh = ih * scale;
-      ctx.drawImage(img, x - dw / 2, y - dh / 2, dw, dh);
-    } else {
-      const pg = ctx.createRadialGradient(x, y, 0, x, y, headR);
-      pg.addColorStop(0, idx === 0 ? BRAND.colorAccent : BRAND.colorPositive);
-      pg.addColorStop(1, idx === 0 ? "#c2564a" : "#5a7a58");
-      ctx.fillStyle = pg;
+    if (showCircle) {
+      // Dramatic shadow behind circle
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = headR * 0.5;
+      ctx.shadowOffsetY = headR * 0.1;
+      ctx.beginPath();
+      ctx.arc(x, y, headR, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0,0,0,0.01)";
       ctx.fill();
-      ctx.font = `800 ${headR * 0.8}px 'DM Sans', sans-serif`;
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(name.charAt(0).toUpperCase(), x, y);
+      ctx.restore();
+
+      // Thick outer glow ring
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, headR + headR * 0.08, 0, Math.PI * 2);
+      ctx.strokeStyle = GAME.gold;
+      ctx.lineWidth = headR * 0.08;
+      ctx.shadowColor = GAME.gold;
+      ctx.shadowBlur = headR * 0.3;
+      ctx.stroke();
+      ctx.restore();
+
+      // Image or initial letter
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, headR, 0, Math.PI * 2);
+      ctx.closePath();
+      if (imgReady) {
+        ctx.clip();
+        const iw = img.naturalWidth, ih = img.naturalHeight;
+        const scale = Math.max(headR * 2 / iw, headR * 2 / ih);
+        const dw = iw * scale, dh = ih * scale;
+        ctx.drawImage(img, x - dw / 2, y - dh / 2, dw, dh);
+      } else {
+        const pg = ctx.createRadialGradient(x, y, 0, x, y, headR);
+        pg.addColorStop(0, idx === 0 ? BRAND.colorAccent : BRAND.colorPositive);
+        pg.addColorStop(1, idx === 0 ? "#c2564a" : "#5a7a58");
+        ctx.fillStyle = pg;
+        ctx.fill();
+        ctx.font = `800 ${headR * 0.8}px 'DM Sans', sans-serif`;
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(name.charAt(0).toUpperCase(), x, y);
+      }
+      ctx.restore();
     }
-    ctx.restore();
 
     // Name — BIG and bold
     const nameS = sz(W, H, ar === "portrait" ? 0.05 : 0.042);
@@ -1622,7 +1627,7 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // ── Live mode state ──
   const [liveMode, setLiveMode] = useState(false);
-  const [liveStep, setLiveStep] = useState(0);
+  const [liveStep, setLiveStep] = useState(-1); // -1 = intro, 0+ = LIVE_FLOW index
   const [livePhotoIndex, setLivePhotoIndex] = useState(0);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const [photoAnimProgress, setPhotoAnimProgress] = useState(1);
@@ -2746,23 +2751,24 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // Live step navigation
   const liveProceed = () => {
-    const next = Math.min(liveStep + 1, LIVE_FLOW.length - 1);
-    if (next === liveStep) return;
+    // liveStep -1 = intro (not in LIVE_FLOW), 0+ = LIVE_FLOW index
+    const next = liveStep + 1;
+    if (next >= LIVE_FLOW.length) return;
     setLiveStep(next);
     const newAsset = LIVE_FLOW[next];
     transitionToAsset(newAsset);
-    // Auto-play animated assets after transition
     if (newAsset === "timer" || newAsset === "reveal") {
       setTimeout(() => playAnimation(), 450);
     }
   };
 
   const liveGoBack = () => {
-    const prev = Math.max(liveStep - 1, 0);
-    if (prev === liveStep) return;
+    const prev = liveStep - 1;
+    if (prev < -1) return;
     setLiveStep(prev);
     setLivePhotoIndex(0);
-    transitionToAsset(LIVE_FLOW[prev]);
+    const newAsset = prev < 0 ? "intro" : LIVE_FLOW[prev];
+    transitionToAsset(newAsset);
     cancelAnimationFrame(animRef.current);
     setIsPlaying(false);
   };
