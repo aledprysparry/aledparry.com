@@ -3052,7 +3052,7 @@ export default function GuessThePrice({ displayMode = false }) {
       return;
     }
     displayKeyRef.current = newKey;
-    if (ds.asset !== "property") setDispPaused(false); // reset pause on slide change
+    if (ds.asset !== "property") { setDispPaused(false); dispManualPhotoRef.current = -1; } // reset on slide change
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -3109,14 +3109,54 @@ export default function GuessThePrice({ displayMode = false }) {
     return () => cancelAnimationFrame(displayAnimRef.current);
   }, [displayMode, displayState]);
 
-  // Display: tap to pause/resume property photo loop
+  // Display: tap to pause, swipe to step through photos
   const [dispPaused, setDispPaused] = useState(false);
   const dispPausedRef = useRef(false);
+  const dispManualPhotoRef = useRef(-1); // -1 = auto, 0+ = manual photo index
   useEffect(() => { dispPausedRef.current = dispPaused; }, [dispPaused]);
+
+  const dispTouchStartRef = useRef(null);
+  const dispHandleTouchStart = (e) => {
+    dispTouchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+  };
+  const dispHandleTouchEnd = (e) => {
+    if (!dispTouchStartRef.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - dispTouchStartRef.current.x;
+    const dt = Date.now() - dispTouchStartRef.current.time;
+    dispTouchStartRef.current = null;
+
+    if (dt > 500 || Math.abs(dx) < 40) {
+      // Tap — toggle pause on property
+      if (displayState?.asset === "property") setDispPaused(p => !p);
+      dispShowUIBriefly();
+      return;
+    }
+
+    // Swipe on property — step through photos manually
+    if (displayState?.asset === "property") {
+      const photos = displayState.roundData?.photos || [];
+      if (photos.length <= 1) return;
+      setDispPaused(true);
+      dispManualPhotoRef.current = Math.max(0, Math.min(photos.length - 1,
+        (dispManualPhotoRef.current < 0 ? 0 : dispManualPhotoRef.current) + (dx < 0 ? 1 : -1)
+      ));
+      // Draw the specific photo
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const p = (dispManualPhotoRef.current + 0.5) / photos.length;
+        const cx = canvas.getContext("2d");
+        cx.clearRect(0, 0, canvas.width, canvas.height);
+        DRAW_FNS.property(cx, canvas.width, canvas.height, displayState.S, p);
+      }
+    }
+  };
 
   const dispHandleTap = () => {
     if (displayState?.asset === "property") {
+      const wasPaused = dispPaused;
       setDispPaused(p => !p);
+      if (wasPaused) dispManualPhotoRef.current = -1; // resume auto
     }
     dispShowUIBriefly();
   };
@@ -3130,8 +3170,9 @@ export default function GuessThePrice({ displayMode = false }) {
 
   if (displayMode) {
     return (
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", cursor: dispShowUI ? "default" : "none", overflow: "hidden" }}
-        onMouseMove={dispShowUIBriefly} onClick={dispHandleTap}>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", cursor: dispShowUI ? "default" : "none", overflow: "hidden", touchAction: "none" }}
+        onMouseMove={dispShowUIBriefly} onClick={dispHandleTap}
+        onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
         <canvas ref={canvasRef}
           style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "block" }} />
         {!displayState && (
@@ -3145,12 +3186,6 @@ export default function GuessThePrice({ displayMode = false }) {
             style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.5)", border: "none", color: "rgba(255,255,255,0.6)", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontFamily: DS.font }}>
             &#x26F6;
           </button>
-        )}
-        {/* Pause indicator — shows briefly when tapping to pause/resume on property */}
-        {dispPaused && displayState?.asset === "property" && (
-          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", background: "rgba(0,0,0,0.5)", borderRadius: 16, padding: "16px 24px", color: "#fff", fontFamily: DS.font, fontSize: 18, fontWeight: 700, pointerEvents: "none" }}>
-            PAUSED — tap to resume
-          </div>
         )}
       </div>
     );
