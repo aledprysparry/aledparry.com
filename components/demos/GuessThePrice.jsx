@@ -1414,7 +1414,7 @@ function drawRoundTitle(ctx, W, H, S, progress) {
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
-  const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.45;
+  const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.48 : H * 0.50;
 
   // "ROUND" label — fades in with glow
   const labelP = easeOutExpo(Math.min(1, p / 0.4));
