@@ -177,16 +177,15 @@ function emptyRound(n, propertyAgent, guesser) {
   };
 }
 
-// Compress uploaded photo — adaptive quality based on existing photo count
+// Compress uploaded photo — high res for iPad Pro display (2388×1668)
 function compressPhoto(file, existingCount = 0) {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const highCount = existingCount > 10;
-        const maxW = highCount ? 960 : 1280;
-        const quality = highCount ? 0.7 : 0.75;
+        const maxW = 2400; // covers iPad Pro width
+        const quality = 0.85;
         const scale = Math.min(1, maxW / img.width);
         const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
@@ -3481,7 +3480,7 @@ export default function GuessThePrice({ displayMode = false }) {
   return (<>
     {photoManager}
     {photoModal}
-    <div style={{ fontFamily: DS.font, background: DS.bgPage, color: DS.textPrimary, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ fontFamily: DS.font, background: DS.bgPage, color: DS.textPrimary, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* HEADER */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: `${DS.md}px ${DS.xl}px`, borderBottom: `1px solid ${DS.borderSubtle}`, background: DS.bgSurface }}>
