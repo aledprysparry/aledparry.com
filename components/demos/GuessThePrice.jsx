@@ -343,12 +343,13 @@ function roundRect(ctx, x, y, w, h, r) {
 
 function drawStamp(ctx, W, H) {
   const logo = getCachedImage(BRAND.logoUrlLight);
-  if (!logo) return;
-  const logoW = W * BRAND.logoSize;
+  if (!logo || !logo.complete || !logo.naturalWidth) return;
+  const ar = H > W ? "portrait" : W === H ? "square" : "landscape";
+  // Bigger logo on social ratios, standard on landscape
+  const logoScale = ar === "portrait" ? 0.22 : ar === "square" ? 0.20 : BRAND.logoSize;
+  const logoW = W * logoScale;
   const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
-  const pad = W * 0.03;
-  // In portrait, keep logo above the bottom safe zone (420px on 1080x1920)
-  const ar = H > W ? "portrait" : "other";
+  const pad = W * 0.05; // moved in from edge (was 0.03)
   const bottomPad = ar === "portrait" ? Math.round(420 * (W / 1080)) + pad : pad;
   ctx.save();
   ctx.globalAlpha = BRAND.logoOpacity;
