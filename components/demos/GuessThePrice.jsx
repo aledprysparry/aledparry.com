@@ -298,8 +298,9 @@ const GTP_CHANNEL_NAME = "gtp-live-sync";
 //  ASSET TYPES
 // ═══════════════════════════════════════════════════════════════
 const ASSETS = [
-  { id: "intro",     label: "Intro Title",    icon: "\u25b6", animated: true },
-  { id: "property",  label: "Property Frame",  icon: "\ud83c\udfe0", animated: true },
+  { id: "intro",      label: "Intro Title",    icon: "\u25b6", animated: true },
+  { id: "roundtitle", label: "Round Title",     icon: "#", animated: true },
+  { id: "property",   label: "Property Frame",  icon: "\ud83c\udfe0", animated: true },
   { id: "prompt",    label: "Audience Prompt", icon: "\u2753", animated: true },
   { id: "options",   label: "A/B/C Options",   icon: "\ud83c\udfaf", animated: true },
   { id: "lockin",    label: "Lock-In",         icon: "\ud83d\udd12", animated: true },
@@ -311,7 +312,7 @@ const ASSETS = [
 // ═══════════════════════════════════════════════════════════════
 //  LIVE MODE — flow + touch detection
 // ═══════════════════════════════════════════════════════════════
-const LIVE_FLOW = ["property", "prompt", "options", "lockin", "timer", "reveal", "scoreboard"];
+const LIVE_FLOW = ["roundtitle", "property", "prompt", "options", "lockin", "timer", "reveal", "scoreboard"];
 
 let _touchStart = null;
 function detectGesture(sx, sy, ex, ey, elapsed) {
@@ -1398,6 +1399,53 @@ function drawReveal(ctx, W, H, S, progress) {
   drawStamp(ctx, W, H);
 }
 
+function drawRoundTitle(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  drawBg(ctx, W, H);
+  drawAccentBars(ctx, W, H);
+  const ar = aspect(W, H);
+  const safe = safeZone(W, H);
+  const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.45;
+
+  // "ROUND" label — fades in with glow
+  const labelP = easeOutExpo(Math.min(1, p / 0.4));
+  ctx.save();
+  ctx.globalAlpha = labelP;
+  ctx.shadowColor = GAME.gold;
+  ctx.shadowBlur = 20;
+  ctx.font = `700 ${sz(W, H, 0.04)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = GAME.goldLight;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("ROUND", W / 2, centerY - sz(W, H, 0.10));
+  ctx.restore();
+
+  // Giant round number — scales in with elastic
+  const numP = Math.min(1, Math.max(0, (p - 0.15) / 0.5));
+  const numScale = easeOutBack(numP);
+  const numSz = sz(W, H, ar === "portrait" ? 0.35 : 0.28) * numScale;
+  if (numP > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, numP * 2);
+    ctx.shadowColor = GAME.gold;
+    ctx.shadowBlur = sz(W, H, 0.06);
+    ctx.font = `800 ${Math.round(numSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(S.propRound || 1), W / 2, centerY + sz(W, H, 0.05));
+    ctx.restore();
+  }
+
+  // Underline
+  const ulW = W * 0.12;
+  ctx.fillStyle = GAME.gold;
+  roundRect(ctx, W / 2 - ulW / 2, centerY + sz(W, H, 0.18), ulW, 4, 2);
+  ctx.fill();
+
+  drawStamp(ctx, W, H);
+}
+
 function drawScoreboard(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   drawBg(ctx, W, H);
@@ -1525,6 +1573,7 @@ function drawScoreboard(ctx, W, H, S, progress) {
 
 const DRAW_FNS = {
   intro: drawIntro,
+  roundtitle: drawRoundTitle,
   property: drawProperty,
   prompt: drawPrompt,
   options: drawOptions,
