@@ -3242,7 +3242,7 @@ export default function GuessThePrice({ displayMode = false }) {
   if (displayMode) {
     return (
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "#000", cursor: dispShowUI ? "default" : "none", overflow: "hidden", touchAction: "none" }}
-        onMouseMove={dispShowUIBriefly} onClick={dispHandleTap}
+        onMouseMove={dispShowUIBriefly} onMouseDown={(e) => { if (e.detail > 0 && !("ontouchstart" in window)) dispHandleTap(); }}
         onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
         <canvas ref={canvasRef}
           style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "block" }} />
