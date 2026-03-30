@@ -70,7 +70,7 @@ const label = (o) => ({
   letterSpacing: "0.02em", marginBottom: DS.xs, ...o,
 });
 const sectionHead = (o) => ({
-  fontWeight: 700, fontSize: 10, color: DS.textMuted,
+  fontWeight: 700, fontSize: DS.fsXs, color: DS.textMuted,
   letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: DS.md, ...o,
 });
 
@@ -3002,7 +3002,7 @@ export default function GuessThePrice({ displayMode = false }) {
                   style={{ width: 30, height: 22, objectFit: "cover", borderRadius: 3, cursor: "pointer",
                     border: (rd.heroPhotoIndex || 0) === i ? `2px solid ${GAME.gold}` : `1px solid ${DS.borderSubtle}` }} />
               ))}
-              {(rd.photos || []).length > 8 && <span style={{ fontSize: 9, color: DS.textMuted, alignSelf: "center" }}>+{(rd.photos || []).length - 8}</span>}
+              {(rd.photos || []).length > 8 && <span style={{ fontSize: DS.fsXs, color: DS.textMuted, alignSelf: "center" }}>+{(rd.photos || []).length - 8}</span>}
             </div>
           )}
 
@@ -3381,7 +3381,7 @@ export default function GuessThePrice({ displayMode = false }) {
             <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 10 }}>
               {episode.rounds.map((rd2, i) => (
                 <button key={i} onClick={() => !isRoundEmpty(rd2) && liveLoadRound(i + 1)}
-                  style={{ padding: "6px 14px", fontSize: 13, fontWeight: 700, border: "none", borderRadius: 20, cursor: isRoundEmpty(rd2) ? "default" : "pointer",
+                  style={{ padding: `${DS.xs + 2}px ${DS.md}px`, fontSize: DS.fsMd, fontWeight: 700, border: "none", borderRadius: 20, cursor: isRoundEmpty(rd2) ? "default" : "pointer",
                     background: currentRound === i ? GAME.gold : isRoundEmpty(rd2) ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.12)",
                     color: currentRound === i ? "#000" : isRoundEmpty(rd2) ? "rgba(255,255,255,0.2)" : "#fff",
                     opacity: isRoundEmpty(rd2) ? 0.4 : 1 }}>
@@ -3403,23 +3403,23 @@ export default function GuessThePrice({ displayMode = false }) {
 
             {/* Nav + Scores */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
-              <button onClick={liveGoBack} style={{ padding: "8px 16px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: "rgba(255,255,255,0.1)", color: "#fff", cursor: "pointer" }}>Back</button>
+              <button onClick={liveGoBack} style={{ padding: `${DS.sm}px ${DS.lg}px`, fontSize: DS.fsMd, fontWeight: 700, border: "none", borderRadius: DS.rSm, background: "rgba(255,255,255,0.1)", color: DS.textPrimary, cursor: "pointer" }}>Back</button>
 
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{episode.agents[0]}</span>
-                <span style={{ background: GAME.gold, color: "#000", fontWeight: 800, padding: "2px 10px", borderRadius: 12, fontSize: 16 }}>{scores[0]}</span>
-                <button onClick={() => addScore(0)} style={{ padding: "8px 14px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: "rgba(255,255,255,0.15)", color: "#fff", cursor: "pointer", minWidth: 44, minHeight: 44 }}>+1</button>
+                <span style={{ color: DS.textPrimary, fontSize: DS.fsMd, fontWeight: 600 }}>{episode.agents[0]}</span>
+                <span style={{ background: GAME.gold, color: GAME.navy, fontWeight: 800, padding: "2px 10px", borderRadius: DS.rMd, fontSize: DS.fsLg }}>{scores[0]}</span>
+                <button onClick={() => addScore(0)} style={{ padding: `${DS.sm}px ${DS.md}px`, fontSize: DS.fsMd, fontWeight: 700, border: "none", borderRadius: DS.rSm, background: "rgba(255,255,255,0.15)", color: DS.textPrimary, cursor: "pointer", minWidth: 44, minHeight: 44 }}>+1</button>
               </div>
 
-              <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>vs</span>
+              <span style={{ color: DS.textMuted, fontSize: DS.fsSm }}>vs</span>
 
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{episode.agents[1]}</span>
-                <span style={{ background: GAME.gold, color: "#000", fontWeight: 800, padding: "2px 10px", borderRadius: 12, fontSize: 16 }}>{scores[1]}</span>
-                <button onClick={() => addScore(1)} style={{ padding: "8px 14px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: "rgba(255,255,255,0.15)", color: "#fff", cursor: "pointer", minWidth: 44, minHeight: 44 }}>+1</button>
+                <span style={{ color: DS.textPrimary, fontSize: DS.fsMd, fontWeight: 600 }}>{episode.agents[1]}</span>
+                <span style={{ background: GAME.gold, color: GAME.navy, fontWeight: 800, padding: "2px 10px", borderRadius: DS.rMd, fontSize: DS.fsLg }}>{scores[1]}</span>
+                <button onClick={() => addScore(1)} style={{ padding: `${DS.sm}px ${DS.md}px`, fontSize: DS.fsMd, fontWeight: 700, border: "none", borderRadius: DS.rSm, background: "rgba(255,255,255,0.15)", color: DS.textPrimary, cursor: "pointer", minWidth: 44, minHeight: 44 }}>+1</button>
               </div>
 
-              <button onClick={liveProceed} style={{ padding: "8px 16px", fontSize: 14, fontWeight: 700, border: "none", borderRadius: 8, background: GAME.gold, color: "#000", cursor: "pointer" }}>Next</button>
+              <button onClick={liveProceed} style={{ padding: `${DS.sm}px ${DS.lg}px`, fontSize: DS.fsMd, fontWeight: 700, border: "none", borderRadius: DS.rSm, background: GAME.gold, color: GAME.navy, cursor: "pointer" }}>Next</button>
             </div>
 
             {/* Photo dots (property step only) */}
@@ -3702,7 +3702,7 @@ export default function GuessThePrice({ displayMode = false }) {
                 onDrop={e => { e.preventDefault(); e.currentTarget.style.borderLeft = "2px solid transparent"; if (dragRoundIdx !== null) reorderRounds(dragRoundIdx, i); setDragRoundIdx(null); }}
                 onDragEnd={() => setDragRoundIdx(null)}
                 style={btn({ padding: "6px 14px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: dragRoundIdx === i ? 0.4 : empty ? 0.4 : 1, cursor: "grab", letterSpacing: "0.05em", borderLeft: "2px solid transparent" })}>
-                R{i + 1}{!empty && <span style={{ fontSize: 8, opacity: 0.5, marginLeft: 4 }}>{rd.propertyAgent?.charAt(0)}</span>}
+                R{i + 1}{!empty && <span style={{ fontSize: DS.fsXs - 2, opacity: 0.5, marginLeft: 4 }}>{rd.propertyAgent?.charAt(0)}</span>}
               </button>
             );
           })}
@@ -3735,7 +3735,7 @@ export default function GuessThePrice({ displayMode = false }) {
               style={{ ...btn({ padding: "8px 12px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textPrimary }) }}>
               <span style={{ fontSize: 14 }}>{a.icon}</span>
               <span style={{ fontSize: DS.fsSm }}>{a.label}</span>
-              {a.animated && <span style={{ fontSize: 8, color: DS.textMuted, marginLeft: "auto" }}>ANIM</span>}
+              {a.animated && <span style={{ fontSize: DS.fsXs - 2, color: DS.textMuted, marginLeft: "auto" }}>ANIM</span>}
             </button>
           ))}
         </nav>
