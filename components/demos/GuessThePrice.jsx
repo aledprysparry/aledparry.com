@@ -2969,10 +2969,29 @@ export default function GuessThePrice({ displayMode = false }) {
     ((data.roundData?.photos) || data.photos || []).forEach(u => u && getCachedImage(u));
   }, []);
 
+  // Re-render display when images load (agent photos, logos, property photos)
+  const [dispImgTick, setDispImgTick] = useState(0);
+  useEffect(() => {
+    if (!displayMode) return;
+    _imgLoadCallback = () => setDispImgTick(t => t + 1);
+    return () => { _imgLoadCallback = null; };
+  }, [displayMode]);
+  // Force re-draw when images load (bypass key check)
+  useEffect(() => {
+    if (!displayMode || !displayState) return;
+    const ds = displayState;
+    const canvas = canvasRef.current;
+    if (!canvas || ds.asset === "property") return; // property has its own loop
+    const drawFn = DRAW_FNS[ds.asset];
+    if (drawFn) drawFn(canvas.getContext("2d"), canvas.width, canvas.height, ds.S, 1);
+  }, [dispImgTick]); // eslint-disable-line — intentionally redraw on image load
+
   useEffect(() => {
     if (!displayMode) return;
     loadFont("DM Sans");
     loadFont("Lora");
+    // Wait for fonts before allowing first render
+    document.fonts?.ready?.then(() => setDispImgTick(t => t + 1));
     getCachedImage(BRAND.logoUrl);
     getCachedImage(BRAND.logoUrlLight);
 
