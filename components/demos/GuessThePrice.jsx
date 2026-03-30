@@ -1481,102 +1481,109 @@ function drawScoreboard(ctx, W, H, S, progress) {
   ctx.fillText("SCOREBOARD", W / 2, ar === "portrait" ? safeTop + safeH * 0.06 : H * 0.12);
   ctx.restore();
 
-  if (ar === "portrait") {
-    // Vertical: stack the two agent cards within safe zone
-    const cardW2 = W * 0.7;
-    const cardH2 = safeH * 0.22;
-    const gap = safeH * 0.04;
-    const centerX = W / 2 - cardW2 / 2;
+  // Staggered animation: card1 at 0.15, VS at 0.35, card2 at 0.45, scores pop at 0.6
+  const card1P = easeOutExpo(Math.min(1, Math.max(0, (p - 0.15) / 0.3)));
+  const vsAnimP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.35) / 0.2)));
+  const card2P = easeOutExpo(Math.min(1, Math.max(0, (p - 0.45) / 0.3)));
+  const score1P = easeOutBack(Math.min(1, Math.max(0, (p - 0.55) / 0.3)));
+  const score2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.65) / 0.3)));
+  const labelP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.8) / 0.2)));
 
-    // Agent 1
-    const y1 = safeTop + safeH * 0.15;
+  // Helper: draw a score card
+  const drawCard = (cx, cy, cw, ch, name, score, cardAnim, scoreAnim) => {
+    const slideY = ch * 0.15 * (1 - cardAnim);
+    ctx.save();
+    ctx.globalAlpha = cardAnim;
+    ctx.translate(0, slideY);
+    // Card background
     ctx.fillStyle = "rgba(255,255,255,0.06)";
-    roundRect(ctx, centerX, y1, cardW2, cardH2, BRAND.cornerRadius);
+    roundRect(ctx, cx, cy, cw, ch, BRAND.cornerRadius);
     ctx.fill();
     ctx.strokeStyle = GAME.gold;
     ctx.lineWidth = 2;
-    roundRect(ctx, centerX, y1, cardW2, cardH2, BRAND.cornerRadius);
+    roundRect(ctx, cx, cy, cw, ch, BRAND.cornerRadius);
     ctx.stroke();
-    ctx.font = `700 ${sz(W, H, 0.035)}px 'DM Sans', sans-serif`;
+    // Agent name
+    ctx.font = `700 ${sz(W, H, ar === "portrait" ? 0.035 : 0.032)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "center";
-    ctx.fillText(a1, W / 2, y1 + cardH2 * 0.35);
-    ctx.font = `800 ${sz(W, H, 0.09)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = GAME.gold;
-    ctx.fillText(String(s1), W / 2, y1 + cardH2 * 0.72);
+    ctx.textBaseline = "middle";
+    ctx.fillText(name, cx + cw / 2, cy + ch * 0.30);
+    ctx.restore();
+    // Score number — scales up with bounce
+    if (scoreAnim > 0) {
+      const scoreSz = sz(W, H, ar === "portrait" ? 0.09 : 0.10) * scoreAnim;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, scoreAnim * 1.5);
+      ctx.shadowColor = GAME.gold;
+      ctx.shadowBlur = scoreSz * 0.2;
+      ctx.font = `800 ${Math.round(scoreSz)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = GAME.gold;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(score), cx + cw / 2, cy + slideY + ch * 0.68);
+      ctx.restore();
+    }
+  };
+
+  if (ar === "portrait") {
+    const cardW2 = W * 0.7, cardH2 = safeH * 0.22, gap = safeH * 0.04;
+    const centerX = W / 2 - cardW2 / 2;
+    const y1 = safeTop + safeH * 0.15;
+    drawCard(centerX, y1, cardW2, cardH2, a1, s1, card1P, score1P);
 
     // VS
-    ctx.font = `600 ${sz(W, H, 0.03)}px 'Lora', serif`;
+    ctx.save();
+    ctx.globalAlpha = vsAnimP;
+    const vsScale = easeOutBack(vsAnimP);
+    ctx.font = `600 ${sz(W, H, 0.03) * vsScale}px 'Lora', serif`;
     ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText("vs", W / 2, y1 + cardH2 + gap / 2);
+    ctx.restore();
 
-    // Agent 2
     const y2 = y1 + cardH2 + gap;
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    roundRect(ctx, centerX, y2, cardW2, cardH2, BRAND.cornerRadius);
-    ctx.fill();
-    ctx.strokeStyle = GAME.gold;
-    ctx.lineWidth = 2;
-    roundRect(ctx, centerX, y2, cardW2, cardH2, BRAND.cornerRadius);
-    ctx.stroke();
-    ctx.font = `700 ${sz(W, H, 0.035)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = BRAND.colorText;
-    ctx.fillText(a2, W / 2, y2 + cardH2 * 0.35);
-    ctx.font = `800 ${sz(W, H, 0.09)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = GAME.gold;
-    ctx.fillText(String(s2), W / 2, y2 + cardH2 * 0.72);
+    drawCard(centerX, y2, cardW2, cardH2, a2, s2, card2P, score2P);
 
     // Round label
+    ctx.save();
+    ctx.globalAlpha = labelP;
     ctx.font = `500 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(`After Round ${S.propRound || 1} of 6`, W / 2, y2 + cardH2 + safeH * 0.05);
+    ctx.restore();
   } else {
-    // Landscape/square: side-by-side
     const cw2 = W * 0.3, ch2 = H * 0.4, gap = W * 0.05;
     const cy2 = H * 0.28;
-
-    // Agent 1
     const x1 = W / 2 - gap / 2 - cw2;
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    roundRect(ctx, x1, cy2, cw2, ch2, BRAND.cornerRadius);
-    ctx.fill();
-    ctx.strokeStyle = GAME.gold;
-    ctx.lineWidth = 2;
-    roundRect(ctx, x1, cy2, cw2, ch2, BRAND.cornerRadius);
-    ctx.stroke();
-    ctx.font = `700 ${sz(W, H, 0.032)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = BRAND.colorText;
-    ctx.textAlign = "center";
-    ctx.fillText(a1, x1 + cw2 / 2, cy2 + ch2 * 0.28);
-    ctx.font = `800 ${sz(W, H, 0.10)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = GAME.gold;
-    ctx.fillText(String(s1), x1 + cw2 / 2, cy2 + ch2 * 0.65);
+    drawCard(x1, cy2, cw2, ch2, a1, s1, card1P, score1P);
 
     // VS
-    ctx.font = `600 ${sz(W, H, 0.03)}px 'Lora', serif`;
+    ctx.save();
+    ctx.globalAlpha = vsAnimP;
+    const vsScale = easeOutBack(vsAnimP);
+    ctx.font = `600 ${sz(W, H, 0.03) * vsScale}px 'Lora', serif`;
     ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText("vs", W / 2, cy2 + ch2 / 2);
+    ctx.restore();
 
-    // Agent 2
     const x2 = W / 2 + gap / 2;
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    roundRect(ctx, x2, cy2, cw2, ch2, BRAND.cornerRadius);
-    ctx.fill();
-    ctx.strokeStyle = GAME.gold;
-    ctx.lineWidth = 2;
-    roundRect(ctx, x2, cy2, cw2, ch2, BRAND.cornerRadius);
-    ctx.stroke();
-    ctx.font = `700 ${sz(W, H, 0.032)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = BRAND.colorText;
-    ctx.fillText(a2, x2 + cw2 / 2, cy2 + ch2 * 0.28);
-    ctx.font = `800 ${sz(W, H, 0.10)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = GAME.gold;
-    ctx.fillText(String(s2), x2 + cw2 / 2, cy2 + ch2 * 0.65);
+    drawCard(x2, cy2, cw2, ch2, a2, s2, card2P, score2P);
 
     // Round label
+    ctx.save();
+    ctx.globalAlpha = labelP;
     ctx.font = `500 ${sz(W, H, 0.02)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(`After Round ${S.propRound || 1} of 6`, W / 2, cy2 + ch2 + H * 0.06);
+    ctx.restore();
   }
 
   drawStamp(ctx, W, H);
