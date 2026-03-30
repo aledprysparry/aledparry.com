@@ -3569,7 +3569,23 @@ export default function GuessThePrice({ displayMode = false }) {
   //  EDITOR MODE RENDER
   // ═══════════════════════════════════════════════════════════
   return (<>
-    <style>{`@keyframes gtp-pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+    <style>{`
+      @keyframes gtp-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+      /* ── Button hover/focus/active ── */
+      button { transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, background 0.08s ease, border-color 0.12s ease, opacity 0.12s ease; }
+      button:hover { filter: brightness(1.15); }
+      button:active { transform: scale(0.97); transition-duration: 0.06s; }
+      button:focus-visible { box-shadow: 0 0 0 2px rgba(42,157,143,0.4); outline: none; }
+      /* ── Input focus glow ── */
+      input:focus, select:focus, textarea:focus { border-color: rgba(42,157,143,0.5) !important; box-shadow: 0 0 0 2px rgba(42,157,143,0.15); outline: none; }
+      /* ── Card hover ── */
+      [data-card]:hover { border-color: rgba(255,255,255,0.12) !important; }
+      /* ── Smooth scrollbar ── */
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    `}</style>
     {photoManager}
     {photoModal}
     <div style={{ fontFamily: DS.font, background: DS.bgPage, color: DS.textPrimary, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -3622,8 +3638,12 @@ export default function GuessThePrice({ displayMode = false }) {
       </header>
 
       {/* EPISODE PANEL */}
-      {showEpisodePanel && (
-        <div style={{ padding: `${DS.md}px ${DS.xl}px`, borderBottom: `1px solid ${DS.borderSubtle}`, background: "rgba(11,29,58,0.6)", display: "flex", gap: DS.lg, alignItems: "flex-start", flexWrap: "wrap" }}>
+      <div style={{
+        maxHeight: showEpisodePanel ? 300 : 0, overflow: "hidden", opacity: showEpisodePanel ? 1 : 0,
+        transition: "max-height 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease",
+        borderBottom: showEpisodePanel ? `1px solid ${DS.borderSubtle}` : "none",
+      }}>
+        <div style={{ padding: `${DS.md}px ${DS.xl}px`, background: "rgba(11,29,58,0.6)", display: "flex", gap: DS.lg, alignItems: "flex-start", flexWrap: "wrap" }}>
           {/* Episode list */}
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ ...sectionHead(), marginBottom: DS.sm }}>Episodes</div>
@@ -3667,7 +3687,7 @@ export default function GuessThePrice({ displayMode = false }) {
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* ROUND BAR */}
       <div style={{ padding: `${DS.sm}px ${DS.xl}px`, borderBottom: `1px solid ${DS.borderSubtle}`, background: "rgba(11,29,58,0.4)", display: "flex", alignItems: "center", gap: DS.lg, flexWrap: "wrap" }}>
