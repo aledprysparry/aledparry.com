@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { getFFmpeg, webmToMov, recordAsset, WEBM_MIME } from "@/lib/video-export";
 
 // ═══════════════════════════════════════════════════════════════
 //  DESIGN SYSTEM — shared tokens (mirrors Social Editor)
@@ -2310,41 +2311,26 @@ export default function GuessThePrice({ displayMode = false }) {
     }, "image/png");
   }, [activeAsset, S, render]);
 
-  // ── Export WebM ──
-  const exportWebM = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  // ── Export MOV (animated, Premiere-native with alpha) ──
+  const exportMOV = useCallback(async () => {
     const asset = ASSETS.find(a => a.id === activeAsset);
     if (!asset?.animated) { exportPNG(); return; }
-
-    setExportStatus("Recording...");
+    const r = RATIOS[ratio];
+    const drawFn = DRAW_FNS[activeAsset];
+    if (!drawFn) return;
     const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? (S.photoDuration || 5) * Math.max(1, (episode.rounds[currentRound]?.photos?.length || 1)) : activeAsset === "intro" ? 6 : 3) * 1000;
-    const fps = 30;
-    const stream = canvas.captureStream(fps);
-    const chunks = [];
-    const rec = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
-    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-    rec.onstop = () => {
-      const blob = new Blob(chunks, { type: "video/webm" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `gtp_${activeAsset}_r${S.propRound}.webm`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      setExportStatus("Done \u2713");
-      setTimeout(() => setExportStatus(""), 2000);
-    };
-    rec.start();
-    const start = performance.now();
-    const tick = (now) => {
-      const elapsed = now - start;
-      const p = Math.min(1, elapsed / duration);
-      renderRef.current(p);
-      if (p < 1) requestAnimationFrame(tick);
-      else rec.stop();
-    };
-    requestAnimationFrame(tick);
-  }, [activeAsset, S, exportPNG]);
+    setExportStatus("Recording…");
+    const webm = await recordAsset(drawFn, r.W, r.H, S, duration);
+    setExportStatus("Converting to MOV…");
+    const mov = await webmToMov(webm, `gtp_${activeAsset}_r${S.propRound}.mov`);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(mov);
+    a.download = `gtp_${activeAsset}_r${S.propRound}.mov`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setExportStatus("Done \u2713");
+    setTimeout(() => setExportStatus(""), 2000);
+  }, [activeAsset, S, ratio, exportPNG]);
 
   // ── Batch export round ──
   const exportRound = useCallback(async () => {
@@ -2444,10 +2430,10 @@ export default function GuessThePrice({ displayMode = false }) {
       const photos = round.photos || [];
       const numPhotos = Math.max(1, photos.length);
 
-      // Helper: render an asset to PNG and add to ZIP
-      const exportAsset = async (assetId, filename, overrideS) => {
+      // Helper: render an asset to PNG still and add to ZIP
+      const exportStill = async (assetId, filename, overrideS) => {
         fileCount++;
-        setExportStatus(`R${rn} ${assetId}…`);
+        setExportStatus(`R${rn} ${assetId} (still)…`);
         canvas.width = rat.W;
         canvas.height = rat.H;
         const ctx = canvas.getContext("2d");
@@ -2459,11 +2445,24 @@ export default function GuessThePrice({ displayMode = false }) {
         await new Promise(r => setTimeout(r, 50));
       };
 
-      // Full show sequence per round:
-      // 1. Round title
-      await exportAsset("roundtitle", `R${rn}_01_round_title.png`);
+      // Helper: record an animated asset as MOV and add to ZIP
+      const exportAnimated = async (assetId, filename, durMs, overrideS) => {
+        fileCount++;
+        setExportStatus(`R${rn} ${assetId} (recording)…`);
+        const fn = DRAW_FNS[assetId];
+        if (!fn) return;
+        const webm = await recordAsset(fn, rat.W, rat.H, overrideS || roundS, durMs);
+        setExportStatus(`R${rn} ${assetId} (converting MOV)…`);
+        const mov = await webmToMov(webm, filename);
+        zip.file(filename, mov);
+      };
 
-      // 2. Each property photo as a slide
+      // Full show sequence per round — stills + animated MOVs:
+      // 1. Round title (still + animated)
+      await exportStill("roundtitle", `R${rn}_01_round_title.png`);
+      await exportAnimated("roundtitle", `R${rn}_01_round_title.mov`, 3000);
+
+      // 2. Each property photo as a still slide
       for (let pi = 0; pi < numPhotos; pi++) {
         fileCount++;
         setExportStatus(`R${rn} photo ${pi + 1}/${numPhotos}…`);
@@ -2478,23 +2477,28 @@ export default function GuessThePrice({ displayMode = false }) {
         await new Promise(r => setTimeout(r, 50));
       }
 
-      // 3. Prompt ("Which one is it?")
-      await exportAsset("prompt", `R${rn}_03_prompt.png`);
+      // 3. Prompt (still + animated)
+      await exportStill("prompt", `R${rn}_03_prompt.png`);
+      await exportAnimated("prompt", `R${rn}_03_prompt.mov`, 3000);
 
-      // 4. A/B/C Options
-      await exportAsset("options", `R${rn}_04_options.png`);
+      // 4. A/B/C Options (still + animated)
+      await exportStill("options", `R${rn}_04_options.png`);
+      await exportAnimated("options", `R${rn}_04_options.mov`, 3000);
 
-      // 5. Lock-in (with answer)
-      await exportAsset("lockin", `R${rn}_05_lockin.png`);
+      // 5. Lock-in (still + animated)
+      await exportStill("lockin", `R${rn}_05_lockin.png`);
+      await exportAnimated("lockin", `R${rn}_05_lockin.mov`, 3000);
 
-      // 6. Timer (at completion)
-      await exportAsset("timer", `R${rn}_06_timer.png`);
+      // 6. Timer (still + animated)
+      await exportStill("timer", `R${rn}_06_timer.png`);
+      await exportAnimated("timer", `R${rn}_06_timer.mov`, (roundS.timerDuration || 3) * 1000);
 
-      // 7. Price Reveal
-      await exportAsset("reveal", `R${rn}_07_reveal.png`);
+      // 7. Price Reveal (still + animated)
+      await exportStill("reveal", `R${rn}_07_reveal.png`);
+      await exportAnimated("reveal", `R${rn}_07_reveal.mov`, 3000);
 
-      // 8. Scoreboard
-      await exportAsset("scoreboard", `R${rn}_08_scoreboard.png`);
+      // 8. Scoreboard (still only — no entrance animation needed)
+      await exportStill("scoreboard", `R${rn}_08_scoreboard.png`);
     }
 
     setExportStatus("Building ZIP…");
@@ -3717,7 +3721,7 @@ export default function GuessThePrice({ displayMode = false }) {
         <div style={{ display: "flex", gap: DS.sm }}>
           <button onClick={() => exportPNG()} style={btnCta({ padding: "8px 20px", fontSize: DS.fsSm })}>Export PNG</button>
           {ASSETS.find(a => a.id === activeAsset)?.animated && (
-            <button onClick={exportWebM} style={btnPositive({ padding: "8px 20px", fontSize: DS.fsSm })}>Export WebM</button>
+            <button onClick={exportMOV} style={btnPositive({ padding: "8px 20px", fontSize: DS.fsSm })}>Export MOV</button>
           )}
           <button onClick={exportRound} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export Round</button>
           <button onClick={exportAllZIP} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export All (ZIP)</button>
