@@ -1491,6 +1491,9 @@ function addBleed(srcCanvas, bleed=10){
 //  PNG SEQUENCE — frame-by-frame export for Premiere Pro
 // ═══════════════════════════════════════════════════════════════
 async function recordPNGSequence(g,brand,ratio,onProgress){
+  // Wait for ALL fonts to load before rendering any frames
+  // This prevents character height jumping mid-animation
+  await document.fonts.ready;
   const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
   const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
   // 4s at 25fps = 100 frames (1s entrance + 3s hold/drift)
@@ -1575,7 +1578,8 @@ async function pngSeqToMov(frames, fps=25, onProgress){
 const MIME=()=>MediaRecorder.isTypeSupported("video/webm;codecs=vp9")?"video/webm;codecs=vp9":"video/webm";
 
 function recordGraphic(g,brand,ratio){
-  return new Promise((res,rej)=>{
+  return new Promise(async(res,rej)=>{
+    await document.fonts.ready; // ensure fonts loaded before recording
     const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
     const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
     const durMs=Math.max(4000,(g.duration||4)*1000);  // minimum 4 seconds
