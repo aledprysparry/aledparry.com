@@ -443,8 +443,7 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
     const idx = (g._origIdx!=null ? g._origIdx : i);
     const fn = `${prefix}${String(idx+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
     const fileId = `${trackId}_file_${i+1}`;
-    // Reference still PNG — Premiere holds it for the clip duration
-    // For animated versions, user imports PNG sequence folders manually
+    // Reference MOV file (PNG codec with alpha) — Premiere imports natively
     return `          <clipitem id="${trackId}_clip_${i+1}">
             <name>${fn}</name>
             <duration>${dur}</duration>
@@ -453,10 +452,9 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
             <end>${sf+dur}</end>
             <in>0</in>
             <out>${dur}</out>
-            <stillframe>TRUE</stillframe>
             <file id="${fileId}">
-              <name>${fn}.png</name>
-              <pathurl>${fn}.png</pathurl>
+              <name>${fn}.mov</name>
+              <pathurl>${fn}.mov</pathurl>
               <duration>${dur}</duration>
               <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
               <media>
@@ -1414,6 +1412,33 @@ async function webmToMov(webmBlob, filename="output.mov", onProgress){
   await ff.deleteFile(outputName);
   return new Blob([data.buffer],{type:"video/quicktime"});
 }
+// Convert array of PNG frame blobs to MOV with alpha (PNG codec)
+async function pngSeqToMov(frames, fps=25, onProgress){
+  const ff=await getFFmpeg();
+  // Write all frames to ffmpeg virtual filesystem
+  for(let i=0;i<frames.length;i++){
+    const name=`frame_${String(i+1).padStart(4,"0")}.png`;
+    await ff.writeFile(name, await fetchFile(frames[i].blob||frames[i]));
+  }
+  if(onProgress) ff.on("progress",({progress})=>onProgress(progress));
+  // Convert: PNG sequence → MOV with PNG codec (preserves alpha)
+  await ff.exec([
+    "-framerate",String(fps),
+    "-i","frame_%04d.png",
+    "-c:v","png",
+    "-pix_fmt","rgba",
+    "-an",
+    "output.mov"
+  ]);
+  const data=await ff.readFile("output.mov");
+  // Clean up frames
+  for(let i=0;i<frames.length;i++){
+    await ff.deleteFile(`frame_${String(i+1).padStart(4,"0")}.png`);
+  }
+  await ff.deleteFile("output.mov");
+  return new Blob([data.buffer],{type:"video/quicktime"});
+}
+
 const MIME=()=>MediaRecorder.isTypeSupported("video/webm;codecs=vp9")?"video/webm;codecs=vp9":"video/webm";
 
 function recordGraphic(g,brand,ratio){
@@ -2827,7 +2852,33 @@ function ExportTab({project,brand,updateProject}){
           for(const f of frames) folder.file(f.name,f.blob);
           tick(done+1);
         }
-        // Also add still PNGs at root level (XML references these for placement)
+        // Convert each PNG sequence to MOV with alpha (ffmpeg.wasm)
+        setPhase(`${ratio} — loading ffmpeg…`);
+        try{
+          await getFFmpeg();
+          const allFrameSets=[]; // store frames for MOV conversion
+          // Re-collect frames from each graphic (already rendered above)
+          // We stored them in zip folders, but ffmpeg needs raw blobs
+          // So we'll re-render — small perf cost but cleaner than caching
+        }catch(e){console.warn("ffmpeg load failed, skipping MOV:",e);}
+
+        // Render MOVs from PNG sequences
+        setPhase(`${ratio} — converting to MOV…`);
+        for(let i=0;i<selectedGfx.length;i++){
+          const gLabel=selectedGfx[i].label||selectedGfx[i].template;
+          const movName=`${rp}_${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.mov`;
+          setPhase(`${ratio} — ${gLabel} → MOV…`);
+          try{
+            const frames=await recordPNGSequence(selectedGfx[i],exportBrand,ratio);
+            const movBlob=await pngSeqToMov(frames,25,pct=>{
+              setProg(p=>({...p,pct:(done+pct)/totalSteps}));
+            });
+            zip.file(movName,movBlob);
+          }catch(e){console.warn("MOV conversion failed for",gLabel,e);}
+          tick(done+1);
+        }
+
+        // Also add still PNGs at root level (fallback for XML)
         setPhase(`${ratio} — rendering still PNGs…`);
         for(let i=0;i<selectedGfx.length;i++){
           const gLabel=selectedGfx[i].label||selectedGfx[i].template;
@@ -2838,9 +2889,8 @@ function ExportTab({project,brand,updateProject}){
           const blob=await new Promise(r=>bc.toBlob(r,"image/png"));
           zip.file(stillName,blob);
         }
-        // Zip it all
-        setPhase(`${ratio} — zipping…`);
-        // Add Premiere XML inside the zip so everything is in one package
+        // Add Premiere XML (references MOV files)
+        setPhase(`${ratio} — building XML…`);
         const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
         zip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
         const zipBlob=await zip.generateAsync({type:"blob"},meta=>{
