@@ -431,13 +431,18 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
     const s=tsToSec(g.timestamp); return Math.max(max, s+(g.duration||4));
   }, 60);
   const totalFrames = toF(lastEnd) + FPS;
-  const fullscreen = graphics.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)==="fullscreen");
-  const overlays = graphics.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)!=="fullscreen");
+  // Tag each graphic with its original array index (matches zip folder numbering)
+  const tagged = graphics.map((g,idx)=>({...g,_origIdx:idx}));
+  const fullscreen = tagged.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)==="fullscreen");
+  const overlays = tagged.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)!=="fullscreen");
 
   const makeClip = (g, i, trackId) => {
     const sf = toF(tsToSec(g.timestamp));
     const dur = toF(g.duration||4);
-    const fn = `${prefix}${String(i+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
+    // Folder name MUST match the zip export: {ratio}_{padded}_{label}
+    // Use original array index (g._origIdx) so it matches the zip folder numbering
+    const idx = (g._origIdx!=null ? g._origIdx : i);
+    const fn = `${prefix}${String(idx+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
     const fileId = `${trackId}_file_${i+1}`;
     // Point to first frame of PNG sequence — Premiere auto-detects the rest
     const seqPath = `${fn}/frame_0001.png`;
@@ -1369,7 +1374,7 @@ async function recordPNGSequence(g,brand,ratio,onProgress){
     drawGraphic(cvs,g,brand,ratio,p);
     const bleedCvs=addBleed(cvs,10);
     const blob=await new Promise(r=>bleedCvs.toBlob(r,"image/png"));
-    frames.push({name:`frame_${String(f).padStart(4,"0")}.png`,blob});
+    frames.push({name:`frame_${String(f+1).padStart(4,"0")}.png`,blob}); // 1-indexed for Premiere
     if(onProgress) onProgress(f/totalFrames);
   }
   return frames;
