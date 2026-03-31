@@ -428,11 +428,12 @@ function generatePremiereScript(graphics, ratio, prefix, projectName) {
   const tsToSec = ts => { const p=(ts||"00:00:00").split(":").map(Number); return p[0]*3600+p[1]*60+(p[2]||0); };
   const { W, H } = RATIOS[ratio] || RATIOS["16:9"];
 
-  // Build clip data array
+  const pn = (projectName||"Project").replace(/\s+/g,"_");
+  // Build clip data array — folder names MUST match the download filenames
   const clips = graphics.map((g, i) => {
     const idx = i;
     const label = (g.label||g.template).replace(/[^a-z0-9_-]/gi,"_");
-    const folder = `${prefix}${String(idx+1).padStart(2,"0")}_${label}`;
+    const folder = `${pn}_${prefix}${String(idx+1).padStart(2,"0")}_${label}`;
     const startSec = tsToSec(g.timestamp);
     const dur = g.duration || 4;
     const isOv = (g.typeOverride||(TMPL[g.template]||{}).type) !== "fullscreen";
@@ -553,13 +554,13 @@ main();
 function generateGraphicsXML(graphics, ratio, prefix, projectName) {
   const { W, H } = RATIOS[ratio] || RATIOS["16:9"];
   const FPS = 25;
+  const pn = (projectName||"Project").replace(/\s+/g,"_");
   const toF = sec => Math.round(sec * FPS);
   const tsToSec = ts => { const p=(ts||"00:00:00").split(":").map(Number); return p[0]*3600+p[1]*60+(p[2]||0); };
   const lastEnd = graphics.reduce((max,g) => {
     const s=tsToSec(g.timestamp); return Math.max(max, s+(g.duration||4));
   }, 60);
   const totalFrames = toF(lastEnd) + FPS;
-  // Tag each graphic with its original array index (matches zip folder numbering)
   const tagged = graphics.map((g,idx)=>({...g,_origIdx:idx}));
   const fullscreen = tagged.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)==="fullscreen");
   const overlays = tagged.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)!=="fullscreen");
@@ -567,9 +568,9 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
   const makeClip = (g, i, trackId) => {
     const sf = toF(tsToSec(g.timestamp));
     const dur = toF(g.duration||4);
-    // Use original array index so names match between zip and XML
     const idx = (g._origIdx!=null ? g._origIdx : i);
-    const fn = `${prefix}${String(idx+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
+    // MUST match the download filename: ${pn}_${prefix}01_label.png
+    const fn = `${pn}_${prefix}${String(idx+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
     const fileId = `${trackId}_file_${i+1}`;
     // Reference MOV file (PNG codec with alpha) — Premiere imports natively
     return `          <clipitem id="${trackId}_clip_${i+1}">
@@ -3014,7 +3015,7 @@ function ExportTab({project,brand,updateProject}){
           for(let j=0;j<batch.length;j++){
             const i=b+j;
             const gLabel=batch[j].label||batch[j].template;
-            const folderName=`${rp}_${String(i+1).padStart(2,"0")}_${gLabel}`;
+            const folderName=`${pn}_${rp}_${String(i+1).padStart(2,"0")}_${gLabel}`;
             const folder=zip.folder(folderName);
             setPhase(`${ratio} — ${gLabel} (${i+1}/${selectedGfx.length})…`);
             try{
@@ -3036,7 +3037,7 @@ function ExportTab({project,brand,updateProject}){
         setPhase(`${ratio} — rendering still PNGs…`);
         for(let i=0;i<selectedGfx.length;i++){
           const gLabel=selectedGfx[i].label||selectedGfx[i].template;
-          const stillName=`${rp}_${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.png`;
+          const stillName=`${pn}_${rp}_${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.png`;
           const c=document.createElement("canvas");
           drawGraphic(c,selectedGfx[i],exportBrand,ratio,1);
           const bc=addBleed(c,10);
