@@ -439,13 +439,12 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
   const makeClip = (g, i, trackId) => {
     const sf = toF(tsToSec(g.timestamp));
     const dur = toF(g.duration||4);
-    // Folder name MUST match the zip export: {ratio}_{padded}_{label}
-    // Use original array index (g._origIdx) so it matches the zip folder numbering
+    // Use original array index so names match between zip and XML
     const idx = (g._origIdx!=null ? g._origIdx : i);
     const fn = `${prefix}${String(idx+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
     const fileId = `${trackId}_file_${i+1}`;
-    // Point to first frame of PNG sequence — Premiere auto-detects the rest
-    const seqPath = `${fn}/frame_0001.png`;
+    // Reference still PNG — Premiere holds it for the clip duration
+    // For animated versions, user imports PNG sequence folders manually
     return `          <clipitem id="${trackId}_clip_${i+1}">
             <name>${fn}</name>
             <duration>${dur}</duration>
@@ -454,9 +453,10 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
             <end>${sf+dur}</end>
             <in>0</in>
             <out>${dur}</out>
+            <stillframe>TRUE</stillframe>
             <file id="${fileId}">
-              <name>${fn}</name>
-              <pathurl>${seqPath}</pathurl>
+              <name>${fn}.png</name>
+              <pathurl>${fn}.png</pathurl>
               <duration>${dur}</duration>
               <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
               <media>
@@ -2827,12 +2827,26 @@ function ExportTab({project,brand,updateProject}){
           for(const f of frames) folder.file(f.name,f.blob);
           tick(done+1);
         }
+        // Also add still PNGs at root level (XML references these for placement)
+        setPhase(`${ratio} — rendering still PNGs…`);
+        for(let i=0;i<selectedGfx.length;i++){
+          const gLabel=selectedGfx[i].label||selectedGfx[i].template;
+          const stillName=`${rp}_${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.png`;
+          const c=document.createElement("canvas");
+          drawGraphic(c,selectedGfx[i],exportBrand,ratio,1);
+          const bc=addBleed(c,10);
+          const blob=await new Promise(r=>bc.toBlob(r,"image/png"));
+          zip.file(stillName,blob);
+        }
         // Zip it all
         setPhase(`${ratio} — zipping…`);
+        // Add Premiere XML inside the zip so everything is in one package
+        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
+        zip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
         const zipBlob=await zip.generateAsync({type:"blob"},meta=>{
           setProg(p=>({...p,pct:meta.percent/100}));
         });
-        dl(zipBlob,`${pn}_${prefix}png_sequences.zip`);
+        dl(zipBlob,`${pn}_${prefix}premiere_ready.zip`);
       }
       // Graphics WebMs
       if(gfxMode==="webm"||gfxMode==="both"){
