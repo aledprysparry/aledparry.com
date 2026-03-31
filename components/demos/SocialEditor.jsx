@@ -2807,19 +2807,23 @@ function ExportTab({project,brand,updateProject}){
       };
       // Graphics PNGs (title_card + endboard are now regular graphics in the array)
       if(gfxMode==="png"||gfxMode==="both"){
-        setPhase(`${ratio} — exporting graphic PNGs…`);
+        setPhase(`${ratio} — rendering PNGs…`);
+        const pngZip=new JSZip();
         for(let i=0;i<selectedGfx.length;i++){
           drawGraphic(cvs.current,selectedGfx[i],exportBrand,ratio,1);
           const bleedCvs=addBleed(cvs.current,10);
-          await new Promise(res=>{
-            bleedCvs.toBlob(blob=>{
-              if(blob) dl(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}.png`);
-              res();
-            },"image/png");
-          });
+          const blob=await new Promise(res=>bleedCvs.toBlob(res,"image/png"));
+          const fn=`${prefix}${String(i+1).padStart(2,"0")}_${(selectedGfx[i].label||selectedGfx[i].template).replace(/[^a-z0-9_-]/gi,"_")}.png`;
+          pngZip.file(fn,blob);
           tick(done+1);
-          await new Promise(r=>setTimeout(r,300));
+          setPhase(`${ratio} — ${i+1}/${selectedGfx.length} PNGs…`);
         }
+        // Add XML for timeline placement
+        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
+        pngZip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
+        setPhase(`${ratio} — zipping PNGs…`);
+        const zipBlob=await pngZip.generateAsync({type:"blob"});
+        dl(zipBlob,`${pn}_${prefix}stills.zip`);
       }
       // PNG Sequences (for Premiere Pro)
       if(gfxMode==="premiere"||gfxMode==="pngseq"){
