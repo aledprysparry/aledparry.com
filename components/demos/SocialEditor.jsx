@@ -2807,23 +2807,23 @@ function ExportTab({project,brand,updateProject}){
       };
       // Graphics PNGs (title_card + endboard are now regular graphics in the array)
       if(gfxMode==="png"||gfxMode==="both"){
-        setPhase(`${ratio} — rendering PNGs…`);
-        const pngZip=new JSZip();
+        setPhase(`${ratio} — exporting PNGs…`);
         for(let i=0;i<selectedGfx.length;i++){
+          setPhase(`${ratio} — PNG ${i+1}/${selectedGfx.length}…`);
           drawGraphic(cvs.current,selectedGfx[i],exportBrand,ratio,1);
           const bleedCvs=addBleed(cvs.current,10);
-          const blob=await new Promise(res=>bleedCvs.toBlob(res,"image/png"));
-          const fn=`${prefix}${String(i+1).padStart(2,"0")}_${(selectedGfx[i].label||selectedGfx[i].template).replace(/[^a-z0-9_-]/gi,"_")}.png`;
-          pngZip.file(fn,blob);
+          await new Promise(res=>{
+            bleedCvs.toBlob(blob=>{
+              if(blob) dl(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${(selectedGfx[i].label||selectedGfx[i].template).replace(/[^a-z0-9_-]/gi,"_")}.png`);
+              res();
+            },"image/png");
+          });
           tick(done+1);
-          setPhase(`${ratio} — ${i+1}/${selectedGfx.length} PNGs…`);
+          await new Promise(r=>setTimeout(r,500)); // 500ms gap so Chrome doesn't throttle
         }
-        // Add XML for timeline placement
+        // Also download the XML
         const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
-        pngZip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
-        setPhase(`${ratio} — zipping PNGs…`);
-        const zipBlob=await pngZip.generateAsync({type:"blob",compression:"STORE"});
-        dl(zipBlob,`${pn}_${prefix}stills.zip`);
+        dlText(gfxXml,`${pn}_${prefix}graphics_sequence.xml`);
       }
       // PNG Sequences (for Premiere Pro)
       if(gfxMode==="premiere"||gfxMode==="pngseq"){
@@ -2856,27 +2856,7 @@ function ExportTab({project,brand,updateProject}){
           for(const f of frames) folder.file(f.name,f.blob);
           tick(done+1);
         }
-        // Convert each graphic to MOV with alpha via WebM → ffmpeg → MOV
-        let ffmpegReady=false;
-        try{ await getFFmpeg(); ffmpegReady=true; }catch(e){ console.error("ffmpeg load:",e); }
-
-        if(ffmpegReady){
-          setPhase(`${ratio} — converting to MOV…`);
-          for(let i=0;i<selectedGfx.length;i++){
-            const gLabel=selectedGfx[i].label||selectedGfx[i].template;
-            const movName=`${rp}_${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.mov`;
-            setPhase(`${ratio} — ${gLabel} → MOV (${i+1}/${selectedGfx.length})…`);
-            try{
-              // Record as WebM first (browser native), then convert to MOV
-              const webmBlob=await recordGraphic(selectedGfx[i],exportBrand,ratio);
-              const movBlob=await webmToMov(webmBlob,movName);
-              zip.file(movName,movBlob);
-            }catch(e){ console.error("MOV failed for",gLabel,e); }
-            tick(done+1);
-          }
-        }
-
-        // Also add still PNGs at root level (fallback for XML)
+        // Add still PNGs at root level (XML references these)
         setPhase(`${ratio} — rendering still PNGs…`);
         for(let i=0;i<selectedGfx.length;i++){
           const gLabel=selectedGfx[i].label||selectedGfx[i].template;
