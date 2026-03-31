@@ -2822,7 +2822,7 @@ function ExportTab({project,brand,updateProject}){
         const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
         pngZip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
         setPhase(`${ratio} — zipping PNGs…`);
-        const zipBlob=await pngZip.generateAsync({type:"blob"});
+        const zipBlob=await pngZip.generateAsync({type:"blob",compression:"STORE"});
         dl(zipBlob,`${pn}_${prefix}stills.zip`);
       }
       // PNG Sequences (for Premiere Pro)
@@ -2891,7 +2891,7 @@ function ExportTab({project,brand,updateProject}){
         setPhase(`${ratio} — building XML…`);
         const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
         zip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
-        const zipBlob=await zip.generateAsync({type:"blob"},meta=>{
+        const zipBlob=await zip.generateAsync({type:"blob",compression:"STORE"},meta=>{
           setProg(p=>({...p,pct:meta.percent/100}));
         });
         dl(zipBlob,`${pn}_${prefix}premiere_ready.zip`);
