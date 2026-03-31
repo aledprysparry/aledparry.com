@@ -2425,7 +2425,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
         <button style={btnDanger({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Clear all and re-analyse">↺ Re-analyse</button>
         <button style={{...sm,background:"#FB8770",color:"#fff",fontWeight:700}} onClick={()=>{const n=graphics.length;const add=[
-          {id:n+1,timestamp:"00:00:10",duration:6,type:"fullscreen",template:"title",content:{headline:"RENT INCREASES EXPLAINED",subheadline:"Wales 2026",body:"What landlords and tenants need to know",number:"6"},label:"title-card"},
+          {id:n+1,timestamp:"00:00:00",duration:5,type:"fullscreen",template:"title_card",content:{headline:"RENT INCREASES EXPLAINED",subheadline:"Wales 2026",body:"What landlords and tenants need to know",style:"split"},label:"title-card"},
+          {id:n+17,timestamp:"00:00:10",duration:6,type:"fullscreen",template:"title",content:{headline:"RENT INCREASES EXPLAINED",subheadline:"Wales 2026",body:"What landlords and tenants need to know",number:"6"},label:"title-slide"},
           {id:n+2,timestamp:"00:00:15",duration:5,type:"overlay",template:"lower_third",content:{name:"Nikki Lewis",title:"Director of Operations",company:"CPS Homes"},label:"nikki-intro"},
           {id:n+3,timestamp:"00:00:30",duration:4,type:"overlay",template:"timeline",content:{label:"CONTRACT LENGTH",markers:["6 months","9 months","12 months"]},label:"contract-length"},
           {id:n+4,timestamp:"00:01:00",duration:4,type:"overlay",template:"speech_bubble",content:{text:"Back to square one — start the process again"},label:"back-to-square-one"},
@@ -2440,7 +2441,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           {id:n+13,timestamp:"00:03:05",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CANNOT APPEAL",body:"New tenants from December 2022 onwards"},label:"cannot-appeal"},
           {id:n+14,timestamp:"00:03:15",duration:5,type:"fullscreen",template:"key_point",content:{headline:"HIDDEN COSTS",body:"Void period, council tax liability, standing charges liability"},label:"hidden-costs"},
           {id:n+15,timestamp:"00:03:20",duration:4,type:"overlay",template:"tenant_ask",content:{text:"A tenant can only afford what they can afford"},label:"tenant-affordability"},
-          {id:n+16,timestamp:"00:01:50",duration:6,type:"fullscreen",template:"key_point",content:{headline:"KEY RULES",body:"Five essential things you need to know",number:"5",strikeNumber:"6"},label:"five-to-six-rules"}
+          {id:n+16,timestamp:"00:01:50",duration:6,type:"fullscreen",template:"key_point",content:{headline:"KEY RULES",body:"Five essential things you need to know",number:"5",strikeNumber:"6"},label:"five-to-six-rules"},
+          {id:n+18,timestamp:"00:03:30",duration:8,type:"fullscreen",template:"endboard",content:{headline:"Thanks for watching",body:"Like and subscribe for more",handle:"@cpshomes",website:"cpshomes.co.uk",style:"logo"},label:"endboard"}
         ];const ng=[...graphics,...add];setGraphics(ng);setSelected(s=>{const ns=new Set(s);add.forEach((_,i)=>ns.add(n+i));return ns;});}} title="Add Nikki's feedback graphics">+ Client v2</button>
       </div>
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
