@@ -2982,10 +2982,18 @@ function ExportTab({project,brand,updateProject}){
           const folderName=`${rp}_${String(i+1).padStart(2,"0")}_${gLabel}`;
           const folder=zip.folder(folderName);
           setPhase(`${ratio} — ${gLabel} sequence…`);
-          const frames=await recordPNGSequence(selectedGfx[i],exportBrand,ratio,frac=>{
-            setProg(p=>({...p,pct:(done+frac)/totalSteps}));
-          });
-          for(const f of frames) folder.file(f.name,f.blob);
+          try{
+            const frames=await recordPNGSequence(selectedGfx[i],exportBrand,ratio,frac=>{
+              setPhase(`${ratio} — ${gLabel} frame ${Math.round(frac*100)}%…`);
+              setProg(p=>({...p,pct:(done+frac)/totalSteps}));
+            });
+            setPhase(`${ratio} — ${gLabel}: ${frames.length} frames → zip…`);
+            for(const f of frames) folder.file(f.name,f.blob);
+          }catch(e){
+            console.error("PNG seq failed for",gLabel,e);
+            setPhase(`${ratio} — ${gLabel} FAILED: ${e.message}`);
+            await new Promise(r=>setTimeout(r,1000));
+          }
           tick(done+1);
         }
         // Add still PNGs at root level (XML references these)
