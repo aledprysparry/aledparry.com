@@ -453,8 +453,8 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
             <in>0</in>
             <out>${dur}</out>
             <file id="${fileId}">
-              <name>${fn}.mov</name>
-              <pathurl>${fn}.mov</pathurl>
+              <name>${fn}.png</name>
+              <pathurl>${fn}.png</pathurl>
               <duration>${dur}</duration>
               <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
               <media>
