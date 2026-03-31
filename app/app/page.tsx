@@ -98,23 +98,6 @@ export default function DemosIndexPage() {
             <p className="text-sm text-stone-600">{demo.description}</p>
           </Link>
         ))}
-
-        <a
-          href="https://cwis-creator-hub.vercel.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group block border border-stone-200 p-6 hover:border-stone-400 transition-colors"
-        >
-          <p className="text-xs font-sans font-medium tracking-wider uppercase text-stone-400 mb-2">
-            S4C
-          </p>
-          <h2 className="text-lg font-serif font-semibold text-stone-900 group-hover:text-accent-dark transition-colors mb-2">
-            Cwis Bob Dydd
-          </h2>
-          <p className="text-sm text-stone-600">
-            Quiz content creation suite — question bank, leaderboards, social media planner, and branded graphic builder.
-          </p>
-        </a>
       </div>
     </div>
   );

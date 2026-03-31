@@ -48,6 +48,16 @@ export const demos: DemoEntry[] = [
     componentPath: "GuessThePrice",
   },
   {
+    clientSlug: "s4c",
+    clientName: "S4C",
+    toolSlug: "cwis-bob-dydd",
+    toolName: "Cwis Bob Dydd",
+    description:
+      "Quiz content creation suite — question bank, leaderboards, social media planner, and branded graphic builder.",
+    componentPath: "",
+    href: "https://cwis-creator-hub.vercel.app",
+  },
+  {
     clientSlug: "aledparry",
     clientName: "Aled Parry",
     toolSlug: "mastery",
