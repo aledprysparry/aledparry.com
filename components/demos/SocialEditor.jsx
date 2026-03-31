@@ -426,50 +426,84 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
   const { W, H } = RATIOS[ratio] || RATIOS["16:9"];
   const FPS = 25;
   const toF = sec => Math.round(sec * FPS);
-  const tsToSec = ts => { const p=ts.split(":").map(Number); return p[0]*3600+p[1]*60+(p[2]||0); };
-  // Find total duration from last graphic end
+  const tsToSec = ts => { const p=(ts||"00:00:00").split(":").map(Number); return p[0]*3600+p[1]*60+(p[2]||0); };
   const lastEnd = graphics.reduce((max,g) => {
-    const s=tsToSec(g.timestamp||"00:00:00"); return Math.max(max, s+(g.duration||4));
+    const s=tsToSec(g.timestamp); return Math.max(max, s+(g.duration||4));
   }, 60);
   const totalFrames = toF(lastEnd) + FPS;
-  // Two tracks: fullscreen on V2, overlays on V3
   const fullscreen = graphics.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)==="fullscreen");
   const overlays = graphics.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)!=="fullscreen");
-  const makeClips = (list, trackLabel) => list.map((g,i) => {
-    const sf = toF(tsToSec(g.timestamp||"00:00:00"));
+
+  const makeClip = (g, i, trackId) => {
+    const sf = toF(tsToSec(g.timestamp));
     const dur = toF(g.duration||4);
-    const ef = sf + dur;
-    const fn = `${prefix}${(g.label||g.template+"_"+i).replace(/[^a-z0-9_-]/gi,"_")}`;
-    return `      <clipitem id="${trackLabel}_${i+1}">
-        <name>${fn}</name><start>${sf}</start><end>${ef}</end>
-        <in>0</in><out>${dur}</out>
-        <file id="${trackLabel}_file${i+1}">
-          <name>${fn}</name><pathurl>${fn}/frame_%04d.png</pathurl>
-          <duration>${dur}</duration>
-          <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
-          <media><video><samplecharacteristics>
-            <width>${W}</width><height>${H}</height>
-          </samplecharacteristics></video></media>
-        </file>
-      </clipitem>`;
-  }).join("\n");
+    const fn = `${prefix}${String(i+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
+    const fileId = `${trackId}_file_${i+1}`;
+    // Point to first frame of PNG sequence — Premiere auto-detects the rest
+    const seqPath = `${fn}/frame_0001.png`;
+    return `          <clipitem id="${trackId}_clip_${i+1}">
+            <name>${fn}</name>
+            <duration>${dur}</duration>
+            <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
+            <start>${sf}</start>
+            <end>${sf+dur}</end>
+            <in>0</in>
+            <out>${dur}</out>
+            <file id="${fileId}">
+              <name>${fn}</name>
+              <pathurl>${seqPath}</pathurl>
+              <duration>${dur}</duration>
+              <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
+              <media>
+                <video>
+                  <samplecharacteristics>
+                    <width>${W}</width>
+                    <height>${H}</height>
+                    <pixelaspectratio>square</pixelaspectratio>
+                    <anamorphic>FALSE</anamorphic>
+                    <fielddominance>none</fielddominance>
+                    <alphatype>straight</alphatype>
+                  </samplecharacteristics>
+                </video>
+              </media>
+            </file>
+          </clipitem>`;
+  };
+
+  const fsClips = fullscreen.map((g,i) => makeClip(g,i,"fs")).join("\n");
+  const ovClips = overlays.map((g,i) => makeClip(g,i,"ov")).join("\n");
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xmeml>
 <xmeml version="5">
   <sequence id="gfx_seq">
-    <name>${projectName||"Graphics"} ${ratio}</name>
+    <name>${(projectName||"Graphics").replace(/[<>&"]/g,"_")} ${ratio}</name>
     <duration>${totalFrames}</duration>
-    <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
+    <rate>
+      <timebase>${FPS}</timebase>
+      <ntsc>FALSE</ntsc>
+    </rate>
+    <timecode>
+      <string>00:00:00:00</string>
+      <frame>0</frame>
+      <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
+      <displayformat>NDF</displayformat>
+    </timecode>
     <media>
       <video>
-        <format><samplecharacteristics><width>${W}</width><height>${H}</height></samplecharacteristics></format>
+        <format>
+          <samplecharacteristics>
+            <width>${W}</width>
+            <height>${H}</height>
+            <pixelaspectratio>square</pixelaspectratio>
+            <fielddominance>none</fielddominance>
+          </samplecharacteristics>
+        </format>
         <track>
-          <!-- V2: Fullscreen graphics -->
-${makeClips(fullscreen,"fs")}
+${fsClips}
         </track>
         <track>
-          <!-- V3: Overlay graphics -->
-${makeClips(overlays,"ov")}
+${ovClips}
         </track>
       </video>
     </media>
