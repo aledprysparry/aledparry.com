@@ -1491,15 +1491,15 @@ function addBleed(srcCanvas, bleed=10){
 async function recordPNGSequence(g,brand,ratio,onProgress){
   const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
   const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-  // 1s entrance at 25fps + 1s hold = 50 frames total (not 100)
-  // Reduces memory by 50% while keeping the animation
+  // 4s at 25fps = 100 frames (1s entrance + 3s hold/drift)
+  // Batched processing prevents memory exhaustion
+  const dur=Math.max(4,g.duration||4);
   const fps=25;
-  const animFrames=fps; // 25 frames = 1s entrance
-  const holdFrames=fps; // 25 frames = 1s hold at final state
-  const totalFrames=animFrames+holdFrames;
+  const totalFrames=Math.round(dur*fps);
+  const animFrames=fps; // entrance over 1s
   const frames=[];
   for(let f=0;f<totalFrames;f++){
-    const p=f<animFrames ? f/fps : (animFrames/fps)+((f-animFrames)/fps); // entrance then drift
+    const p=f/fps; // seconds elapsed — entrance at 0-1s, waves drift after
     drawGraphic(cvs,g,brand,ratio,p);
     const bleedCvs=addBleed(cvs,10);
     const blob=await new Promise(r=>bleedCvs.toBlob(r,"image/png"));
@@ -2428,26 +2428,52 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export Selected</button>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
         <button style={btnDanger({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Clear all and re-analyse">↺ Re-analyse</button>
-        <button style={{...sm,background:"#FB8770",color:"#fff",fontWeight:700}} onClick={()=>{const n=graphics.length;const add=[
-          {id:n+1,timestamp:"00:00:00",duration:5,type:"fullscreen",template:"title_card",content:{headline:"RENT INCREASES EXPLAINED",subheadline:"Wales 2026",body:"What landlords and tenants need to know",style:"split"},label:"title-card"},
-          {id:n+17,timestamp:"00:00:10",duration:6,type:"fullscreen",template:"title",content:{headline:"RENT INCREASES EXPLAINED",subheadline:"Wales 2026",body:"What landlords and tenants need to know",number:"6"},label:"title-slide"},
-          {id:n+2,timestamp:"00:00:15",duration:5,type:"overlay",template:"lower_third",content:{name:"Nikki Lewis",title:"Director of Operations",company:"CPS Homes"},label:"nikki-intro"},
-          {id:n+3,timestamp:"00:00:30",duration:4,type:"overlay",template:"timeline",content:{label:"CONTRACT LENGTH",markers:["6 months","9 months","12 months"]},label:"contract-length"},
-          {id:n+4,timestamp:"00:01:00",duration:4,type:"overlay",template:"speech_bubble",content:{text:"Back to square one — start the process again"},label:"back-to-square-one"},
-          {id:n+5,timestamp:"00:01:15",duration:5,type:"fullscreen",template:"rule_number",content:{number:"!",body:"New rent does not take effect until after the fixed term"},label:"rent-after-fixed-term"},
-          {id:n+6,timestamp:"00:01:30",duration:4,type:"overlay",template:"fact_box",content:{headline:"WHY IT MATTERS",body:"Saves faffing around with pro rata amounts and standing orders"},label:"why-it-matters"},
-          {id:n+7,timestamp:"00:01:40",duration:5,type:"fullscreen",template:"key_point",content:{headline:"QUIRK ONE",body:"Notice can be served during fixed term… but can only take effect after it"},label:"quirk-one"},
-          {id:n+8,timestamp:"00:01:55",duration:5,type:"fullscreen",template:"key_point",content:{headline:"QUIRK TWO",body:"Can serve notice before 12 months up… as long as new rent only takes effect at 12-month mark"},label:"quirk-two"},
-          {id:n+9,timestamp:"00:02:10",duration:4,type:"overlay",template:"advice",content:{text:"It might be better to stick than twist"},label:"stick-or-twist"},
-          {id:n+10,timestamp:"00:02:25",duration:4,type:"overlay",template:"fact_box",content:{headline:"THE RISK",body:"Slightly increased rent with no guarantee of same reliability"},label:"the-risk"},
-          {id:n+11,timestamp:"00:02:40",duration:5,type:"overlay",template:"fact_box",content:{headline:"RENTING HOMES (WALES) ACT",body:"Came into effect December 2022"},label:"renting-act"},
-          {id:n+12,timestamp:"00:02:55",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CAN APPEAL",body:"Tenants on a periodic before December 2022"},label:"can-appeal"},
-          {id:n+13,timestamp:"00:03:05",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CANNOT APPEAL",body:"New tenants from December 2022 onwards"},label:"cannot-appeal"},
-          {id:n+14,timestamp:"00:03:15",duration:5,type:"fullscreen",template:"key_point",content:{headline:"HIDDEN COSTS",body:"Void period, council tax liability, standing charges liability"},label:"hidden-costs"},
-          {id:n+15,timestamp:"00:03:20",duration:4,type:"overlay",template:"tenant_ask",content:{text:"A tenant can only afford what they can afford"},label:"tenant-affordability"},
-          {id:n+16,timestamp:"00:01:50",duration:6,type:"fullscreen",template:"key_point",content:{headline:"KEY RULES",body:"Five essential things you need to know",number:"5",strikeNumber:"6"},label:"five-to-six-rules"},
-          {id:n+18,timestamp:"00:03:30",duration:8,type:"fullscreen",template:"endboard",content:{headline:"Thanks for watching",body:"Like and subscribe for more",handle:"@cpshomes",website:"cpshomes.co.uk",style:"logo"},label:"endboard"}
-        ];const ng=[...graphics,...add];setGraphics(ng);setSelected(s=>{const ns=new Set(s);add.forEach((_,i)=>ns.add(n+i));return ns;});}} title="Add Nikki's feedback graphics">+ Client v2</button>
+        <button style={{...sm,color:DS.salmon}} onClick={()=>{
+          // Remove duplicates by label — keep the LAST occurrence (most recently added/edited)
+          const seen=new Map();
+          graphics.forEach((g,i)=>{const key=g.label||`${g.template}_${g.timestamp}`;seen.set(key,i);});
+          const keep=[...seen.values()].sort((a,b)=>a-b);
+          const deduped=keep.map(i=>graphics[i]);
+          if(deduped.length<graphics.length){
+            setGraphics(deduped);
+            setSelected(new Set(deduped.map((_,i)=>i)));
+          }
+        }} title="Remove duplicate graphics (keeps latest)">🧹 Dedup ({graphics.length})</button>
+        <button style={{...sm,color:DS.textMuted}} onClick={()=>{if(confirm(`Clear all ${graphics.length} graphics? (SRT kept)`)){setGraphics([]);setGStep("review");}}} title="Clear graphics list without re-analysing">🗑 Clear list</button>
+        <select style={{...inputS({width:"auto",padding:"6px 10px",fontSize:11}),background:"#FB8770",color:"#fff",fontWeight:700,borderColor:"#FB8770",cursor:"pointer"}} onChange={e=>{
+          const ver=e.target.value;e.target.value="";if(!ver)return;
+          const n=Date.now();
+          const VERSIONS={
+            v2:[
+              {id:n+1,timestamp:"00:00:00",duration:5,type:"fullscreen",template:"title_card",content:{headline:"RENT INCREASES EXPLAINED",subheadline:"Wales 2026",body:"What landlords and tenants need to know",style:"split"},label:"title-card"},
+              {id:n+17,timestamp:"00:00:10",duration:6,type:"fullscreen",template:"title",content:{headline:"RENT INCREASES EXPLAINED",subheadline:"Wales 2026",body:"What landlords and tenants need to know",number:"6"},label:"title-slide"},
+              {id:n+2,timestamp:"00:00:15",duration:5,type:"overlay",template:"lower_third",content:{name:"Nikki Lewis",title:"Director of Operations",company:"CPS Homes"},label:"nikki-intro"},
+              {id:n+3,timestamp:"00:00:30",duration:4,type:"overlay",template:"timeline",content:{label:"CONTRACT LENGTH",markers:["6 months","9 months","12 months"]},label:"contract-length"},
+              {id:n+4,timestamp:"00:01:00",duration:4,type:"overlay",template:"speech_bubble",content:{text:"Back to square one — start the process again"},label:"back-to-square-one"},
+              {id:n+5,timestamp:"00:01:15",duration:5,type:"fullscreen",template:"rule_number",content:{number:"!",body:"New rent does not take effect until after the fixed term"},label:"rent-after-fixed-term"},
+              {id:n+6,timestamp:"00:01:30",duration:4,type:"overlay",template:"fact_box",content:{headline:"WHY IT MATTERS",body:"Saves faffing around with pro rata amounts and standing orders"},label:"why-it-matters"},
+              {id:n+7,timestamp:"00:01:40",duration:5,type:"fullscreen",template:"key_point",content:{headline:"QUIRK ONE",body:"Notice can be served during fixed term…\nbut can only take effect after it"},label:"quirk-one"},
+              {id:n+8,timestamp:"00:01:55",duration:5,type:"fullscreen",template:"key_point",content:{headline:"QUIRK TWO",body:"Can serve notice before 12 months up…\nas long as new rent only takes effect at 12-month mark"},label:"quirk-two"},
+              {id:n+9,timestamp:"00:02:10",duration:4,type:"overlay",template:"advice",content:{text:"It might be better to stick than twist"},label:"stick-or-twist"},
+              {id:n+10,timestamp:"00:02:25",duration:4,type:"overlay",template:"fact_box",content:{headline:"THE RISK",body:"Slightly increased rent with no guarantee of same reliability"},label:"the-risk"},
+              {id:n+11,timestamp:"00:02:40",duration:5,type:"overlay",template:"fact_box",content:{headline:"RENTING HOMES (WALES) ACT",body:"Came into effect December 2022"},label:"renting-act"},
+              {id:n+12,timestamp:"00:02:55",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CAN APPEAL",body:"Tenants on a periodic before December 2022"},label:"can-appeal"},
+              {id:n+13,timestamp:"00:03:05",duration:4,type:"fullscreen",template:"key_point",content:{headline:"CANNOT APPEAL",body:"New tenants from December 2022 onwards"},label:"cannot-appeal"},
+              {id:n+14,timestamp:"00:03:15",duration:5,type:"fullscreen",template:"key_point",content:{headline:"HIDDEN COSTS",body:"Void period, council tax liability,\nstanding charges liability"},label:"hidden-costs"},
+              {id:n+15,timestamp:"00:03:20",duration:4,type:"overlay",template:"tenant_ask",content:{text:"A tenant can only afford\nwhat they can afford"},label:"tenant-affordability"},
+              {id:n+16,timestamp:"00:01:50",duration:6,type:"fullscreen",template:"key_point",content:{headline:"KEY RULES",body:"Six essential things you need to know",number:"5",strikeNumber:"6"},label:"five-to-six-rules"},
+              {id:n+18,timestamp:"00:03:30",duration:8,type:"fullscreen",template:"endboard",content:{headline:"Thanks for watching",body:"Like and subscribe for more",handle:"@cpshomes",website:"cpshomes.co.uk",style:"logo"},label:"endboard"},
+            ],
+          };
+          const add=VERSIONS[ver];
+          if(!add){alert("Unknown version: "+ver);return;}
+          const ng=[...graphics,...add];
+          setGraphics(ng);
+          setSelected(s=>{const ns=new Set(s);add.forEach((_,i)=>ns.add(graphics.length+i));return ns;});
+        }} title="Load client feedback graphics">
+          <option value="">+ Client feedback…</option>
+          <option value="v2">v2 — Nikki's notes (18 graphics)</option>
+        </select>
       </div>
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
       <div style={{position:"relative"}}>
