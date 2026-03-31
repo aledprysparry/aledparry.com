@@ -3,6 +3,18 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async headers() {
+    return [
+      {
+        // ffmpeg.wasm needs these headers for SharedArrayBuffer
+        source: '/app/cpshomes/socialeditor',
+        headers: [
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'credentialless' },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {
