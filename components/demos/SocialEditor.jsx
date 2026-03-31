@@ -1491,15 +1491,19 @@ function addBleed(srcCanvas, bleed=10){
 async function recordPNGSequence(g,brand,ratio,onProgress){
   const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
   const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-  const dur=Math.max(4,g.duration||4);
-  const fps=25;const totalFrames=Math.round(dur*fps);
+  // 1s entrance at 25fps + 1s hold = 50 frames total (not 100)
+  // Reduces memory by 50% while keeping the animation
+  const fps=25;
+  const animFrames=fps; // 25 frames = 1s entrance
+  const holdFrames=fps; // 25 frames = 1s hold at final state
+  const totalFrames=animFrames+holdFrames;
   const frames=[];
   for(let f=0;f<totalFrames;f++){
-    const p=f/fps; // seconds elapsed
+    const p=f<animFrames ? f/fps : (animFrames/fps)+((f-animFrames)/fps); // entrance then drift
     drawGraphic(cvs,g,brand,ratio,p);
     const bleedCvs=addBleed(cvs,10);
     const blob=await new Promise(r=>bleedCvs.toBlob(r,"image/png"));
-    frames.push({name:`frame_${String(f+1).padStart(4,"0")}.png`,blob}); // 1-indexed for Premiere
+    frames.push({name:`frame_${String(f+1).padStart(4,"0")}.png`,blob});
     if(onProgress) onProgress(f/totalFrames);
   }
   return frames;
@@ -2975,26 +2979,31 @@ function ExportTab({project,brand,updateProject}){
           }
         };
         const rp=ratio.replace(":","x");
-        // 00 — Title Card
-        // All graphics (title_card + endboard are now in the array)
-        for(let i=0;i<selectedGfx.length;i++){
-          const gLabel=selectedGfx[i].label||selectedGfx[i].template;
-          const folderName=`${rp}_${String(i+1).padStart(2,"0")}_${gLabel}`;
-          const folder=zip.folder(folderName);
-          setPhase(`${ratio} — ${gLabel} sequence…`);
-          try{
-            const frames=await recordPNGSequence(selectedGfx[i],exportBrand,ratio,frac=>{
-              setPhase(`${ratio} — ${gLabel} frame ${Math.round(frac*100)}%…`);
-              setProg(p=>({...p,pct:(done+frac)/totalSteps}));
-            });
-            setPhase(`${ratio} — ${gLabel}: ${frames.length} frames → zip…`);
-            for(const f of frames) folder.file(f.name,f.blob);
-          }catch(e){
-            console.error("PNG seq failed for",gLabel,e);
-            setPhase(`${ratio} — ${gLabel} FAILED: ${e.message}`);
-            await new Promise(r=>setTimeout(r,1000));
+        // Process in batches of 5 to avoid memory exhaustion
+        const BATCH=5;
+        for(let b=0;b<selectedGfx.length;b+=BATCH){
+          const batch=selectedGfx.slice(b,b+BATCH);
+          setPhase(`${ratio} — batch ${Math.floor(b/BATCH)+1}/${Math.ceil(selectedGfx.length/BATCH)}…`);
+          for(let j=0;j<batch.length;j++){
+            const i=b+j;
+            const gLabel=batch[j].label||batch[j].template;
+            const folderName=`${rp}_${String(i+1).padStart(2,"0")}_${gLabel}`;
+            const folder=zip.folder(folderName);
+            setPhase(`${ratio} — ${gLabel} (${i+1}/${selectedGfx.length})…`);
+            try{
+              const frames=await recordPNGSequence(batch[j],exportBrand,ratio,frac=>{
+                setPhase(`${ratio} — ${gLabel} frame ${Math.round(frac*100)}%…`);
+              });
+              for(const f of frames) folder.file(f.name,f.blob);
+            }catch(e){
+              console.error("PNG seq failed for",gLabel,e);
+              setPhase(`${ratio} — ${gLabel} FAILED: ${e.message}`);
+              await new Promise(r=>setTimeout(r,500));
+            }
+            tick(done+1);
           }
-          tick(done+1);
+          // Yield to browser between batches — allows GC to reclaim memory
+          await new Promise(r=>setTimeout(r,200));
         }
         // Add still PNGs at root level (XML references these)
         setPhase(`${ratio} — rendering still PNGs…`);
