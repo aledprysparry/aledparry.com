@@ -2853,29 +2853,37 @@ function ExportTab({project,brand,updateProject}){
           tick(done+1);
         }
         // Convert each PNG sequence to MOV with alpha (ffmpeg.wasm)
-        setPhase(`${ratio} — loading ffmpeg…`);
+        let ffmpegReady=false;
+        setPhase(`${ratio} — loading ffmpeg (first time ~30s)…`);
         try{
           await getFFmpeg();
-          const allFrameSets=[]; // store frames for MOV conversion
-          // Re-collect frames from each graphic (already rendered above)
-          // We stored them in zip folders, but ffmpeg needs raw blobs
-          // So we'll re-render — small perf cost but cleaner than caching
-        }catch(e){console.warn("ffmpeg load failed, skipping MOV:",e);}
+          ffmpegReady=true;
+          setPhase(`${ratio} — ffmpeg ready ✓`);
+        }catch(e){
+          console.error("ffmpeg.wasm load failed:",e);
+          setPhase(`${ratio} — ffmpeg failed: ${e.message} (MOVs skipped, PNG sequences still included)`);
+          await new Promise(r=>setTimeout(r,2000)); // show error briefly
+        }
 
-        // Render MOVs from PNG sequences
-        setPhase(`${ratio} — converting to MOV…`);
-        for(let i=0;i<selectedGfx.length;i++){
-          const gLabel=selectedGfx[i].label||selectedGfx[i].template;
-          const movName=`${rp}_${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.mov`;
-          setPhase(`${ratio} — ${gLabel} → MOV…`);
-          try{
-            const frames=await recordPNGSequence(selectedGfx[i],exportBrand,ratio);
-            const movBlob=await pngSeqToMov(frames,25,pct=>{
-              setProg(p=>({...p,pct:(done+pct)/totalSteps}));
-            });
-            zip.file(movName,movBlob);
-          }catch(e){console.warn("MOV conversion failed for",gLabel,e);}
-          tick(done+1);
+        // Render MOVs from PNG sequences (only if ffmpeg loaded)
+        if(ffmpegReady){
+          for(let i=0;i<selectedGfx.length;i++){
+            const gLabel=selectedGfx[i].label||selectedGfx[i].template;
+            const movName=`${rp}_${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.mov`;
+            setPhase(`${ratio} — ${gLabel} → MOV (${i+1}/${selectedGfx.length})…`);
+            try{
+              const frames=await recordPNGSequence(selectedGfx[i],exportBrand,ratio);
+              const movBlob=await pngSeqToMov(frames,25,pct=>{
+                setProg(p=>({...p,pct:(done+pct)/totalSteps}));
+              });
+              zip.file(movName,movBlob);
+            }catch(e){
+              console.error("MOV conversion failed for",gLabel,e);
+              setPhase(`${ratio} — MOV failed for ${gLabel}: ${e.message}`);
+              await new Promise(r=>setTimeout(r,1000));
+            }
+            tick(done+1);
+          }
         }
 
         // Also add still PNGs at root level (fallback for XML)
