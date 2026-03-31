@@ -2955,7 +2955,7 @@ function ExportTab({project,brand,updateProject}){
         dlText(gfxXml,`${pn}_${prefix}graphics_sequence.xml`);
         await new Promise(r=>setTimeout(r,500));
         const script=generatePremiereScript(selectedGfx,ratio,prefix,project.name);
-        dlText(script,`${pn}_${prefix}import_to_premiere.jsx`);
+        dlText(script,`${pn}_${prefix}PREMIERE_IMPORT_SCRIPT.jsx`);
       }
       // PNG Sequences (for Premiere Pro)
       if(gfxMode==="premiere"||gfxMode==="pngseq"){
@@ -3004,7 +3004,7 @@ function ExportTab({project,brand,updateProject}){
         const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
         zip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
         const script=generatePremiereScript(selectedGfx,ratio,prefix,project.name);
-        zip.file(`${pn}_${prefix}import_to_premiere.jsx`,script);
+        zip.file(`${pn}_${prefix}PREMIERE_IMPORT_SCRIPT.jsx`,script);
         const zipBlob=await zip.generateAsync({type:"blob",compression:"STORE"},meta=>{
           setProg(p=>({...p,pct:meta.percent/100}));
         });
