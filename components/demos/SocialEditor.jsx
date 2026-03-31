@@ -565,14 +565,25 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
   const fullscreen = tagged.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)==="fullscreen");
   const overlays = tagged.filter(g => (g.typeOverride||(TMPL[g.template]||{}).type)!=="fullscreen");
 
+  // Sort each track by timecode and trim durations to prevent overlap
+  const trimTrack = (track) => {
+    const sorted = [...track].sort((a,b) => tsToSec(a.timestamp) - tsToSec(b.timestamp));
+    return sorted.map((g, i) => {
+      const startSec = tsToSec(g.timestamp);
+      const maxDur = g.duration || 4;
+      // If next clip exists on same track, trim this clip to not overlap
+      const nextStart = i < sorted.length - 1 ? tsToSec(sorted[i+1].timestamp) : Infinity;
+      const trimmedDur = Math.min(maxDur, nextStart - startSec);
+      return { ...g, _trimmedDur: Math.max(0.5, trimmedDur) }; // min 0.5s
+    });
+  };
+
   const makeClip = (g, i, trackId) => {
     const sf = toF(tsToSec(g.timestamp));
-    const dur = toF(g.duration||4);
-    const idx = (g._origIdx!=null ? g._origIdx : i);
-    // MUST match the download filename: ${pn}_${prefix}01_label.png
+    const dur = toF(g._trimmedDur || g.duration || 4);
+    const idx = (g._origIdx != null ? g._origIdx : i);
     const fn = `${pn}_${prefix}${String(idx+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
     const fileId = `${trackId}_file_${i+1}`;
-    // Reference MOV file (PNG codec with alpha) — Premiere imports natively
     return `          <clipitem id="${trackId}_clip_${i+1}">
             <name>${fn}</name>
             <duration>${dur}</duration>
@@ -581,6 +592,7 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
             <end>${sf+dur}</end>
             <in>0</in>
             <out>${dur}</out>
+            <stillframe>TRUE</stillframe>
             <file id="${fileId}">
               <name>${fn}.png</name>
               <pathurl>${fn}.png</pathurl>
@@ -602,8 +614,8 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
           </clipitem>`;
   };
 
-  const fsClips = fullscreen.map((g,i) => makeClip(g,i,"fs")).join("\n");
-  const ovClips = overlays.map((g,i) => makeClip(g,i,"ov")).join("\n");
+  const fsClips = trimTrack(fullscreen).map((g,i) => makeClip(g,i,"fs")).join("\n");
+  const ovClips = trimTrack(overlays).map((g,i) => makeClip(g,i,"ov")).join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xmeml>
