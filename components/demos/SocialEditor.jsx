@@ -3092,8 +3092,8 @@ function ExportTab({project,brand,updateProject}){
         await dlBlob(compositeBlob,`${pn}_${prefix}all_graphics_composite.webm`);
         tick(done+1);
       }
-      // Premiere XML for graphics (always include with pngseq, composite, or webm)
-      if(gfxMode==="premiere"||gfxMode==="pngseq"||gfxMode==="composite"||gfxMode==="webm"||gfxMode==="both"){
+      // Premiere XML — only download separately for non-premiere modes (premiere mode has it in the zip)
+      if(gfxMode!=="premiere"&&gfxMode!=="pngseq"&&(gfxMode==="composite"||gfxMode==="webm"||gfxMode==="both")){
         const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
         dlText(gfxXml,`${pn}_${prefix}graphics_sequence.xml`);
       }
