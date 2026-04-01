@@ -2202,19 +2202,6 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const [progress,setProgress]=useState("");
   const [error,setError]=useState("");
   const [showAdd,setShowAdd]=useState(false);
-
-  // Keyboard shortcuts
-  useEffect(()=>{
-    const handler=(e)=>{
-      const tag=e.target.tagName;
-      if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
-      if(e.key==="Escape"&&editingIdx!==null){e.preventDefault();setEditingIdx(null);}
-      if(e.key==="ArrowLeft"&&editingIdx!==null){e.preventDefault();setEditingIdx(Math.max(0,editingIdx-1));}
-      if(e.key==="ArrowRight"&&editingIdx!==null){e.preventDefault();setEditingIdx(Math.min(graphics.length-1,editingIdx+1));}
-    };
-    window.addEventListener("keydown",handler);
-    return()=>window.removeEventListener("keydown",handler);
-  },[editingIdx,graphics.length]);
   const [filterTpl,setFilterTpl]=useState("");
   const [showSafeZones,setShowSafeZones]=useState(false);
   const [showMoreActions,setShowMoreActions]=useState(false);
@@ -2334,6 +2321,19 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   };
 
   const [editingIdx,setEditingIdx]=useState(null);
+
+  // Keyboard shortcuts (must be after editingIdx declaration)
+  useEffect(()=>{
+    const handler=(e)=>{
+      const tag=e.target.tagName;
+      if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+      if(e.key==="Escape"&&editingIdx!==null){e.preventDefault();setEditingIdx(null);}
+      if(e.key==="ArrowLeft"&&editingIdx!==null){e.preventDefault();setEditingIdx(Math.max(0,editingIdx-1));}
+      if(e.key==="ArrowRight"&&editingIdx!==null){e.preventDefault();setEditingIdx(Math.min(graphics.length-1,editingIdx+1));}
+    };
+    window.addEventListener("keydown",handler);
+    return()=>window.removeEventListener("keydown",handler);
+  },[editingIdx,graphics.length]);
   const [dragIdx,setDragIdx]=useState(null);
   const [dragOverIdx,setDragOverIdx]=useState(null);
   const handleDrop=(fromIdx,toIdx)=>{
