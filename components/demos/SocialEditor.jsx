@@ -4870,9 +4870,20 @@ function App(){
 
   // ── Server sync: load on mount (projects + templates only, NOT brands — preset is source of truth) ──
   useEffect(()=>{
-    // Per-project sync replaces the old all-at-once load
-    // Projects are saved individually now — no bulk load on mount
-    // Brands always come from local preset (BRAND_VERSION controls reseeding)
+    // Load brands from server and merge with presets (preset fills missing fields)
+    fetch("/api/studio?brands").then(r=>r.json()).then(d=>{
+      if(d.brands?.length){
+        const presets=Object.values(BRAND_PRESETS).map(p=>({...DEFAULT_BRAND,...p}));
+        // Merge: server data wins for user-editable fields, preset fills everything else
+        const merged=d.brands.map(sb=>{
+          const preset=presets.find(p=>p.name===sb.name)||DEFAULT_BRAND;
+          return{...DEFAULT_BRAND,...preset,...sb};
+        });
+        // Add any presets not on server
+        presets.forEach(p=>{if(!merged.find(m=>m.name===p.name))merged.push(p);});
+        if(merged.length>0){setBrands(merged);save(BS,merged);}
+      }
+    }).catch(()=>{});
   },[]);
 
   // ── Per-project server sync — saves only the active project, small payload ──
@@ -4895,7 +4906,20 @@ function App(){
   // Keep full sync for manual snapshots only
   const syncToServer=useCallback(()=>{},[]);
 
-  useEffect(()=>{save(BS,brands);},[brands]);
+  useEffect(()=>{
+    save(BS,brands);
+    // Sync each brand to server
+    brands.forEach(b=>{
+      if(!b.id) return;
+      const light={...b};
+      // Strip base64 logos if present (keep URL logos)
+      if(light.logoDataUrl&&light.logoDataUrl.startsWith("data:")) delete light.logoDataUrl;
+      if(light.logoDataUrlLight&&light.logoDataUrlLight.startsWith("data:")) delete light.logoDataUrlLight;
+      fetch(`/api/studio?brand=${b.id}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(light)})
+        .then(r=>{if(r.ok)console.log("[Sync] Brand saved:",b.name);})
+        .catch(()=>{});
+    });
+  },[brands]);
   useEffect(()=>{
     save(PS,projects);
     // Per-project sync — only save the active project

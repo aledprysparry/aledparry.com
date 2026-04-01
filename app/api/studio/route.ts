@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 const LATEST_PREFIX = "studio/latest/";
 const SNAPSHOT_PREFIX = "studio/snapshots/";
 const PROJECT_PREFIX = "studio/projects/";
+const BRAND_PREFIX = "studio/brands/";
 
 async function fetchBlob(blobUrl: string): Promise<string | null> {
   try {
@@ -58,6 +59,21 @@ export async function GET(req: Request) {
     }
   }
 
+  // Load all saved brands
+  if (url.searchParams.has("brands")) {
+    try {
+      const { blobs } = await list({ prefix: BRAND_PREFIX });
+      const brands = [];
+      for (const b of blobs) {
+        const content = await fetchBlob(b.url);
+        if (content) brands.push(JSON.parse(content));
+      }
+      return NextResponse.json({ brands });
+    } catch {
+      return NextResponse.json({ brands: [] });
+    }
+  }
+
   // Load a specific project by ID
   if (url.searchParams.has("project")) {
     try {
@@ -107,6 +123,17 @@ export async function POST(req: Request) {
     const reqUrl = new URL(req.url);
     const projectId = reqUrl.searchParams.get("project");
     const snapshotName = reqUrl.searchParams.get("snapshot");
+
+    // Per-brand save
+    const brandId = reqUrl.searchParams.get("brand");
+    if (brandId) {
+      const body = await req.json();
+      const json = JSON.stringify(body);
+      const { blobs } = await list({ prefix: BRAND_PREFIX + brandId + "/" });
+      if (blobs.length > 0) await del(blobs.map((b) => b.url));
+      await put(BRAND_PREFIX + brandId + "/data.json", json, { access: "private" });
+      return NextResponse.json({ ok: true, size: json.length });
+    }
 
     // Per-project save — small, fast, no 413 risk
     if (projectId) {
