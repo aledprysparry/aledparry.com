@@ -10,17 +10,16 @@ import { fetchFile } from "@ffmpeg/util";
 //  GLOBAL STYLES — CSS hover/active/reduced-motion (injected once)
 // ═══════════════════════════════════════════════════════════════
 const GLOBAL_STYLES = `
-  .is-btn { transition: all 120ms cubic-bezier(0.16,1,0.3,1); }
-  .is-btn:hover { filter: brightness(1.15); }
-  .is-btn:active { transform: scale(0.97); transition-duration: 0ms; }
-  .is-card { transition: transform 200ms cubic-bezier(0.16,1,0.3,1), box-shadow 200ms cubic-bezier(0.16,1,0.3,1), border-color 120ms cubic-bezier(0.16,1,0.3,1); }
-  .is-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.15) !important; }
-  .is-card:active { transform: translateY(0); transition-duration: 0ms; }
-  .is-input { transition: border-color 120ms cubic-bezier(0.16,1,0.3,1), box-shadow 120ms cubic-bezier(0.16,1,0.3,1); }
-  .is-input:focus { border-color: rgba(42,157,143,0.5) !important; box-shadow: 0 0 0 3px rgba(42,157,143,0.12); }
-  .is-tab { transition: all 200ms cubic-bezier(0.16,1,0.3,1); position: relative; }
-  .is-tab::after { content: ""; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px; background: #2A9D8F; border-radius: 1px; transition: all 200ms cubic-bezier(0.16,1,0.3,1); transform: translateX(-50%); }
-  .is-tab[data-active="true"]::after { width: 70%; }
+  /* Auto-apply to ALL buttons and inputs inside the app container */
+  [data-app="social-editor"] button { transition: all 120ms cubic-bezier(0.16,1,0.3,1); will-change: transform; }
+  [data-app="social-editor"] button:hover { filter: brightness(1.12); }
+  [data-app="social-editor"] button:active { transform: scale(0.97); transition-duration: 0ms; }
+  [data-app="social-editor"] input, [data-app="social-editor"] textarea, [data-app="social-editor"] select {
+    transition: border-color 120ms cubic-bezier(0.16,1,0.3,1), box-shadow 120ms cubic-bezier(0.16,1,0.3,1);
+  }
+  [data-app="social-editor"] input:focus, [data-app="social-editor"] textarea:focus, [data-app="social-editor"] select:focus {
+    border-color: rgba(42,157,143,0.5) !important; box-shadow: 0 0 0 3px rgba(42,157,143,0.12); outline: none;
+  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
@@ -1507,11 +1506,10 @@ async function recordPNGSequence(g,brand,ratio,onProgress){
   await document.fonts.ready;
   const r=ratio||"16:9";
   const AR=RATIOS[r]||RATIOS["16:9"];
-  console.log(`[PNG Seq] ${g.label||g.template} ratio=${r} → ${AR.W}x${AR.H}`);
   const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-  // 4s at 25fps = 100 frames (1s entrance + 3s hold/drift)
-  // Batched processing prevents memory exhaustion
-  const dur=Math.max(4,g.duration||4);
+  // 2s at 25fps = 50 frames (1s entrance + 1s hold/drift)
+  // Shorter duration halves memory while keeping full animation
+  const dur=2; // fixed 2s — editor can loop/extend in Premiere
   const fps=25;
   const totalFrames=Math.round(dur*fps);
   const animFrames=fps; // entrance over 1s
@@ -2389,7 +2387,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           <button style={{background:brand.colorAccent,border:"none",borderRadius:11,padding:"14px 36px",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}} onClick={analyse}>🔍 Analyse Script</button>
           <button style={{background:"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.5)",borderRadius:11,padding:"14px 24px",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>{setGStep("review");setShowAdd(true);}}>+ Add Manually</button>
         </div>
-        {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{setGraphics([g]);setSelected(new Set([0]));setGStep("review");}} onClose={()=>setShowAdd(false)}/>}
+        {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{setGraphics([g]);setGStep("review");}} onClose={()=>setShowAdd(false)}/>}
         </>}
     </div>
   );
@@ -4695,7 +4693,7 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
   const inp=inputS();
   const sm=btn();
   return(
-    <div style={{fontFamily:DS.font,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary}}>
+    <div data-app="social-editor" style={{fontFamily:DS.font,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary}}>
       {confirmDialog&&<ConfirmDialog message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={closeConfirm}/>}
       {/* Header */}
       <div style={{background:"linear-gradient(135deg, #0d1926 0%, #132438 100%)",padding:`${DS.lg}px ${DS.xl+4}px`,display:"flex",alignItems:"center",gap:DS.lg,borderBottom:`2px solid ${DS.accent}22`}}>
