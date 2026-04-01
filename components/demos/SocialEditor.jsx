@@ -100,7 +100,8 @@ const cx = (...classes) => classes.filter(Boolean).join(" ");
 const btnCta = (o) => btn({
   background: DS.accent, border: `1px solid ${DS.accentLight}`,
   color: "#fff", padding: "12px 28px", fontSize: DS.fsLg, fontWeight: 700,
-  borderRadius: DS.rMd, letterSpacing: "0.02em", ...o,
+  borderRadius: DS.rMd, letterSpacing: "0.02em",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.25)", ...o,
 });
 // Positive action (save, confirm)
 const btnPositive = (o) => btn({ background: DS.positive, border: `1px solid ${DS.positiveBorder}`, ...o });
@@ -132,10 +133,10 @@ const label = (overrides) => ({
   ...overrides,
 });
 
-// Section heading
+// Section heading — upgraded visibility
 const sectionHead = (overrides) => ({
-  fontWeight: 700, fontSize: 10, color: DS.textMuted,
-  letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: DS.md,
+  fontWeight: 700, fontSize: 11, color: DS.textSecondary,
+  letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: DS.md,
   ...overrides,
 });
 
@@ -2203,6 +2204,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const [showAdd,setShowAdd]=useState(false);
   const [filterTpl,setFilterTpl]=useState("");
   const [showSafeZones,setShowSafeZones]=useState(false);
+  const [showMoreActions,setShowMoreActions]=useState(false);
   const cvs=useRef(document.createElement("canvas"));
 
   const graphics=project.graphics;
@@ -2427,37 +2429,33 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           </div>
         </div>
       )}
-      {/* Filter + sort bar */}
-      <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
+      {/* PRIMARY TOOLBAR — 4 actions + count */}
+      <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
+        <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
+        <button style={sm} onClick={previewAll} title="Preview all graphics">👁 Preview</button>
+        <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export</button>
+        <button style={{...sm,background:showMoreActions?"rgba(255,255,255,0.1)":"transparent"}} onClick={()=>setShowMoreActions(v=>!v)} title="More actions">⋯ {showMoreActions?"Less":"More"}</button>
+        <span style={{fontSize:11,color:DS.textMuted,marginLeft:"auto"}}>{graphics.length} graphics{filterTpl?` (${filteredGraphics.length} shown)`:""}</span>
+      </div>
+      {/* SECONDARY TOOLBAR — collapsed by default */}
+      {showMoreActions&&(
+      <div style={{display:"flex",gap:6,marginBottom:10,alignItems:"center",flexWrap:"wrap",padding:`${DS.sm}px ${DS.md}px`,background:"rgba(255,255,255,0.02)",borderRadius:DS.rSm,border:`1px solid ${DS.borderSubtle}`}}>
         <select value={filterTpl} onChange={e=>setFilterTpl(e.target.value)}
           style={{background:DS.bgButton,border:`1px solid ${DS.borderSubtle}`,borderRadius:DS.rSm,padding:"5px 8px",color:DS.textSecondary,fontSize:11,fontFamily:"inherit",outline:"none"}}>
           <option value="">All templates</option>
           {Object.entries(TMPL).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
         </select>
-        <button style={sm} onClick={()=>{const sorted=[...graphics].sort((a,b)=>{const ta=a.timestamp||"",tb=b.timestamp||"";return ta.localeCompare(tb);});setGraphics(sorted);}} title="Sort by timecode">⏱ Sort</button>
-        <span style={{fontSize:11,color:DS.textMuted}}>{filterTpl?filteredGraphics.length+" / ":""}{graphics.length} graphics</span>
-      </div>
-      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
         <button style={sm} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))} title="Select all">All</button>
         <button style={sm} onClick={()=>setSelected(()=>new Set())} title="Deselect all">None</button>
-        <button style={{...sm,marginLeft:"auto",background:showSafeZones?"rgba(251,135,112,0.2)":"transparent",border:showSafeZones?"1px solid rgba(251,135,112,0.4)":"1px solid rgba(255,255,255,0.1)"}} onClick={()=>setShowSafeZones(v=>!v)} title="Toggle safe zone overlay">📐 {showSafeZones?"Safe ON":"Safe"}</button>
-        <button style={sm} onClick={previewAll} title="Preview all graphics">👁 Preview All</button>
-        <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export Selected</button>
-        <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
-        <button style={btnDanger({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Clear all and re-analyse">↺ Re-analyse</button>
-        <button style={{...sm,color:DS.salmon}} onClick={()=>{
-          // Remove duplicates by label — keep the LAST occurrence (most recently added/edited)
-          const seen=new Map();
-          graphics.forEach((g,i)=>{const key=g.label||`${g.template}_${g.timestamp}`;seen.set(key,i);});
-          const keep=[...seen.values()].sort((a,b)=>a-b);
-          const deduped=keep.map(i=>graphics[i]);
-          if(deduped.length<graphics.length){
-            setGraphics(deduped);
-            setSelected(new Set(deduped.map((_,i)=>i)));
-          }
-        }} title="Remove duplicate graphics (keeps latest)">🧹 Dedup ({graphics.length})</button>
-        <button style={{...sm,color:DS.textMuted}} onClick={()=>{if(confirm(`Clear all ${graphics.length} graphics? (SRT kept)`)){setGraphics([]);setGStep("review");}}} title="Clear graphics list without re-analysing">🗑 Clear list</button>
-        <select style={{...inputS({width:"auto",padding:"6px 10px",fontSize:11}),background:"#FB8770",color:"#fff",fontWeight:700,borderColor:"#FB8770",cursor:"pointer"}} onChange={e=>{
+        <button style={{...sm,background:showSafeZones?"rgba(251,135,112,0.2)":"transparent"}} onClick={()=>setShowSafeZones(v=>!v)} title="Toggle safe zone overlay">📐 Safe</button>
+        <button style={sm} onClick={()=>{
+          const seen=new Map();graphics.forEach((g,i)=>{const key=g.label||`${g.template}_${g.timestamp}`;seen.set(key,i);});
+          const keep=[...seen.values()].sort((a,b)=>a-b);const deduped=keep.map(i=>graphics[i]);
+          if(deduped.length<graphics.length){setGraphics(deduped);setSelected(new Set(deduped.map((_,i)=>i)));}
+        }} title="Remove duplicates">🧹 Dedup</button>
+        <button style={{...sm,color:DS.textMuted}} onClick={()=>{if(confirm(`Clear all ${graphics.length} graphics?`)){setGraphics([]);setGStep("review");}}} title="Clear list (keeps SRT)">🗑 Clear</button>
+        <button style={btnDanger({padding:"5px 10px",fontSize:10})} onClick={()=>{setGraphics([]);setGStep("idle");}} title="Re-analyse from scratch">↺ Re-analyse</button>
+        <select style={{...inputS({width:"auto",padding:"5px 8px",fontSize:10}),background:"#FB8770",color:"#fff",fontWeight:700,borderColor:"#FB8770",cursor:"pointer"}} onChange={e=>{
           const ver=e.target.value;e.target.value="";if(!ver)return;
           const n=Date.now();
           const VERSIONS={
@@ -2482,16 +2480,15 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
               {id:n+18,timestamp:"00:03:30",duration:8,type:"fullscreen",template:"endboard",content:{headline:"Thanks for watching",body:"Like and subscribe for more",handle:"@cpshomes",website:"cpshomes.co.uk",style:"logo"},label:"endboard"},
             ],
           };
-          const add=VERSIONS[ver];
-          if(!add){alert("Unknown version: "+ver);return;}
-          const ng=[...graphics,...add];
-          setGraphics(ng);
+          const add=VERSIONS[ver];if(!add)return;
+          const ng=[...graphics,...add];setGraphics(ng);
           setSelected(s=>{const ns=new Set(s);add.forEach((_,i)=>ns.add(graphics.length+i));return ns;});
-        }} title="Load client feedback graphics">
-          <option value="">+ Client feedback…</option>
-          <option value="v2">v2 — Nikki's notes (18 graphics)</option>
+        }} title="Load client feedback">
+          <option value="">+ Client…</option>
+          <option value="v2">v2 — Nikki (18)</option>
         </select>
       </div>
+      )}
       {showAdd&&<AddGraphicModal brand={brand} onAdd={g=>{const ng=[...graphics,g];setGraphics(ng);setSelected(s=>{const n=new Set(s);n.add(ng.length-1);return n;});}} onClose={()=>setShowAdd(false)}/>}
       <div style={{position:"relative"}}>
         {/* Graphics list */}
