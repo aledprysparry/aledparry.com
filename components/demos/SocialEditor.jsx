@@ -4870,40 +4870,38 @@ function App(){
 
   // ── Server sync: load on mount (projects + templates only, NOT brands — preset is source of truth) ──
   useEffect(()=>{
-    fetch("/api/studio").then(r=>{if(!r.ok)throw r;return r.json();}).then(d=>{
-      if(d.projects?.length){setProjects(d.projects);save(PS,d.projects);}
-      if(d.templates?.length) save(TMPL_STORE,d.templates);
-    }).catch(()=>{});
+    // Per-project sync replaces the old all-at-once load
+    // Projects are saved individually now — no bulk load on mount
+    // Brands always come from local preset (BRAND_VERSION controls reseeding)
   },[]);
 
-  // ── Server sync: debounced save (stops retrying on 413/error) ──
+  // ── Per-project server sync — saves only the active project, small payload ──
   const syncRetries=useRef(0);
-  const syncToServer=useCallback((b,p)=>{
-    if(syncRetries.current>5) return; // stop after 5 failures
+  const syncProject=useCallback((proj)=>{
+    if(!proj||syncRetries.current>5) return;
     if(syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(()=>{
-      const templates=load(TMPL_STORE);
-      // Strip heavy data: previews (base64), videoUrl (blob), posters previews
-      const lightP=p.map(pr=>({...pr,previews:{},videoUrl:null,videoName:null}));
-      // Keep brand data intact — logos are URLs not base64, so they're small
-      const lightB=b;
-      const payload=JSON.stringify({brands:lightB,projects:lightP,templates});
-      // Check size before sending — skip if over 4MB
-      if(payload.length>4*1024*1024){
-        console.warn("[Sync] Payload too large:",Math.round(payload.length/1024)+"KB — skipping");
-        return;
-      }
-      fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},body:payload})
+      const light={...proj,previews:{},videoUrl:null,videoName:null};
+      const payload=JSON.stringify(light);
+      if(payload.length>2*1024*1024){console.warn("[Sync] Project too large — skipping");return;}
+      fetch(`/api/studio?project=${proj.id}`,{method:"POST",headers:{"Content-Type":"application/json"},body:payload})
         .then(r=>{
-          if(r.ok){syncRetries.current=0;console.log("[Sync] Saved",Math.round(payload.length/1024)+"KB");}
+          if(r.ok){syncRetries.current=0;console.log("[Sync] Saved project:",proj.name,Math.round(payload.length/1024)+"KB");}
           else{syncRetries.current++;console.warn("[Sync] Failed:",r.status);}
         })
         .catch(e=>{syncRetries.current++;console.warn("[Sync] Error:",e.message);});
     },2000);
   },[]);
+  // Keep full sync for manual snapshots only
+  const syncToServer=useCallback(()=>{},[]);
 
-  useEffect(()=>{save(BS,brands);syncToServer(brands,projects);},[brands]);
-  useEffect(()=>{save(PS,projects);syncToServer(brands,projects);},[projects]);
+  useEffect(()=>{save(BS,brands);},[brands]);
+  useEffect(()=>{
+    save(PS,projects);
+    // Per-project sync — only save the active project
+    const active=projects.find(p=>p.id===activeProjectId);
+    if(active) syncProject(active);
+  },[projects]);
 
   useEffect(()=>{ brands.forEach(b=>{ loadFont(b.fontFamily); if(b.fontSerif) loadFont(b.fontSerif); }); },[brands]);
 

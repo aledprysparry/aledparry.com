@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 const LATEST_PREFIX = "studio/latest/";
 const SNAPSHOT_PREFIX = "studio/snapshots/";
+const PROJECT_PREFIX = "studio/projects/";
 
 async function fetchBlob(blobUrl: string): Promise<string | null> {
   try {
@@ -57,6 +58,35 @@ export async function GET(req: Request) {
     }
   }
 
+  // Load a specific project by ID
+  if (url.searchParams.has("project")) {
+    try {
+      const projectId = url.searchParams.get("project")!;
+      const { blobs } = await list({ prefix: PROJECT_PREFIX + projectId + "/" });
+      if (!blobs.length) return NextResponse.json({ project: null });
+      const content = await fetchBlob(blobs[blobs.length - 1].url);
+      if (!content) return NextResponse.json({ project: null });
+      return NextResponse.json({ project: JSON.parse(content) });
+    } catch {
+      return NextResponse.json({ project: null });
+    }
+  }
+
+  // List all saved projects (metadata only)
+  if (url.searchParams.has("projects")) {
+    try {
+      const { blobs } = await list({ prefix: PROJECT_PREFIX });
+      const projects = blobs.map((b) => ({
+        pathname: b.pathname,
+        uploadedAt: b.uploadedAt,
+        size: b.size,
+      }));
+      return NextResponse.json({ projects });
+    } catch {
+      return NextResponse.json({ projects: [] });
+    }
+  }
+
   // Default: return latest
   try {
     const raw = await getLatest();
@@ -69,12 +99,26 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/studio — auto-save (overwrites latest)
+// POST /api/studio?project=ID — save a single project (small payload)
+// POST /api/studio — auto-save all (overwrites latest)
 // POST /api/studio?snapshot=Name — save as named snapshot + update latest
 export async function POST(req: Request) {
   try {
     const reqUrl = new URL(req.url);
+    const projectId = reqUrl.searchParams.get("project");
     const snapshotName = reqUrl.searchParams.get("snapshot");
+
+    // Per-project save — small, fast, no 413 risk
+    if (projectId) {
+      const body = await req.json();
+      const json = JSON.stringify(body);
+      // Delete old version of this project
+      const { blobs } = await list({ prefix: PROJECT_PREFIX + projectId + "/" });
+      if (blobs.length > 0) await del(blobs.map((b) => b.url));
+      // Save new version
+      await put(PROJECT_PREFIX + projectId + "/data.json", json, { access: "private" });
+      return NextResponse.json({ ok: true, size: json.length });
+    }
 
     const body = await req.json();
     const data = {
