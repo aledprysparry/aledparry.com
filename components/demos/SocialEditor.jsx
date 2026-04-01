@@ -2214,7 +2214,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const setGraphics=gs=>{
     // Auto-sort by timecode so graphics always appear in video order
     const sorted=[...gs].sort((a,b)=>(a.timestamp||"").localeCompare(b.timestamp||""));
-    updateProject({graphics:sorted,selected:sorted.map((_,i)=>i),previews:{}});
+    updateProject({graphics:sorted,selected:[...sorted.keys()],previews:{}});
   };
   const setSelected=fn=>{const n=fn(selected);updateProject({selected:[...n]});};
   const setPreviews=fn=>updateProject(prev=>({previews:typeof fn==="function"?fn(prev.previews||{}):fn}));
@@ -2223,7 +2223,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setGStep("analysing");setError("");
     try{
       const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
-      const raw=await callAI({system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}],max_tokens:4500});
+      const raw=await callAI({system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}],max_tokens:8000});
       const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
       // Enrich each graphic with per-segment prompt and template hint
       const subs=project.subtitles||[];
