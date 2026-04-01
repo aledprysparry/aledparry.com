@@ -3007,22 +3007,31 @@ function ExportTab({project,brand,updateProject}){
       }
       // PNG Sequences (for Premiere Pro)
       if(gfxMode==="premiere"||gfxMode==="pngseq"){
-        setPhase(`${ratio} — rendering PNG sequences…`);
         const zip=new JSZip();
-        // Helper: render a drawFn as PNG sequence into a zip folder
-        const renderAssetSeq=async(drawFn,folderName,dur=4)=>{
-          const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
-          const c=document.createElement("canvas");c.width=AR.W;c.height=AR.H;
-          const fps=25;const total=Math.round(dur*fps);
-          const folder=zip.folder(folderName);
-          for(let f=0;f<total;f++){
-            drawFn(c,exportBrand,ratio,f/fps);
-            const bc=addBleed(c,10);
-            const blob=await new Promise(r=>bc.toBlob(r,"image/png"));
-            folder.file(`frame_${String(f).padStart(4,"0")}.png`,blob);
-          }
-        };
         const rp=ratio.replace(":","x");
+
+        // STEP 1: Stills at root level FIRST (XML references these, always needed)
+        setPhase(`${ratio} — rendering stills…`);
+        await document.fonts.ready;
+        for(let i=0;i<selectedGfx.length;i++){
+          const gLabel=selectedGfx[i].label||selectedGfx[i].template;
+          const stillName=`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.png`;
+          const c=document.createElement("canvas");
+          drawGraphic(c,selectedGfx[i],exportBrand,ratio,1);
+          const bc=addBleed(c,10);
+          const blob=await new Promise(r=>bc.toBlob(r,"image/png"));
+          zip.file(stillName,blob);
+          setPhase(`${ratio} — still ${i+1}/${selectedGfx.length}…`);
+        }
+
+        // STEP 2: XML + script (add now so zip has them even if sequences fail)
+        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
+        zip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
+        const script=generatePremiereScript(selectedGfx,ratio,prefix,project.name);
+        zip.file(`${pn}_${prefix}PREMIERE_IMPORT_SCRIPT.jsx`,script);
+
+        // STEP 3: PNG sequences (can crash on large exports — stills + XML already safe)
+        setPhase(`${ratio} — rendering sequences…`);
         // Process in batches of 5 to avoid memory exhaustion
         const BATCH=5;
         for(let b=0;b<selectedGfx.length;b+=BATCH){
@@ -3049,23 +3058,8 @@ function ExportTab({project,brand,updateProject}){
           // Yield to browser between batches — allows GC to reclaim memory
           await new Promise(r=>setTimeout(r,200));
         }
-        // Add still PNGs at root level (XML references these)
-        setPhase(`${ratio} — rendering still PNGs…`);
-        for(let i=0;i<selectedGfx.length;i++){
-          const gLabel=selectedGfx[i].label||selectedGfx[i].template;
-          const stillName=`${pn}_${rp}_${String(i+1).padStart(2,"0")}_${(gLabel).replace(/[^a-z0-9_-]/gi,"_")}.png`;
-          const c=document.createElement("canvas");
-          drawGraphic(c,selectedGfx[i],exportBrand,ratio,1);
-          const bc=addBleed(c,10);
-          const blob=await new Promise(r=>bc.toBlob(r,"image/png"));
-          zip.file(stillName,blob);
-        }
-        // Add Premiere XML (references MOV files)
-        setPhase(`${ratio} — building XML + script…`);
-        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
-        zip.file(`${pn}_${prefix}graphics_sequence.xml`,gfxXml);
-        const script=generatePremiereScript(selectedGfx,ratio,prefix,project.name);
-        zip.file(`${pn}_${prefix}PREMIERE_IMPORT_SCRIPT.jsx`,script);
+        // Stills + XML + script already added in STEP 1 + 2 above
+        setPhase(`${ratio} — zipping…`);
         const zipBlob=await zip.generateAsync({type:"blob",compression:"STORE"},meta=>{
           setProg(p=>({...p,pct:meta.percent/100}));
         });
