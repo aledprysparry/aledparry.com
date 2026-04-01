@@ -2976,8 +2976,66 @@ export default function GuessThePrice({ displayMode = false }) {
               <input style={inputS({ width: "100%" })} value={rd.addedDate || ""} placeholder="DD/MM/YYYY" onChange={e => updateRoundField("addedDate", e.target.value)} />
             </div>
           </div>
-          <div style={{ ...label(), marginTop: DS.sm }}>Rightmove URL</div>
-          <input style={inputS()} value={rd.rightmoveUrl || ""} placeholder="https://www.rightmove.co.uk/…" onChange={e => updateRoundField("rightmoveUrl", e.target.value)} />
+          <div style={{ ...label(), marginTop: DS.sm }}>Property URL</div>
+          <div style={{ display: "flex", gap: DS.xs }}>
+            <input style={inputS({ flex: 1 })} value={rd.rightmoveUrl || ""} placeholder="Rightmove or Zoopla URL…" onChange={e => updateRoundField("rightmoveUrl", e.target.value)} />
+            <button onClick={async () => {
+              const propUrl = rd.rightmoveUrl;
+              if (!propUrl) return;
+              setSaveStatus("Fetching property…");
+              try {
+                const res = await fetch("/api/gtp/scrape", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: propUrl }) });
+                const data = await res.json();
+                if (!data.success) { setSaveStatus(data.error || "Fetch failed"); setTimeout(() => setSaveStatus(""), 3000); return; }
+                const p = data.property;
+                // Populate round fields
+                if (p.address) { updateRoundField("address", p.address); updateS("propAddress", p.address); }
+                if (p.location) { updateRoundField("location", p.location); updateS("optionLocation", p.location); }
+                if (p.beds) { updateRoundField("beds", p.beds); updateS("propBeds", p.beds); }
+                if (p.type) { updateRoundField("type", p.type); updateS("propType", p.type); }
+                if (p.tenure) { updateRoundField("tenure", p.tenure); updateS("propTenure", p.tenure); }
+                if (p.addedDate) { updateRoundField("addedDate", p.addedDate); updateS("propAddedDate", p.addedDate); }
+                // Download and upload photos
+                if (p.photos && p.photos.length > 0) {
+                  setSaveStatus(`Downloading ${p.photos.length} photos…`);
+                  const roundIdx = currentRound;
+                  for (let pi = 0; pi < p.photos.length; pi++) {
+                    try {
+                      setSaveStatus(`Photo ${pi + 1}/${p.photos.length}…`);
+                      const imgRes = await fetch(p.photos[pi]);
+                      const imgBlob = await imgRes.blob();
+                      const form = new FormData();
+                      form.append("photo", imgBlob, "photo.jpg");
+                      form.append("episodeId", String(activeEpisodeId));
+                      form.append("round", String(roundIdx));
+                      form.append("index", String(Date.now()));
+                      const upRes = await fetch("/api/gtp/photo", { method: "POST", body: form });
+                      const upData = await upRes.json();
+                      if (upData.url) {
+                        setEpisodes(prev => prev.map(ep => {
+                          if (ep.id !== activeEpisodeId) return ep;
+                          const rounds = [...ep.rounds];
+                          if (rounds[roundIdx]) {
+                            rounds[roundIdx] = { ...rounds[roundIdx], photos: [...(rounds[roundIdx].photos || []), upData.url] };
+                          }
+                          return { ...ep, rounds };
+                        }));
+                        setDirty(true);
+                        getCachedImage(upData.url);
+                      }
+                    } catch {}
+                  }
+                }
+                setSaveStatus(`Property loaded ✓`);
+                setTimeout(() => setSaveStatus(""), 3000);
+              } catch (err) {
+                setSaveStatus("Fetch failed");
+                setTimeout(() => setSaveStatus(""), 3000);
+              }
+            }} style={btn({ padding: "6px 12px", fontSize: DS.fsXs, whiteSpace: "nowrap", background: GAME.gold, color: GAME.navy, border: "none", fontWeight: 700 })}>
+              Fetch
+            </button>
+          </div>
 
           <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>PHOTOS ({(rd.photos || []).length})</div>
           {/* Compact upload + manage button */}
