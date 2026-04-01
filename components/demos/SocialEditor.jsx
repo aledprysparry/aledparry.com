@@ -2202,6 +2202,19 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const [progress,setProgress]=useState("");
   const [error,setError]=useState("");
   const [showAdd,setShowAdd]=useState(false);
+
+  // Keyboard shortcuts
+  useEffect(()=>{
+    const handler=(e)=>{
+      const tag=e.target.tagName;
+      if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+      if(e.key==="Escape"&&editingIdx!==null){e.preventDefault();setEditingIdx(null);}
+      if(e.key==="ArrowLeft"&&editingIdx!==null){e.preventDefault();setEditingIdx(Math.max(0,editingIdx-1));}
+      if(e.key==="ArrowRight"&&editingIdx!==null){e.preventDefault();setEditingIdx(Math.min(graphics.length-1,editingIdx+1));}
+    };
+    window.addEventListener("keydown",handler);
+    return()=>window.removeEventListener("keydown",handler);
+  },[editingIdx,graphics.length]);
   const [filterTpl,setFilterTpl]=useState("");
   const [showSafeZones,setShowSafeZones]=useState(false);
   const [showMoreActions,setShowMoreActions]=useState(false);
@@ -2524,22 +2537,35 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
             );
           })}
         </div>
-        {/* Floating edit panel — overlays to the right */}
-        {editingG&&(
-          <div style={{position:"fixed",top:140,right:DS.xl,width:420,maxHeight:"calc(100vh - 180px)",overflowY:"auto",zIndex:100,boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
-            <SegmentEditPanel
-              key={editingIdx}
-              g={editingG} index={editingIdx} brand={brand}
-              previewSrc={previews[editingIdx]}
-              onRefreshPreview={()=>{const g=project.graphics[editingIdx];if(g)doPreview(g,editingIdx);}}
-              onRegenerate={(prompt,tplHint)=>regenerateSegment(editingIdx,prompt,tplHint)}
-              onUpdateContent={(changes,meta)=>updateGraphicContent(editingIdx,changes,meta)}
-              onUpdateMeta={(changes)=>updateGraphicMeta(editingIdx,changes)}
-              regenLoading={regenLoading}
-              onClose={()=>setEditingIdx(null)}
-            />
+        {/* Edit drawer — slides in from right */}
+        {editingG&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.3)",zIndex:99,transition:`opacity 200ms ${DS.easeOut}`}} onClick={()=>setEditingIdx(null)}/>}
+        <div style={{
+          position:"fixed",top:0,right:0,bottom:0,width:460,maxWidth:"90vw",
+          background:DS.bgSurface,borderLeft:`1px solid ${DS.borderMedium}`,
+          boxShadow:editingG?"-8px 0 40px rgba(0,0,0,0.5)":"none",
+          zIndex:100,overflowY:"auto",padding:`${DS.xl}px`,
+          transform:editingG?"translateX(0)":"translateX(100%)",
+          transition:`transform 350ms ${DS.easeOut}`,
+        }}>
+          {/* Prev / Next navigation */}
+          <div style={{display:"flex",alignItems:"center",gap:DS.sm,marginBottom:DS.lg}}>
+            <button style={btn({padding:"6px 10px",opacity:editingIdx>0?1:0.3})} disabled={editingIdx<=0} onClick={()=>setEditingIdx(Math.max(0,editingIdx-1))}>← Prev</button>
+            <span style={{flex:1,textAlign:"center",fontSize:DS.fsSm,color:DS.textMuted}}>{(editingIdx||0)+1} of {graphics.length}</span>
+            <button style={btn({padding:"6px 10px",opacity:editingIdx<graphics.length-1?1:0.3})} disabled={editingIdx>=graphics.length-1} onClick={()=>setEditingIdx(Math.min(graphics.length-1,editingIdx+1))}>Next →</button>
+            <button style={btn({padding:"6px 10px"})} onClick={()=>setEditingIdx(null)} title="Close (Escape)">✕</button>
           </div>
-        )}
+          {editingG&&<SegmentEditPanel
+            key={editingIdx}
+            g={editingG} index={editingIdx} brand={brand}
+            previewSrc={previews[editingIdx]}
+            onRefreshPreview={()=>{const g=project.graphics[editingIdx];if(g)doPreview(g,editingIdx);}}
+            onRegenerate={(prompt,tplHint)=>regenerateSegment(editingIdx,prompt,tplHint)}
+            onUpdateContent={(changes,meta)=>updateGraphicContent(editingIdx,changes,meta)}
+            onUpdateMeta={(changes)=>updateGraphicMeta(editingIdx,changes)}
+            regenLoading={regenLoading}
+            onClose={()=>setEditingIdx(null)}
+          />}
+        </div>
       </div>
     </div>
   );
@@ -3421,7 +3447,7 @@ function TitleCardPanel({project, brand, updateProject}){
 // ═══════════════════════════════════════════════════════════════
 //  PROJECT VIEW
 // ═══════════════════════════════════════════════════════════════
-function ProjectView({project,brand,updateProject,onBack}){
+function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand}){
   const [tab,setTab]=useState("graphics");
   const [previewRatio,setPreviewRatio]=useState("16:9");
   const fileRef=useRef();
@@ -3485,7 +3511,14 @@ function ProjectView({project,brand,updateProject,onBack}){
       <div style={S.topbar}>
         <div style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:DS.sm}}>
           <button style={btn({background:"transparent",border:"none",opacity:0.5,padding:"4px 8px",fontSize:DS.fsSm})} onClick={onBack} title="Back to home">←</button>
-          <div style={{fontSize:DS.fsSm,color:DS.textMuted,cursor:"pointer"}} onClick={onBack}>{brand.name}</div>
+          {allBrands?.length>1?(
+            <select value={project.brandId} onChange={e=>onChangeBrand&&onChangeBrand(Number(e.target.value))}
+              style={{background:"transparent",border:"none",color:DS.textMuted,fontSize:DS.fsSm,cursor:"pointer",fontFamily:"inherit",outline:"none",padding:"2px 4px"}}>
+              {(allBrands||[]).map(b=><option key={b.id} value={b.id} style={{background:DS.bgModal}}>{b.name}</option>)}
+            </select>
+          ):(
+            <div style={{fontSize:DS.fsSm,color:DS.textMuted,cursor:"pointer"}} onClick={onBack}>{brand.name}</div>
+          )}
           <span style={{color:DS.textMuted,fontSize:DS.fsXs}}>/</span>
           <div style={{fontWeight:700,fontSize:DS.fsLg,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
         </div>
@@ -4985,6 +5018,8 @@ function App(){
         brand={activeBrand}
         updateProject={updateProject}
         onBack={()=>{setView("home");pushHash("home");}}
+        allBrands={brands}
+        onChangeBrand={newId=>updateProject({brandId:newId})}
       />
     );
   }
