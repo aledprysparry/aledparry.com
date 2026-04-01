@@ -1503,10 +1503,10 @@ function addBleed(srcCanvas, bleed=10){
 //  PNG SEQUENCE — frame-by-frame export for Premiere Pro
 // ═══════════════════════════════════════════════════════════════
 async function recordPNGSequence(g,brand,ratio,onProgress){
-  // Wait for ALL fonts to load before rendering any frames
-  // This prevents character height jumping mid-animation
   await document.fonts.ready;
-  const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+  const r=ratio||"16:9";
+  const AR=RATIOS[r]||RATIOS["16:9"];
+  console.log(`[PNG Seq] ${g.label||g.template} ratio=${r} → ${AR.W}x${AR.H}`);
   const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
   // 4s at 25fps = 100 frames (1s entrance + 3s hold/drift)
   // Batched processing prevents memory exhaustion
