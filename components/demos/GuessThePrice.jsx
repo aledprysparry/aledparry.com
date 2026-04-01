@@ -2995,6 +2995,28 @@ export default function GuessThePrice({ displayMode = false }) {
                 if (p.type) { updateRoundField("type", p.type); updateS("propType", p.type); }
                 if (p.tenure) { updateRoundField("tenure", p.tenure); updateS("propTenure", p.tenure); }
                 if (p.addedDate) { updateRoundField("addedDate", p.addedDate); updateS("propAddedDate", p.addedDate); }
+                // Auto-generate A/B/C price options from listing price
+                if (p.price) {
+                  const rawPrice = parseInt(p.price.replace(/[^0-9]/g, ""));
+                  if (rawPrice > 0) {
+                    // Generate two plausible wrong prices (±10-20%)
+                    const variance1 = Math.round(rawPrice * (0.10 + Math.random() * 0.10));
+                    const variance2 = Math.round(rawPrice * (0.10 + Math.random() * 0.10));
+                    const wrong1 = rawPrice - variance1;
+                    const wrong2 = rawPrice + variance2;
+                    // Round to nearest £5,000 for realism
+                    const round5k = (v) => Math.round(v / 5000) * 5000;
+                    const prices = [round5k(wrong1), rawPrice, round5k(wrong2)].sort(() => Math.random() - 0.5);
+                    const fmt = (v) => `£${v.toLocaleString()}`;
+                    const correctIdx = prices.indexOf(rawPrice);
+                    const correctLetter = ["A", "B", "C"][correctIdx];
+                    updateRoundField("optionA", fmt(prices[0])); updateS("optionA", fmt(prices[0]));
+                    updateRoundField("optionB", fmt(prices[1])); updateS("optionB", fmt(prices[1]));
+                    updateRoundField("optionC", fmt(prices[2])); updateS("optionC", fmt(prices[2]));
+                    updateRoundField("correctLetter", correctLetter); updateS("revealLetter", correctLetter);
+                    updateRoundField("correctPrice", rawPrice.toLocaleString()); updateS("revealPrice", rawPrice.toLocaleString());
+                  }
+                }
                 // Download and upload photos
                 if (p.photos && p.photos.length > 0) {
                   setSaveStatus(`Downloading ${p.photos.length} photos…`);
