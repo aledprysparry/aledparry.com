@@ -359,7 +359,7 @@ const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
 const TMPL_STORE = "infostudio_templates_v1";
 const BRAND_VERSION_KEY = "infostudio_brand_version";
-const BRAND_VERSION = 8; // bump this to force-reseed brands from presets
+const BRAND_VERSION = 9; // bump this to force-reseed brands from presets
 const load = k => { try { const r=localStorage.getItem(k); return r?JSON.parse(r):[]; } catch{ return []; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} };
 
@@ -4887,13 +4887,8 @@ function App(){
       const templates=load(TMPL_STORE);
       // Strip heavy data: previews (base64), videoUrl (blob), posters previews
       const lightP=p.map(pr=>({...pr,previews:{},videoUrl:null,videoName:null}));
-      // Strip brand logo base64 if too large
-      const lightB=b.map(br=>{
-        const lb={...br};
-        if(lb.logoDataUrl&&lb.logoDataUrl.length>5000) delete lb.logoDataUrl;
-        if(lb.logoDataUrlLight&&lb.logoDataUrlLight.length>5000) delete lb.logoDataUrlLight;
-        return lb;
-      });
+      // Keep brand data intact — logos are URLs not base64, so they're small
+      const lightB=b;
       const payload=JSON.stringify({brands:lightB,projects:lightP,templates});
       // Check size before sending — skip if over 4MB
       if(payload.length>4*1024*1024){
