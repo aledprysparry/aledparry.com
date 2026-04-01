@@ -584,6 +584,8 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
     const idx = (g._origIdx != null ? g._origIdx : i);
     const fn = `${pn}_${prefix}${String(idx+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
     const fileId = `${trackId}_file_${i+1}`;
+    // Reference first frame of PNG sequence — Premiere imports as image sequence
+    const seqPath = `${fn}/frame_0001.png`;
     return `          <clipitem id="${trackId}_clip_${i+1}">
             <name>${fn}</name>
             <duration>${dur}</duration>
@@ -592,10 +594,9 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
             <end>${sf+dur}</end>
             <in>0</in>
             <out>${dur}</out>
-            <stillframe>TRUE</stillframe>
             <file id="${fileId}">
-              <name>${fn}.png</name>
-              <pathurl>${fn}.png</pathurl>
+              <name>${fn}</name>
+              <pathurl>${seqPath}</pathurl>
               <duration>${dur}</duration>
               <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
               <media>
