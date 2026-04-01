@@ -359,7 +359,7 @@ const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
 const TMPL_STORE = "infostudio_templates_v1";
 const BRAND_VERSION_KEY = "infostudio_brand_version";
-const BRAND_VERSION = 9; // bump this to force-reseed brands from presets
+const BRAND_VERSION = 10; // bump this to force-reseed brands from presets
 const load = k => { try { const r=localStorage.getItem(k); return r?JSON.parse(r):[]; } catch{ return []; } };
 const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch{} };
 
@@ -4900,20 +4900,9 @@ function App(){
 
   // ── Server sync: load on mount (projects + templates only, NOT brands — preset is source of truth) ──
   useEffect(()=>{
-    // Load brands from server and merge with presets (preset fills missing fields)
-    fetch("/api/studio?brands").then(r=>r.json()).then(d=>{
-      if(d.brands?.length){
-        const presets=Object.values(BRAND_PRESETS).map(p=>({...DEFAULT_BRAND,...p}));
-        // Merge: server data wins for user-editable fields, preset fills everything else
-        const merged=d.brands.map(sb=>{
-          const preset=presets.find(p=>p.name===sb.name)||DEFAULT_BRAND;
-          return{...DEFAULT_BRAND,...preset,...sb};
-        });
-        // Add any presets not on server
-        presets.forEach(p=>{if(!merged.find(m=>m.name===p.name))merged.push(p);});
-        if(merged.length>0){setBrands(merged);save(BS,merged);}
-      }
-    }).catch(()=>{});
+    // Brands come from local presets ONLY (controlled by BRAND_VERSION)
+    // Server stores brands as backup but never overwrites local
+    // This prevents stale server data from breaking fonts/logos
   },[]);
 
   // ── Per-project server sync — saves only the active project, small payload ──
