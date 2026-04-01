@@ -4878,18 +4878,34 @@ function App(){
   },[]);
 
   // ── Server sync: debounced save (stops retrying on 413/error) ──
-  const syncFailed=useRef(false);
+  const syncRetries=useRef(0);
   const syncToServer=useCallback((b,p)=>{
-    if(syncFailed.current) return;
+    if(syncRetries.current>5) return; // stop after 5 failures
     if(syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(()=>{
       const templates=load(TMPL_STORE);
-      const lightP=p.map(pr=>({...pr,previews:{}}));
-      fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({brands:b,projects:lightP,templates})})
-        .then(r=>{if(!r.ok) syncFailed.current=true;})
-        .catch(()=>{syncFailed.current=true;});
-    },1500);
+      // Strip heavy data: previews (base64), videoUrl (blob), posters previews
+      const lightP=p.map(pr=>({...pr,previews:{},videoUrl:null,videoName:null}));
+      // Strip brand logo base64 if too large
+      const lightB=b.map(br=>{
+        const lb={...br};
+        if(lb.logoDataUrl&&lb.logoDataUrl.length>5000) delete lb.logoDataUrl;
+        if(lb.logoDataUrlLight&&lb.logoDataUrlLight.length>5000) delete lb.logoDataUrlLight;
+        return lb;
+      });
+      const payload=JSON.stringify({brands:lightB,projects:lightP,templates});
+      // Check size before sending — skip if over 4MB
+      if(payload.length>4*1024*1024){
+        console.warn("[Sync] Payload too large:",Math.round(payload.length/1024)+"KB — skipping");
+        return;
+      }
+      fetch("/api/studio",{method:"POST",headers:{"Content-Type":"application/json"},body:payload})
+        .then(r=>{
+          if(r.ok){syncRetries.current=0;console.log("[Sync] Saved",Math.round(payload.length/1024)+"KB");}
+          else{syncRetries.current++;console.warn("[Sync] Failed:",r.status);}
+        })
+        .catch(e=>{syncRetries.current++;console.warn("[Sync] Error:",e.message);});
+    },2000);
   },[]);
 
   useEffect(()=>{save(BS,brands);syncToServer(brands,projects);},[brands]);
