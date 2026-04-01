@@ -1930,9 +1930,15 @@ export default function GuessThePrice({ displayMode = false }) {
   const createNewEpisode = () => {
     const num = episodes.length + 1;
     const ep = createDefaultEpisode(num);
+    // Carry over agent names, headshots, and logo from current episode
     ep.agents = episode.agents ? [...episode.agents] : ["Agent 1", "Agent 2"];
+    ep.agentImages = episode.agentImages ? [...episode.agentImages] : ["", ""];
+    ep.logoImage = episode.logoImage || "";
+    ep.timerDuration = episode.timerDuration || 3;
+    ep.photoDuration = episode.photoDuration || 5;
     ep.rounds = Array.from({ length: 6 }, (_, i) => emptyRound(i + 1, ep.agents[i < 3 ? 0 : 1], ep.agents[i < 3 ? 1 : 0]));
     setEpisodes(prev => [...prev, ep]);
+    setDirty(true);
     switchToEpisode(ep);
   };
 
@@ -3683,6 +3689,10 @@ export default function GuessThePrice({ displayMode = false }) {
           <button onClick={() => setShowEpisodePanel(!showEpisodePanel)}
             style={btn({ padding: "4px 12px", fontSize: DS.fsSm, background: showEpisodePanel ? "rgba(251,135,112,0.15)" : DS.bgButton, border: showEpisodePanel ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}` })}>
             Ep {episode.episode} {showEpisodePanel ? "▲" : "▼"}
+          </button>
+          <button onClick={createNewEpisode}
+            style={btn({ padding: "4px 10px", fontSize: DS.fsXs })}>
+            + New
           </button>
           {saveStatus && <span style={{ fontSize: DS.fsXs, color: GAME.gold }}>{saveStatus}</span>}
           {dirty && !saveStatus && <span style={{ fontSize: DS.fsXs, color: DS.textMuted }}>unsaved</span>}
