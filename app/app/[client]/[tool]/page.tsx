@@ -15,7 +15,7 @@ function DemoLoading() {
 // Dynamic import registry — maps componentPath to lazy-loaded component.
 // Each entry must be a static import() call for Next.js to bundle correctly.
 // @ts-ignore
-const SocialEditor = dynamic(() => import("@/components/demos/SocialEditor"), { ssr: false, loading: () => <DemoLoading /> });
+const SocialEditor = dynamic(() => import("@/cpshomes/components/SocialEditor"), { ssr: false, loading: () => <DemoLoading /> });
 // @ts-ignore
 const MasteryCompanion = dynamic(() => import("@/components/demos/MasteryCompanion"), { ssr: false, loading: () => <DemoLoading /> });
 // @ts-ignore
@@ -23,7 +23,7 @@ const PMADemo = dynamic(() => import("@/components/demos/PMA"), { ssr: false, lo
 // @ts-ignore
 const KeepItLocal = dynamic(() => import("@/components/demos/KeepItLocal"), { ssr: false, loading: () => <DemoLoading /> });
 // @ts-ignore
-const GuessThePrice = dynamic(() => import("@/components/demos/GuessThePrice"), { ssr: false, loading: () => <DemoLoading /> });
+const GuessThePrice = dynamic(() => import("@/cpshomes/components/GuessThePrice"), { ssr: false, loading: () => <DemoLoading /> });
 
 const componentMap: Record<string, React.ComponentType> = {
   SocialEditor,

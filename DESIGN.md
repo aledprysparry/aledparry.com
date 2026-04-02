@@ -240,17 +240,17 @@ Think **Linear**, **Notion**, **Stripe Dashboard** quality:
 
 ```typescript
 // Import shared design system
-import { DS, btn, btnCta, btnPositive, inputS, card, label, sectionHead } from "@/lib/design-system";
+import { DS, btn, btnCta, btnPositive, inputS, card, label, sectionHead } from "@/cpshomes/lib/design-system";
 
 // Import canvas helpers
 import { sz, roundRect, aspect, safeZone, getCachedImage, onImageLoad, loadFont,
-         easeOutExpo, easeOutBack, easeOutElastic, RATIOS } from "@/lib/canvas-helpers";
+         easeOutExpo, easeOutBack, easeOutElastic, RATIOS } from "@/cpshomes/lib/canvas-helpers";
 
 // Import video export
-import { recordAsset, webmToMov, recordAssetAsMov } from "@/lib/video-export";
+import { recordAsset, webmToMov, recordAssetAsMov } from "@/cpshomes/lib/video-export";
 
 // Import brand
-import { CPSHOMES_BRAND } from "@/content/brands/cpshomes";
+import { CPSHOMES_BRAND } from "@/cpshomes/brands/cpshomes";
 ```
 
 ### CSS Custom Properties (for Tailwind / global styles)
@@ -275,15 +275,16 @@ import { CPSHOMES_BRAND } from "@/content/brands/cpshomes";
 ### File Structure
 
 ```
-lib/
-├── design-system.ts     ← DS tokens + style factories
-├── canvas-helpers.ts    ← Easing, shapes, sizing, image cache, font loader
-└── video-export.ts      ← FFmpeg, WebM→MOV, asset recording
-
-content/brands/
-├── cpshomes.ts          ← CPS Homes brand config
-├── CPSHOMES-BRAND-GUIDE.md
-└── GUESSPRICE-APP-GUIDE.md
+cpshomes/
+├── components/          ← GuessThePrice, SocialEditor
+├── lib/
+│   ├── design-system.ts ← DS tokens + style factories
+│   ├── canvas-helpers.ts← Easing, shapes, sizing, image cache, font loader
+│   └── video-export.ts  ← FFmpeg, WebM→MOV, asset recording
+└── brands/
+    ├── cpshomes.ts      ← CPS Homes brand config
+    ├── CPSHOMES-BRAND-GUIDE.md
+    └── GUESSPRICE-APP-GUIDE.md
 ```
 
 ---

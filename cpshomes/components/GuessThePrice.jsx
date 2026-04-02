@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 // Dynamic import — FFmpeg.wasm (~31MB) only loaded when user exports MOV
-const loadVideoExport = () => import("@/lib/video-export");
+const loadVideoExport = () => import("@/cpshomes/lib/video-export");
 
 // ═══════════════════════════════════════════════════════════════
 //  DESIGN SYSTEM — shared tokens (mirrors Social Editor)

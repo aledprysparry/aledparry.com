@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 
 const GuessThePrice = dynamic(
-  () => import("@/components/demos/GuessThePrice"),
+  () => import("@/cpshomes/components/GuessThePrice"),
   { ssr: false }
 );
 

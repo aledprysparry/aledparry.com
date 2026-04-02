@@ -537,7 +537,7 @@ style={{ transition: `all ${MOTION.fast} ${MOTION.easeDefault}` }}
 
 ```typescript
 // From lib/canvas-helpers.ts
-import { easeOutExpo, easeOutBack, easeOutElastic, easeInOutCubic } from "@/lib/canvas-helpers";
+import { easeOutExpo, easeOutBack, easeOutElastic, easeInOutCubic } from "@/cpshomes/lib/canvas-helpers";
 
 // Standard canvas durations (ms)
 const CANVAS_DURATION = {

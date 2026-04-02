@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 const demoRegistry: Record<string, Record<string, React.ComponentType>> = {
   cpshomes: {
     socialeditor: dynamic(
-      () => import("@/components/demos/SocialEditor"),
+      () => import("@/cpshomes/components/SocialEditor"),
       { ssr: false, loading: () => <DemoLoading /> }
     ),
   },

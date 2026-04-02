@@ -82,36 +82,36 @@ Landscape (16:9): No safe zone insets
 
 ## Shared Config File
 
-`content/brands/cpshomes.ts` — TypeScript config with all brand values, font loader, ratios, and safe zones. Import from here for new projects:
+`cpshomes/brands/cpshomes.ts` — TypeScript config with all brand values, font loader, ratios, and safe zones. Import from here for new projects:
 
 ```typescript
-import { CPSHOMES_BRAND, CPSHOMES_FONTS, RATIOS, loadFont } from "@/content/brands/cpshomes";
+import { CPSHOMES_BRAND, CPSHOMES_FONTS, RATIOS, loadFont } from "@/cpshomes/brands/cpshomes";
 ```
 
 ## Existing Apps
 
 | App | Route | Component | Description |
 |-----|-------|-----------|-------------|
-| **Guess the Price** | `/app/cpshomes/guessprice` | `GuessThePrice.jsx` | Live game show — property price guessing with A/B/C options |
-| **Social Editor** | `/app/cpshomes/socialeditor` | `SocialEditor.jsx` | Graphics generator — social media templates, captions, exports |
+| **Guess the Price** | `/app/cpshomes/guessprice` | `cpshomes/components/GuessThePrice.jsx` | Live game show — property price guessing with A/B/C options |
+| **Social Editor** | `/app/cpshomes/socialeditor` | `cpshomes/components/SocialEditor.jsx` | Graphics generator — social media templates, captions, exports |
 
 ## Shared Libraries
 
 | Library | Path | Contents |
 |---------|------|----------|
-| **Design System** | `lib/design-system.ts` | DS tokens, btn, btnCta, btnPositive, inputS, card, label, sectionHead |
-| **Canvas Helpers** | `lib/canvas-helpers.ts` | Easing (easeOutExpo, easeOutBack, easeOutElastic), roundRect, sz, aspect, safeZone, getCachedImage, onImageLoad, loadFont, RATIOS |
-| **Video Export** | `lib/video-export.ts` | FFmpeg.wasm, webmToMov, recordAsset, recordAssetAsMov, WEBM_MIME |
-| **Brand Config** | `content/brands/cpshomes.ts` | CPS Homes colours, fonts, logos, layout tokens |
+| **Design System** | `cpshomes/lib/design-system.ts` | DS tokens, btn, btnCta, btnPositive, inputS, card, label, sectionHead |
+| **Canvas Helpers** | `cpshomes/lib/canvas-helpers.ts` | Easing (easeOutExpo, easeOutBack, easeOutElastic), roundRect, sz, aspect, safeZone, getCachedImage, onImageLoad, loadFont, RATIOS |
+| **Video Export** | `cpshomes/lib/video-export.ts` | FFmpeg.wasm, webmToMov, recordAsset, recordAssetAsMov, WEBM_MIME |
+| **Brand Config** | `cpshomes/brands/cpshomes.ts` | CPS Homes colours, fonts, logos, layout tokens |
 
 ## New App Checklist
 
 When creating a new CPS Homes app:
 
-1. Import design system: `import { DS, btn, btnCta, inputS, card, label } from "@/lib/design-system"`
-2. Import canvas helpers: `import { sz, aspect, roundRect, safeZone, getCachedImage, onImageLoad, loadFont, easeOutExpo, easeOutBack, RATIOS } from "@/lib/canvas-helpers"`
-3. Import brand: `import { CPSHOMES_BRAND } from "@/content/brands/cpshomes"`
-4. Import video export (if needed): `import { recordAsset, webmToMov } from "@/lib/video-export"`
+1. Import design system: `import { DS, btn, btnCta, inputS, card, label } from "@/cpshomes/lib/design-system"`
+2. Import canvas helpers: `import { sz, aspect, roundRect, safeZone, getCachedImage, onImageLoad, loadFont, easeOutExpo, easeOutBack, RATIOS } from "@/cpshomes/lib/canvas-helpers"`
+3. Import brand: `import { CPSHOMES_BRAND } from "@/cpshomes/brands/cpshomes"`
+4. Import video export (if needed): `import { recordAsset, webmToMov } from "@/cpshomes/lib/video-export"`
 5. Register in `content/demos.config.ts` with `clientSlug: "cpshomes"`
 6. Use `loadFont("DM Sans")` + `loadFont("Lora")` on mount
 7. Use `onImageLoad(() => setTick(t => t + 1))` to re-render when images load
