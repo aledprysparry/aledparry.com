@@ -84,6 +84,7 @@ interface GameState {
   clearTimer: number;
   targetCol: number;
   popup: ScorePopup | null;
+  pressing: boolean;
   // Cached grid dimensions (updated in render, used in input handlers)
   gridX: number;
   gridCellSize: number;
@@ -192,6 +193,7 @@ export function TetrisBackground() {
       clearTimer: 0,
       targetCol: 3,
       popup: null,
+      pressing: false,
       gridX: 0,
       gridCellSize: 40,
     };
@@ -250,8 +252,13 @@ export function TetrisBackground() {
     }
 
     function finishClear() {
-      for (const row of g.clearRows.sort((a, b) => a - b)) {
+      // Remove from bottom to top so splice indices stay valid
+      const sorted = g.clearRows.sort((a, b) => b - a);
+      for (const row of sorted) {
         g.board.splice(row, 1);
+      }
+      // Add empty rows at top to replace removed ones
+      for (let i = 0; i < sorted.length; i++) {
         g.board.unshift(new Array(COLS).fill(0));
       }
       g.clearRows = [];
@@ -380,7 +387,13 @@ export function TetrisBackground() {
       }
     }
 
+    // Mouse/touch hold = soft drop (pieces fall faster)
+    function onMouseDown() { g.pressing = true; }
+    function onMouseUp() { g.pressing = false; }
+
     document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("mouseup", onMouseUp);
     document.addEventListener("click", onClick);
     document.addEventListener("touchstart", onTouchStart, { passive: true });
     document.addEventListener("touchmove", onTouchMove, { passive: true });
@@ -411,10 +424,12 @@ export function TetrisBackground() {
       while (g.current.x < g.targetCol && movePiece(1, 0)) { /* keep going */ }
       while (g.current.x > g.targetCol && movePiece(-1, 0)) { /* keep going */ }
 
-      // Gravity
+      // Gravity — pressing (mousedown/hold) makes pieces fall 6x faster
       g.dropTimer++;
-      if (g.dropTimer >= getDropInterval(g.level)) {
+      const interval = g.pressing ? Math.max(1, Math.floor(getDropInterval(g.level) / 6)) : getDropInterval(g.level);
+      if (g.dropTimer >= interval) {
         g.dropTimer = 0;
+        if (g.pressing) { g.score += 1; setScoreState(g.score); }
         if (!movePiece(0, 1)) lockPiece();
       }
     }
@@ -560,6 +575,8 @@ export function TetrisBackground() {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
       document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("click", onClick);
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchmove", onTouchMove);
