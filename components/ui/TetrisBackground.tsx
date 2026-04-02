@@ -624,15 +624,6 @@ export function TetrisBackground() {
         drawCell(previewX + c * previewCellSize, previewY + r * previewCellSize, previewCellSize, PIECE_ALPHA[g.next] * 0.6);
       }
 
-      // ── HUD: Score (top-right) — whisper quiet ────────────────────
-      ctx.save();
-      ctx.font = "500 11px Inter, system-ui, sans-serif";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = `rgba(${STONE}, 0.15)`;
-      ctx.fillText(String(g.score), W - 16, 14);
-      ctx.restore();
-
       // ── Game over overlay ─────────────────────────────────────────
       if (g.gameOver) {
         const fadeAlpha = Math.min(1, g.gameOverTimer / 30);
