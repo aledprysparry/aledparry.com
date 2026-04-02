@@ -345,15 +345,14 @@ function drawStamp(ctx, W, H) {
   const logo = getCachedImage(BRAND.logoUrlLight);
   if (!logo || !logo.complete || !logo.naturalWidth) return;
   const ar = H > W ? "portrait" : W === H ? "square" : "landscape";
-  // Smaller logo to avoid overlapping content
-  const logoScale = ar === "portrait" ? 0.18 : ar === "square" ? 0.16 : 0.10;
+  const logoScale = ar === "portrait" ? 0.20 : ar === "square" ? 0.18 : BRAND.logoSize;
   const logoW = W * logoScale;
   const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
-  const padR = W * 0.03;
-  const padB = ar === "portrait" ? Math.round(420 * (W / 1080)) + padR : H * 0.02;
+  const pad = W * 0.05; // 5% from edges — comfortable breathing room
+  const bottomPad = ar === "portrait" ? Math.round(420 * (W / 1080)) + pad : H * 0.05;
   ctx.save();
   ctx.globalAlpha = BRAND.logoOpacity;
-  ctx.drawImage(logo, W - logoW - padR, H - logoH - padB, logoW, logoH);
+  ctx.drawImage(logo, W - logoW - pad, H - logoH - bottomPad, logoW, logoH);
   ctx.restore();
 }
 
@@ -682,8 +681,20 @@ function drawProperty(ctx, W, H, S, progress) {
   const photoLocalP = (p * numPhotos - photoIdx); // 0-1 within this photo's time
   const currentSrc = photos[photoIdx] || photos[rd?.heroPhotoIndex || 0];
   const heroImg = currentSrc ? getCachedImage(currentSrc) : null;
-  // Fade in for photos after the first — first image shows instantly
-  const ep = photoIdx === 0 ? 1 : easeOutExpo(Math.min(1, photoLocalP / 0.3));
+  // Crossfade: draw previous photo underneath during transition
+  const fadeT = Math.min(1, photoLocalP / 0.3); // 0-1 over first 30% of each photo's time
+  if (photoIdx > 0 && fadeT < 1) {
+    const prevSrc = photos[photoIdx - 1];
+    const prevImg = prevSrc ? getCachedImage(prevSrc) : null;
+    if (prevImg && prevImg.complete && prevImg.naturalWidth > 0) {
+      const piw = prevImg.naturalWidth, pih = prevImg.naturalHeight;
+      const pScale = Math.max(W / piw, H / pih) * 1.04; // end of its Ken Burns zoom
+      const pdw = piw * pScale, pdh = pih * pScale;
+      ctx.drawImage(prevImg, (W - pdw) / 2, (H - pdh) / 2, pdw, pdh);
+    }
+  }
+  // Current photo fades in (first photo shows instantly)
+  const ep = photoIdx === 0 ? 1 : easeOutExpo(fadeT);
   if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
     // Cover-fit with Ken Burns zoom entrance per photo
     const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
