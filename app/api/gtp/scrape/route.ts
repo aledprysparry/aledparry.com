@@ -103,9 +103,11 @@ function parseRightmove(html: string) {
         property.type = pd.propertySubType || pd.propertyType || "";
         property.tenure = pd.tenure?.tenureType || "";
         property.price = pd.prices?.primaryPrice || "";
+        // Only use property photo URLs — filter strictly by path
         property.photos = (pd.images || [])
           .map((img: any) => (img.url || img.srcUrl || ""))
-          .filter((u: string) => u && isPropertyPhoto(u));
+          .filter((u: string) => u && u.includes("/property-photo/"))
+          .slice(0, 25);
       }
     } catch {}
   }
@@ -121,9 +123,9 @@ function parseRightmove(html: string) {
   // Added date
   property.addedDate = firstMatch(html, /Added on (\d{2}\/\d{2}\/\d{4})/, 1) || "";
 
-  // Photos from HTML
+  // Photos from HTML — only match property-photo paths
   if (property.photos.length === 0) {
-    property.photos = extractPhotos(html, /https:\/\/media\.rightmove\.co\.uk[^"'\s]+\.(jpg|jpeg|png|webp)/gi);
+    property.photos = extractPhotos(html, /https:\/\/media\.rightmove\.co\.uk[^"'\s]*property-photo[^"'\s]+\.(jpg|jpeg)/gi);
   }
 
   return property;
