@@ -178,8 +178,9 @@ export function TetrisBackground() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const maybeCtx = canvas.getContext("2d");
+    if (!maybeCtx) return;
+    const ctx: CanvasRenderingContext2D = maybeCtx;
 
     // ── Init game state ───────────────────────────────────────────────
     let bag = shuffleBag();
@@ -436,10 +437,11 @@ export function TetrisBackground() {
 
     function render() {
       if (!ctx || !canvas) return;
+      const dc = ctx;
       const W = canvas.width;
       const H = canvas.height;
 
-      ctx.clearRect(0, 0, W, H);
+      dc.clearRect(0, 0, W, H);
 
       // ── Grid sizing ───────────────────────────────────────────────
       const cellSize = Math.floor(W / COLS);
@@ -449,16 +451,16 @@ export function TetrisBackground() {
       const gridY = H - gridH; // anchor to bottom
 
       // ── Giant background score ────────────────────────────────────
-      ctx.save();
+      dc.save();
       const digits = String(g.score).length;
       const maxScoreW = W * 0.8;
       const scoreSize = Math.min(maxScoreW / (digits * 0.6), H * 0.4, 400);
-      ctx.font = `bold ${scoreSize}px Inter, system-ui, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = `rgba(${STONE}, 0.035)`;
-      ctx.fillText(String(g.score), W / 2, H / 2);
-      ctx.restore();
+      dc.font = `bold ${scoreSize}px Inter, system-ui, sans-serif`;
+      dc.textAlign = "center";
+      dc.textBaseline = "middle";
+      dc.fillStyle = `rgba(${STONE}, 0.035)`;
+      dc.fillText(String(g.score), W / 2, H / 2);
+      dc.restore();
 
       // No grid border or grid lines — clean abstract look
 
@@ -466,23 +468,23 @@ export function TetrisBackground() {
       const gap = Math.max(2, Math.floor(cellSize * 0.04));
       const rad = Math.max(4, Math.floor(cellSize * 0.08));
       function drawCell(x: number, y: number, size: number, alpha: number) {
-        ctx.fillStyle = `rgba(${STONE}, ${alpha})`;
-        ctx.beginPath();
+        dc.fillStyle = `rgba(${STONE}, ${alpha})`;
+        dc.beginPath();
         const s = size - gap * 2;
         const cx = x + gap;
         const cy = y + gap;
-        ctx.moveTo(cx + rad, cy);
-        ctx.arcTo(cx + s, cy, cx + s, cy + s, rad);
-        ctx.arcTo(cx + s, cy + s, cx, cy + s, rad);
-        ctx.arcTo(cx, cy + s, cx, cy, rad);
-        ctx.arcTo(cx, cy, cx + s, cy, rad);
-        ctx.fill();
+        dc.moveTo(cx + rad, cy);
+        dc.arcTo(cx + s, cy, cx + s, cy + s, rad);
+        dc.arcTo(cx + s, cy + s, cx, cy + s, rad);
+        dc.arcTo(cx, cy + s, cx, cy, rad);
+        dc.arcTo(cx, cy, cx + s, cy, rad);
+        dc.fill();
       }
 
       // ── Draw locked board cells ───────────────────────────────────
       for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          const val = g.board[r][c];
+        for (let col = 0; col < COLS; col++) {
+          const val = g.board[r][col];
           if (val === 0) continue;
 
           const isClearRow = g.clearRows.includes(r);
@@ -490,7 +492,7 @@ export function TetrisBackground() {
             ? 0.08 + Math.sin(g.clearTimer * 0.8) * 0.06
             : PIECE_ALPHA[val - 1];
 
-          drawCell(gridX + c * cellSize, gridY + r * cellSize, cellSize, alpha);
+          drawCell(gridX + col * cellSize, gridY + r * cellSize, cellSize, alpha);
         }
       }
 
@@ -499,18 +501,18 @@ export function TetrisBackground() {
         const ghostY = getGhostY(g.board, g.current);
         if (ghostY !== g.current.y) {
           const ghostCells = getCells(g.current.type, g.current.rotation, g.current.x, ghostY);
-          for (const [r, c] of ghostCells) {
+          for (const [r, col] of ghostCells) {
             if (r < 0) continue;
-            drawCell(gridX + c * cellSize, gridY + r * cellSize, cellSize, 0.04);
+            drawCell(gridX + col * cellSize, gridY + r * cellSize, cellSize, 0.04);
           }
         }
 
         // ── Current piece ─────────────────────────────────────────────
         const currentCells = getCells(g.current.type, g.current.rotation, g.current.x, g.current.y);
         const activeAlpha = PIECE_ALPHA[g.current.type] + PIECE_ACTIVE_BOOST;
-        for (const [r, c] of currentCells) {
+        for (const [r, col] of currentCells) {
           if (r < 0) continue;
-          drawCell(gridX + c * cellSize, gridY + r * cellSize, cellSize, activeAlpha);
+          drawCell(gridX + col * cellSize, gridY + r * cellSize, cellSize, activeAlpha);
         }
       }
 
@@ -520,8 +522,8 @@ export function TetrisBackground() {
       const previewY = Math.max(32, gridY + cellSize);
 
       const nextCells = TETROMINOES[g.next][0];
-      for (const [r, c] of nextCells) {
-        drawCell(previewX + c * previewCellSize, previewY + r * previewCellSize, previewCellSize, PIECE_ALPHA[g.next] * 0.6);
+      for (const [r, col] of nextCells) {
+        drawCell(previewX + col * previewCellSize, previewY + r * previewCellSize, previewCellSize, PIECE_ALPHA[g.next] * 0.6);
       }
 
       // ── Game over overlay ─────────────────────────────────────────
@@ -529,21 +531,20 @@ export function TetrisBackground() {
         const fadeAlpha = Math.min(1, g.gameOverTimer / 30);
 
         // Gentle fade over visible area
-        ctx.fillStyle = `rgba(250, 250, 249, ${0.6 * fadeAlpha})`;
-        ctx.fillRect(0, 0, W, H);
+        dc.fillStyle = `rgba(250, 250, 249, ${0.6 * fadeAlpha})`;
+        dc.fillRect(0, 0, W, H);
 
-        ctx.save();
-        ctx.font = `300 24px Inter, system-ui, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.letterSpacing = "0.15em";
-        ctx.fillStyle = `rgba(${STONE}, ${0.25 * fadeAlpha})`;
-        ctx.fillText("GAME OVER", W / 2, H / 2 - 10);
+        dc.save();
+        dc.font = `300 24px Inter, system-ui, sans-serif`;
+        dc.textAlign = "center";
+        dc.textBaseline = "middle";
+        dc.fillStyle = `rgba(${STONE}, ${0.25 * fadeAlpha})`;
+        dc.fillText("GAME OVER", W / 2, H / 2 - 10);
 
-        ctx.font = `400 11px Inter, system-ui, sans-serif`;
-        ctx.fillStyle = `rgba(${STONE}, ${0.15 * fadeAlpha})`;
-        ctx.fillText("SPACE to restart", W / 2, H / 2 + 16);
-        ctx.restore();
+        dc.font = `400 11px Inter, system-ui, sans-serif`;
+        dc.fillStyle = `rgba(${STONE}, ${0.15 * fadeAlpha})`;
+        dc.fillText("SPACE to restart", W / 2, H / 2 + 16);
+        dc.restore();
       }
     }
 
