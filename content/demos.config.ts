@@ -58,6 +58,16 @@ export const demos: DemoEntry[] = [
     href: "https://cwis-creator-hub.vercel.app",
   },
   {
+    clientSlug: "tinopolis",
+    clientName: "Tinopolis Cymru",
+    toolSlug: "pressroom",
+    toolName: "Pressroom Intelligence",
+    description:
+      "Newspaper analysis platform — OCR scanning, NLP theme extraction, sentiment analysis, and AI-powered story angle suggestions. Bilingual Welsh and English.",
+    componentPath: "",
+    href: "#",
+  },
+  {
     clientSlug: "aledparry",
     clientName: "Aled Parry",
     toolSlug: "mastery",
@@ -74,8 +84,8 @@ export const demos: DemoEntry[] = [
     toolName: "PMA",
     description:
       "Production management app for broadcast teams — scheduling, task tracking, and resource planning.",
-    componentPath: "PMA",
-    href: "/app/pma",
+    componentPath: "",
+    href: "https://edit-intelligence.vercel.app/",
   },
   {
     clientSlug: "aledparry",
