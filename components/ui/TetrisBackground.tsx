@@ -90,14 +90,9 @@ interface GameState {
   gameOverTimer: number;
   clearRows: number[];
   clearTimer: number;
-  lastKeyTime: number;
-  // DAS state
-  dasKey: string;
-  dasTimer: number;
-  dasInterval: number;
-  // AI state
-  aiTarget: { rotation: number; x: number } | null;
-  aiMoveTimer: number;
+  // Pointer controls
+  targetCol: number;
+  moveTimer: number;
 }
 
 function createBoard(): number[][] {
@@ -156,77 +151,6 @@ function getDropInterval(level: number): number {
   return Math.max(2, 48 - (level - 1) * 3);
 }
 
-// ── Simple AI for auto-play ─────────────────────────────────────────────────
-function evaluatePosition(board: number[][], type: number, rotation: number, x: number): number {
-  // Drop piece to bottom
-  let y = 0;
-  while (!collides(board, type, rotation, x, y + 1)) y++;
-  if (collides(board, type, rotation, x, y)) return -Infinity;
-
-  // Simulate placing the piece
-  const testBoard = board.map((r) => [...r]);
-  const cells = getCells(type, rotation, x, y);
-  for (const [r, c] of cells) {
-    if (r >= 0 && r < ROWS && c >= 0 && c < COLS) testBoard[r][c] = type + 1;
-  }
-
-  // Count completed lines
-  let linesCleared = 0;
-  for (let r = 0; r < ROWS; r++) {
-    if (testBoard[r].every((c) => c !== 0)) linesCleared++;
-  }
-
-  // Calculate aggregate height and holes
-  let aggregateHeight = 0;
-  let holes = 0;
-  let bumpiness = 0;
-  const colHeights: number[] = [];
-
-  for (let c = 0; c < COLS; c++) {
-    let h = 0;
-    for (let r = 0; r < ROWS; r++) {
-      if (testBoard[r][c] !== 0) {
-        h = ROWS - r;
-        break;
-      }
-    }
-    colHeights.push(h);
-    aggregateHeight += h;
-
-    // Count holes in this column
-    let foundBlock = false;
-    for (let r = 0; r < ROWS; r++) {
-      if (testBoard[r][c] !== 0) foundBlock = true;
-      else if (foundBlock) holes++;
-    }
-  }
-
-  for (let c = 0; c < COLS - 1; c++) {
-    bumpiness += Math.abs(colHeights[c] - colHeights[c + 1]);
-  }
-
-  return linesCleared * 100 - aggregateHeight * 0.5 - holes * 3 - bumpiness * 0.2;
-}
-
-function findBestMove(board: number[][], type: number): { rotation: number; x: number } {
-  let bestScore = -Infinity;
-  let bestMove = { rotation: 0, x: 3 };
-
-  for (let rot = 0; rot < 4; rot++) {
-    for (let x = -2; x < COLS + 2; x++) {
-      // Check if this position is reachable
-      if (collides(board, type, rot, x, 0) && collides(board, type, rot, x, 1)) continue;
-      const score = evaluatePosition(board, type, rot, x);
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = { rotation: rot, x };
-      }
-    }
-  }
-
-  return bestMove;
-}
-
 // ── Component ───────────────────────────────────────────────────────────────
 export function TetrisBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -278,12 +202,8 @@ export function TetrisBackground() {
       gameOverTimer: 0,
       clearRows: [],
       clearTimer: 0,
-      lastKeyTime: 0,
-      dasKey: "",
-      dasTimer: 0,
-      dasInterval: 0,
-      aiTarget: null,
-      aiMoveTimer: 0,
+      targetCol: 3,
+      moveTimer: 0,
     };
     gameRef.current = g;
 
@@ -302,7 +222,6 @@ export function TetrisBackground() {
       [nextT, g.bag] = drawFromBag(g.bag);
       g.next = nextT;
       g.current = { type, rotation: 0, x: 3, y: 0 };
-      g.aiTarget = null;
 
       if (collides(g.board, type, 0, 3, 0)) {
         g.gameOver = true;
@@ -398,51 +317,71 @@ export function TetrisBackground() {
       g.gameOverTimer = 0;
       g.clearRows = [];
       g.clearTimer = 0;
-      g.aiTarget = null;
-      g.aiMoveTimer = 0;
       setScore(0);
       setLevel(1);
       setGameOver(false);
     }
 
-    // ── Keyboard ──────────────────────────────────────────────────────
-    function onKeyDown(e: KeyboardEvent) {
+    // ── Pointer controls (mouse + touch) ────────────────────────────
+    function getColFromX(clientX: number) {
+      const W = canvas!.width;
+      const cs = Math.floor(W / COLS);
+      const gx = Math.floor((W - cs * COLS) / 2);
+      return Math.max(0, Math.min(COLS - 1, Math.floor((clientX - gx) / cs)));
+    }
+
+    function onPointerMove(e: MouseEvent | Touch) {
+      if (g.gameOver || g.clearTimer > 0) return;
+      g.targetCol = getColFromX(e.clientX);
+    }
+
+    function onPointerTap() {
       if (g.gameOver) {
-        if (e.code === "Space") {
-          e.preventDefault();
-          restart();
-        }
+        restart();
         return;
       }
       if (g.clearTimer > 0) return;
+      const rotated = tryRotate(g.board, g.current);
+      if (rotated) g.current = rotated;
+    }
 
+    function onMouseMove(e: MouseEvent) { onPointerMove(e); }
+    function onClick() { onPointerTap(); }
+    function onTouchMove(e: TouchEvent) {
+      if (e.touches.length > 0) onPointerMove(e.touches[0]);
+    }
+    function onTouchStart(e: TouchEvent) {
+      if (e.touches.length > 0) onPointerMove(e.touches[0]);
+    }
+    // Detect tap (vs drag) for rotation
+    let touchStartX = 0;
+    let touchStartY = 0;
+    function onTouchStartCapture(e: TouchEvent) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }
+    function onTouchEnd(e: TouchEvent) {
+      const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
+      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+      // Only rotate on tap (not drag)
+      if (dx < 10 && dy < 10) onPointerTap();
+    }
+
+    // Keyboard as secondary controls (desktop)
+    function onKeyDown(e: KeyboardEvent) {
+      if (g.gameOver) {
+        if (e.code === "Space") { e.preventDefault(); restart(); }
+        return;
+      }
+      if (g.clearTimer > 0) return;
       const gameKeys = ["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", "Space"];
       if (!gameKeys.includes(e.code)) return;
       e.preventDefault();
-      g.lastKeyTime = Date.now();
-
       switch (e.code) {
-        case "ArrowLeft":
-          movePiece(-1, 0);
-          if (g.dasKey !== "ArrowLeft") {
-            g.dasKey = "ArrowLeft";
-            g.dasTimer = 10; // ~170ms at 60fps
-            g.dasInterval = 0;
-          }
-          break;
-        case "ArrowRight":
-          movePiece(1, 0);
-          if (g.dasKey !== "ArrowRight") {
-            g.dasKey = "ArrowRight";
-            g.dasTimer = 10;
-            g.dasInterval = 0;
-          }
-          break;
+        case "ArrowLeft": movePiece(-1, 0); break;
+        case "ArrowRight": movePiece(1, 0); break;
         case "ArrowDown":
-          if (movePiece(0, 1)) {
-            g.score += 1;
-            setScore(g.score);
-          }
+          if (movePiece(0, 1)) { g.score += 1; setScore(g.score); }
           g.dropTimer = 0;
           break;
         case "ArrowUp": {
@@ -450,22 +389,16 @@ export function TetrisBackground() {
           if (rotated) g.current = rotated;
           break;
         }
-        case "Space":
-          hardDrop();
-          break;
+        case "Space": hardDrop(); break;
       }
     }
 
-    function onKeyUp(e: KeyboardEvent) {
-      if (e.code === g.dasKey) {
-        g.dasKey = "";
-        g.dasTimer = 0;
-        g.dasInterval = 0;
-      }
-    }
-
+    window.addEventListener("mousemove", onMouseMove);
+    canvas!.addEventListener("click", onClick);
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchstart", onTouchStartCapture, { passive: true });
+    window.addEventListener("touchend", onTouchEnd);
     document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("keyup", onKeyUp);
 
     // ── Game loop ─────────────────────────────────────────────────────
     let animId: number;
@@ -473,11 +406,6 @@ export function TetrisBackground() {
     function update() {
       if (g.gameOver) {
         g.gameOverTimer = Math.min(g.gameOverTimer + 1, 30);
-        // Auto-restart in AI mode after showing game over briefly
-        const isAI = Date.now() - g.lastKeyTime > 3000;
-        if (isAI && g.gameOverTimer >= 30) {
-          restart();
-        }
         return;
       }
 
@@ -488,42 +416,11 @@ export function TetrisBackground() {
         return;
       }
 
-      // AI auto-play when idle for 3 seconds
-      const isAI = Date.now() - g.lastKeyTime > 3000;
-      if (isAI) {
-        if (!g.aiTarget) {
-          g.aiTarget = findBestMove(g.board, g.current.type);
-          g.aiMoveTimer = 0;
-        }
-
-        g.aiMoveTimer++;
-        if (g.aiMoveTimer % 3 === 0) {
-          // Rotate toward target
-          if (g.current.rotation !== g.aiTarget.rotation) {
-            const rotated = tryRotate(g.board, g.current);
-            if (rotated) g.current = rotated;
-          } else if (g.current.x < g.aiTarget.x) {
-            movePiece(1, 0);
-          } else if (g.current.x > g.aiTarget.x) {
-            movePiece(-1, 0);
-          } else {
-            // Positioned correctly — hard drop
-            hardDrop();
-          }
-        }
-      }
-
-      // DAS (Delayed Auto Shift) for held keys
-      if (g.dasKey && !isAI) {
-        if (g.dasTimer > 0) {
-          g.dasTimer--;
-        } else {
-          g.dasInterval++;
-          if (g.dasInterval % 3 === 0) {
-            const dx = g.dasKey === "ArrowLeft" ? -1 : 1;
-            movePiece(dx, 0);
-          }
-        }
+      // Move piece toward target column (from pointer)
+      g.moveTimer++;
+      if (g.moveTimer % 3 === 0) {
+        if (g.current.x < g.targetCol) movePiece(1, 0);
+        else if (g.current.x > g.targetCol) movePiece(-1, 0);
       }
 
       // Gravity
@@ -549,11 +446,14 @@ export function TetrisBackground() {
       const gridW = cellSize * COLS;
       const gridH = cellSize * ROWS;
       const gridX = Math.floor((W - gridW) / 2);
-      const gridY = H - gridH; // anchor to bottom — pieces emerge from above
+      const gridY = H - gridH; // anchor to bottom
 
       // ── Giant background score ────────────────────────────────────
       ctx.save();
-      ctx.font = `bold ${Math.min(W * 0.5, 400)}px Inter, system-ui, sans-serif`;
+      const digits = String(g.score).length;
+      const maxScoreW = W * 0.8;
+      const scoreSize = Math.min(maxScoreW / (digits * 0.6), H * 0.4, 400);
+      ctx.font = `bold ${scoreSize}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = `rgba(${STONE}, 0.035)`;
@@ -661,8 +561,12 @@ export function TetrisBackground() {
       g.running = false;
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMouseMove);
+      canvas!.removeEventListener("click", onClick);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchstart", onTouchStartCapture);
+      window.removeEventListener("touchend", onTouchEnd);
       document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("keyup", onKeyUp);
     };
   }, [updateBest]);
 
