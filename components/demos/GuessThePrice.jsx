@@ -3001,7 +3001,7 @@ export default function GuessThePrice({ displayMode = false }) {
           </div>
           <div style={{ ...label(), marginTop: DS.sm }}>Property URL</div>
           <div style={{ display: "flex", gap: DS.xs }}>
-            <input style={inputS({ flex: 1 })} value={rd.rightmoveUrl || ""} placeholder="Rightmove or Zoopla URL…" onChange={e => updateRoundField("rightmoveUrl", e.target.value)} />
+            <input style={inputS({ flex: 1 })} value={rd.rightmoveUrl || ""} placeholder="Rightmove, Zoopla, OnTheMarket or PrimeLocation…" onChange={e => updateRoundField("rightmoveUrl", e.target.value)} />
             <button onClick={async () => {
               const propUrl = rd.rightmoveUrl;
               if (!propUrl) return;

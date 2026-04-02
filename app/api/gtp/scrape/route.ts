@@ -53,8 +53,10 @@ export async function POST(req: Request) {
 
     const isRightmove = url.includes("rightmove.co.uk");
     const isZoopla = url.includes("zoopla.co.uk");
-    if (!isRightmove && !isZoopla) {
-      return NextResponse.json({ error: "Only Rightmove and Zoopla URLs supported" }, { status: 400 });
+    const isOnTheMarket = url.includes("onthemarket.com");
+    const isPrimeLocation = url.includes("primelocation.com");
+    if (!isRightmove && !isZoopla && !isOnTheMarket && !isPrimeLocation) {
+      return NextResponse.json({ error: "Supported: Rightmove, Zoopla, OnTheMarket, PrimeLocation" }, { status: 400 });
     }
 
     // Fetch the page HTML server-side
@@ -70,7 +72,10 @@ export async function POST(req: Request) {
     }
 
     const html = await res.text();
-    const property = isRightmove ? parseRightmove(html) : parseZoopla(html);
+    const property = isRightmove ? parseRightmove(html)
+      : isOnTheMarket ? parseOnTheMarket(html)
+      : isPrimeLocation ? parsePrimeLocation(html)
+      : parseZoopla(html);
 
     return NextResponse.json({
       success: true,
@@ -181,15 +186,96 @@ function parseZoopla(html: string) {
   return property;
 }
 
+// ── OnTheMarket parser ──
+function parseOnTheMarket(html: string) {
+  const property: any = { address: "", location: "", beds: 0, type: "", tenure: "", price: "", addedDate: "", photos: [] };
+
+  // Try __NEXT_DATA__
+  const nextDataMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+  if (nextDataMatch) {
+    try {
+      const nd = JSON.parse(nextDataMatch[1]);
+      const listing = nd?.props?.pageProps?.property || nd?.props?.pageProps?.listing;
+      if (listing) {
+        property.address = listing.displayAddress || listing.address || "";
+        property.beds = listing.bedrooms || listing.numberOfBedrooms || 0;
+        property.type = listing.propertyType || listing.propertySubType || "";
+        property.tenure = listing.tenure || "";
+        property.price = listing.price || listing.priceLabel || "";
+        property.photos = (listing.images || listing.photos || listing.gallery || [])
+          .map((img: any) => typeof img === "string" ? img : (img.url || img.src || img.original || ""))
+          .filter(Boolean).slice(0, 30);
+      }
+    } catch {}
+  }
+
+  // Fallbacks
+  if (!property.address) property.address = extractMeta(html, "og:title") || extractTitle(html);
+  if (!property.price) property.price = firstMatch(html, /£[\d,]+/);
+  if (!property.beds) property.beds = parseInt(firstMatch(html, /(\d+)\s*bed/i, 1) || "0");
+  if (!property.type) property.type = capitalize(firstMatch(html, /(terraced|semi-detached|detached|flat|bungalow|end[- ]of[- ]terrace|maisonette|apartment)/i) || "");
+  if (!property.tenure) property.tenure = capitalize(firstMatch(html, /(freehold|leasehold|share of freehold)/i) || "");
+  if (!property.location) property.location = extractLocation(property.address);
+
+  // Photos from og:image or media CDN
+  if (property.photos.length === 0) {
+    const ogImage = extractMeta(html, "og:image");
+    if (ogImage) property.photos.push(ogImage);
+  }
+  if (property.photos.length === 0) {
+    property.photos = extractPhotos(html, /https:\/\/media\.onthemarket\.com\/properties[^"'\s]+\.(jpg|jpeg|png|webp)/gi);
+  }
+
+  return property;
+}
+
+// ── PrimeLocation parser (powered by Zoopla — similar data structures) ──
+function parsePrimeLocation(html: string) {
+  const property: any = { address: "", location: "", beds: 0, type: "", tenure: "", price: "", addedDate: "", photos: [] };
+
+  const nextDataMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+  if (nextDataMatch) {
+    try {
+      const nd = JSON.parse(nextDataMatch[1]);
+      const listing = nd?.props?.pageProps?.listingDetails || nd?.props?.pageProps?.data?.listing || nd?.props?.pageProps?.property;
+      if (listing) {
+        property.address = listing.address?.displayAddress || listing.displayAddress || "";
+        property.beds = listing.counts?.numBedrooms || listing.bedrooms || 0;
+        property.type = listing.propertyType || "";
+        property.tenure = listing.tenure || "";
+        property.price = listing.pricing?.label || listing.price || "";
+        property.photos = (listing.images || listing.photos || [])
+          .map((img: any) => typeof img === "string" ? img : (img.url || img.src || img.original || ""))
+          .filter(Boolean).slice(0, 30);
+      }
+    } catch {}
+  }
+
+  // Fallbacks
+  if (!property.address) property.address = extractMeta(html, "og:title") || extractTitle(html);
+  if (!property.price) property.price = firstMatch(html, /£[\d,]+/);
+  if (!property.beds) property.beds = parseInt(firstMatch(html, /(\d+)\s*bed/i, 1) || "0");
+  if (!property.type) property.type = capitalize(firstMatch(html, /(terraced|semi-detached|detached|flat|bungalow|end[- ]of[- ]terrace|maisonette|apartment)/i) || "");
+  if (!property.tenure) property.tenure = capitalize(firstMatch(html, /(freehold|leasehold|share of freehold)/i) || "");
+  if (!property.location) property.location = extractLocation(property.address);
+
+  // Photos — PrimeLocation uses Zoopla's CDN
+  if (property.photos.length === 0) {
+    property.photos = extractPhotos(html, /https:\/\/lid\.zoocdn\.com[^"'\s]+\.(jpg|jpeg|png|webp)/gi);
+  }
+
+  return property;
+}
+
 // ── Helpers ──
 function extractMeta(html: string, property: string): string {
   const match = html.match(new RegExp(`<meta[^>]*property="${property}"[^>]*content="([^"]*)"`, "i"));
-  return match ? match[1].replace(/\s*\|.*$/, "").replace(/\s*-\s*(Rightmove|Zoopla).*$/i, "").trim() : "";
+  return match ? match[1].replace(/\s*\|.*$/, "").replace(/\s*-\s*(Rightmove|Zoopla|OnTheMarket|PrimeLocation).*$/i, "").trim() : "";
 }
 
 function extractTitle(html: string): string {
   const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  return match ? match[1].replace(/\s*\|.*$/, "").replace(/\s*-\s*(Rightmove|Zoopla).*$/i, "").trim() : "";
+  return match ? match[1].replace(/\s*\|.*$/, "").replace(/\s*-\s*(Rightmove|Zoopla|OnTheMarket|PrimeLocation).*$/i, "").trim() : "";
 }
 
 function extractLocation(address: string): string {
@@ -223,9 +309,12 @@ function isPropertyPhoto(url: string): boolean {
   if (lower.includes("rightmove.co.uk")) {
     return lower.includes("property-photo");
   }
-  // Zoopla: accept from their photo CDN
+  // OnTheMarket: only accept property photo paths
+  if (lower.includes("onthemarket.com")) {
+    return lower.includes("properties/") || lower.includes("property-photo");
+  }
+  // Zoopla / PrimeLocation: accept from their photo CDN
   if (lower.includes("zoocdn.com")) {
-    // Exclude known non-photo paths
     if (lower.includes("logo") || lower.includes("brand") || lower.includes("icon") || lower.includes("agent")) return false;
     return true;
   }
