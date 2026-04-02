@@ -2,14 +2,14 @@
 
 import { useLanguage } from "@/lib/i18n/context";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
-import { PongBackground } from "@/components/ui/PongBackground";
+import { TetrisBackground } from "@/components/ui/TetrisBackground";
 
 export function HomeContent() {
   const { t } = useLanguage();
 
   return (
     <>
-    <PongBackground />
+    <TetrisBackground />
     <div className="min-h-screen flex flex-col items-center justify-center px-6 -mt-16 relative z-10 pointer-events-none">
       <div className="text-center max-w-xl pointer-events-auto">
         {/* Hero */}
