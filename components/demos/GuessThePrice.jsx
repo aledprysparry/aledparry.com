@@ -3030,7 +3030,7 @@ export default function GuessThePrice({ displayMode = false }) {
                   for (let pi = 0; pi < p.photos.length; pi++) {
                     try {
                       setSaveStatus(`Photo ${pi + 1}/${p.photos.length}…`);
-                      const imgRes = await fetch(p.photos[pi]);
+                      const imgRes = await fetch(`/api/gtp/scrape?img=${encodeURIComponent(p.photos[pi])}`);
                       const imgBlob = await imgRes.blob();
                       const form = new FormData();
                       form.append("photo", imgBlob, "photo.jpg");

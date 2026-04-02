@@ -1,5 +1,33 @@
 import { NextResponse } from "next/server";
 
+// GET /api/gtp/scrape?img=<url> — proxy external images to avoid CORS
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const imgUrl = searchParams.get("img");
+    if (!imgUrl) return new NextResponse("Missing img param", { status: 400 });
+
+    const res = await fetch(imgUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "image/*",
+        "Referer": imgUrl.includes("rightmove") ? "https://www.rightmove.co.uk/" : "https://www.zoopla.co.uk/",
+      },
+    });
+    if (!res.ok) return new NextResponse("Image fetch failed", { status: 502 });
+
+    const blob = await res.blob();
+    return new NextResponse(blob, {
+      headers: {
+        "Content-Type": blob.type || "image/jpeg",
+        "Cache-Control": "public, max-age=86400",
+      },
+    });
+  } catch {
+    return new NextResponse("Proxy error", { status: 500 });
+  }
+}
+
 // POST /api/gtp/scrape — fetch property data from Rightmove or Zoopla URL
 export async function POST(req: Request) {
   try {
