@@ -624,15 +624,6 @@ export function TetrisBackground() {
         drawCell(previewX + c * previewCellSize, previewY + r * previewCellSize, previewCellSize, PIECE_ALPHA[g.next] * 0.6);
       }
 
-      // ── HUD: Level (top-left) — whisper quiet ─────────────────────
-      ctx.save();
-      ctx.font = "500 11px Inter, system-ui, sans-serif";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = `rgba(${STONE}, 0.15)`;
-      ctx.fillText(`Level ${g.level}`, 16, 14);
-      ctx.restore();
-
       // ── HUD: Score (top-right) — whisper quiet ────────────────────
       ctx.save();
       ctx.font = "500 11px Inter, system-ui, sans-serif";
