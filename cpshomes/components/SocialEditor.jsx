@@ -1371,6 +1371,25 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     drawEndboard(canvas,ebBrand,ratio,p);
     return; // drawEndboard handles its own canvas setup
   }
+  else {
+    // ── FALLBACK: unrecognised template ──
+    // Render as a generic fullscreen card so it's never transparent/empty.
+    if(!isOverlay){ctx.fillStyle=B.colorPrimary;ctx.fillRect(0,0,W,H);
+      ctx.save();ctx.globalAlpha=0.04;for(let i=0;i<W;i+=3){for(let j=0;j<H;j+=3){if(Math.random()>0.5){ctx.fillStyle="#fff";ctx.fillRect(i,j,2,2);}}}ctx.restore();
+    }
+    const lbl=(t||"graphic").toUpperCase().replace(/_/g," ");
+    ctx.save();ctx.globalAlpha=ENT*0.6;
+    ctx.font=`700 ${Math.round(28*sc)}px "${FF}","Arial",sans-serif`;
+    const lw=ctx.measureText(lbl).width;
+    ctx.fillStyle="rgba(0,0,0,0.3)";rrPath(ctx,W/2-lw/2-20*sc,H*0.22,lw+40*sc,48*sc,24*sc);ctx.fill();
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(lbl,W/2,H*0.22+24*sc);ctx.restore();
+    const rW=Math.round(60*sc)*ENT;
+    ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-rW/2,H*0.32,rW,Math.round(4*sc));
+    const allText=Object.values(c).filter(v=>typeof v==="string"&&v.length>0);
+    if(allText[0]){ctx.save();ctx.globalAlpha=TXT;DT(allText[0],W/2,H*0.36,W-PAD*2,H*0.28,Math.round(72*sc),"HW","center","#fff",3);ctx.restore();}
+    if(allText[1]){ctx.save();ctx.globalAlpha=TXT*0.65;DT(allText.slice(1).join(" — "),W/2,H*0.68,W-PAD*2,H*0.15,Math.round(36*sc),"500","center","rgba(255,255,255,0.8)",2);ctx.restore();}
+    stamp(ctx,B,W,H);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1718,6 +1737,25 @@ Placement rules — be generous, use every appropriate moment:
 - endboard ALWAYS as the LAST graphic — closing slide with logo and CTA
 - Use overlays (fact_box, speech_bubble, landlord_ask, tenant_ask, stat) generously — they don't interrupt the video`;
 
+// AI Social Media Review prompt
+const REVIEW_PROMPT=`You are a senior English-language social media content strategist who specialises in short-form educational video (TikTok, Instagram Reels, YouTube Shorts, LinkedIn).
+
+You are reviewing the on-screen graphics for a social media explainer video. Each graphic is a slide that appears over or replaces the video footage.
+
+Your job:
+1. Check every graphic's text is factually consistent with the transcript.
+2. Ensure text is punchy, scannable, and social-media-ready (short, active voice, no jargon).
+3. Flag any slide that is confusing, too wordy, misleading, or doesn't add value.
+4. Suggest improved text where needed — keep to the same template field structure.
+
+Return a JSON array (no markdown fences) with one object per graphic that needs changes:
+[{"index":0,"issues":["too wordy","headline unclear"],"suggestions":{"headline":"NEW TEXT","body":"NEW TEXT"},"verdict":"rewrite"},...]
+
+verdict values: "ok" (no changes), "tweak" (minor wording), "rewrite" (significant change needed), "remove" (slide adds no value)
+
+If a graphic is fine, still include it with verdict:"ok" and empty suggestions.
+Always return an entry for EVERY graphic. Be opinionated and direct.`;
+
 const SEGMENT_PROMPT=`You are a video graphics producer. Generate exactly ONE graphic for a social media explainer video.
 Return ONLY a valid JSON object (NOT an array). No markdown, no preamble.
 
@@ -2054,7 +2092,7 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
           style={{...sm,background:regenLoading?"rgba(255,255,255,0.05)":"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",cursor:regenLoading?"wait":"pointer"}}>
           {regenLoading?"⏳ Generating...":"🔄 Regenerate with AI"}
         </button>
-        <button onClick={()=>{onUpdateContent(localContent,{templateHint:tplHint,prompt});onClose();}}
+        <button onClick={()=>{onUpdateContent(localContent,{templateHint:tplHint,template:tplHint!=="any"?tplHint:g.template,prompt});onClose();}}
           style={{...sm,background:"rgba(42,157,143,0.15)",border:"1px solid rgba(42,157,143,0.3)"}}>
           💾 Save edits
         </button>
@@ -2205,6 +2243,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const [filterTpl,setFilterTpl]=useState("");
   const [showSafeZones,setShowSafeZones]=useState(false);
   const [showMoreActions,setShowMoreActions]=useState(false);
+  const [reviewResults,setReviewResults]=useState(null);
+  const [reviewing,setReviewing]=useState(false);
   const cvs=useRef(document.createElement("canvas"));
 
   const graphics=project.graphics;
@@ -2277,7 +2317,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       tCtx.drawImage(canvas,0,0,thumbW,thumbH);
       batch[i]=thumb.toDataURL("image/png");
     });
-    setPreviews(p=>({...p,...batch}));
+    updateProject({previews:batch});
   },[graphics,brand,previewRatio]);
 
   const exportWebM=async(g,i)=>{
@@ -2385,6 +2425,26 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
     setTimeout(()=>{if(updated){const c=document.createElement("canvas");drawGraphic(c,updated,brand,previewRatio,1);setPreviews(p=>({...p,[i]:c.toDataURL("image/png")}));}},100);
   };
 
+  // ── AI Social Media Review ──
+  const runReview=async()=>{
+    if(!graphics.length) return;
+    setReviewing(true); setReviewResults(null);
+    try{
+      const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
+      const graphicsSummary=graphics.map((g,i)=>`#${i+1} [${g.template}] at ${g.timestamp||"?"}: ${JSON.stringify(g.content)}`).join("\n");
+      const raw=await callAI({system:REVIEW_PROMPT,messages:[{role:"user",content:`VIDEO TITLE: "${project.name}"\n\nTRANSCRIPT:\n${transcript}\n\nGRAPHICS TO REVIEW:\n${graphicsSummary}`}],max_tokens:3000});
+      const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      setReviewResults(parsed);
+    }catch(e){ alert("Review failed: "+e.message); }
+    setReviewing(false);
+  };
+  const applyReviewSuggestion=(i,suggestions)=>updateGraphicContent(i,suggestions,{});
+  const applyAllReviewSuggestions=()=>{
+    if(!reviewResults) return;
+    reviewResults.forEach(r=>{if(r.verdict!=="ok"&&r.verdict!=="remove"&&r.suggestions&&Object.keys(r.suggestions).length) applyReviewSuggestion(r.index,r.suggestions);});
+    setReviewResults(null);setTimeout(previewAll,300);
+  };
+
   const sm=btn();
   const tplBg=t=>t==="myth"?brand.colorAccent:t==="reality"?brand.colorPositive:brand.colorPrimary;
 
@@ -2446,10 +2506,38 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
         <button style={sm} onClick={previewAll} title="Preview all graphics">👁 Preview</button>
+        <button style={{...sm,background:reviewing?"rgba(255,200,50,0.15)":"rgba(255,200,50,0.1)",border:"1px solid rgba(255,200,50,0.35)",opacity:reviewing?0.6:1,cursor:reviewing?"wait":"pointer"}} onClick={()=>!reviewing&&runReview()} title="AI Social Media Expert reviews all slides">{reviewing?"⏳ Reviewing...":"🧠 AI Review"}</button>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export</button>
         <button style={{...sm,background:showMoreActions?"rgba(255,255,255,0.1)":"transparent"}} onClick={()=>setShowMoreActions(v=>!v)} title="More actions">⋯ {showMoreActions?"Less":"More"}</button>
         <span style={{fontSize:11,color:DS.textMuted,marginLeft:"auto"}}>{graphics.length} graphics{filterTpl?` (${filteredGraphics.length} shown)`:""}</span>
       </div>
+      {/* AI Review Results */}
+      {reviewResults&&(
+        <div style={card({padding:`${DS.lg}px`,marginBottom:DS.md,border:"1px solid rgba(255,200,50,0.3)",background:"rgba(255,200,50,0.04)"})}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:DS.md}}>
+            <div style={sectionHead({marginBottom:0})}>🧠 AI SOCIAL MEDIA REVIEW</div>
+            <div style={{display:"flex",gap:8}}>
+              <button style={btnPositive({fontSize:11,padding:"6px 14px"})} onClick={applyAllReviewSuggestions}>Apply All</button>
+              <button style={btnIcon()} onClick={()=>setReviewResults(null)} title="Dismiss">✕</button>
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {reviewResults.map((r,ri)=>{
+              const vc=r.verdict==="ok"?"rgba(42,157,143,0.8)":r.verdict==="tweak"?"rgba(255,200,50,0.8)":r.verdict==="rewrite"?"rgba(230,57,70,0.8)":"rgba(150,150,150,0.6)";
+              const hs=r.suggestions&&Object.keys(r.suggestions).length>0;
+              return(<div key={ri} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${DS.borderSubtle}`,borderRadius:DS.rSm,padding:"8px 12px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:r.issues?.length||hs?6:0}}>
+                  <span style={{fontWeight:800,fontSize:11,color:vc,textTransform:"uppercase",background:`${vc}22`,padding:"2px 7px",borderRadius:4}}>{r.verdict}</span>
+                  <span style={{fontSize:12,fontWeight:600,opacity:0.7}}>#{(r.index||ri)+1} {graphics[r.index||ri]?.template||"?"}</span>
+                  {hs&&r.verdict!=="ok"&&<button style={{...btn({fontSize:10,padding:"2px 8px"}),marginLeft:"auto",background:"rgba(42,157,143,0.15)",border:"1px solid rgba(42,157,143,0.3)"}} onClick={()=>applyReviewSuggestion(r.index||ri,r.suggestions)}>Apply</button>}
+                </div>
+                {r.issues?.length>0&&<div style={{fontSize:11,opacity:0.5,marginBottom:hs?4:0}}>{r.issues.join(" · ")}</div>}
+                {hs&&r.verdict!=="ok"&&<div style={{fontSize:11,opacity:0.8,fontFamily:"monospace",background:"rgba(0,0,0,0.15)",padding:"4px 8px",borderRadius:4}}>{Object.entries(r.suggestions).map(([k,v])=><div key={k}><span style={{opacity:0.5}}>{k}:</span> {v}</div>)}</div>}
+              </div>);
+            })}
+          </div>
+        </div>
+      )}
       {/* SECONDARY TOOLBAR — collapsed by default */}
       {showMoreActions&&(
       <div style={{display:"flex",gap:6,marginBottom:10,alignItems:"center",flexWrap:"wrap",padding:`${DS.sm}px ${DS.md}px`,background:"rgba(255,255,255,0.02)",borderRadius:DS.rSm,border:`1px solid ${DS.borderSubtle}`}}>
