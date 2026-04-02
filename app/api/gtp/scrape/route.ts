@@ -216,26 +216,20 @@ function extractPhotos(html: string, regex: RegExp): string[] {
   return Array.from(set).slice(0, 30);
 }
 
-// Filter: only keep actual property photos, not logos/icons/branding
+// Filter: only keep actual property photos — strict whitelist approach
 function isPropertyPhoto(url: string): boolean {
   const lower = url.toLowerCase();
-  // Exclude known non-property image paths
-  const excludePatterns = [
-    "logo", "brand", "icon", "favicon", "badge", "marker",
-    "partner", "affiliation", "agent", "branch", "profile",
-    "floorplan", "floor-plan", "epc", "energy",
-    "app-icon", "sprite", "placeholder", "watermark",
-    "industry-affiliation", "association",
-  ];
-  for (const pat of excludePatterns) {
-    if (lower.includes(pat)) return false;
+  // Rightmove: only accept "property-photo" paths (NOT floorplans, logos, agents, etc.)
+  if (lower.includes("rightmove.co.uk")) {
+    return lower.includes("property-photo");
   }
-  // Must contain "property-photo" or "property/" or common photo paths
-  // OR be from a known photo CDN path
-  if (lower.includes("property-photo") || lower.includes("property/")) return true;
-  if (lower.includes("/photo/") || lower.includes("/photos/")) return true;
-  if (lower.includes("lid.zoocdn.com")) return true; // Zoopla CDN
-  // For URLs without clear path hints, accept JPEGs (likely photos, not PNGs which are usually logos)
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return true;
+  // Zoopla: accept from their photo CDN
+  if (lower.includes("zoocdn.com")) {
+    // Exclude known non-photo paths
+    if (lower.includes("logo") || lower.includes("brand") || lower.includes("icon") || lower.includes("agent")) return false;
+    return true;
+  }
+  // Generic: only accept if path clearly indicates a property photo
+  if (lower.includes("property-photo") || lower.includes("property/photo")) return true;
   return false;
 }
