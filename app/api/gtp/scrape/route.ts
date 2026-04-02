@@ -7,14 +7,29 @@ export async function GET(req: Request) {
     const imgUrl = searchParams.get("img");
     if (!imgUrl) return new NextResponse("Missing img param", { status: 400 });
 
-    const res = await fetch(imgUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Accept": "image/*",
-        "Referer": imgUrl.includes("rightmove") ? "https://www.rightmove.co.uk/" : "https://www.zoopla.co.uk/",
-      },
-    });
-    if (!res.ok) return new NextResponse("Image fetch failed", { status: 502 });
+    const referer = imgUrl.includes("rightmove") ? "https://www.rightmove.co.uk/" : "https://www.zoopla.co.uk/";
+    const headers = {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+      "Referer": referer,
+    };
+
+    // Try the URL as-is first
+    let res = await fetch(imgUrl, { headers });
+
+    // If 2400x2400 fails, try without the size suffix
+    if (!res.ok && imgUrl.includes("_max_2400x2400")) {
+      const fallbackUrl = imgUrl.replace("_max_2400x2400", "_max_1024x1024");
+      res = await fetch(fallbackUrl, { headers });
+    }
+
+    // If /dir/ path fails, try without /dir/
+    if (!res.ok && imgUrl.includes("/dir/")) {
+      const noDirUrl = imgUrl.replace("/dir/", "/");
+      res = await fetch(noDirUrl, { headers });
+    }
+
+    if (!res.ok) return new NextResponse(`Image fetch failed: ${res.status}`, { status: 502 });
 
     const blob = await res.blob();
     return new NextResponse(blob, {
@@ -84,7 +99,7 @@ function parseRightmove(html: string) {
         property.tenure = pd.tenure?.tenureType || "";
         property.price = pd.prices?.primaryPrice || "";
         property.photos = (pd.images || [])
-          .map((img: any) => (img.url || img.srcUrl || "").replace(/_max_\d+x\d+/, "_max_2400x2400"))
+          .map((img: any) => (img.url || img.srcUrl || ""))
           .filter((u: string) => u && isPropertyPhoto(u));
       }
     } catch {}
@@ -195,7 +210,7 @@ function capitalize(s: string): string {
 function extractPhotos(html: string, regex: RegExp): string[] {
   const set = new Set<string>();
   for (const m of Array.from(html.matchAll(regex))) {
-    const url = m[0].replace(/_max_\d+x\d+/, "_max_2400x2400");
+    const url = m[0];
     if (isPropertyPhoto(url)) set.add(url);
   }
   return Array.from(set).slice(0, 30);
