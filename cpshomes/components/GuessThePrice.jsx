@@ -3046,9 +3046,11 @@ export default function GuessThePrice({ displayMode = false }) {
                   for (let pi = 0; pi < p.photos.length; pi++) {
                     try {
                       setSaveStatus(`Photo ${pi + 1}/${p.photos.length}…`);
+                      // Delay between downloads to avoid rate limiting
+                      if (pi > 0) await new Promise(r => setTimeout(r, 300));
                       const imgRes = await fetch(`/api/gtp/scrape?img=${encodeURIComponent(p.photos[pi])}`);
+                      if (!imgRes.ok) continue; // skip failed downloads
                       const imgBlob = await imgRes.blob();
-                      // Skip small images (< 50KB) — logos, icons, branding
                       if (imgBlob.size < 50000) continue;
                       const form = new FormData();
                       form.append("photo", imgBlob, "photo.jpg");
