@@ -3,7 +3,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 
 // ── Tetromino definitions (4 rotation states each) ──────────────────────────
-// Each shape is a list of [row, col] offsets from the piece origin
 const TETROMINOES: [number, number][][][] = [
   // I
   [
@@ -56,25 +55,18 @@ const TETROMINOES: [number, number][][][] = [
   ],
 ];
 
-// Piece opacities — subtle variation, lower overall for background feel
-const PIECE_ALPHA = [0.10, 0.13, 0.11, 0.09, 0.14, 0.08, 0.07];
-const PIECE_ACTIVE_BOOST = 0.04;
-const GHOST_ALPHA = 0.03;
-// Warm stone tone (avoids cool/blue cast at low opacity on cream bg)
+// Piece opacities — visible enough to play, subtle enough for background
+const PIECE_ALPHA = [0.14, 0.17, 0.15, 0.13, 0.18, 0.12, 0.11];
+const PIECE_ACTIVE_BOOST = 0.06;
+// Warm stone tone
 const STONE = "120, 113, 108";
 
 const COLS = 10;
 const ROWS = 20;
-
-// NES-style scoring multipliers
 const LINE_SCORES = [0, 40, 100, 300, 1200];
 
-interface Piece {
-  type: number;
-  rotation: number;
-  x: number;
-  y: number;
-}
+interface Piece { type: number; rotation: number; x: number; y: number; }
+interface ScorePopup { text: string; timer: number; x: number; y: number; }
 
 interface GameState {
   board: number[][];
@@ -90,9 +82,11 @@ interface GameState {
   gameOverTimer: number;
   clearRows: number[];
   clearTimer: number;
-  // Pointer controls
   targetCol: number;
-  moveTimer: number;
+  popup: ScorePopup | null;
+  // Cached grid dimensions (updated in render, used in input handlers)
+  gridX: number;
+  gridCellSize: number;
 }
 
 function createBoard(): number[][] {
@@ -110,8 +104,7 @@ function shuffleBag(): number[] {
 
 function drawFromBag(bag: number[]): [number, number[]] {
   if (bag.length === 0) bag = shuffleBag();
-  const piece = bag.pop()!;
-  return [piece, bag];
+  return [bag.pop()!, bag];
 }
 
 function getCells(type: number, rotation: number, x: number, y: number): [number, number][] {
@@ -119,8 +112,7 @@ function getCells(type: number, rotation: number, x: number, y: number): [number
 }
 
 function collides(board: number[][], type: number, rotation: number, x: number, y: number): boolean {
-  const cells = getCells(type, rotation, x, y);
-  for (const [r, c] of cells) {
+  for (const [r, c] of getCells(type, rotation, x, y)) {
     if (c < 0 || c >= COLS || r >= ROWS) return true;
     if (r >= 0 && board[r][c] !== 0) return true;
   }
@@ -129,7 +121,6 @@ function collides(board: number[][], type: number, rotation: number, x: number, 
 
 function tryRotate(board: number[][], piece: Piece): Piece | null {
   const newRot = (piece.rotation + 1) % 4;
-  // Try basic rotation, then wall kicks
   const kicks = piece.type === 0 ? [0, -1, 1, -2, 2] : [0, -1, 1];
   for (const dx of kicks) {
     if (!collides(board, piece.type, newRot, piece.x + dx, piece.y)) {
@@ -141,23 +132,20 @@ function tryRotate(board: number[][], piece: Piece): Piece | null {
 
 function getGhostY(board: number[][], piece: Piece): number {
   let y = piece.y;
-  while (!collides(board, piece.type, piece.rotation, piece.x, y + 1)) {
-    y++;
-  }
+  while (!collides(board, piece.type, piece.rotation, piece.x, y + 1)) y++;
   return y;
 }
 
 function getDropInterval(level: number): number {
-  return Math.max(2, 48 - (level - 1) * 3);
+  return Math.max(3, 45 - (level - 1) * 4);
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
 export function TetrisBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [score, setScore] = useState(0);
+  const [, setScoreState] = useState(0);
   const [bestScore, setBestScore] = useState(0);
-  const [level, setLevel] = useState(1);
-  const [gameOver, setGameOver] = useState(false);
+  const [, setGameOverState] = useState(false);
   const gameRef = useRef<GameState | null>(null);
 
   useEffect(() => {
@@ -182,7 +170,6 @@ export function TetrisBackground() {
     if (!maybeCtx) return;
     const ctx: CanvasRenderingContext2D = maybeCtx;
 
-    // ── Init game state ───────────────────────────────────────────────
     let bag = shuffleBag();
     let firstType: number;
     [firstType, bag] = drawFromBag(bag);
@@ -204,11 +191,12 @@ export function TetrisBackground() {
       clearRows: [],
       clearTimer: 0,
       targetCol: 3,
-      moveTimer: 0,
+      popup: null,
+      gridX: 0,
+      gridCellSize: 40,
     };
     gameRef.current = g;
 
-    // ── Canvas sizing ─────────────────────────────────────────────────
     function resize() {
       canvas!.width = window.innerWidth;
       canvas!.height = window.innerHeight;
@@ -216,59 +204,52 @@ export function TetrisBackground() {
     resize();
     window.addEventListener("resize", resize);
 
-    // ── Spawn a new piece ─────────────────────────────────────────────
+    // ── Game helpers ──────────────────────────────────────────────────
     function spawnPiece() {
       const type = g.next;
       let nextT: number;
       [nextT, g.bag] = drawFromBag(g.bag);
       g.next = nextT;
       g.current = { type, rotation: 0, x: 3, y: 0 };
-
       if (collides(g.board, type, 0, 3, 0)) {
         g.gameOver = true;
         g.gameOverTimer = 0;
         updateBest(g.score);
-        setGameOver(true);
+        setGameOverState(true);
       }
     }
 
-    // ── Lock piece and check lines ────────────────────────────────────
     function lockPiece() {
       const cells = getCells(g.current.type, g.current.rotation, g.current.x, g.current.y);
       for (const [r, c] of cells) {
-        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
-          g.board[r][c] = g.current.type + 1;
-        }
+        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) g.board[r][c] = g.current.type + 1;
       }
 
-      // Check for completed lines
       const fullRows: number[] = [];
       for (let r = 0; r < ROWS; r++) {
-        if (g.board[r].every((c) => c !== 0)) fullRows.push(r);
+        if (g.board[r].every((v) => v !== 0)) fullRows.push(r);
       }
 
       if (fullRows.length > 0) {
         g.clearRows = fullRows;
-        g.clearTimer = 12;
-
-        // Update score
+        g.clearTimer = 14;
         const pts = LINE_SCORES[fullRows.length] * (g.level + 1);
         g.score += pts;
         g.lines += fullRows.length;
-        const newLevel = Math.min(15, Math.floor(g.lines / 10) + 1);
-        if (newLevel > g.level) g.level = newLevel;
+        g.level = Math.min(15, Math.floor(g.lines / 10) + 1);
 
-        setScore(g.score);
-        setLevel(g.level);
+        // Score popup at the cleared area
+        const midRow = fullRows[Math.floor(fullRows.length / 2)];
+        g.popup = { text: `+${pts}`, timer: 40, x: g.current.x, y: midRow };
+
+        setScoreState(g.score);
         updateBest(g.score);
       } else {
         spawnPiece();
       }
     }
 
-    // ── Clear animation complete ──────────────────────────────────────
     function finishClear() {
-      // Remove cleared rows top-down
       for (const row of g.clearRows.sort((a, b) => a - b)) {
         g.board.splice(row, 1);
         g.board.unshift(new Array(COLS).fill(0));
@@ -278,7 +259,6 @@ export function TetrisBackground() {
       spawnPiece();
     }
 
-    // ── Move piece ────────────────────────────────────────────────────
     function movePiece(dx: number, dy: number): boolean {
       if (!collides(g.board, g.current.type, g.current.rotation, g.current.x + dx, g.current.y + dy)) {
         g.current.x += dx;
@@ -295,12 +275,11 @@ export function TetrisBackground() {
         dropped++;
       }
       g.score += dropped * 2;
-      setScore(g.score);
+      setScoreState(g.score);
       lockPiece();
       g.dropTimer = 0;
     }
 
-    // ── Restart ───────────────────────────────────────────────────────
     function restart() {
       g.board = createBoard();
       g.bag = shuffleBag();
@@ -318,32 +297,27 @@ export function TetrisBackground() {
       g.gameOverTimer = 0;
       g.clearRows = [];
       g.clearTimer = 0;
-      setScore(0);
-      setLevel(1);
-      setGameOver(false);
+      g.popup = null;
+      setScoreState(0);
+      setGameOverState(false);
     }
 
-    // ── Pointer controls (mouse + touch) ────────────────────────────
+    // ── Input: column from screen X ──────────────────────────────────
     function getColFromX(clientX: number) {
-      const W = canvas!.width;
-      const cs = Math.floor(W / COLS);
-      const gx = Math.floor((W - cs * COLS) / 2);
-      return Math.max(0, Math.min(COLS - 1, Math.floor((clientX - gx) / cs)));
+      return Math.max(0, Math.min(COLS - 1, Math.floor((clientX - g.gridX) / g.gridCellSize)));
     }
 
-    // Mouse: piece snaps to column under cursor
+    // Mouse
     function onMouseMove(e: MouseEvent) {
       if (g.gameOver || g.clearTimer > 0) return;
       g.targetCol = getColFromX(e.clientX);
     }
-    // Click anywhere: rotate piece. Double-click: hard drop
     let lastClickTime = 0;
-    function onClick(e: MouseEvent) {
+    function onClick() {
       if (g.gameOver) { restart(); return; }
       if (g.clearTimer > 0) return;
       const now = Date.now();
       if (now - lastClickTime < 300) {
-        // Double-click = hard drop
         hardDrop();
         lastClickTime = 0;
       } else {
@@ -353,7 +327,7 @@ export function TetrisBackground() {
       }
     }
 
-    // Touch: drag to position, tap to rotate, swipe down to drop
+    // Touch
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
@@ -361,14 +335,11 @@ export function TetrisBackground() {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
       touchStartTime = Date.now();
-      if (g.gameOver || g.clearTimer > 0) return;
-      g.targetCol = getColFromX(e.touches[0].clientX);
+      if (!g.gameOver && g.clearTimer === 0) g.targetCol = getColFromX(e.touches[0].clientX);
     }
     function onTouchMove(e: TouchEvent) {
-      if (g.gameOver || g.clearTimer > 0) return;
-      if (e.touches.length > 0) {
-        g.targetCol = getColFromX(e.touches[0].clientX);
-      }
+      if (g.gameOver || g.clearTimer > 0 || e.touches.length === 0) return;
+      g.targetCol = getColFromX(e.touches[0].clientX);
     }
     function onTouchEnd(e: TouchEvent) {
       if (g.gameOver) { restart(); return; }
@@ -376,16 +347,14 @@ export function TetrisBackground() {
       const dy = e.changedTouches[0].clientY - touchStartY;
       const elapsed = Date.now() - touchStartTime;
       if (dy > 60 && Math.abs(dy) > dx * 2) {
-        // Swipe down = hard drop
         hardDrop();
       } else if (dx < 15 && Math.abs(dy) < 15 && elapsed < 300) {
-        // Tap = rotate
         const rotated = tryRotate(g.board, g.current);
         if (rotated) g.current = rotated;
       }
     }
 
-    // Keyboard controls (desktop)
+    // Keyboard
     function onKeyDown(e: KeyboardEvent) {
       if (g.gameOver) {
         if (e.code === "Space") { e.preventDefault(); restart(); }
@@ -399,7 +368,7 @@ export function TetrisBackground() {
         case "ArrowLeft": movePiece(-1, 0); break;
         case "ArrowRight": movePiece(1, 0); break;
         case "ArrowDown":
-          if (movePiece(0, 1)) { g.score += 1; setScore(g.score); }
+          if (movePiece(0, 1)) { g.score += 1; setScoreState(g.score); }
           g.dropTimer = 0;
           break;
         case "ArrowUp": {
@@ -411,7 +380,6 @@ export function TetrisBackground() {
       }
     }
 
-    // Use document-level listeners so they work above the content overlay
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("click", onClick);
     document.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -419,7 +387,7 @@ export function TetrisBackground() {
     document.addEventListener("touchend", onTouchEnd);
     document.addEventListener("keydown", onKeyDown);
 
-    // ── Game loop ─────────────────────────────────────────────────────
+    // ── Game loop ────────────────────────────────────────────────────
     let animId: number;
 
     function update() {
@@ -427,29 +395,27 @@ export function TetrisBackground() {
         g.gameOverTimer = Math.min(g.gameOverTimer + 1, 30);
         return;
       }
-
-      // Line clear animation
       if (g.clearTimer > 0) {
         g.clearTimer--;
         if (g.clearTimer === 0) finishClear();
         return;
       }
 
-      // Snap piece to target column (from pointer) — move up to 2 cols per frame
-      for (let i = 0; i < 2; i++) {
-        if (g.current.x < g.targetCol) movePiece(1, 0);
-        else if (g.current.x > g.targetCol) movePiece(-1, 0);
-        else break;
+      // Popup fade
+      if (g.popup) {
+        g.popup.timer--;
+        if (g.popup.timer <= 0) g.popup = null;
       }
+
+      // Snap piece to target column instantly
+      while (g.current.x < g.targetCol && movePiece(1, 0)) { /* keep going */ }
+      while (g.current.x > g.targetCol && movePiece(-1, 0)) { /* keep going */ }
 
       // Gravity
       g.dropTimer++;
-      const interval = getDropInterval(g.level);
-      if (g.dropTimer >= interval) {
+      if (g.dropTimer >= getDropInterval(g.level)) {
         g.dropTimer = 0;
-        if (!movePiece(0, 1)) {
-          lockPiece();
-        }
+        if (!movePiece(0, 1)) lockPiece();
       }
     }
 
@@ -461,18 +427,21 @@ export function TetrisBackground() {
 
       dc.clearRect(0, 0, W, H);
 
-      // ── Grid sizing ───────────────────────────────────────────────
-      const cellSize = Math.floor(W / COLS);
+      // ── Grid sizing: fit viewport height, cap at viewport width ───
+      const cellSize = Math.floor(Math.min(H * 0.9 / ROWS, W / COLS));
       const gridW = cellSize * COLS;
       const gridH = cellSize * ROWS;
       const gridX = Math.floor((W - gridW) / 2);
-      const gridY = H - gridH; // anchor to bottom
+      const gridY = H - gridH;
+
+      // Cache for input handlers
+      g.gridX = gridX;
+      g.gridCellSize = cellSize;
 
       // ── Giant background score ────────────────────────────────────
       dc.save();
       const digits = String(g.score).length;
-      const maxScoreW = W * 0.8;
-      const scoreSize = Math.min(maxScoreW / (digits * 0.6), H * 0.4, 400);
+      const scoreSize = Math.min(W * 0.8 / (digits * 0.6), H * 0.35, 360);
       dc.font = `bold ${scoreSize}px Inter, system-ui, sans-serif`;
       dc.textAlign = "center";
       dc.textBaseline = "middle";
@@ -480,11 +449,9 @@ export function TetrisBackground() {
       dc.fillText(String(g.score), W / 2, H / 2);
       dc.restore();
 
-      // No grid border or grid lines — clean abstract look
-
-      // ── Helper: draw rounded rect (gaps & radius scale with cell size) ──
-      const gap = Math.max(2, Math.floor(cellSize * 0.04));
-      const rad = Math.max(4, Math.floor(cellSize * 0.08));
+      // ── Helper: draw rounded rect ─────────────────────────────────
+      const gap = Math.max(2, Math.floor(cellSize * 0.05));
+      const rad = Math.max(3, Math.floor(cellSize * 0.12));
       function drawCell(x: number, y: number, size: number, alpha: number) {
         dc.fillStyle = `rgba(${STONE}, ${alpha})`;
         dc.beginPath();
@@ -499,69 +466,84 @@ export function TetrisBackground() {
         dc.fill();
       }
 
-      // ── Draw locked board cells ───────────────────────────────────
+      // ── Locked board cells ────────────────────────────────────────
       for (let r = 0; r < ROWS; r++) {
         for (let col = 0; col < COLS; col++) {
           const val = g.board[r][col];
           if (val === 0) continue;
-
-          const isClearRow = g.clearRows.includes(r);
-          const alpha = isClearRow
-            ? 0.08 + Math.sin(g.clearTimer * 0.8) * 0.06
+          const isClear = g.clearRows.includes(r);
+          const alpha = isClear
+            ? 0.2 + Math.sin(g.clearTimer * 0.6) * 0.1
             : PIECE_ALPHA[val - 1];
-
           drawCell(gridX + col * cellSize, gridY + r * cellSize, cellSize, alpha);
         }
       }
 
-      // ── Ghost piece (very subtle fill, no outline) ────────────────
+      // ── Ghost piece ───────────────────────────────────────────────
       if (!g.gameOver && g.clearTimer === 0) {
         const ghostY = getGhostY(g.board, g.current);
         if (ghostY !== g.current.y) {
-          const ghostCells = getCells(g.current.type, g.current.rotation, g.current.x, ghostY);
-          for (const [r, col] of ghostCells) {
+          for (const [r, col] of getCells(g.current.type, g.current.rotation, g.current.x, ghostY)) {
             if (r < 0) continue;
-            drawCell(gridX + col * cellSize, gridY + r * cellSize, cellSize, 0.04);
+            drawCell(gridX + col * cellSize, gridY + r * cellSize, cellSize, 0.05);
           }
         }
 
         // ── Current piece ─────────────────────────────────────────────
-        const currentCells = getCells(g.current.type, g.current.rotation, g.current.x, g.current.y);
         const activeAlpha = PIECE_ALPHA[g.current.type] + PIECE_ACTIVE_BOOST;
-        for (const [r, col] of currentCells) {
+        for (const [r, col] of getCells(g.current.type, g.current.rotation, g.current.x, g.current.y)) {
           if (r < 0) continue;
           drawCell(gridX + col * cellSize, gridY + r * cellSize, cellSize, activeAlpha);
         }
       }
 
-      // ── Next piece preview (floating inside top-right of grid) ──
-      const previewCellSize = Math.floor(cellSize * 0.4);
-      const previewX = W - previewCellSize * 5;
-      const previewY = Math.max(32, gridY + cellSize);
+      // ── Next piece preview (top-right of visible area) ────────────
+      const pvSize = Math.floor(cellSize * 0.55);
+      const pvX = gridX + gridW + Math.max(12, cellSize * 0.3);
+      const pvY = Math.max(gridY + cellSize, 40);
 
-      const nextCells = TETROMINOES[g.next][0];
-      for (const [r, col] of nextCells) {
-        drawCell(previewX + col * previewCellSize, previewY + r * previewCellSize, previewCellSize, PIECE_ALPHA[g.next] * 0.6);
+      // Label
+      dc.save();
+      dc.font = `500 ${Math.max(9, pvSize * 0.4)}px Inter, system-ui, sans-serif`;
+      dc.textAlign = "left";
+      dc.textBaseline = "bottom";
+      dc.fillStyle = `rgba(${STONE}, 0.15)`;
+      dc.fillText("NEXT", pvX, pvY - 4);
+      dc.restore();
+
+      for (const [r, col] of TETROMINOES[g.next][0]) {
+        drawCell(pvX + col * pvSize, pvY + r * pvSize, pvSize, PIECE_ALPHA[g.next] * 0.7);
+      }
+
+      // ── Score popup ───────────────────────────────────────────────
+      if (g.popup) {
+        const alpha = Math.min(1, g.popup.timer / 20) * 0.4;
+        const py = gridY + g.popup.y * cellSize - (40 - g.popup.timer) * 1.5;
+        dc.save();
+        dc.font = `700 ${Math.max(14, cellSize * 0.4)}px Inter, system-ui, sans-serif`;
+        dc.textAlign = "center";
+        dc.textBaseline = "middle";
+        dc.fillStyle = `rgba(${STONE}, ${alpha})`;
+        dc.fillText(g.popup.text, gridX + g.popup.x * cellSize + cellSize * 2, py);
+        dc.restore();
       }
 
       // ── Game over overlay ─────────────────────────────────────────
       if (g.gameOver) {
         const fadeAlpha = Math.min(1, g.gameOverTimer / 30);
-
-        // Gentle fade over visible area
         dc.fillStyle = `rgba(250, 250, 249, ${0.6 * fadeAlpha})`;
         dc.fillRect(0, 0, W, H);
 
         dc.save();
-        dc.font = `300 24px Inter, system-ui, sans-serif`;
+        dc.font = `300 ${Math.min(28, cellSize * 0.7)}px Inter, system-ui, sans-serif`;
         dc.textAlign = "center";
         dc.textBaseline = "middle";
-        dc.fillStyle = `rgba(${STONE}, ${0.25 * fadeAlpha})`;
-        dc.fillText("GAME OVER", W / 2, H / 2 - 10);
+        dc.fillStyle = `rgba(${STONE}, ${0.3 * fadeAlpha})`;
+        dc.fillText("GAME OVER", W / 2, H / 2 - 14);
 
-        dc.font = `400 11px Inter, system-ui, sans-serif`;
-        dc.fillStyle = `rgba(${STONE}, ${0.15 * fadeAlpha})`;
-        dc.fillText("SPACE to restart", W / 2, H / 2 + 16);
+        dc.font = `400 ${Math.min(12, cellSize * 0.3)}px Inter, system-ui, sans-serif`;
+        dc.fillStyle = `rgba(${STONE}, ${0.2 * fadeAlpha})`;
+        dc.fillText("Click or tap to restart", W / 2, H / 2 + 14);
         dc.restore();
       }
     }
@@ -569,11 +551,8 @@ export function TetrisBackground() {
     function loop() {
       update();
       render();
-      if (g.running) {
-        animId = requestAnimationFrame(loop);
-      }
+      if (g.running) animId = requestAnimationFrame(loop);
     }
-
     animId = requestAnimationFrame(loop);
 
     return () => {
@@ -591,11 +570,7 @@ export function TetrisBackground() {
 
   return (
     <>
-      <canvas
-        ref={canvasRef}
-        className="fixed inset-0 z-0"
-      />
-      {/* Best score indicator */}
+      <canvas ref={canvasRef} className="fixed inset-0 z-0" />
       <div className="fixed bottom-4 right-4 z-10 text-xs font-sans text-stone-400 select-none">
         {bestScore > 0 && `★ ${bestScore}`}
       </div>
