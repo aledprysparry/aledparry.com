@@ -103,11 +103,21 @@ function parseRightmove(html: string) {
         property.type = pd.propertySubType || pd.propertyType || "";
         property.tenure = pd.tenure?.tenureType || "";
         property.price = pd.prices?.primaryPrice || "";
-        // Only use property photo URLs — filter strictly by path
-        property.photos = (pd.images || [])
+        // Only property photos, deduplicated — keep largest version of each
+        // Rightmove stores 3 sizes per photo (135x100, 476x317, 656x437)
+        // Each has the same hash in the filename, different size suffix
+        const allUrls = (pd.images || [])
           .map((img: any) => (img.url || img.srcUrl || ""))
-          .filter((u: string) => u && u.includes("/property-photo/"))
-          .slice(0, 25);
+          .filter((u: string) => u && u.includes("/property-photo/"));
+        // Group by hash (first 9+ chars of the filename), keep the longest URL (largest image)
+        const byHash: Record<string, string> = {};
+        for (const u of allUrls) {
+          const parts = u.split("/");
+          const filename = parts[parts.length - 1] || "";
+          const hash = filename.replace(/[._].*/,""); // strip size suffix + extension
+          if (!byHash[hash] || u.length > byHash[hash].length) byHash[hash] = u;
+        }
+        property.photos = Object.values(byHash).slice(0, 30);
       }
     } catch {}
   }
