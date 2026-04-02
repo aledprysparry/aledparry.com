@@ -3049,6 +3049,8 @@ export default function GuessThePrice({ displayMode = false }) {
                       setSaveStatus(`Photo ${pi + 1}/${p.photos.length}…`);
                       const imgRes = await fetch(`/api/gtp/scrape?img=${encodeURIComponent(p.photos[pi])}`);
                       const imgBlob = await imgRes.blob();
+                      // Skip small images (< 50KB) — logos, icons, branding
+                      if (imgBlob.size < 50000) continue;
                       const form = new FormData();
                       form.append("photo", imgBlob, "photo.jpg");
                       form.append("episodeId", String(activeEpisodeId));
