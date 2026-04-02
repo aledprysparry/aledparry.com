@@ -2,18 +2,18 @@
 
 import { useLanguage } from "@/lib/i18n/context";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
-import { PongBackground } from "@/components/ui/PongBackground";
+import { TetrisBackground } from "@/components/ui/TetrisBackground";
 
 export function HomeContent() {
   const { t } = useLanguage();
 
   return (
     <>
-    <PongBackground />
+    <TetrisBackground />
     <div className="min-h-screen flex flex-col items-center justify-center px-6 -mt-16 relative z-10 pointer-events-none">
       <div className="text-center max-w-xl pointer-events-auto">
         {/* Hero */}
-        <p className="text-sm font-sans font-medium tracking-widest uppercase text-accent mb-6">
+        <p className="text-sm font-sans font-medium tracking-widest uppercase text-stone-400 mb-6">
           {t.home.hero.title}
         </p>
         <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-stone-900 mb-8 leading-[1.1]">
