@@ -92,10 +92,17 @@ function parseRightmove(html: string) {
   const property: any = { address: "", location: "", beds: 0, type: "", tenure: "", price: "", addedDate: "", photos: [] };
 
   // Try PAGE_MODEL (Rightmove's client-side data)
-  const pageModelMatch = html.match(/window\.PAGE_MODEL\s*=\s*({[\s\S]*?});\s*<\/script>/);
-  if (pageModelMatch) {
+  // Regex fails on large JSON (~120KB) — use bracket counting instead
+  const pageModelIdx = html.indexOf("window.PAGE_MODEL = ");
+  if (pageModelIdx >= 0) {
     try {
-      const pd = JSON.parse(pageModelMatch[1])?.propertyData;
+      const jsonStart = pageModelIdx + "window.PAGE_MODEL = ".length;
+      let depth = 0, jsonEnd = jsonStart;
+      for (let i = jsonStart; i < html.length; i++) {
+        if (html[i] === "{") depth++;
+        else if (html[i] === "}") { depth--; if (depth === 0) { jsonEnd = i + 1; break; } }
+      }
+      const pd = JSON.parse(html.substring(jsonStart, jsonEnd))?.propertyData;
       if (pd) {
         property.address = pd.address?.displayAddress || "";
         property.location = extractLocation(property.address);
