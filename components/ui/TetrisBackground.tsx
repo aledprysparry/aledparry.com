@@ -331,44 +331,61 @@ export function TetrisBackground() {
       return Math.max(0, Math.min(COLS - 1, Math.floor((clientX - gx) / cs)));
     }
 
-    function onPointerMove(e: MouseEvent | Touch) {
+    // Mouse: piece snaps to column under cursor
+    function onMouseMove(e: MouseEvent) {
       if (g.gameOver || g.clearTimer > 0) return;
       g.targetCol = getColFromX(e.clientX);
     }
-
-    function onPointerTap() {
-      if (g.gameOver) {
-        restart();
-        return;
-      }
+    // Click anywhere: rotate piece. Double-click: hard drop
+    let lastClickTime = 0;
+    function onClick(e: MouseEvent) {
+      if (g.gameOver) { restart(); return; }
       if (g.clearTimer > 0) return;
-      const rotated = tryRotate(g.board, g.current);
-      if (rotated) g.current = rotated;
+      const now = Date.now();
+      if (now - lastClickTime < 300) {
+        // Double-click = hard drop
+        hardDrop();
+        lastClickTime = 0;
+      } else {
+        lastClickTime = now;
+        const rotated = tryRotate(g.board, g.current);
+        if (rotated) g.current = rotated;
+      }
     }
 
-    function onMouseMove(e: MouseEvent) { onPointerMove(e); }
-    function onClick() { onPointerTap(); }
-    function onTouchMove(e: TouchEvent) {
-      if (e.touches.length > 0) onPointerMove(e.touches[0]);
-    }
-    function onTouchStart(e: TouchEvent) {
-      if (e.touches.length > 0) onPointerMove(e.touches[0]);
-    }
-    // Detect tap (vs drag) for rotation
+    // Touch: drag to position, tap to rotate, swipe down to drop
     let touchStartX = 0;
     let touchStartY = 0;
-    function onTouchStartCapture(e: TouchEvent) {
+    let touchStartTime = 0;
+    function onTouchStart(e: TouchEvent) {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      if (g.gameOver || g.clearTimer > 0) return;
+      g.targetCol = getColFromX(e.touches[0].clientX);
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (g.gameOver || g.clearTimer > 0) return;
+      if (e.touches.length > 0) {
+        g.targetCol = getColFromX(e.touches[0].clientX);
+      }
     }
     function onTouchEnd(e: TouchEvent) {
+      if (g.gameOver) { restart(); return; }
       const dx = Math.abs(e.changedTouches[0].clientX - touchStartX);
-      const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
-      // Only rotate on tap (not drag)
-      if (dx < 10 && dy < 10) onPointerTap();
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const elapsed = Date.now() - touchStartTime;
+      if (dy > 60 && Math.abs(dy) > dx * 2) {
+        // Swipe down = hard drop
+        hardDrop();
+      } else if (dx < 15 && Math.abs(dy) < 15 && elapsed < 300) {
+        // Tap = rotate
+        const rotated = tryRotate(g.board, g.current);
+        if (rotated) g.current = rotated;
+      }
     }
 
-    // Keyboard as secondary controls (desktop)
+    // Keyboard controls (desktop)
     function onKeyDown(e: KeyboardEvent) {
       if (g.gameOver) {
         if (e.code === "Space") { e.preventDefault(); restart(); }
@@ -394,11 +411,12 @@ export function TetrisBackground() {
       }
     }
 
-    window.addEventListener("mousemove", onMouseMove);
-    canvas!.addEventListener("click", onClick);
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
-    window.addEventListener("touchstart", onTouchStartCapture, { passive: true });
-    window.addEventListener("touchend", onTouchEnd);
+    // Use document-level listeners so they work above the content overlay
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("click", onClick);
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
+    document.addEventListener("touchend", onTouchEnd);
     document.addEventListener("keydown", onKeyDown);
 
     // ── Game loop ─────────────────────────────────────────────────────
@@ -417,11 +435,11 @@ export function TetrisBackground() {
         return;
       }
 
-      // Move piece toward target column (from pointer)
-      g.moveTimer++;
-      if (g.moveTimer % 3 === 0) {
+      // Snap piece to target column (from pointer) — move up to 2 cols per frame
+      for (let i = 0; i < 2; i++) {
         if (g.current.x < g.targetCol) movePiece(1, 0);
         else if (g.current.x > g.targetCol) movePiece(-1, 0);
+        else break;
       }
 
       // Gravity
@@ -562,11 +580,11 @@ export function TetrisBackground() {
       g.running = false;
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
-      window.removeEventListener("mousemove", onMouseMove);
-      canvas!.removeEventListener("click", onClick);
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("touchstart", onTouchStartCapture);
-      window.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [updateBest]);
