@@ -543,7 +543,7 @@ export function TetrisBackground() {
       ctx.clearRect(0, 0, W, H);
 
       // ── Grid sizing ───────────────────────────────────────────────
-      const cellSize = Math.floor(Math.min(H * 0.85, W * 0.55) / ROWS);
+      const cellSize = Math.floor(Math.min(H * 0.95, W * 0.95) / ROWS);
       const gridW = cellSize * COLS;
       const gridH = cellSize * ROWS;
       const gridX = Math.floor((W - gridW) / 2);
