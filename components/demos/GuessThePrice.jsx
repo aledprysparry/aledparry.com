@@ -711,14 +711,13 @@ function drawProperty(ctx, W, H, S, progress) {
     const fadeIn = photoIdx === 0 ? 1 : (photoLocalP < crossfadeDuration ? easeOutExpo(photoLocalP / crossfadeDuration) : 1);
     drawPhoto(photos[photoIdx], photoLocalP, fadeIn);
   }
-    // Darken bottom for readability
-    const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
-    grad.addColorStop(0, "rgba(0,0,0,0)");
-    grad.addColorStop(0.6, "rgba(0,0,0,0.4)");
-    grad.addColorStop(1, "rgba(0,0,0,0.75)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-  }
+  // Darken bottom for readability
+  const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(0.6, "rgba(0,0,0,0.4)");
+  grad.addColorStop(1, "rgba(0,0,0,0.75)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
   // Bar appears when the second photo starts (first photo is clean full-screen)
   const barStart = numPhotos > 1 ? 1 / numPhotos : 0;
   const barP = easeOutExpo(Math.min(1, Math.max(0, (p - barStart) / 0.02)));
