@@ -85,7 +85,7 @@ function parseRightmove(html: string) {
         property.price = pd.prices?.primaryPrice || "";
         property.photos = (pd.images || [])
           .map((img: any) => (img.url || img.srcUrl || "").replace(/_max_\d+x\d+/, "_max_2400x2400"))
-          .filter(Boolean);
+          .filter((u: string) => u && isPropertyPhoto(u));
       }
     } catch {}
   }
@@ -195,7 +195,32 @@ function capitalize(s: string): string {
 function extractPhotos(html: string, regex: RegExp): string[] {
   const set = new Set<string>();
   for (const m of Array.from(html.matchAll(regex))) {
-    set.add(m[0].replace(/_max_\d+x\d+/, "_max_2400x2400"));
+    const url = m[0].replace(/_max_\d+x\d+/, "_max_2400x2400");
+    if (isPropertyPhoto(url)) set.add(url);
   }
   return Array.from(set).slice(0, 30);
+}
+
+// Filter: only keep actual property photos, not logos/icons/branding
+function isPropertyPhoto(url: string): boolean {
+  const lower = url.toLowerCase();
+  // Exclude known non-property image paths
+  const excludePatterns = [
+    "logo", "brand", "icon", "favicon", "badge", "marker",
+    "partner", "affiliation", "agent", "branch", "profile",
+    "floorplan", "floor-plan", "epc", "energy",
+    "app-icon", "sprite", "placeholder", "watermark",
+    "industry-affiliation", "association",
+  ];
+  for (const pat of excludePatterns) {
+    if (lower.includes(pat)) return false;
+  }
+  // Must contain "property-photo" or "property/" or common photo paths
+  // OR be from a known photo CDN path
+  if (lower.includes("property-photo") || lower.includes("property/")) return true;
+  if (lower.includes("/photo/") || lower.includes("/photos/")) return true;
+  if (lower.includes("lid.zoocdn.com")) return true; // Zoopla CDN
+  // For URLs without clear path hints, accept JPEGs (likely photos, not PNGs which are usually logos)
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return true;
+  return false;
 }

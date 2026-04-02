@@ -672,39 +672,45 @@ function drawProperty(ctx, W, H, S, progress) {
 
   const safe = safeZone(W, H);
 
-  // Draw photos — cycles through all photos during animation
+  // Draw photos — cycles through all photos with crossfade
   const rd = EPISODE.rounds ? EPISODE.rounds[S.propRound - 1] : null;
   const photos = rd?.photos || [];
   const numPhotos = Math.max(1, photos.length);
-  // Each photo gets equal portion of the animation timeline
-  const photoIdx = Math.min(numPhotos - 1, Math.floor(p * numPhotos * 0.999));
-  const photoLocalP = (p * numPhotos - photoIdx); // 0-1 within this photo's time
-  const currentSrc = photos[photoIdx] || photos[rd?.heroPhotoIndex || 0];
-  const heroImg = currentSrc ? getCachedImage(currentSrc) : null;
-  // Crossfade: draw previous photo underneath during transition
-  const fadeT = Math.min(1, photoLocalP / 0.3); // 0-1 over first 30% of each photo's time
-  if (photoIdx > 0 && fadeT < 1) {
-    const prevSrc = photos[photoIdx - 1];
-    const prevImg = prevSrc ? getCachedImage(prevSrc) : null;
-    if (prevImg && prevImg.complete && prevImg.naturalWidth > 0) {
-      const piw = prevImg.naturalWidth, pih = prevImg.naturalHeight;
-      const pScale = Math.max(W / piw, H / pih) * 1.04; // end of its Ken Burns zoom
-      const pdw = piw * pScale, pdh = pih * pScale;
-      ctx.drawImage(prevImg, (W - pdw) / 2, (H - pdh) / 2, pdw, pdh);
-    }
-  }
-  // Current photo fades in (first photo shows instantly)
-  const ep = photoIdx === 0 ? 1 : easeOutExpo(fadeT);
-  if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
-    // Cover-fit with Ken Burns zoom entrance per photo
-    const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
-    const zoomScale = 1.0 + 0.04 * photoLocalP; // gentle zoom during display
+
+  // Helper: draw a single photo cover-fit with Ken Burns zoom
+  const drawPhoto = (src, localP, alpha) => {
+    const img = src ? getCachedImage(src) : null;
+    if (!img || !img.complete || !img.naturalWidth) return;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const zoomScale = 1.0 + 0.04 * localP;
     const scale = Math.max(W / iw, H / ih) * zoomScale;
     const dw = iw * scale, dh = ih * scale;
     ctx.save();
-    ctx.globalAlpha = ep;
-    ctx.drawImage(heroImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
     ctx.restore();
+  };
+
+  // Calculate which photo we're on and crossfade progress
+  const rawIdx = p * numPhotos;
+  const photoIdx = Math.min(numPhotos - 1, Math.floor(rawIdx));
+  const photoLocalP = rawIdx - photoIdx; // 0-1 within this photo's time
+  const crossfadeDuration = 0.15; // 15% of each photo's slot = smooth crossfade
+
+  if (numPhotos <= 1) {
+    // Single photo — just draw it
+    drawPhoto(photos[0] || photos[rd?.heroPhotoIndex || 0], p, 1);
+  } else {
+    // Multi-photo: crossfade between current and previous
+    if (photoIdx > 0 && photoLocalP < crossfadeDuration) {
+      // Outgoing photo (fading out)
+      const fadeOut = 1 - easeOutExpo(photoLocalP / crossfadeDuration);
+      drawPhoto(photos[photoIdx - 1], 1, fadeOut);
+    }
+    // Current photo (fading in, or fully visible)
+    const fadeIn = photoIdx === 0 ? 1 : (photoLocalP < crossfadeDuration ? easeOutExpo(photoLocalP / crossfadeDuration) : 1);
+    drawPhoto(photos[photoIdx], photoLocalP, fadeIn);
+  }
     // Darken bottom for readability
     const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
     grad.addColorStop(0, "rgba(0,0,0,0)");
