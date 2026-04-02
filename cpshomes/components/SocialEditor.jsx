@@ -3599,14 +3599,10 @@ function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand
       <div style={S.topbar}>
         <div style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:DS.sm}}>
           <button style={btn({background:"transparent",border:"none",opacity:0.5,padding:"4px 8px",fontSize:DS.fsSm})} onClick={onBack} title="Back to home">←</button>
-          {allBrands?.length>1?(
-            <select value={project.brandId} onChange={e=>onChangeBrand&&onChangeBrand(Number(e.target.value))}
-              style={{background:"transparent",border:"none",color:DS.textMuted,fontSize:DS.fsSm,cursor:"pointer",fontFamily:"inherit",outline:"none",padding:"2px 4px"}}>
-              {(allBrands||[]).map(b=><option key={b.id} value={b.id} style={{background:DS.bgModal}}>{b.name}</option>)}
-            </select>
-          ):(
-            <div style={{fontSize:DS.fsSm,color:DS.textMuted,cursor:"pointer"}} onClick={onBack}>{brand.name}</div>
-          )}
+          <select value={project.brandId} onChange={e=>onChangeBrand&&onChangeBrand(Number(e.target.value))}
+            style={{background:"transparent",border:"none",color:DS.textMuted,fontSize:DS.fsSm,cursor:"pointer",fontFamily:"inherit",outline:"none",padding:"2px 4px"}}>
+            {(allBrands||[{id:project.brandId,name:brand.name}]).map(b=><option key={b.id} value={b.id} style={{background:DS.bgModal}}>{b.name}</option>)}
+          </select>
           <span style={{color:DS.textMuted,fontSize:DS.fsXs}}>/</span>
           <div style={{fontWeight:700,fontSize:DS.fsLg,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
         </div>
