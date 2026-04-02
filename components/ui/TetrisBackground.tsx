@@ -56,10 +56,12 @@ const TETROMINOES: [number, number][][][] = [
   ],
 ];
 
-// Piece opacities — different for each type to create visual variation
-const PIECE_ALPHA = [0.22, 0.26, 0.24, 0.20, 0.28, 0.18, 0.16];
-const PIECE_ACTIVE_BOOST = 0.06;
-const GHOST_ALPHA = 0.07;
+// Piece opacities — subtle variation, lower overall for background feel
+const PIECE_ALPHA = [0.10, 0.13, 0.11, 0.09, 0.14, 0.08, 0.07];
+const PIECE_ACTIVE_BOOST = 0.04;
+const GHOST_ALPHA = 0.03;
+// Warm stone tone (avoids cool/blue cast at low opacity on cream bg)
+const STONE = "120, 113, 108";
 
 const COLS = 10;
 const ROWS = 20;
@@ -543,44 +545,41 @@ export function TetrisBackground() {
       ctx.clearRect(0, 0, W, H);
 
       // ── Grid sizing ───────────────────────────────────────────────
-      const cellSize = Math.floor(Math.min(H * 0.95, W * 0.95) / ROWS);
+      const cellSize = Math.floor(W / COLS);
       const gridW = cellSize * COLS;
       const gridH = cellSize * ROWS;
       const gridX = Math.floor((W - gridW) / 2);
-      const gridY = Math.floor((H - gridH) / 2);
+      const gridY = H - gridH; // anchor to bottom — pieces emerge from above
 
       // ── Giant background score ────────────────────────────────────
       ctx.save();
       ctx.font = `bold ${Math.min(W * 0.5, 400)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = "rgba(0, 0, 0, 0.03)";
+      ctx.fillStyle = `rgba(${STONE}, 0.035)`;
       ctx.fillText(String(g.score), W / 2, H / 2);
       ctx.restore();
 
-      // ── Grid border ───────────────────────────────────────────────
-      ctx.strokeStyle = "rgba(68, 64, 60, 0.08)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(gridX - 0.5, gridY - 0.5, gridW + 1, gridH + 1);
+      // No grid border or grid lines — clean abstract look
 
-      // ── Grid lines ────────────────────────────────────────────────
-      ctx.strokeStyle = "rgba(68, 64, 60, 0.04)";
-      ctx.lineWidth = 0.5;
-      for (let c = 1; c < COLS; c++) {
+      // ── Helper: draw rounded rect (gaps & radius scale with cell size) ──
+      const gap = Math.max(2, Math.floor(cellSize * 0.04));
+      const rad = Math.max(4, Math.floor(cellSize * 0.08));
+      function drawCell(x: number, y: number, size: number, alpha: number) {
+        ctx.fillStyle = `rgba(${STONE}, ${alpha})`;
         ctx.beginPath();
-        ctx.moveTo(gridX + c * cellSize, gridY);
-        ctx.lineTo(gridX + c * cellSize, gridY + gridH);
-        ctx.stroke();
-      }
-      for (let r = 1; r < ROWS; r++) {
-        ctx.beginPath();
-        ctx.moveTo(gridX, gridY + r * cellSize);
-        ctx.lineTo(gridX + gridW, gridY + r * cellSize);
-        ctx.stroke();
+        const s = size - gap * 2;
+        const cx = x + gap;
+        const cy = y + gap;
+        ctx.moveTo(cx + rad, cy);
+        ctx.arcTo(cx + s, cy, cx + s, cy + s, rad);
+        ctx.arcTo(cx + s, cy + s, cx, cy + s, rad);
+        ctx.arcTo(cx, cy + s, cx, cy, rad);
+        ctx.arcTo(cx, cy, cx + s, cy, rad);
+        ctx.fill();
       }
 
       // ── Draw locked board cells ───────────────────────────────────
-      const gap = 1;
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
           const val = g.board[r][c];
@@ -588,131 +587,80 @@ export function TetrisBackground() {
 
           const isClearRow = g.clearRows.includes(r);
           const alpha = isClearRow
-            ? 0.3 + Math.sin(g.clearTimer * 0.8) * 0.15
+            ? 0.08 + Math.sin(g.clearTimer * 0.8) * 0.06
             : PIECE_ALPHA[val - 1];
 
-          ctx.fillStyle = `rgba(68, 64, 60, ${alpha})`;
-          ctx.beginPath();
-          const cx = gridX + c * cellSize + gap;
-          const cy = gridY + r * cellSize + gap;
-          const cs = cellSize - gap * 2;
-          const radius = 2;
-          ctx.moveTo(cx + radius, cy);
-          ctx.arcTo(cx + cs, cy, cx + cs, cy + cs, radius);
-          ctx.arcTo(cx + cs, cy + cs, cx, cy + cs, radius);
-          ctx.arcTo(cx, cy + cs, cx, cy, radius);
-          ctx.arcTo(cx, cy, cx + cs, cy, radius);
-          ctx.fill();
+          drawCell(gridX + c * cellSize, gridY + r * cellSize, cellSize, alpha);
         }
       }
 
-      // ── Ghost piece ───────────────────────────────────────────────
+      // ── Ghost piece (very subtle fill, no outline) ────────────────
       if (!g.gameOver && g.clearTimer === 0) {
         const ghostY = getGhostY(g.board, g.current);
         if (ghostY !== g.current.y) {
           const ghostCells = getCells(g.current.type, g.current.rotation, g.current.x, ghostY);
-          ctx.strokeStyle = `rgba(68, 64, 60, ${GHOST_ALPHA})`;
-          ctx.lineWidth = 1;
           for (const [r, c] of ghostCells) {
             if (r < 0) continue;
-            const cx = gridX + c * cellSize + gap;
-            const cy = gridY + r * cellSize + gap;
-            const cs = cellSize - gap * 2;
-            ctx.strokeRect(cx, cy, cs, cs);
+            drawCell(gridX + c * cellSize, gridY + r * cellSize, cellSize, 0.04);
           }
         }
 
         // ── Current piece ─────────────────────────────────────────────
         const currentCells = getCells(g.current.type, g.current.rotation, g.current.x, g.current.y);
         const activeAlpha = PIECE_ALPHA[g.current.type] + PIECE_ACTIVE_BOOST;
-        ctx.fillStyle = `rgba(68, 64, 60, ${activeAlpha})`;
         for (const [r, c] of currentCells) {
           if (r < 0) continue;
-          const cx = gridX + c * cellSize + gap;
-          const cy = gridY + r * cellSize + gap;
-          const cs = cellSize - gap * 2;
-          const radius = 2;
-          ctx.beginPath();
-          ctx.moveTo(cx + radius, cy);
-          ctx.arcTo(cx + cs, cy, cx + cs, cy + cs, radius);
-          ctx.arcTo(cx + cs, cy + cs, cx, cy + cs, radius);
-          ctx.arcTo(cx, cy + cs, cx, cy, radius);
-          ctx.arcTo(cx, cy, cx + cs, cy, radius);
-          ctx.fill();
+          drawCell(gridX + c * cellSize, gridY + r * cellSize, cellSize, activeAlpha);
         }
       }
 
-      // ── Next piece preview ────────────────────────────────────────
-      const previewCellSize = Math.floor(cellSize * 0.7);
-      const previewX = gridX + gridW + Math.max(20, cellSize);
-      const previewY = gridY + cellSize;
-
-      ctx.save();
-      ctx.font = "600 11px Inter, system-ui, sans-serif";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "bottom";
-      ctx.fillStyle = "rgba(120, 113, 108, 0.25)";
-      ctx.fillText("NEXT", previewX, previewY - 6);
-      ctx.restore();
-
-      // Preview border
-      ctx.strokeStyle = "rgba(68, 64, 60, 0.06)";
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(previewX - 4, previewY - 4, previewCellSize * 4 + 8, previewCellSize * 4 + 8);
+      // ── Next piece preview (floating inside top-right of grid) ──
+      const previewCellSize = Math.floor(cellSize * 0.4);
+      const previewX = W - previewCellSize * 5;
+      const previewY = Math.max(32, gridY + cellSize);
 
       const nextCells = TETROMINOES[g.next][0];
-      ctx.fillStyle = `rgba(68, 64, 60, ${PIECE_ALPHA[g.next]})`;
       for (const [r, c] of nextCells) {
-        const cx = previewX + c * previewCellSize + gap;
-        const cy = previewY + r * previewCellSize + gap;
-        const cs = previewCellSize - gap * 2;
-        const radius = 2;
-        ctx.beginPath();
-        ctx.moveTo(cx + radius, cy);
-        ctx.arcTo(cx + cs, cy, cx + cs, cy + cs, radius);
-        ctx.arcTo(cx + cs, cy + cs, cx, cy + cs, radius);
-        ctx.arcTo(cx, cy + cs, cx, cy, radius);
-        ctx.arcTo(cx, cy, cx + cs, cy, radius);
-        ctx.fill();
+        drawCell(previewX + c * previewCellSize, previewY + r * previewCellSize, previewCellSize, PIECE_ALPHA[g.next] * 0.6);
       }
 
-      // ── HUD: Level (top-left) ─────────────────────────────────────
+      // ── HUD: Level (top-left) — whisper quiet ─────────────────────
       ctx.save();
-      ctx.font = "600 13px Inter, system-ui, sans-serif";
+      ctx.font = "500 11px Inter, system-ui, sans-serif";
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
-      ctx.fillStyle = "rgba(120, 113, 108, 0.35)";
-      ctx.fillText(`Level ${g.level}`, 16, 12);
+      ctx.fillStyle = `rgba(${STONE}, 0.15)`;
+      ctx.fillText(`Level ${g.level}`, 16, 14);
       ctx.restore();
 
-      // ── HUD: Score (top-right) ────────────────────────────────────
+      // ── HUD: Score (top-right) — whisper quiet ────────────────────
       ctx.save();
-      ctx.font = "700 16px Inter, system-ui, sans-serif";
+      ctx.font = "500 11px Inter, system-ui, sans-serif";
       ctx.textAlign = "right";
       ctx.textBaseline = "top";
-      ctx.fillStyle = "rgba(87, 83, 78, 0.45)";
-      ctx.fillText(String(g.score), W - 16, 10);
+      ctx.fillStyle = `rgba(${STONE}, 0.15)`;
+      ctx.fillText(String(g.score), W - 16, 14);
       ctx.restore();
 
       // ── Game over overlay ─────────────────────────────────────────
       if (g.gameOver) {
         const fadeAlpha = Math.min(1, g.gameOverTimer / 30);
 
-        // Dim the grid area
-        ctx.fillStyle = `rgba(250, 250, 249, ${0.4 * fadeAlpha})`;
-        ctx.fillRect(gridX, gridY, gridW, gridH);
+        // Gentle fade over visible area
+        ctx.fillStyle = `rgba(250, 250, 249, ${0.6 * fadeAlpha})`;
+        ctx.fillRect(0, 0, W, H);
 
-        // GAME OVER text
         ctx.save();
-        ctx.font = `bold ${Math.min(gridW * 0.12, 36)}px Inter, system-ui, sans-serif`;
+        ctx.font = `300 24px Inter, system-ui, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = `rgba(68, 64, 60, ${0.5 * fadeAlpha})`;
-        ctx.fillText("GAME OVER", gridX + gridW / 2, gridY + gridH / 2 - 16);
+        ctx.letterSpacing = "0.15em";
+        ctx.fillStyle = `rgba(${STONE}, ${0.25 * fadeAlpha})`;
+        ctx.fillText("GAME OVER", W / 2, H / 2 - 10);
 
-        ctx.font = `500 ${Math.min(gridW * 0.06, 14)}px Inter, system-ui, sans-serif`;
-        ctx.fillStyle = `rgba(68, 64, 60, ${0.3 * fadeAlpha})`;
-        ctx.fillText("SPACE to restart", gridX + gridW / 2, gridY + gridH / 2 + 16);
+        ctx.font = `400 11px Inter, system-ui, sans-serif`;
+        ctx.fillStyle = `rgba(${STONE}, ${0.15 * fadeAlpha})`;
+        ctx.fillText("SPACE to restart", W / 2, H / 2 + 16);
         ctx.restore();
       }
     }
