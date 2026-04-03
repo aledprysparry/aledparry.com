@@ -2510,25 +2510,37 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
             {graphics.map((g,i)=>{
               const meta=TMPL[g.template]||{label:"?",type:"?"};
               const isOv=(g.typeOverride||meta.type)==="overlay";
+              const isActive=editingIdx===i;
               return(
-                <div key={i} onClick={()=>setEditingIdx(editingIdx===i?null:i)}
-                  style={{width:80,height:45,borderRadius:6,overflow:"hidden",border:`2px solid ${editingIdx===i?"#2A9D8F":selected.has(i)?"rgba(255,255,255,0.2)":"transparent"}`,cursor:"pointer",flexShrink:0,position:"relative",background:previews[i]?"#111":"repeating-conic-gradient(#333 0% 25%,#222 0% 50%) 0 0/12px 12px",transition:"border-color 0.15s"}}>
-                  {previews[i]&&<img src={previews[i]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
-                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.7)",fontSize:8,padding:"1px 4px",color:isOv?"#2A9D8F":"#FB8770",fontWeight:700,textTransform:"uppercase"}}>{meta.label}</div>
+                <div key={i} onClick={()=>setEditingIdx(isActive?null:i)}
+                  style={{width:100,flexShrink:0,cursor:"pointer",transition:"all 0.15s",transform:isActive?"scale(1.05)":"scale(1)",opacity:isActive?1:selected.has(i)?1:0.75}}>
+                  <div style={{width:100,height:56,borderRadius:6,overflow:"hidden",border:`2px solid ${isActive?brand.colorAccent:selected.has(i)?"rgba(255,255,255,0.25)":"transparent"}`,position:"relative",background:previews[i]?"#111":"repeating-conic-gradient(#333 0% 25%,#222 0% 50%) 0 0/12px 12px"}}>
+                    {previews[i]&&<img src={previews[i]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
+                    {isActive&&<div style={{position:"absolute",inset:0,border:`2px solid ${brand.colorAccent}`,borderRadius:4,pointerEvents:"none"}}/>}
+                  </div>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",color:isOv?"#2A9D8F":"#FB8770",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textAlign:"center",opacity:0.8}}>{meta.label}</div>
                 </div>
               );
             })}
           </div>
         </div>
       )}
-      {/* PRIMARY TOOLBAR — 4 actions + count */}
-      <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
+      {/* PRIMARY TOOLBAR */}
+      <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
         <button style={sm} onClick={previewAll} title="Preview all graphics">👁 Preview</button>
         <button style={{...sm,background:reviewing?"rgba(255,200,50,0.15)":"rgba(255,200,50,0.1)",border:"1px solid rgba(255,200,50,0.35)",opacity:reviewing?0.6:1,cursor:reviewing?"wait":"pointer"}} onClick={()=>!reviewing&&runReview()} title="AI Social Media Expert reviews all slides">{reviewing?"⏳ Reviewing...":"🧠 AI Review"}</button>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export</button>
-        <button style={{...sm,background:showMoreActions?"rgba(255,255,255,0.1)":"transparent"}} onClick={()=>setShowMoreActions(v=>!v)} title="More actions">⋯ {showMoreActions?"Less":"More"}</button>
-        <span style={{fontSize:11,color:DS.textMuted,marginLeft:"auto"}}>{graphics.length} graphics{filterTpl?` (${filteredGraphics.length} shown)`:""}</span>
+        <div style={{width:1,height:20,background:DS.borderSubtle,margin:"0 2px"}}/>
+        <button style={btn({fontSize:10,padding:"5px 9px"})} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))} title="Select all">All</button>
+        <button style={btn({fontSize:10,padding:"5px 9px"})} onClick={()=>setSelected(()=>new Set())} title="Deselect all">None</button>
+        <select value={filterTpl} onChange={e=>setFilterTpl(e.target.value)}
+          style={{background:DS.bgInput,border:`1px solid ${filterTpl?brand.colorAccent:DS.borderSubtle}`,borderRadius:DS.rSm,padding:"4px 8px",color:filterTpl?DS.textPrimary:DS.textMuted,fontSize:10,fontFamily:"inherit",outline:"none",cursor:"pointer"}}>
+          <option value="">All types</option>
+          {[...new Set(graphics.map(g=>g.template))].map(t=><option key={t} value={t}>{(TMPL[t]||{}).label||t}</option>)}
+        </select>
+        <button style={{...sm,background:showMoreActions?"rgba(255,255,255,0.1)":"transparent",fontSize:10}} onClick={()=>setShowMoreActions(v=>!v)} title="More actions">⋯ {showMoreActions?"Less":"More"}</button>
+        <span style={{fontSize:10,color:DS.textMuted,marginLeft:"auto"}}>{selected.size}/{graphics.length}{filterTpl?` (${filteredGraphics.length} shown)`:""}</span>
       </div>
       {/* AI Review Results */}
       {reviewResults&&(
@@ -2638,7 +2650,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                     <button style={btn({fontSize:10,padding:"4px 8px",opacity:0.35})} onClick={()=>{if(graphics.length<=1)return;const ng=graphics.filter((_,j)=>j!==i);setGraphics(ng);if(editingIdx===i)setEditingIdx(null);}} title="Delete">🗑</button>
                   </div>
                 </div>
-                {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px",imageRendering:"auto"}}/>}
+                {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} onClick={e=>{e.stopPropagation();setEditingIdx(editingIdx===i?null:i);}} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px",imageRendering:"auto",cursor:"pointer"}}/>}
                 {showAnim&&<GraphicAnimPreview key={JSON.stringify(g.content)+g.typeOverride} g={g} brand={brand} ratio={previewRatio} showSafeZones={showSafeZones}/>}
               </div>
             );
@@ -3011,6 +3023,7 @@ function ExportTab({project,brand,updateProject}){
   const [prog,setProg]=useState({done:0,total:0,pct:0});
   const [captionMode,setCaptionMode]=useState("composite"); // composite | individual
   const [includeCaptions,setIncludeCaptions]=useState(false);
+  const [showAdvanced,setShowAdvanced]=useState(false);
   const [convertMov,setConvertMov]=useState(false);
   const [ffmpegLoading,setFfmpegLoading]=useState(false);
   const [gfxMode,setGfxMode]=useState("premiere"); // premiere | png | webm | pngseq | composite | both
@@ -3304,14 +3317,32 @@ function ExportTab({project,brand,updateProject}){
       {selectedGfx.length>0&&(
         <div style={{marginBottom:DS.lg+2}}>
           <div style={sectionHead()}>GRAPHICS EXPORT FORMAT</div>
-          <div style={{display:"flex",gap:DS.sm}}>
-            {[["premiere","🎬 Premiere Ready (Recommended)","PNG sequences + XML timecodes"],["png","🖼 Stills (PNG)","Static images for review"],["webm","🎞 Animated (WebM)","Individual transparent videos"],["pngseq","🎬 PNG Sequence","Numbered frames in zip"],["composite","🎥 Composite Video","One video, all graphics timed"],["both","📦 Everything","Stills + WebMs + sequences"]].map(([mode,title,desc])=>(
-              <button key={mode} style={{flex:1,background:gfxMode===mode?DS.positive:DS.bgCard,border:`1px solid ${gfxMode===mode?DS.positiveBorder:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md}px`,cursor:"pointer",color:DS.textPrimary,fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setGfxMode(mode)}>
-                <div style={{fontWeight:800,fontSize:DS.fsMd,marginBottom:3}}>{title}</div>
-                <div style={{fontSize:11,color:DS.textMuted,lineHeight:1.4}}>{desc}</div>
-              </button>
-            ))}
-          </div>
+          {(()=>{
+            const allFormats=[["premiere","🎬 Premiere Ready","PNG sequences + XML timecodes"],["png","🖼 Stills (PNG)","Static images for review"],["webm","🎞 Animated (WebM)","Transparent videos"],["pngseq","🎬 PNG Sequence","Numbered frames in zip"],["composite","🎥 Composite Video","One video, all graphics timed"],["both","📦 Everything","Stills + WebMs + sequences"]];
+            const primary=allFormats.slice(0,2);
+            const advanced=allFormats.slice(2);
+            const isAdvancedSelected=advanced.some(([m])=>m===gfxMode);
+            const show=showAdvanced||isAdvancedSelected;
+            return(<>
+              <div style={{display:"flex",gap:DS.sm,marginBottom:show?DS.sm:0}}>
+                {primary.map(([mode,title,desc])=>(
+                  <button key={mode} style={{flex:1,background:gfxMode===mode?DS.positive:DS.bgCard,border:`1px solid ${gfxMode===mode?DS.positiveBorder:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md}px`,cursor:"pointer",color:DS.textPrimary,fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setGfxMode(mode)}>
+                    <div style={{fontWeight:800,fontSize:DS.fsMd,marginBottom:3}}>{title}{mode==="premiere"?" ★":""}</div>
+                    <div style={{fontSize:11,color:DS.textMuted,lineHeight:1.4}}>{desc}</div>
+                  </button>
+                ))}
+                {!show&&<button style={btn({flex:"0 0 auto",fontSize:10,alignSelf:"center",opacity:0.6})} onClick={()=>setShowAdvanced(true)}>More formats →</button>}
+              </div>
+              {show&&<div style={{display:"flex",gap:DS.sm}}>
+                {advanced.map(([mode,title,desc])=>(
+                  <button key={mode} style={{flex:1,background:gfxMode===mode?DS.positive:DS.bgCard,border:`1px solid ${gfxMode===mode?DS.positiveBorder:DS.borderSubtle}`,borderRadius:DS.rMd,padding:`${DS.md-2}px`,cursor:"pointer",color:DS.textPrimary,fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setGfxMode(mode)}>
+                    <div style={{fontWeight:700,fontSize:DS.fsSm,marginBottom:2}}>{title}</div>
+                    <div style={{fontSize:10,color:DS.textMuted,lineHeight:1.3}}>{desc}</div>
+                  </button>
+                ))}
+              </div>}
+            </>);
+          })()}
           {/* MOV conversion toggle — only show for webm/both/composite modes */}
           {(gfxMode==="webm"||gfxMode==="both"||gfxMode==="composite")&&(
             <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 0",marginTop:DS.xs}} onClick={()=>setConvertMov(v=>!v)}>
