@@ -1527,9 +1527,9 @@ async function recordPNGSequence(g,brand,ratio,onProgress){
   const r=ratio||"16:9";
   const AR=RATIOS[r]||RATIOS["16:9"];
   const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-  // 2s at 25fps = 50 frames (1s entrance + 1s hold/drift)
-  // Shorter duration halves memory while keeping full animation
-  const dur=2; // fixed 2s — editor can loop/extend in Premiere
+  // Use the graphic's duration from the manifest (default 4s if not set)
+  // 1s entrance animation + remaining hold/drift
+  const dur=Math.max(2, g.duration||4);
   const fps=25;
   const totalFrames=Math.round(dur*fps);
   const animFrames=fps; // entrance over 1s
