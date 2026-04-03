@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback, createContext, useContext } f
 // ════════════════════════════════════════════════════════════════
 // PSC PRODUCTION MODULE — BUNDLED v2
 // All modules inlined. API-wired. Ready for Vercel deployment.
-// Set VITE_API_URL in your Vercel env vars to your Railway backend.
+// Set VITE_API_URL in your env vars to point at your backend API.
 // ════════════════════════════════════════════════════════════════
 
 // ═══ psc_constants.js ═══
@@ -116,50 +116,53 @@ const CSS = `
 ${FONT_IMPORT}
 /* ── SCOPED ROOT — all PMA styles contained under .pma ── */
 .pma{
-  --bg:#0b0d12;--surface:#13151c;--surface2:#191c27;--surface3:#1f2333;--surface4:#252a3a;
-  --border:#252a3a;--border2:#2f3550;
-  --accent:#4f72ff;--accent-dim:rgba(79,114,255,0.15);--accent-mid:rgba(79,114,255,0.3);
-  --green:#22c55e;--green-dim:rgba(34,197,94,0.12);
-  --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.12);
-  --red:#ef4444;--red-dim:rgba(239,68,68,0.12);
-  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
-  --teal:#2dd4bf;--teal-dim:rgba(45,212,191,0.12);
-  --text:#e8eaf5;--text2:#9197b3;--text3:#555e80;--text4:#3a4060;
-  --radius:10px;--radius-sm:7px;--radius-lg:14px;--radius-xl:18px;
-  background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  --bg:#0a0c10;--surface:#12141b;--surface2:#181b25;--surface3:#1e2230;--surface4:#252a3a;
+  --border:#1e2230;--border2:#2a3048;
+  --accent:#4f72ff;--accent-hover:#3d5de8;--accent-dim:rgba(79,114,255,0.10);--accent-mid:rgba(79,114,255,0.22);
+  --green:#22c55e;--green-dim:rgba(34,197,94,0.10);
+  --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.10);
+  --red:#ef4444;--red-dim:rgba(239,68,68,0.10);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.10);
+  --teal:#2dd4bf;--teal-dim:rgba(45,212,191,0.10);
+  --text:#e2e4ef;--text2:#8b92b0;--text3:#4e5672;--text4:#363d58;
+  --radius:8px;--radius-sm:6px;--radius-lg:12px;--radius-xl:16px;
+  --space-xs:4px;--space-sm:8px;--space-md:16px;--space-lg:24px;--space-xl:32px;--space-2xl:48px;
+  background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
 }
 .pma-app{display:flex;height:100vh;overflow:hidden}
 .pma *,.pma *::before,.pma *::after{box-sizing:border-box;margin:0;padding:0}
-.pma h1,.pma h2,.pma h3,.pma h4,.pma h5{font-family:'Syne',sans-serif}
+.pma h1,.pma h2,.pma h3,.pma h4,.pma h5{font-family:'Syne',sans-serif;letter-spacing:-0.01em}
 .pma button{font-family:'DM Sans',sans-serif;cursor:pointer}
 .pma input,.pma textarea,.pma select{font-family:'DM Sans',sans-serif}
 .pma a{text-decoration:none;color:inherit}
-.pma ::-webkit-scrollbar{width:5px;height:5px}
+.pma ::-webkit-scrollbar{width:4px;height:4px}
 .pma ::-webkit-scrollbar-track{background:transparent}
-.pma ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.pma ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.pma ::-webkit-scrollbar-thumb:hover{background:var(--text4)}
 
 /* ── LAYOUT ────────────────────────────────── */
 .sidebar{width:252px;min-width:252px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;gap:12px}
-.content{flex:1;overflow-y:auto;padding:28px 32px}
+.topbar{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;gap:12px}
+.content{flex:1;overflow-y:auto;padding:28px 32px;scroll-behavior:smooth}
 
 /* ── SIDEBAR ────────────────────────────────── */
-.sb-logo{padding:18px 18px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-logo{padding:16px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
 .sb-org-avatar{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden}
 .sb-org-avatar img{width:100%;height:100%;object-fit:cover}
-.sb-org-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sb-org-tag{font-size:10px;color:var(--text3);margin-top:1px}
-.sb-nav{flex:1;overflow-y:auto;padding:10px 8px}
-.sb-section{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text4);padding:10px 10px 5px}
-.sb-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;color:var(--text3);font-size:13px;font-weight:500;transition:all .15s;margin-bottom:1px;white-space:nowrap;overflow:hidden}
+.sb-org-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-org-tag{font-size:10px;color:var(--text3);margin-top:2px}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 6px}
+.sb-section{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text4);padding:14px 10px 6px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--radius-sm);cursor:pointer;color:var(--text3);font-size:13px;font-weight:500;margin-bottom:1px;white-space:nowrap;overflow:hidden}
 .sb-item:hover{background:var(--surface2);color:var(--text2)}
-.sb-item.active{background:var(--surface3);color:var(--accent)}
+.sb-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600}
 .sb-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
-.sb-divider{height:1px;background:var(--border);margin:8px 4px}
-.sb-story{padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;transition:all .15s}
+.sb-divider{height:1px;background:var(--border);margin:6px 8px}
+.sb-story{padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:1px}
 .sb-story:hover{background:var(--surface2)}
-.sb-story.active{background:var(--surface3)}
+.sb-story.active{background:var(--accent-dim)}
 .sb-story-title{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
 .sb-user{padding:12px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
 .sb-user-av{width:28px;height:28px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text2);flex-shrink:0}
@@ -168,51 +171,52 @@ ${FONT_IMPORT}
 .sb-user-role{font-size:10px;color:var(--text3)}
 
 /* ── BREADCRUMB ────────────────────────────── */
-.bc{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text3)}
-.bc-sep{color:var(--text4)}
+.bc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text3)}
+.bc-sep{color:var(--text4);font-size:11px}
 .bc-cur{color:var(--text);font-weight:600}
 
 /* ── BADGES ─────────────────────────────────── */
-.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;white-space:nowrap}
 .badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
 .b-dev{background:var(--accent-dim);color:#7b9fff;border:1px solid var(--accent-mid)}
-.b-rts{background:var(--amber-dim);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
-.b-film{background:var(--red-dim);color:#f87171;border:1px solid rgba(239,68,68,.25)}
-.b-edit{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
-.b-del{background:var(--green-dim);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
-.b-arc{background:rgba(85,94,128,.1);color:var(--text3);border:1px solid var(--border)}
-.b-must{background:var(--red-dim);color:#f87171;border:1px solid rgba(239,68,68,.25)}
-.b-should{background:var(--amber-dim);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
-.b-nice{background:var(--green-dim);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
-.b-teal{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(45,212,191,.25)}
+.b-rts{background:var(--amber-dim);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.b-film{background:var(--red-dim);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.b-edit{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(167,139,250,.2)}
+.b-del{background:var(--green-dim);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.b-arc{background:rgba(85,94,128,.08);color:var(--text3);border:1px solid var(--border)}
+.b-must{background:var(--red-dim);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.b-should{background:var(--amber-dim);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
+.b-nice{background:var(--green-dim);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.b-teal{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(45,212,191,.2)}
 .b-role{background:var(--surface3);color:var(--text2);border:1px solid var(--border2)}
 
 /* ── BUTTONS ─────────────────────────────────── */
-.btn{display:inline-flex;align-items:center;gap:7px;padding:7px 15px;border-radius:var(--radius-sm);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;border:none;transition:all .15s;white-space:nowrap;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:0;border:none;white-space:nowrap;cursor:pointer}
 .btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:#3a5be0}
+.btn-primary:hover{background:var(--accent-hover)}
 .btn-secondary{background:var(--surface3);color:var(--text);border:1px solid var(--border2)}
 .btn-secondary:hover{background:var(--surface4)}
 .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
 .btn-ghost:hover{background:var(--surface2);color:var(--text)}
-.btn-danger{background:var(--red-dim);color:#f87171;border:1px solid rgba(239,68,68,.25)}
-.btn-danger:hover{background:rgba(239,68,68,.22)}
-.btn-green{background:var(--green-dim);color:#4ade80;border:1px solid rgba(34,197,94,.25)}
-.btn-green:hover{background:rgba(34,197,94,.2)}
-.btn-teal{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(45,212,191,.25)}
-.btn-teal:hover{background:rgba(45,212,191,.2)}
-.btn-sm{padding:5px 11px;font-size:10px}
-.btn-xs{padding:3px 8px;font-size:10px}
-.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-danger{background:var(--red-dim);color:#f87171;border:1px solid rgba(239,68,68,.2)}
+.btn-danger:hover{background:rgba(239,68,68,.18)}
+.btn-green{background:var(--green-dim);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.btn-green:hover{background:rgba(34,197,94,.18)}
+.btn-teal{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(45,212,191,.2)}
+.btn-teal:hover{background:rgba(45,212,191,.18)}
+.btn-sm{padding:6px 12px;font-size:11px}
+.btn-xs{padding:4px 9px;font-size:11px}
+.btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
 
 /* ── FORM ─────────────────────────────────────── */
-.fg{margin-bottom:18px}
+.fg{margin-bottom:20px}
 .fg:last-child{margin-bottom:0}
-.fl{display:block;font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
-.fh{font-size:12px;color:var(--text4);margin-bottom:7px;font-style:italic;line-height:1.5}
-.fi,.fta,.fsel{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 13px;color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
+.fl{display:block;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.fh{font-size:12px;color:var(--text4);margin-bottom:8px;font-style:normal;line-height:1.5;opacity:.8}
+.fi,.fta,.fsel{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:13px;outline:none}
 .fi:focus,.fta:focus,.fsel:focus{border-color:var(--accent)}
-.fi:disabled,.fta:disabled{opacity:.5;cursor:not-allowed;background:var(--surface)}
+.fi::placeholder,.fta::placeholder{color:var(--text4)}
+.fi:disabled,.fta:disabled{opacity:.4;cursor:not-allowed;background:var(--surface)}
 .fta{resize:vertical;min-height:88px;line-height:1.6}
 .fsel option{background:var(--surface2)}
 .frow{display:grid;gap:14px}
@@ -220,17 +224,17 @@ ${FONT_IMPORT}
 .frow-3{grid-template-columns:1fr 1fr 1fr}
 
 /* ── CARDS ───────────────────────────────────── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:16px}
 .card:last-child{margin-bottom:0}
 .card-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
 .card-hd-l{display:flex;align-items:center;gap:10px}
-.card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+.card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);letter-spacing:-0.01em}
 .card-sub{font-size:11px;color:var(--text3)}
 .card-bd{padding:18px}
 
 /* ── TABS ────────────────────────────────────── */
-.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:22px;gap:2px;overflow-x:auto}
-.tab{padding:9px 16px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;color:var(--text4);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:24px;gap:0;overflow-x:auto}
+.tab{padding:10px 18px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:0;cursor:pointer;color:var(--text4);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;position:relative}
 .tab:hover{color:var(--text2)}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 
@@ -245,7 +249,7 @@ ${FONT_IMPORT}
 .bil-panel{padding:10px 14px}
 .bil-panel+.bil-panel{border-top:1px solid var(--border)}
 .bil-panel-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.bil-lang-tag{font-family:'Syne',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:10px}
+.bil-lang-tag{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;padding:2px 8px;border-radius:10px}
 .bil-cy{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(45,212,191,.25)}
 .bil-en{background:var(--accent-dim);color:#7b9fff;border:1px solid var(--accent-mid)}
 .bil-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)}
@@ -265,22 +269,22 @@ ${FONT_IMPORT}
 .pma tr:hover td{background:rgba(255,255,255,.015)}
 
 /* ── WORKFLOW BAR ────────────────────────────── */
-.wf{display:flex;margin-bottom:22px;flex-wrap:wrap;gap:2px}
-.wf-step{display:flex;align-items:center;gap:7px;padding:8px 16px;background:var(--surface);border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;color:var(--text3);cursor:pointer;transition:all .15s;white-space:nowrap;border-radius:var(--radius-sm)}
+.wf{display:flex;margin-bottom:24px;flex-wrap:wrap;gap:3px}
+.wf-step{display:flex;align-items:center;gap:7px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;white-space:nowrap;border-radius:var(--radius-sm)}
 .wf-step:hover{background:var(--surface2);color:var(--text2)}
-.wf-step.wf-done{color:var(--green);background:var(--green-dim);border-color:rgba(34,197,94,.25)}
-.wf-step.wf-active{background:var(--surface3);color:var(--accent);border-color:var(--accent)}
-.wf-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.wf-step.wf-done{color:var(--green);background:var(--green-dim);border-color:rgba(34,197,94,.2)}
+.wf-step.wf-active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-mid)}
+.wf-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
 
 /* ── TONE PILLS ──────────────────────────────── */
 .tone-grid{display:flex;flex-wrap:wrap;gap:8px}
-.tone-pill{padding:6px 15px;border-radius:20px;border:1px solid var(--border2);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .15s;color:var(--text3)}
+.tone-pill{padding:6px 16px;border-radius:20px;border:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;color:var(--text3)}
 .tone-pill:hover{border-color:var(--accent);color:var(--text)}
 .tone-pill.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* ── CHIPS ───────────────────────────────────── */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{padding:4px 11px;background:var(--surface3);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;color:var(--text3);cursor:pointer;transition:all .15s}
+.chip{padding:5px 12px;background:var(--surface3);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer}
 .chip:hover{border-color:var(--border2);color:var(--text2)}
 .chip.sel{background:var(--accent-dim);border-color:var(--accent);color:#7b9fff}
 
@@ -323,10 +327,11 @@ ${FONT_IMPORT}
 .audit-new{color:var(--green)}
 
 /* ── STATS ───────────────────────────────────── */
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
-.stat-label{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text4);margin-bottom:8px}
-.stat-value{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1}
-.stat-sub{font-size:11px;color:var(--text3);margin-top:5px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;cursor:pointer}
+.stat-card:hover{border-color:var(--border2)}
+.stat-label{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--text4);margin-bottom:8px}
+.stat-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;letter-spacing:-0.02em}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:6px}
 
 /* ── PROGRESS ────────────────────────────────── */
 .prog-steps{display:flex;gap:3px;margin-top:12px}
@@ -335,7 +340,7 @@ ${FONT_IMPORT}
 .prog-step.cur{background:var(--amber)}
 
 /* ── NOTICE ──────────────────────────────────── */
-.notice{border-radius:var(--radius-sm);padding:11px 15px;font-size:13px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.notice{border-radius:var(--radius);padding:12px 16px;font-size:13px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;line-height:1.5}
 .notice-blue{background:var(--accent-dim);border:1px solid var(--accent-mid);color:#7b9fff}
 .notice-purple{background:var(--purple-dim);border:1px solid rgba(167,139,250,.2);color:var(--purple)}
 .notice-amber{background:var(--amber-dim);border:1px solid rgba(245,158,11,.2);color:#fbbf24}
@@ -343,30 +348,30 @@ ${FONT_IMPORT}
 .notice-teal{background:var(--teal-dim);border:1px solid rgba(45,212,191,.2);color:var(--teal)}
 
 /* ── EMPTY ───────────────────────────────────── */
-.empty{text-align:center;padding:36px 20px;color:var(--text3)}
-.empty-icon{font-size:36px;margin-bottom:10px}
-.empty h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text2);margin-bottom:5px}
-.empty p{font-size:12px;color:var(--text4)}
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:14px;opacity:.6}
+.empty h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text2);margin-bottom:6px;letter-spacing:-0.01em}
+.empty p{font-size:13px;color:var(--text4);line-height:1.5}
 
 /* ── MODAL ───────────────────────────────────── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:580px;max-width:100%;max-height:90vh;display:flex;flex-direction:column}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:580px;max-width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 16px 64px rgba(0,0,0,.5)}
 .modal-hd{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;letter-spacing:-0.01em}
 .modal-bd{padding:22px;overflow-y:auto;flex:1}
-.modal-ft{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:9px;flex-shrink:0}
+.modal-ft{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
 
 /* ── PAGE HEADER ─────────────────────────────── */
-.sh{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:12px}
-.sh-left h1{font-size:23px;font-weight:800;margin-bottom:3px}
+.sh{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px}
+.sh-left h1{font-size:24px;font-weight:800;margin-bottom:4px;letter-spacing:-0.02em}
 .sh-left p{font-size:13px;color:var(--text3)}
 
 /* ── LOGIN ───────────────────────────────────── */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:24px}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px;width:400px;max-width:100%}
-.login-logo{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
-.login-title{font-size:26px;font-weight:800;margin-bottom:6px}
-.login-sub{font-size:13px;color:var(--text3);margin-bottom:28px}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:24px;background-image:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(79,114,255,0.06),transparent)}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:44px;width:420px;max-width:100%;box-shadow:0 4px 40px rgba(0,0,0,.3)}
+.login-logo{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.login-title{font-size:28px;font-weight:800;margin-bottom:8px;letter-spacing:-0.02em}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:32px}
 .login-divider{display:flex;align-items:center;gap:10px;margin:20px 0}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .login-divider span{font-size:11px;color:var(--text4)}
@@ -379,7 +384,7 @@ ${FONT_IMPORT}
 .user-pick-role{font-size:11px;color:var(--text3)}
 
 /* ── ACCOUNT PAGES ───────────────────────────── */
-.profile-header{display:flex;align-items:center;gap:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px}
+.profile-header{display:flex;align-items:center;gap:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;background-image:linear-gradient(135deg,rgba(79,114,255,.03) 0%,transparent 60%)}
 .profile-avatar{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:24px;font-weight:800;flex-shrink:0}
 .profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .profile-name{font-size:20px;font-weight:800;margin-bottom:3px}
@@ -561,14 +566,13 @@ function PBadge({p}){const c=p==="MUST"?"b-must":p==="SHOULD"?"b-should":"b-nice
 
 const STATUSES_IDX = (s) => ["DEVELOPMENT","READY_TO_SHOOT","FILMING","IN_EDIT","DELIVERED","ARCHIVED"].indexOf(s);
 // ═══ psc_seedData.js ═══
-// Realistic seed data for demo/development.
-// Includes: organisation, teams, users, and stories with bilingual fields.
+// Generic placeholder data — replaced at runtime by API responses.
+// These are only used as fallbacks if the API is unreachable.
 
-// ─── ORGANISATION ─────────────────────────────────────────────────────────────
 const SEED_ORG = {
   id: "org1",
-  name: "Cwmni Da Productions",
-  slug: "cwmnida",
+  name: "My Organisation",
+  slug: "myorg",
   logo: null,
   default_language: "CY",
   billing_owner: "u1",
@@ -577,7 +581,6 @@ const SEED_ORG = {
   export_branding: true,
 };
 
-// ─── TEAMS ────────────────────────────────────────────────────────────────────
 const SEED_TEAMS = [
   { id: "t1", org_id:"org1", name:"Production",  icon:"🎬", description:"Story development and filming" },
   { id: "t2", org_id:"org1", name:"Edit",         icon:"✂️", description:"Post-production and assembly" },
@@ -585,51 +588,7 @@ const SEED_TEAMS = [
   { id: "t4", org_id:"org1", name:"Management",   icon:"🏢", description:"Exec and operations" },
 ];
 
-// ─── USERS ────────────────────────────────────────────────────────────────────
-const SEED_USERS = [
-  {
-    id:"u1", org_id:"org1", team_ids:["t4"],
-    name:"Siân Wyn Owen", email:"sian@cwmnida.wales",
-    job_title:"Executive Producer", role:"OWNER",
-    preferred_lang:"CY", content_lang:"CY", fallback_lang:"EN",
-    avatar:null,
-  },
-  {
-    id:"u2", org_id:"org1", team_ids:["t1"],
-    name:"Bethan Morgan", email:"bethan@cwmnida.wales",
-    job_title:"Series Producer", role:"PRODUCER",
-    preferred_lang:"CY", content_lang:"CY", fallback_lang:"EN",
-    avatar:null,
-  },
-  {
-    id:"u3", org_id:"org1", team_ids:["t2"],
-    name:"Rhys Williams", email:"rhys@cwmnida.wales",
-    job_title:"Series Editor", role:"EDITOR",
-    preferred_lang:"EN", content_lang:"EN", fallback_lang:"CY",
-    avatar:null,
-  },
-  {
-    id:"u4", org_id:"org1", team_ids:["t1"],
-    name:"Catrin Jones", email:"catrin@cwmnida.wales",
-    job_title:"Producer", role:"PRODUCER",
-    preferred_lang:"CY", content_lang:"CY", fallback_lang:"EN",
-    avatar:null,
-  },
-  {
-    id:"u5", org_id:"org1", team_ids:["t3"],
-    name:"Tom Davies", email:"tom@cwmnida.wales",
-    job_title:"Social Media Producer", role:"SOCIAL",
-    preferred_lang:"EN", content_lang:"EN", fallback_lang:"CY",
-    avatar:null,
-  },
-  {
-    id:"u6", org_id:"org1", team_ids:["t1","t2"],
-    name:"Huw Griffiths", email:"huw@cwmnida.wales",
-    job_title:"Director / Producer", role:"MANAGER",
-    preferred_lang:"CY", content_lang:"CY", fallback_lang:"EN",
-    avatar:null,
-  },
-];
+const SEED_USERS = [];
 
 // ─── BILINGUAL FIELD HELPER (inline for seed data) ───────────────────────────
 const bf = (cyText, enText="") => ({
@@ -648,167 +607,7 @@ const bfen = (enText, cyText="") => ({
   translation_method: cyText ? "MACHINE" : null,
 });
 
-// ─── STORIES ─────────────────────────────────────────────────────────────────
-const SEED_STORIES = [
-  {
-    id:"s1",
-    org_id:"org1",
-    team_id:"t1",
-    visibility:"TEAM_ONLY",
-    title:"Stori'r Fferm Danfon / Flooded Farm Story",
-    programme:"Wythnos yn Wythnos",
-    shoot_date:"2026-03-10",
-    locations:["Sir Fynwy / Monmouthshire"],
-    status:"IN_EDIT",
-    producer_id:"u2",
-    editor_id:"u3",
-    created_by:"u2",
-
-    psc_brief: {
-      story_hook: bf(
-        "Mae teulu ffermio yn Sir Fynwy yn wynebu colli eu tir ar ôl tair tymor olynol o lifogydd ddinistriodd eu hanifeiliaid a'u cnydau.",
-        "A farming family in Monmouthshire faces losing their land after three consecutive flood seasons have devastated their livestock and crops."
-      ),
-      why_now: bf(
-        "Mae Llywodraeth Cymru yn trafod deddfwriaeth iawndal llifogydd newydd y mis hwn.",
-        "The Welsh Government is debating new flood compensation legislation this month."
-      ),
-      tone: "EMOTIONAL",
-      tone_notes: bf(
-        "Tawel a sylwadol. Gadewch i'r distawrwydd anadlu.",
-        "Quiet and observational. Let silences breathe."
-      ),
-      ending: bf(
-        "Rydym yn gorffen ar obaith y ferch — mae hi eisiau aros a brwydro dros y fferm.",
-        "We end on the daughter's hope — she wants to stay and fight for the farm."
-      ),
-      characters: [
-        { id:"c1", name:"John Evans", role: bf("Ffermwr","Farmer"), notes: bf("Colli da byw i lifogydd. Swil iawn — mae angen amser iddo agor.","Losing livestock to flooding. Very reserved — takes time to open up.") },
-        { id:"c2", name:"Megan Evans", role: bf("Merch","Daughter"), notes: bf("Brwdfrydig dros foderneiddio. Cydbwysedd emosiynol i'r tad.","Passionate about modernising. Emotional counterpoint to father.") },
-      ],
-      sync_lines: [
-        { id:"sl1", prompt: bf("Sut mae hyn wedi effeithio ar eich bywyd dyddiol?","How has this affected your daily life?"), priority:"MUST", notes: bf("Cael John i ateb y tu allan.","Get John to answer this outside.") },
-        { id:"sl2", prompt: bf("Beth sy'n digwydd os nad yw dim yn newid?","What happens if nothing changes?"), priority:"MUST", notes: bf("","") },
-        { id:"sl3", prompt: bf("Beth ydych chi'n gobeithio am y dyfodol?","What do you hope for the future?"), priority:"SHOULD", notes: bf("Megan yw'r person gorau i ateb.","Megan is best placed for this.") },
-      ],
-      visuals: [
-        { id:"v1", activity: bf("Bwydo defaid","Feeding sheep"), location:"Iard y Fferm / Farmyard", notes: bf("Golau bore cynnar yn well","Early morning light preferred"), priority:"MUST" },
-        { id:"v2", activity: bf("Gwirio lefel yr afon","Checking river level"), location:"Glan yr Afon / River bank", notes: bf("Drôn yn bosibl","Drone possible"), priority:"MUST" },
-        { id:"v3", activity: bf("Sgwrs gegin","Kitchen conversation"), location:"Ffermdy / Farmhouse", notes: bf("Moment naturiol — peidiwch â'i osod","Natural moment — don't set it up"), priority:"SHOULD" },
-      ],
-    },
-
-    shoot_notes: {
-      worked_well:  bf("Roedd Megan yn anhygoel o agored ar gamera. Mae lluniau drôn y caeau llifogydd yn syfrdanol.","Megan was incredibly open on camera. The drone footage of flooded fields is stunning."),
-      unexpected:   bf("Agorodd John am sgwrs gyda'i dad ymadawedig. Cwbl annisgwyl.","John opened up about a conversation with his late father. Completely unscripted."),
-      strong_beats: bf("Mae oedi John cyn ateb 'beth sy'n digwydd os nad yw dim yn newid' yn anhygoel.","John's pause before answering 'what happens if nothing changes' is extraordinary."),
-      missing:      bf("Ni chawsom saethiad glân o lefel yr afon — roedd hi'n rhy niwlog.","Didn't get a clean river level shot — too misty."),
-    },
-
-    handover: {
-      story_intention: bf(
-        "Rydym yn adrodd stori am etifeddiaeth, colled a gwytnwch. Dylai'r gynulleidfa adael yn deall sut deimlad yw gwylio'ch gwaith oes yn cael ei ddinistrio — ond hefyd teimlo fflach o obaith Megan.",
-        "We are telling a story about inheritance, loss, and resilience. The audience should leave understanding what it feels like to watch your life's work slowly destroyed — but also feel the flicker of hope Megan carries."
-      ),
-      tone_reference: bfen(
-        "Quiet observational style similar to Countryfile features. No dramatic music stings. Let the landscape do the work.",
-        "Arddull sylwadol dawel tebyg i nodweddion Countryfile. Dim stings cerddoriaeth ddramatig."
-      ),
-      music_suggestions: "Slow acoustic guitar. Something in the vein of Nils Frahm.",
-      clips: [
-        { id:"cl1", interviewee:"John Evans", description: bf("Dinistriodd y llifogydd gnydau eleni","Flood destroyed this year's crops"), tc_in:"02:14:08", tc_out:"02:17:22", asset:"RUSHES_JE_INT_01" },
-        { id:"cl2", interviewee:"John Evans", description: bf("Saib hir — 'Dw i ddim yn gwybod beth fyddwn i'n ei wneud'","Long pause — 'I don't know what I'd do'"), tc_in:"04:50:00", tc_out:"04:52:10", asset:"RUSHES_JE_INT_01" },
-        { id:"cl3", interviewee:"Megan Evans", description: bf("Eisiau achub y fferm","Wants to save the farm"), tc_in:"08:02:14", tc_out:"08:05:30", asset:"RUSHES_ME_INT_01" },
-        { id:"cl4", interviewee:"Megan Evans", description: bf("Moment emosiynol gyda lluniau hen","Emotional moment with old photos"), tc_in:"11:30:00", tc_out:"11:33:45", asset:"RUSHES_ME_INT_01" },
-      ],
-      highlights: [
-        { id:"h1", highlight: bf("Saethiad drôn o'r caeau isaf dan ddŵr","Drone shot of flooded lower fields"), asset:"DRONE_FIELD_01" },
-        { id:"h2", highlight: bf("John yn bwydo defaid ar godiad haul","John feeding sheep at sunrise"), asset:"GV_FARM_MORNING_02" },
-        { id:"h3", highlight: bf("Sgwrs swper teulu — naturiol","Family dinner — natural conversation"), asset:"GV_KITCHEN_01" },
-      ],
-      duration: "3:00",
-    },
-
-    deliverables: [
-      { id:"d1", format:"RATIO_16_9", duration_seconds:180, platforms:["BROADCAST","WEBSITE"], reframe:["KEEP_SUBJECT_CENTRE"], captions:"SRT", language:"BILINGUAL", thumbnail:true, cover:true, notes: bfen("Main broadcast cut.","Prif gywaith darlledu."), checked:false },
-      { id:"d2", format:"RATIO_9_16", duration_seconds:60, platforms:["TIKTOK","INSTAGRAM_REELS"], reframe:["KEEP_SUBJECT_CENTRE","GRAPHICS_SAFE_AREA_SOCIAL"], captions:"BURNT_IN", language:"ENGLISH", thumbnail:true, cover:false, notes: bfen("Use Megan's emotional moment as hook."), checked:false },
-      { id:"d3", format:"RATIO_1_1", duration_seconds:90, platforms:["INSTAGRAM_FEED","FACEBOOK"], reframe:["ALLOW_CROP_EDGES"], captions:"BOTH", language:"ENGLISH", thumbnail:false, cover:true, notes: bfen(""), checked:false },
-    ],
-    media_links: [
-      { id:"ml1", name:"Rushes — John Evans Int.", url:"https://drive.example.com/rushes/je-int-01", type:"Rushes", notes:"" },
-      { id:"ml2", name:"Drone Footage Pack", url:"https://s3.example.com/drone-pack-001", type:"Footage", notes:"4K ProRes" },
-      { id:"ml3", name:"Trawsgrifiad / Transcript", url:"https://docs.example.com/transcript-farm", type:"Transcript", notes:"Auto-generated" },
-    ],
-    uploads: [],
-    audit: [
-      { id:"a1", by:"Bethan Morgan", at:"2026-03-01 09:14", field:"status", old:"DEVELOPMENT", new:"READY_TO_SHOOT", action:"STATUS_CHANGE" },
-      { id:"a2", by:"Bethan Morgan", at:"2026-03-10 18:30", field:"status", old:"READY_TO_SHOOT", new:"FILMING", action:"STATUS_CHANGE" },
-      { id:"a3", by:"Bethan Morgan", at:"2026-03-11 09:02", field:"shoot_notes", old:"", new:"Shoot notes added", action:"EDIT" },
-      { id:"a4", by:"Rhys Williams", at:"2026-03-12 11:45", field:"status", old:"FILMING", new:"IN_EDIT", action:"STATUS_CHANGE" },
-      { id:"a5", by:"Rhys Williams", at:"2026-03-12 14:20", field:"handover.story_intention", old:"", new:"Story intention added", action:"EDIT" },
-    ],
-  },
-
-  {
-    id:"s2", org_id:"org1", team_id:"t1",
-    visibility:"TEAM_ONLY",
-    title:"Nyrsys Shifft Nos / Night Shift Nurses",
-    programme:"Cymru Gudd / Hidden Wales",
-    shoot_date:"2026-03-18",
-    locations:["Ysbyty Prifysgol Bae Abertawe"],
-    status:"READY_TO_SHOOT",
-    producer_id:"u4", editor_id:null, created_by:"u4",
-    psc_brief: {
-      story_hook: bf(
-        "Dilyn nyrsys GIG ar draws shifft nos 12 awr llawn yn Abertawe — y gweithlu anweledig sy'n cadw'r gwasanaeth iechyd yn fyw.",
-        "Following NHS nurses across a full 12-hour night shift in Swansea — the invisible workforce keeping the health service alive."
-      ),
-      why_now: bf("Canlyniadau pleidlais streic nyrsys genedlaethol yn ddyledus yr wythnos nesaf.","National nurses' strike ballot results due next week."),
-      tone:"OBSERVATIONAL", tone_notes: bf("",""),
-      ending: bf("Trosglwyddo shifft ar ddiwedd — moment o ryddhad a chydoliaeth dawel.","End of shift handover — a moment of relief and quiet solidarity."),
-      characters: [
-        { id:"c1", name:"Siân Griffiths", role: bf("Nyrs Uwch","Senior Nurse"), notes: bf("20 mlynedd o brofiad. Hiwmor sych.","20 years experience. Wry humour.") },
-        { id:"c2", name:"Callum Price", role: bf("Nyrs Newydd","Newly Qualified Nurse"), notes: bf("Shifft nos gyntaf. Arc naratif perffaith.","First full night shift. Perfect narrative arc.") },
-      ],
-      sync_lines: [
-        { id:"sl1", prompt: bf("Pam ydych chi'n gwneud y swydd hon?","Why do you do this job?"), priority:"MUST", notes: bf("","") },
-        { id:"sl2", prompt: bf("Sut deimlad yw shifft nos am 4am?","What does a night shift feel like at 4am?"), priority:"MUST", notes: bf("","") },
-      ],
-      visuals: [
-        { id:"v1", activity: bf("Trosglwyddo ward ar ddechrau'r shifft","Ward handover at start of shift"), location:"Ward 7", notes: bf("Moment strwythurol allweddol","Key structural moment"), priority:"MUST" },
-      ],
-    },
-    shoot_notes: { worked_well:bf(""), unexpected:bf(""), strong_beats:bf(""), missing:bf("") },
-    handover: { story_intention:bf(""), tone_reference:bf(""), music_suggestions:"", clips:[], highlights:[], duration:"" },
-    deliverables: [{ id:"d1", format:"RATIO_16_9", duration_seconds:300, platforms:["BROADCAST","WEBSITE"], reframe:["KEEP_SUBJECT_CENTRE"], captions:"SRT", language:"WELSH", thumbnail:true, cover:true, notes:bf(""), checked:false }],
-    media_links:[], uploads:[],
-    audit:[{ id:"a1", by:"Catrin Jones", at:"2026-03-02 14:20", field:"status", old:"DEVELOPMENT", new:"READY_TO_SHOOT", action:"STATUS_CHANGE" }],
-  },
-
-  {
-    id:"s3", org_id:"org1", team_id:"t1",
-    visibility:"PRIVATE",
-    title:"Y Clwb Glo Olaf / Last Coal Club",
-    programme:"Wythnos yn Wythnos",
-    shoot_date:"2026-04-05",
-    locations:["Cwm Rhondda / Rhondda Valley"],
-    status:"DEVELOPMENT",
-    producer_id:"u6", editor_id:null, created_by:"u6",
-    psc_brief: {
-      story_hook: bf(
-        "Mae'r clwb gweithwyr glo olaf yn y Rhondda yn cau ei ddrysau ar ôl 110 mlynedd. Mae'r aelodau olaf yn ymgynnull am un noson olaf.",
-        "The last working men's coal club in the Rhondda is closing its doors after 110 years. The final members gather for one last night."
-      ),
-      why_now: bf("Cyhoeddwyd cau yr wythnos diwethaf. Mae'r noson olaf mewn 10 diwrnod.","Closure announced last week. Final night is in 10 days."),
-      tone:"EMOTIONAL", tone_notes: bf("Gadewch i'r hiraeth anadlu.","Let the nostalgia breathe."),
-      ending: bf("Mae'r goleuadau'n diffodd. Mae'r drws yn cau. Tynnu'n ôl i'r cwm gwag.","The lights go out. Door closes. Pull back to the empty valley."),
-      characters:[], sync_lines:[], visuals:[],
-    },
-    shoot_notes:{ worked_well:bf(""), unexpected:bf(""), strong_beats:bf(""), missing:bf("") },
-    handover:{ story_intention:bf(""), tone_reference:bf(""), music_suggestions:"", clips:[], highlights:[], duration:"" },
-    deliverables:[], media_links:[], uploads:[], audit:[],
-  },
-];
+const SEED_STORIES = [];
 
 // ═══════════════════════════════════════════════════════════════════
 // API CLIENT (src/api/index.js)
@@ -819,8 +618,7 @@ const SEED_STORIES = [
 // Token storage: sessionStorage (survives refresh, clears on tab close)
 // Auto-refresh: deduped promise, retries original request once on 401
 
-const BASE = (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_PMA_API_URL)
-  || "http://localhost:3001/api";
+const BASE = process.env.NEXT_PUBLIC_PMA_API_URL || "https://pma-production-1760.up.railway.app/api";
 
 // ─── Token storage ────────────────────────────────────────────────────────────
 let _access  = null;
@@ -1181,10 +979,10 @@ function SessionProvider({ children }) {
   if (loading) return (
     <div className="pma" style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
       <style>{CSS}{EXTRA_CSS}</style>
-      <div style={{ textAlign:"center" }}>
+      <div style={{ textAlign:"center", animation:"fadeIn .4s ease" }}>
         <div style={{ fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700, letterSpacing:3,
-          textTransform:"uppercase", color:"var(--accent)", marginBottom:12 }}>PSC Module</div>
-        <div>Loading…</div>
+          textTransform:"uppercase", color:"var(--accent)", marginBottom:16 }}>PSC Module</div>
+        <span className="spinner" style={{ width:24, height:24, borderWidth:2.5 }}/>
       </div>
     </div>
   );
@@ -1229,9 +1027,11 @@ function UserAvatar({ user, size = 32, style = {} }) {
 function AuthCard({ children }) {
   return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
-      background:"var(--bg)", padding:24 }}>
+      background:"var(--bg)", padding:24,
+      backgroundImage:"radial-gradient(ellipse 80% 50% at 50% 0%, rgba(79,114,255,0.06), transparent)" }}>
       <div style={{ background:"var(--surface)", border:"1px solid var(--border)",
-        borderRadius:18, padding:40, width:420, maxWidth:"100%" }}>
+        borderRadius:16, padding:44, width:420, maxWidth:"100%",
+        boxShadow:"0 4px 40px rgba(0,0,0,.3)" }}>
         <div style={{ fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700,
           letterSpacing:3, textTransform:"uppercase", color:"var(--accent)", marginBottom:8 }}>
           PSC Module
@@ -1242,15 +1042,16 @@ function AuthCard({ children }) {
   );
 }
 
-function AuthInput({ label, type="text", value, onChange, placeholder, autoFocus }) {
+function AuthInput({ label, type="text", value, onChange, placeholder, autoFocus, autoComplete }) {
+  const id = useRef("ai-" + Math.random().toString(36).slice(2,7)).current;
   return (
-    <div style={{ marginBottom:16 }}>
-      <label style={{ display:"block", fontFamily:"'Syne',sans-serif", fontSize:10, fontWeight:700,
-        letterSpacing:"1.5px", textTransform:"uppercase", color:"var(--text3)", marginBottom:7 }}>
+    <div style={{ marginBottom:18 }}>
+      <label htmlFor={id} style={{ display:"block", fontFamily:"'DM Sans',sans-serif", fontSize:11, fontWeight:600,
+        letterSpacing:".5px", textTransform:"uppercase", color:"var(--text3)", marginBottom:8 }}>
         {label}
       </label>
-      <input type={type} className="fi" value={value} onChange={e => onChange(e.target.value)}
-        placeholder={placeholder} autoFocus={autoFocus} />
+      <input id={id} type={type} className="fi" value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder} autoFocus={autoFocus} autoComplete={autoComplete} />
     </div>
   );
 }
@@ -1258,8 +1059,8 @@ function AuthInput({ label, type="text", value, onChange, placeholder, autoFocus
 function AuthBtn({ children, onClick, disabled, loading: ld, cls="btn-primary" }) {
   return (
     <button className={`btn ${cls}`} onClick={onClick} disabled={disabled || ld}
-      style={{ width:"100%", justifyContent:"center", padding:"10px 0", fontSize:13, marginTop:4 }}>
-      {ld ? "Please wait…" : children}
+      style={{ width:"100%", justifyContent:"center", padding:"11px 0", fontSize:13, fontWeight:600, marginTop:6 }}>
+      {ld ? <><span className="spinner" style={{ width:14, height:14, borderWidth:2 }}/> Please wait…</> : children}
     </button>
   );
 }
@@ -1313,9 +1114,9 @@ function SignInPage({ onNav, onLogin }) {
       </p>
       <AuthError msg={error} />
       <AuthInput label="Email address" type="email" value={email} onChange={setEmail}
-        placeholder="you@yourcompany.wales" autoFocus />
+        placeholder="you@yourcompany.wales" autoFocus autoComplete="email" />
       <AuthInput label="Password" type="password" value={password} onChange={setPassword}
-        placeholder="Your password" />
+        placeholder="Your password" autoComplete="current-password" />
       <div style={{ textAlign:"right", marginBottom:20, marginTop:-8 }}>
         <AuthLink onClick={() => onNav("forgot")}>Forgot password?</AuthLink>
       </div>
@@ -1362,9 +1163,9 @@ function RegisterPage({ onNav, onLogin }) {
         Set up your organisation on PSC Module
       </p>
       <AuthError msg={error} />
-      <AuthInput label="Your full name" value={f.name} onChange={v=>set("name",v)} placeholder="e.g. Bethan Morgan" autoFocus />
-      <AuthInput label="Work email" type="email" value={f.email} onChange={v=>set("email",v)} placeholder="bethan@yourcompany.wales" />
-      <AuthInput label="Organisation name" value={f.org_name} onChange={v=>set("org_name",v)} placeholder="e.g. Cwmni Da Productions" />
+      <AuthInput label="Your full name" value={f.name} onChange={v=>set("name",v)} placeholder="Your full name" autoFocus />
+      <AuthInput label="Work email" type="email" value={f.email} onChange={v=>set("email",v)} placeholder="you@yourcompany.wales" />
+      <AuthInput label="Organisation name" value={f.org_name} onChange={v=>set("org_name",v)} placeholder="Your production company" />
       <AuthInput label="Password" type="password" value={f.password} onChange={v=>set("password",v)} placeholder="Min. 8 characters" />
       <AuthInput label="Confirm password" type="password" value={f.confirm} onChange={v=>set("confirm",v)} placeholder="Repeat password" />
       <AuthBtn onClick={submit} loading={loading}>Create Account →</AuthBtn>
@@ -1404,7 +1205,7 @@ function ForgotPage({ onNav }) {
         <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:20, fontWeight:800, marginBottom:10 }}>Check your email</h2>
         <p style={{ fontSize:13, color:"var(--text3)", lineHeight:1.6, marginBottom:24 }}>
           If an account exists for <strong>{email}</strong>, a reset link has been sent.
-          Check your Railway logs during testing.
+          Please check your inbox.
         </p>
         <AuthLink onClick={() => onNav("sign-in")}>← Back to sign in</AuthLink>
       </div>
@@ -1521,7 +1322,7 @@ function VerifyBanner({ onResend }) {
       fontSize:13, color:"#fbbf24", flexShrink:0 }}>
       <span>⚠️ Please verify your email address to unlock all features.</span>
       {sent
-        ? <span style={{ fontSize:12, opacity:.8 }}>Email sent — check your inbox (or Railway logs).</span>
+        ? <span style={{ fontSize:12, opacity:.8 }}>Email sent — check your inbox.</span>
         : <button className="btn btn-ghost btn-sm" style={{ color:"#fbbf24", borderColor:"rgba(245,158,11,.4)" }}
             onClick={async () => { await onResend(); setSent(true); }}>
             Resend verification email
@@ -1617,8 +1418,8 @@ function BilingualField({
         translated = res.translated_text || res.text;
       } else {
         // Fallback: direct Anthropic call (dev only, needs VITE_ANTHROPIC_KEY)
-        const ANTHROPIC_KEY = typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_ANTHROPIC_KEY : undefined;
-        if (!ANTHROPIC_KEY) throw new Error("No storyId or NEXT_PUBLIC_ANTHROPIC_KEY provided");
+        const ANTHROPIC_KEY = null; // Translation handled by backend API
+        if (!ANTHROPIC_KEY) throw new Error("No storyId or VITE_ANTHROPIC_KEY provided");
         const langNames = { CY:"Welsh (Cymraeg)", EN:"English" };
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method:"POST",
@@ -1777,7 +1578,9 @@ function UserAccountPage() {
       </div>
 
       <div className="profile-header">
-        <UserAvatar user={user} size={64}/>
+        <AvatarUploadWidget user={user} size={64} onUploaded={(result) => {
+          if (result?.avatar_url) updateUser({ avatar_url: result.avatar_url });
+        }}/>
         <div style={{ flex:1 }}>
           <div className="profile-name">{user.name}</div>
           <div className="profile-meta">
@@ -1790,7 +1593,7 @@ function UserAccountPage() {
 
       <ApiError msg={error}/>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))", gap:16 }}>
         <Card>
           <CardHd title="Profile Information"/>
           <CardBd>
@@ -1865,6 +1668,7 @@ function OrganisationPage({ orgMembers, onMembersChange }) {
   const [stats,  setStats]  = useState(null);
   const [inviting, setInviting] = useState(false);
   const [inviteMsg, setInviteMsg] = useState("");
+  const [inviteOk, setInviteOk] = useState(false);
   const set = (k,v) => setForm(f => ({ ...f, [k]:v }));
 
   useEffect(() => {
@@ -1884,13 +1688,15 @@ function OrganisationPage({ orgMembers, onMembersChange }) {
 
   const sendInvite = async () => {
     if (!invite.email) return;
-    setInviting(true); setInviteMsg("");
+    setInviting(true); setInviteMsg(""); setInviteOk(false);
     try {
       await api.org.invite(invite);
-      setInviteMsg(`✓ Invite sent to ${invite.email} — check Railway logs`);
+      setInviteMsg(`Invite sent to ${invite.email}`);
+      setInviteOk(true);
       setInvite({ email:"", role:"PRODUCER" });
     } catch (e) {
-      setInviteMsg(`✗ ${e.data?.error || "Invite failed."}`);
+      setInviteMsg(e.data?.error || "Invite failed.");
+      setInviteOk(false);
     } finally { setInviting(false); }
   };
 
@@ -1926,7 +1732,7 @@ function OrganisationPage({ orgMembers, onMembersChange }) {
 
       <ApiError msg={error}/>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))", gap:16 }}>
         <Card>
           <CardHd title="Organisation Details"/>
           <CardBd>
@@ -1960,7 +1766,7 @@ function OrganisationPage({ orgMembers, onMembersChange }) {
               </select>
             </div>
             <Btn cls="btn-primary" sm onClick={sendInvite} disabled={inviting||!invite.email}>{inviting?"Sending…":"Send Invite"}</Btn>
-            {inviteMsg && <p style={{ marginTop:10, fontSize:12, color: inviteMsg.startsWith("✓") ? "var(--green)" : "var(--red)" }}>{inviteMsg}</p>}
+            {inviteMsg && <p style={{ marginTop:10, fontSize:12, color: inviteOk ? "var(--green)" : "var(--red)" }}>{inviteOk ? "✓ " : "✗ "}{inviteMsg}</p>}
           </CardBd>
         </Card>
 
@@ -1968,7 +1774,7 @@ function OrganisationPage({ orgMembers, onMembersChange }) {
           <Card style={{ gridColumn:"1/-1" }}>
             <CardHd title="Organisation Stats"/>
             <CardBd>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:12 }}>
                 {[
                   ["Stories", stats.total_stories||0, "all time"],
                   ["Members", orgMembers.length, "active"],
@@ -2090,7 +1896,7 @@ function TeamManagementPage({ orgMembers, onMembersChange }) {
         {can("MANAGE_TEAMS") && <Btn cls="btn-primary" sm onClick={addTeam}>＋ New Team</Btn>}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"240px 1fr", gap:16 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))", gap:16 }}>
         <div>
           <div className="card">
             <div className="card-hd"><span className="card-title">Teams</span><span className="card-sub">{teams.length}</span></div>
@@ -2144,7 +1950,7 @@ function TeamManagementPage({ orgMembers, onMembersChange }) {
                   <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:"var(--radius-sm)", padding:16, marginBottom:16 }}>
                     <div style={{ fontFamily:"'Syne',sans-serif", fontSize:11, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", color:"var(--text3)", marginBottom:12 }}>Add to Team</div>
                     <div className="fg"><label className="fl">Member email (must already be in org)</label>
-                      <input className="fi" type="email" value={newUser.email} onChange={e=>setNewUser(f=>({...f,email:e.target.value}))} placeholder="e.g. lowri@cwmnida.wales"/>
+                      <input className="fi" type="email" value={newUser.email} onChange={e=>setNewUser(f=>({...f,email:e.target.value}))} placeholder="colleague@yourcompany.wales"/>
                     </div>
                     {addMsg && <p style={{ fontSize:12, color:"var(--red)", marginBottom:8 }}>{addMsg}</p>}
                     <div style={{ display:"flex", gap:8 }}>
@@ -2476,7 +2282,7 @@ function HandoverTab({ story, onUpdate }) {
         <div className="card-bd">
           <div className="fg">
             <label className="fl">Tone Reference</label>
-            <BilingualField field={h.tone_reference} storyId={story.id} onChange={v=>upd("tone_reference",v)} disabled={!canEdit} placeholder="e.g. Quiet observational style similar to Countryfile…"/>
+            <BilingualField field={h.tone_reference} storyId={story.id} onChange={v=>upd("tone_reference",v)} disabled={!canEdit} placeholder="e.g. Quiet observational style. Let the landscape do the work."/>
           </div>
           <div className="fg">
             <label className="fl">Music Suggestions (plain text)</label>
@@ -2775,7 +2581,7 @@ function MediaTab({ story, onUpdate }) {
           {addLink && (
             <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:"var(--radius-sm)", padding:16, marginBottom:16 }}>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
-                <div className="fg"><label className="fl">Link Name</label><input className="fi" value={lf.name} onChange={e=>setLf(f=>({...f,name:e.target.value}))} placeholder="e.g. John Evans Interview Rushes"/></div>
+                <div className="fg"><label className="fl">Link Name</label><input className="fi" value={lf.name} onChange={e=>setLf(f=>({...f,name:e.target.value}))} placeholder="e.g. Interview Rushes — Subject 1"/></div>
                 <div className="fg"><label className="fl">Type</label><select className="fsel" value={lf.type} onChange={e=>setLf(f=>({...f,type:e.target.value}))}>{LINK_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
               </div>
               <div className="fg"><label className="fl">URL / File Path</label><input className="fi" value={lf.url} onChange={e=>setLf(f=>({...f,url:e.target.value}))} placeholder="https:// or //server/share/path"/></div>
@@ -2923,20 +2729,69 @@ function AuditTab({ story }) {
 // Handles: story list, story CRUD, navigation, org members cache.
 
 
-// ─── Shared atoms (defined once at top of file, reused here) ──────────────
+// ─── HASH ROUTER ─────────────────────────────────────────────────
+// Lightweight hash-based routing: #/dashboard, #/story/abc, #/account, etc.
+// No library needed — just syncs view/selectedId with window.location.hash.
+
+function parseHash() {
+  const raw = window.location.hash.replace(/^#\/?/, "") || "dashboard";
+  const parts = raw.split("/");
+  if (parts[0] === "story" && parts[1]) return { view: "story", id: parts[1] };
+  const validViews = ["dashboard","account","org","teams","archived"];
+  if (validViews.includes(parts[0])) return { view: parts[0], id: null };
+  return { view: "dashboard", id: null };
+}
+
+function setHash(view, id) {
+  const path = view === "story" && id ? `story/${id}` : view;
+  const newHash = `#/${path}`;
+  if (window.location.hash !== newHash) {
+    window.history.pushState(null, "", newHash);
+  }
+}
+
+function replaceHash(view, id) {
+  const path = view === "story" && id ? `story/${id}` : view;
+  window.history.replaceState(null, "", `#/${path}`);
+}
+
+function useHashRouter() {
+  const [route, setRoute] = useState(parseHash);
+
+  useEffect(() => {
+    const onHash = () => setRoute(parseHash());
+    window.addEventListener("hashchange", onHash);
+    window.addEventListener("popstate", onHash);
+    return () => {
+      window.removeEventListener("hashchange", onHash);
+      window.removeEventListener("popstate", onHash);
+    };
+  }, []);
+
+  const navigate = useCallback((view, id = null) => {
+    setHash(view, id);
+    setRoute({ view, id });
+  }, []);
+
+  return { view: route.view, selectedId: route.id, navigate };
+}
+
 function Spinner() {
   return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:40,
-    color:"var(--text3)", fontSize:13 }}>Loading…</div>;
+    color:"var(--text3)", fontSize:13, gap:10 }}><span className="spinner"/>Loading…</div>;
 }
 function Toast({ msg, type="success", onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, []);
   const bg = type === "error" ? "var(--red-dim)" : type === "warn" ? "var(--amber-dim)" : "var(--green-dim)";
   const c  = type === "error" ? "#f87171" : type === "warn" ? "#fbbf24" : "#4ade80";
+  const icon = type === "error" ? "✗" : type === "warn" ? "⚠" : "✓";
   return (
-    <div style={{ position:"fixed", bottom:24, right:24, background:bg, border:`1px solid ${c}33`,
-      borderRadius:10, padding:"12px 20px", color:c, fontSize:13, zIndex:9999, maxWidth:340,
-      boxShadow:"0 4px 20px rgba(0,0,0,.3)", animation:"fadeIn .2s ease" }}>
-      {msg}
+    <div className="toast-enter" style={{ position:"fixed", bottom:24, right:24, background:bg, border:`1px solid ${c}33`,
+      borderRadius:12, padding:"12px 18px", color:c, fontSize:13, zIndex:9999, maxWidth:360,
+      boxShadow:"0 8px 32px rgba(0,0,0,.4)", display:"flex", alignItems:"center", gap:10,
+      backdropFilter:"blur(8px)" }}>
+      <span style={{ fontSize:16, flexShrink:0 }}>{icon}</span>
+      <span style={{ lineHeight:1.4 }}>{msg}</span>
     </div>
   );
 }
@@ -2945,8 +2800,7 @@ function Toast({ msg, type="success", onDone }) {
 // The backend returns flat fields: brief.hook_cy / brief.hook_en
 // The UI components expect bilingual objects: brief.story_hook.source_text etc.
 // This reconstructs the UI shape from the DB shape on every fetch.
-function normBf(cy, en, cyStatus = "PENDING") {
-  // Determine the original language from content presence
+function makeBF(cy, en, cyStatus = "PENDING") {
   const srcLang = cy ? "CY" : "EN";
   return {
     original_language: srcLang,
@@ -2968,8 +2822,8 @@ function normalizeStory(s) {
     // Normalise brief
     brief: {
       ...b,
-      story_hook: normBf(b.hook_cy, b.hook_en, b.hook_status),
-      why_now:    normBf(b.why_now_cy, b.why_now_en, b.why_now_status),
+      story_hook: makeBF(b.hook_cy, b.hook_en, b.hook_status),
+      why_now:    makeBF(b.why_now_cy, b.why_now_en, b.why_now_status),
       tone:       b.tone || "",
       sync_lines: b.sync_lines || [],
       characters: s.characters || [],
@@ -2978,7 +2832,7 @@ function normalizeStory(s) {
     // Normalise handover
     handover: {
       ...h,
-      story_intention: normBf(h.intention_cy, h.intention_en),
+      story_intention: makeBF(h.intention_cy, h.intention_en),
       clips:           Array.isArray(h.must_clips)        ? h.must_clips        : [],
       highlights:      Array.isArray(h.visual_highlights) ? h.visual_highlights : [],
       music_suggestions: typeof h.music_ref === "object" ? (h.music_ref?.text || "") : (h.music_ref || ""),
@@ -2986,9 +2840,9 @@ function normalizeStory(s) {
     // Normalise shoot notes
     shoot_notes: {
       ...n,
-      worked_well: n.what_worked || n.worked_well || normBf("", ""),
-      unexpected:  n.unexpected  || normBf("", ""),
-      missing:     n.missing     || normBf("", ""),
+      worked_well: n.what_worked || n.worked_well || makeBF("", ""),
+      unexpected:  n.unexpected  || makeBF("", ""),
+      missing:     n.missing     || makeBF("", ""),
     },
   };
 }
@@ -3050,12 +2904,15 @@ function Dashboard({ stories, orgMembers, loading, onOpen, onNew }) {
       </div>
 
       {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:12, marginBottom:16 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:12, marginBottom:16 }}>
         {STATUSES.filter(s => s !== "ARCHIVED").map(s => (
-          <div key={s} className="stat-card" onClick={() => setStatusFilter(s === statusFilter ? "ALL" : s)}
-            style={{ cursor:"pointer", borderColor: statusFilter===s ? "var(--accent)" : undefined }}>
+          <div key={s} className="stat-card" role="button" tabIndex={0}
+            onClick={() => setStatusFilter(s === statusFilter ? "ALL" : s)}
+            onKeyDown={e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setStatusFilter(s === statusFilter ? "ALL" : s))}
+            style={{ borderColor: statusFilter===s ? "var(--accent)" : undefined,
+              background: statusFilter===s ? "var(--accent-dim)" : undefined }}>
             <div className="stat-label">{STATUS_META[s].label}</div>
-            <div className="stat-value" style={{ color:s==="DELIVERED"?"var(--green)":s==="IN_EDIT"?"var(--purple)":"var(--text)" }}>
+            <div className="stat-value" style={{ color: STATUS_META[s].cls ? `var(--${s==="DELIVERED"?"green":s==="IN_EDIT"?"purple":s==="FILMING"?"red":s==="READY_TO_SHOOT"?"amber":"accent"})` : "var(--text)" }}>
               {counts[s]||0}
             </div>
           </div>
@@ -3070,7 +2927,9 @@ function Dashboard({ stories, orgMembers, loading, onOpen, onNew }) {
 
       {loading && <Spinner />}
       {!loading && visible.length === 0 && (
-        <Empty icon="📋" title="No stories yet" sub={q ? "No stories match your search." : "Create your first story to get started."}/>
+        <Empty icon="📋"
+          title={q ? "No results" : statusFilter !== "ALL" ? "No stories in this status" : "No stories yet"}
+          sub={q ? "Try a different search term." : statusFilter !== "ALL" ? "Clear the filter to see all stories." : "Create your first story to get started."}/>
       )}
 
       {/* Story grid */}
@@ -3081,14 +2940,11 @@ function Dashboard({ stories, orgMembers, loading, onOpen, onNew }) {
           const visInfo = VISIBILITY[s.visibility];
           const title = getTitle(s);
           return (
-            <div key={s.id}
-              style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)",
-                padding:"18px 20px", cursor:"pointer", transition:"all .2s" }}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--accent)";e.currentTarget.style.transform="translateY(-1px)"}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.transform=""}}
-              onClick={() => onOpen(s.id)}>
+            <div key={s.id} className="story-card" role="button" tabIndex={0}
+              onClick={() => onOpen(s.id)}
+              onKeyDown={e => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen(s.id))}>
               <div style={{ fontFamily:"'Syne',sans-serif", fontSize:15, fontWeight:700, marginBottom:4,
-                display:"flex", gap:8, alignItems:"flex-start", justifyContent:"space-between" }}>
+                display:"flex", gap:8, alignItems:"flex-start", justifyContent:"space-between", letterSpacing:"-0.01em" }}>
                 <span style={{ flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{title}</span>
                 <span title={visInfo?.desc} style={{ fontSize:14, flexShrink:0 }}>{visInfo?.icon}</span>
               </div>
@@ -3097,15 +2953,15 @@ function Dashboard({ stories, orgMembers, loading, onOpen, onNew }) {
                 <Badge status={s.status}/>
                 {s.shoot_date&&<span style={{ fontSize:11, color:"var(--text3)" }}>📅 {s.shoot_date?.slice?.(0,10) || s.shoot_date}</span>}
               </div>
-              <div style={{ fontSize:12, color:"var(--text3)", marginBottom:8, lineHeight:1.5, height:36, overflow:"hidden" }}>
+              <div className="hook-text">
                 {s.brief?.hook_cy || s.brief?.hook_en || "No story hook yet."}
               </div>
-              <div style={{ display:"flex", gap:10, fontSize:11, color:"var(--text4)", marginBottom:6 }}>
+              <div style={{ display:"flex", gap:10, fontSize:11, color:"var(--text4)", marginTop:8, marginBottom:6 }}>
                 <span>📦 {(s._count?.deliverables||s.deliverables?.length||0)} deliverables</span>
                 <span>🗂 {(s._count?.media||s.media?.length||0)} assets</span>
               </div>
               {assignedUsers.length > 0 && (
-                <div style={{ display:"flex", gap:-4, marginTop:6 }}>
+                <div style={{ display:"flex", marginTop:6 }}>
                   {assignedUsers.map(u => <UserAvatar key={u.id} user={u} size={20} style={{ marginRight:4 }}/>)}
                 </div>
               )}
@@ -3298,16 +3154,29 @@ const TABS = [
   { id:"handover", label:"✂️ Handover" },
   { id:"deliver",  label:"📦 Deliverables" },
   { id:"media",    label:"🗂️ Media & Assets" },
+  { id:"comments", label:"💬 Comments" },
   { id:"audit",    label:"🕒 Audit Log" },
 ];
 
-function StoryView({ story, orgMembers, onUpdate, onStatusChange, onBack }) {
+function StoryView({ story, orgMembers, onUpdate, onStatusChange, onBack, onDuplicate, onArchive, onRestore }) {
   const { session, can } = useSession();
   const { viewLang } = useLang();
   const [tab, setTab] = useState("brief");
   const [showExport, setShowExport] = useState(false);
   const [showVis, setShowVis] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const actionsRef = useRef(null);
+
+  // Close action menu on outside click or Escape
+  useEffect(() => {
+    if (!showActions) return;
+    const onKey = (e) => { if (e.key === "Escape") setShowActions(false); };
+    const onClick = (e) => { if (actionsRef.current && !actionsRef.current.contains(e.target)) setShowActions(false); };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onClick); };
+  }, [showActions]);
 
   const visInfo = VISIBILITY[story.visibility];
   const canChangeStatus = can("EDIT_BRIEF");
@@ -3342,8 +3211,27 @@ function StoryView({ story, orgMembers, onUpdate, onStatusChange, onBack }) {
           <LangToggle compact/>
           <span title={visInfo?.desc} style={{ fontSize:16, cursor:"pointer" }} onClick={()=>setShowVis(true)}>{visInfo?.icon}</span>
           <Badge status={story.status}/>
-          {saving && <span style={{ fontSize:11, color:"var(--text3)" }}>Saving…</span>}
+          {saving && <span style={{ fontSize:11, color:"var(--text3)" }}><span className="spinner" style={{ width:14, height:14, marginRight:6 }}/>Saving</span>}
           {can("EXPORT_PACK") && <Btn sm cls="btn-secondary" onClick={()=>setShowExport(true)}>⬇ Editor Pack</Btn>}
+          <div ref={actionsRef} style={{ position:"relative" }}>
+            <Btn sm cls="btn-ghost" onClick={() => setShowActions(v => !v)}>⋯</Btn>
+            {showActions && (
+              <div className="action-dropdown">
+                <div className="sb-item" onClick={() => { setShowActions(false); onDuplicate?.(story.id); }} style={{ margin:0 }}>
+                  <span className="sb-icon">📋</span>Duplicate Story
+                </div>
+                {story.status !== "ARCHIVED" ? (
+                  <div className="sb-item" onClick={() => { setShowActions(false); onArchive?.(story.id); }} style={{ margin:0, color:"var(--red)" }}>
+                    <span className="sb-icon">🗄</span>Archive Story
+                  </div>
+                ) : (
+                  <div className="sb-item" onClick={() => { setShowActions(false); onRestore?.(story.id); }} style={{ margin:0, color:"var(--green)" }}>
+                    <span className="sb-icon">↩</span>Restore Story
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -3368,6 +3256,7 @@ function StoryView({ story, orgMembers, onUpdate, onStatusChange, onBack }) {
         {tab==="handover" && <HandoverTab    story={story} onUpdate={onUpdate}/>}
         {tab==="deliver"  && <DeliverablesTab story={story} onUpdate={onUpdate}/>}
         {tab==="media"    && <MediaTab story={story} onUpdate={onUpdate}/>}
+        {tab==="comments" && <CommentsTab story={story}/>}
         {tab==="audit"    && <AuditTab story={story}/>}
       </div>
 
@@ -3429,6 +3318,7 @@ function Sidebar({ stories, view, selectedId, onNav, onOpen, onNew }) {
 
       <div className="sb-nav">
         {navItem("dashboard","⬡","Dashboard")}
+        {navItem("archived","🗄","Archived")}
         <div className="sb-divider"/>
         <div className="sb-section">Manage</div>
         {navItem("account","👤","My Account")}
@@ -3437,7 +3327,7 @@ function Sidebar({ stories, view, selectedId, onNav, onOpen, onNew }) {
         <div className="sb-divider"/>
         <div className="sb-section">Stories</div>
         <div className="sb-item" onClick={onNew}><span className="sb-icon">＋</span>New Story</div>
-        {stories.slice(0,20).map(s => (
+        {stories.slice(0,15).map(s => (
           <div key={s.id} className={`sb-story${selectedId===s.id?" active":""}`} onClick={()=>onOpen(s.id)}>
             <div className="sb-story-title">{getTitle(s)}</div>
             <div style={{ marginTop:3, display:"flex", gap:6, alignItems:"center" }}>
@@ -3448,6 +3338,11 @@ function Sidebar({ stories, view, selectedId, onNav, onOpen, onNew }) {
             </div>
           </div>
         ))}
+        {stories.length > 15 && (
+          <div className="sb-more" onClick={() => onNav("dashboard")}>
+            View all {stories.length} stories
+          </div>
+        )}
       </div>
 
       {user && (
@@ -3457,6 +3352,7 @@ function Sidebar({ stories, view, selectedId, onNav, onOpen, onNew }) {
             <div className="sb-user-name">{user.name}</div>
             <div className="sb-user-role">{user.preferred_lang==="CY"?"🏴󠁧󠁢󠁷󠁬󠁳󠁿 ":""}{ALL_ROLES[user.role]?.label||user.role}</div>
           </div>
+          <NotificationBell/>
           <button className="btn btn-ghost btn-xs" onClick={logout} title="Sign out">↩</button>
         </div>
       )}
@@ -3465,17 +3361,483 @@ function Sidebar({ stories, view, selectedId, onNav, onOpen, onNew }) {
 }
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
-const EXTRA_CSS = `@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`;
+const EXTRA_CSS = `
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fadeInDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+@keyframes slideInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes pulseGlow{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ── MOTION TOKENS ──────────────────────────── */
+.pma{--dur-fast:120ms;--dur-base:200ms;--dur-slow:300ms;--dur-enter:250ms;--ease-out:cubic-bezier(0.16,1,0.3,1);--ease-in-out:cubic-bezier(0.4,0,0.2,1);--ease-spring:cubic-bezier(0.34,1.56,0.64,1)}
+
+/* ── SKELETON LOADING ───────────────────────── */
+.skel{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s ease-in-out infinite;border-radius:var(--radius-sm)}
+.skel-text{height:14px;margin-bottom:8px;border-radius:4px}
+.skel-text.w-full{width:100%}
+.skel-text.w-3-4{width:75%}
+.skel-text.w-half{width:50%}
+.skel-text.w-1-4{width:25%}
+.skel-title{height:20px;width:60%;margin-bottom:12px;border-radius:4px}
+.skel-avatar{width:32px;height:32px;border-radius:50%}
+.skel-card{height:180px;border-radius:var(--radius-lg)}
+
+/* ── SPINNER ────────────────────────────────── */
+.pma .spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+
+/* ── NOTIFICATION BELL ──────────────────────── */
+.notif-bell{position:relative;cursor:pointer;padding:6px;border-radius:var(--radius-sm);transition:background var(--dur-fast) var(--ease-in-out)}
+.notif-bell:hover{background:var(--surface2)}
+.notif-bell svg{width:18px;height:18px;color:var(--text3);transition:color var(--dur-fast)}
+.notif-bell:hover svg{color:var(--text2)}
+.notif-badge{position:absolute;top:2px;right:2px;width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid var(--surface);animation:pulseGlow 2s infinite}
+.notif-badge-count{position:absolute;top:-2px;right:-4px;min-width:16px;height:16px;background:var(--red);border-radius:8px;font-size:9px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--surface)}
+
+/* ── NOTIFICATION DROPDOWN ──────────────────── */
+.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:360px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:100;overflow:hidden;animation:fadeInDown var(--dur-enter) var(--ease-out)}
+.notif-hd{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.notif-hd-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text2)}
+.notif-list{max-height:320px;overflow-y:auto}
+.notif-item{padding:12px 16px;border-bottom:1px solid rgba(37,42,58,.4);cursor:pointer;transition:background var(--dur-fast)}
+.notif-item:hover{background:var(--surface2)}
+.notif-item:last-child{border-bottom:none}
+.notif-item.unread{background:var(--accent-dim)}
+.notif-item.unread:hover{background:rgba(79,114,255,.12)}
+.notif-time{font-size:11px;color:var(--text4)}
+.notif-msg{font-size:13px;color:var(--text);line-height:1.5;margin-top:2px}
+.notif-empty{padding:32px 16px;text-align:center;color:var(--text3);font-size:13px}
+
+/* ── COMMENTS ───────────────────────────────── */
+.comment-list{display:flex;flex-direction:column;gap:2px}
+.comment-item{padding:14px 0;border-bottom:1px solid rgba(37,42,58,.4);animation:fadeIn var(--dur-enter) var(--ease-out)}
+.comment-item:last-child{border-bottom:none}
+.comment-header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.comment-author{font-size:13px;font-weight:600;color:var(--text)}
+.comment-time{font-size:11px;color:var(--text4)}
+.comment-body{font-size:13px;color:var(--text2);line-height:1.6;padding-left:38px}
+.comment-actions{display:flex;gap:6px;padding-left:38px;margin-top:6px}
+.comment-input-wrap{display:flex;gap:10px;align-items:flex-start;padding:16px 0;border-top:1px solid var(--border)}
+.comment-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;resize:none;min-height:42px;max-height:120px;outline:none;transition:border-color var(--dur-fast)}
+.comment-input:focus{border-color:var(--accent)}
+
+/* ── AVATAR UPLOAD ──────────────────────────── */
+.avatar-upload{position:relative;cursor:pointer;display:inline-block}
+.avatar-upload-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--dur-base);font-size:18px}
+.avatar-upload:hover .avatar-upload-overlay{opacity:1}
+
+/* ── ARCHIVED STORIES ───────────────────────── */
+.archived-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;animation:fadeIn var(--dur-enter) var(--ease-out)}
+
+/* ── POLISH: ENHANCED TRANSITIONS ───────────── */
+.pma .btn{transition:all var(--dur-base) var(--ease-in-out)}
+.pma .btn:active:not(:disabled){transform:scale(.97)}
+.pma .card{transition:border-color var(--dur-base) var(--ease-in-out)}
+.pma .card:hover{border-color:var(--border2)}
+.pma .fi,.pma .fta,.pma .fsel{transition:border-color var(--dur-base) var(--ease-in-out),box-shadow var(--dur-base)}
+.pma .fi:focus,.pma .fta:focus,.pma .fsel:focus{box-shadow:0 0 0 3px var(--accent-dim)}
+.pma .sb-item{transition:all var(--dur-base) var(--ease-in-out)}
+.pma .sb-story{transition:all var(--dur-base) var(--ease-in-out)}
+.pma .tab{transition:all var(--dur-base) var(--ease-in-out)}
+.pma .chip{transition:all var(--dur-base) var(--ease-in-out)}
+.pma .tone-pill{transition:all var(--dur-base) var(--ease-in-out)}
+.pma .modal-overlay{animation:fadeIn var(--dur-base) var(--ease-out)}
+.pma .modal{animation:slideInUp var(--dur-slow) var(--ease-spring)}
+.pma .badge{transition:all var(--dur-fast)}
+.pma .wf-step{transition:all var(--dur-base) var(--ease-in-out)}
+.pma .wf-step:active{transform:scale(.97)}
+.pma .del-card{transition:all var(--dur-base) var(--ease-in-out)}
+.pma .del-card:hover{border-color:var(--border2)}
+.pma .notice{animation:fadeIn var(--dur-enter) var(--ease-out)}
+.pma .toast-enter{animation:slideInRight var(--dur-slow) var(--ease-spring)}
+
+/* ── POLISH: REDUCED MOTION ─────────────────── */
+@media(prefers-reduced-motion:reduce){
+  .pma,.pma *{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
+}
+
+/* ── POLISH: FOCUS VISIBLE ──────────────────── */
+.pma :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pma button:focus:not(:focus-visible),.pma input:focus:not(:focus-visible),.pma select:focus:not(:focus-visible),.pma textarea:focus:not(:focus-visible){outline:none}
+
+/* ── STORY CARD (Dashboard) ─────────────────── */
+.story-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;cursor:pointer;position:relative}
+.story-card:hover,.story-card:focus-visible{border-color:var(--accent-mid);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.story-card .hook-text{font-size:12px;color:var(--text3);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;height:36px}
+
+/* ── ACTION DROPDOWN ────────────────────────── */
+.action-dropdown{position:absolute;top:calc(100% + 4px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;min-width:180px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:fadeInDown var(--dur-enter) var(--ease-out)}
+.action-dropdown .sb-item{margin:0;border-radius:var(--radius-sm)}
+
+/* ── SIDEBAR FOOTER ─────────────────────────── */
+.sb-more{padding:6px 10px;font-size:11px;color:var(--text4);cursor:pointer;text-align:center}
+.sb-more:hover{color:var(--accent)}
+
+/* ── RESPONSIVE ─────────────────────────────── */
+@media(max-width:1024px){
+  .pma .content{padding:20px 20px}
+}
+@media(max-width:768px){
+  .pma .sidebar{display:none}
+  .pma .topbar{padding:0 16px}
+  .pma .content{padding:16px}
+  .pma .sh{flex-direction:column;gap:12px}
+  .pma .profile-header{flex-direction:column;text-align:center;gap:12px}
+  .pma .profile-meta{justify-content:center}
+}
+`;
+
+// ─── SKELETON LOADER ─────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)", padding:"18px 20px" }}>
+      <div className="skel skel-title"/>
+      <div className="skel skel-text w-3-4"/>
+      <div className="skel skel-text w-full" style={{ marginBottom:12 }}/>
+      <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+        <div className="skel" style={{ width:80, height:22, borderRadius:20 }}/>
+        <div className="skel" style={{ width:60, height:22, borderRadius:20 }}/>
+      </div>
+      <div className="skel skel-text w-full"/>
+      <div className="skel skel-text w-half"/>
+      <div style={{ display:"flex", gap:3, marginTop:12 }}>
+        {[0,1,2,3,4].map(i => <div key={i} className="skel" style={{ flex:1, height:3, borderRadius:2 }}/>)}
+      </div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="content" style={{ animation:"fadeIn .3s ease" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:22 }}>
+        <div><div className="skel skel-title" style={{ width:200 }}/><div className="skel skel-text w-half" style={{ width:120 }}/></div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:12, marginBottom:16 }}>
+        {[0,1,2,3,4].map(i => <div key={i} className="skel" style={{ height:80, borderRadius:"var(--radius)" }}/>)}
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:14 }}>
+        {[0,1,2,3,4,5].map(i => <SkeletonCard key={i}/>)}
+      </div>
+    </div>
+  );
+}
+
+// ─── NOTIFICATION BELL ──────────────────────────────────────────
+function NotificationBell() {
+  const [open, setOpen] = useState(false);
+  const [notifs, setNotifs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const dropRef = useRef(null);
+
+  const unreadCount = notifs.filter(n => !n.read_at).length;
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) setOpen(false);
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const loadNotifs = async () => {
+    setLoading(true);
+    try {
+      const data = await api.notifications.list();
+      setNotifs(Array.isArray(data) ? data : data?.notifications || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  const toggleOpen = () => {
+    if (!open) loadNotifs();
+    setOpen(v => !v);
+  };
+
+  const markRead = async (id) => {
+    try {
+      await api.notifications.markRead(id);
+      setNotifs(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
+    } catch { }
+  };
+
+  const markAll = async () => {
+    try {
+      await api.notifications.markAll();
+      setNotifs(prev => prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() })));
+    } catch { }
+  };
+
+  const relTime = (d) => {
+    if (!d) return "";
+    const diff = Date.now() - new Date(d).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  return (
+    <div ref={dropRef} style={{ position: "relative" }}>
+      <div className="notif-bell" onClick={toggleOpen}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        {unreadCount > 0 && (
+          unreadCount > 9
+            ? <span className="notif-badge"/>
+            : <span className="notif-badge-count">{unreadCount}</span>
+        )}
+      </div>
+      {open && (
+        <div className="notif-dropdown">
+          <div className="notif-hd">
+            <span className="notif-hd-title">Notifications</span>
+            {unreadCount > 0 && (
+              <button className="btn btn-ghost btn-xs" onClick={markAll}>Mark all read</button>
+            )}
+          </div>
+          <div className="notif-list">
+            {loading && <div style={{ padding:20, textAlign:"center" }}><span className="spinner"/></div>}
+            {!loading && notifs.length === 0 && (
+              <div className="notif-empty">No notifications yet</div>
+            )}
+            {!loading && notifs.map(n => (
+              <div key={n.id} className={`notif-item${!n.read_at ? " unread" : ""}`}
+                onClick={() => !n.read_at && markRead(n.id)}>
+                <div className="notif-time">{relTime(n.created_at)}</div>
+                <div className="notif-msg">{n.message || n.body || "Notification"}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── COMMENTS TAB ───────────────────────────────────────────────
+function CommentsTab({ story }) {
+  const { session } = useSession();
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState("");
+
+  useEffect(() => {
+    api.stories.comments(story.id)
+      .then(data => setComments(Array.isArray(data) ? data : data?.comments || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [story.id]);
+
+  const postComment = async () => {
+    if (!text.trim()) return;
+    setPosting(true);
+    try {
+      const c = await api.stories.addComment(story.id, { body: text });
+      setComments(prev => [...prev, c]);
+      setText("");
+    } catch { }
+    finally { setPosting(false); }
+  };
+
+  const deleteComment = async (id) => {
+    try {
+      await api.stories.deleteComment(story.id, id);
+      setComments(prev => prev.filter(c => c.id !== id));
+    } catch { }
+  };
+
+  const saveEdit = async (id) => {
+    try {
+      const updated = await api.stories.updateComment(story.id, id, { body: editText });
+      setComments(prev => prev.map(c => c.id === id ? { ...c, body: editText, ...updated } : c));
+      setEditingId(null);
+      setEditText("");
+    } catch { }
+  };
+
+  const relTime = (d) => {
+    if (!d) return "";
+    const diff = Date.now() - new Date(d).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  return (
+    <div>
+      <div className="card">
+        <div className="card-hd">
+          <span className="card-title">Comments</span>
+          <span className="card-sub">{comments.length}</span>
+        </div>
+        <div className="card-bd">
+          {loading && <div style={{ padding:20, textAlign:"center" }}><span className="spinner"/></div>}
+          {!loading && comments.length === 0 && (
+            <Empty icon="💬" title="No comments yet" sub="Start a conversation about this story."/>
+          )}
+          {!loading && (
+            <div className="comment-list">
+              {comments.map(c => (
+                <div key={c.id} className="comment-item">
+                  <div className="comment-header">
+                    <UserAvatar user={c.user || { name: c.user_name || "?" }} size={28}/>
+                    <span className="comment-author">{c.user?.name || c.user_name || "Unknown"}</span>
+                    <span className="comment-time">{relTime(c.created_at)}</span>
+                  </div>
+                  {editingId === c.id ? (
+                    <div style={{ paddingLeft:38 }}>
+                      <textarea className="comment-input" value={editText}
+                        onChange={e => setEditText(e.target.value)} autoFocus/>
+                      <div style={{ display:"flex", gap:6, marginTop:6 }}>
+                        <button className="btn btn-primary btn-xs" onClick={() => saveEdit(c.id)}>Save</button>
+                        <button className="btn btn-ghost btn-xs" onClick={() => setEditingId(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="comment-body">{c.body}</div>
+                      {session?.user?.id === c.user_id && (
+                        <div className="comment-actions">
+                          <button className="btn btn-ghost btn-xs"
+                            onClick={() => { setEditingId(c.id); setEditText(c.body); }}>Edit</button>
+                          <button className="btn btn-ghost btn-xs" style={{ color:"var(--red)" }}
+                            onClick={() => deleteComment(c.id)}>Delete</button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="comment-input-wrap">
+            <UserAvatar user={session?.user || { name:"?" }} size={28}/>
+            <textarea className="comment-input" value={text} onChange={e => setText(e.target.value)}
+              placeholder="Add a comment..." rows={1}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment(); } }}/>
+            <button className="btn btn-primary btn-sm" onClick={postComment}
+              disabled={posting || !text.trim()}>
+              {posting ? <span className="spinner" style={{ width:14, height:14 }}/> : "Post"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AVATAR UPLOAD ──────────────────────────────────────────────
+function AvatarUploadWidget({ user, size = 64, onUploaded }) {
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const result = await uploadFile("/auth/avatar", file);
+      onUploaded?.(result);
+    } catch (err) {
+      console.error("Avatar upload failed:", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="avatar-upload" onClick={() => !uploading && fileRef.current?.click()}>
+      <UserAvatar user={user} size={size}/>
+      <div className="avatar-upload-overlay">
+        {uploading ? <span className="spinner" style={{ borderTopColor:"#fff" }}/> : "📷"}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
+    </div>
+  );
+}
+
+// ─── ARCHIVED STORIES VIEW ──────────────────────────────────────
+function ArchivedStoriesView({ stories, onLoad, onRestore, onOpen }) {
+  const { viewLang } = useLang();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    onLoad().finally(() => setLoading(false));
+  }, []);
+
+  const getTitle = (s) => viewLang === "CY" ? (s.title_cy || s.title_en) : (s.title_en || s.title_cy);
+
+  return (
+    <div className="content">
+      <div className="sh">
+        <div className="sh-left">
+          <h1>Archived Stories</h1>
+          <p>{stories.length} archived {stories.length === 1 ? "story" : "stories"}</p>
+        </div>
+      </div>
+
+      {loading && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:14 }}>
+          {[0,1,2].map(i => <SkeletonCard key={i}/>)}
+        </div>
+      )}
+
+      {!loading && stories.length === 0 && (
+        <Empty icon="🗄" title="No archived stories" sub="Stories you archive will appear here."/>
+      )}
+
+      {!loading && stories.length > 0 && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:14 }}>
+          {stories.map(s => (
+            <div key={s.id}
+              style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:"var(--radius-lg)",
+                padding:"18px 20px", transition:"all .2s", opacity:.8 }}
+              onMouseEnter={e => { e.currentTarget.style.opacity="1"; e.currentTarget.style.borderColor="var(--accent)"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity=".8"; e.currentTarget.style.borderColor="var(--border)"; }}>
+              <div style={{ fontFamily:"'Syne',sans-serif", fontSize:15, fontWeight:700, marginBottom:4 }}>
+                {getTitle(s)}
+              </div>
+              {s.programme && <div style={{ fontSize:12, color:"var(--text3)", marginBottom:8 }}>📺 {s.programme}</div>}
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+                <Badge status="ARCHIVED"/>
+                {s.archived_at && <span style={{ fontSize:11, color:"var(--text4)" }}>Archived {s.archived_at.slice?.(0,10)}</span>}
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button className="btn btn-green btn-sm" onClick={() => onRestore(s.id)}>↩ Restore</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => onOpen(s.id)}>View</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── APP INNER ────────────────────────────────────────────────────────────────
 function AppInner() {
   const { session } = useSession();
   const user = session?.user;
 
+  const { view, selectedId, navigate } = useHashRouter();
+
   const [stories,    setStories]    = useState([]);
+  const [archived,   setArchived]   = useState([]);
   const [orgMembers, setOrgMembers] = useState([]);
-  const [view,       setView]       = useState("dashboard");
-  const [selectedId, setSelectedId] = useState(null);
   const [showNew,    setShowNew]    = useState(false);
   const [loading,    setLoading]    = useState(true);
   const [toast,      setToast]      = useState(null);
@@ -3495,7 +3857,7 @@ function AppInner() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const openStory   = (id) => { setSelectedId(id); setView("story"); };
+  const openStory   = (id) => navigate("story", id);
   const story = selectedId ? stories.find(s => s.id === selectedId) : null;
 
   // ── Create story ─────────────────────────────────────────────────────────────
@@ -3599,6 +3961,55 @@ function AppInner() {
     }
   }, []);
 
+  // ── Duplicate story ─────────────────────────────────────────────────────────
+  const handleDuplicate = useCallback(async (id) => {
+    try {
+      const dup = await api.stories.duplicate(id);
+      setStories(prev => [normalizeStory(dup), ...prev]);
+      openStory(dup.id);
+      showToast("Story duplicated");
+    } catch (e) {
+      showToast("Duplicate failed: " + (e.data?.error||e.message), "error");
+    }
+  }, []);
+
+  // ── Archive story ──────────────────────────────────────────────────────────
+  const handleArchive = useCallback(async (id) => {
+    try {
+      await api.stories.delete(id);
+      const s = stories.find(x => x.id === id);
+      if (s) {
+        setStories(prev => prev.filter(x => x.id !== id));
+        setArchived(prev => [{ ...s, status:"ARCHIVED", archived_at:new Date().toISOString() }, ...prev]);
+      }
+      navigate("dashboard");
+      showToast("Story archived");
+    } catch (e) {
+      showToast("Archive failed: " + (e.data?.error||e.message), "error");
+    }
+  }, [stories, navigate]);
+
+  // ── Restore story ──────────────────────────────────────────────────────────
+  const handleRestore = useCallback(async (id) => {
+    try {
+      const restored = await api.stories.restore(id);
+      setArchived(prev => prev.filter(x => x.id !== id));
+      setStories(prev => [normalizeStory(restored), ...prev]);
+      navigate("dashboard");
+      showToast("Story restored");
+    } catch (e) {
+      showToast("Restore failed: " + (e.data?.error||e.message), "error");
+    }
+  }, [navigate]);
+
+  // ── Load archived stories ──────────────────────────────────────────────────
+  const loadArchived = useCallback(async () => {
+    try {
+      const data = await api.stories.list({ include_archived:"true", status:"ARCHIVED", limit:100 });
+      setArchived((data.stories || []).map(normalizeStory));
+    } catch { }
+  }, []);
+
   // ── Reload single story (after sub-resource saves) ────────────────────────────
   const reloadStory = useCallback(async (id) => {
     try {
@@ -3617,20 +4028,22 @@ function AppInner() {
           stories={stories}
           view={view}
           selectedId={selectedId}
-          onNav={v => { setView(v); setSelectedId(null); }}
+          onNav={v => navigate(v)}
           onOpen={openStory}
           onNew={() => setShowNew(true)}
         />
 
         <div className="main">
           {view === "dashboard" && (
-            <Dashboard
-              stories={stories}
-              orgMembers={orgMembers}
-              loading={loading}
-              onOpen={openStory}
-              onNew={() => setShowNew(true)}
-            />
+            loading ? <DashboardSkeleton/> : (
+              <Dashboard
+                stories={stories}
+                orgMembers={orgMembers}
+                loading={false}
+                onOpen={openStory}
+                onNew={() => setShowNew(true)}
+              />
+            )
           )}
           {view === "story" && story && (
             <StoryView
@@ -3638,7 +4051,18 @@ function AppInner() {
               orgMembers={orgMembers}
               onUpdate={handleUpdate}
               onStatusChange={handleStatusChange}
-              onBack={() => { setView("dashboard"); setSelectedId(null); }}
+              onDuplicate={handleDuplicate}
+              onArchive={handleArchive}
+              onRestore={handleRestore}
+              onBack={() => navigate("dashboard")}
+            />
+          )}
+          {view === "archived" && (
+            <ArchivedStoriesView
+              stories={archived}
+              onLoad={loadArchived}
+              onRestore={handleRestore}
+              onOpen={(id) => navigate("story", id)}
             />
           )}
           {view === "account" && <UserAccountPage orgMembers={orgMembers}/>}
