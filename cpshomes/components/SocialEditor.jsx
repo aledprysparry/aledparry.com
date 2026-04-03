@@ -2272,9 +2272,27 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const [exporting,setExporting]=useState(new Set());
   const [progress,setProgress]=useState("");
   const [error,setError]=useState("");
+  const [aiElapsed,setAiElapsed]=useState(0);
+  const aiTimerRef=useRef(null);
   const [showAdd,setShowAdd]=useState(false);
   const [filterTpl,setFilterTpl]=useState("");
   const [showSafeZones,setShowSafeZones]=useState(false);
+
+  // ── Undo stack ──
+  const undoStack=useRef([]);
+  const pushUndo=useCallback(()=>{
+    const snap=JSON.stringify(project.graphics||[]);
+    const stack=undoStack.current;
+    if(stack.length>0&&stack[stack.length-1]===snap) return; // skip duplicate
+    stack.push(snap);
+    if(stack.length>30) stack.shift(); // cap at 30
+  },[project.graphics]);
+  const undo=useCallback(()=>{
+    const stack=undoStack.current;
+    if(stack.length===0) return;
+    const prev=JSON.parse(stack.pop());
+    updateProject({graphics:prev,selected:prev.map((_,i)=>i),previews:{}});
+  },[updateProject]);
   const [showMoreActions,setShowMoreActions]=useState(false);
   const [reviewResults,setReviewResults]=useState(null);
   const [reviewing,setReviewing]=useState(false);
@@ -2285,6 +2303,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const selected=new Set(project.selected||[]);
   const previews=project.previews||{};
   const setGraphics=gs=>{
+    pushUndo(); // snapshot before mutation
     // Auto-sort by timecode so graphics always appear in video order
     const sorted=[...gs].sort((a,b)=>(a.timestamp||"").localeCompare(b.timestamp||""));
     updateProject({graphics:sorted,selected:[...sorted.keys()],previews:{}});
@@ -2293,7 +2312,8 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   const setPreviews=fn=>updateProject(prev=>({previews:typeof fn==="function"?fn(prev.previews||{}):fn}));
 
   const analyse=async()=>{
-    setGStep("analysing");setError("");
+    setGStep("analysing");setError("");setAiElapsed(0);
+    const t0=Date.now();aiTimerRef.current=setInterval(()=>setAiElapsed(Math.round((Date.now()-t0)/1000)),1000);
     try{
       const transcript=project.subtitles.map(s=>`[${s.start}] ${s.text}`).join("\n");
       const raw=await callAI({system:GFX_PROMPT,messages:[{role:"user",content:`Title:"${project.name}"\n\n${transcript}`}],max_tokens:8000});
@@ -2323,6 +2343,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       ];
       setGraphics(withBookends);setGStep("review");
     }catch(e){setError("Analysis failed: "+e.message+(e.message.includes("fetch")?" — check your API key in Settings":""));setGStep("idle");}
+    finally{clearInterval(aiTimerRef.current);aiTimerRef.current=null;}
   };
 
   const doPreview=useCallback(async(g,i)=>{
@@ -2403,14 +2424,16 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       if(e.key==="Escape"&&editingIdx!==null){e.preventDefault();setEditingIdx(null);}
       if(e.key==="ArrowLeft"&&editingIdx!==null){e.preventDefault();setEditingIdx(Math.max(0,editingIdx-1));}
       if(e.key==="ArrowRight"&&editingIdx!==null){e.preventDefault();setEditingIdx(Math.min(graphics.length-1,editingIdx+1));}
+      if(e.key==="z"&&(e.metaKey||e.ctrlKey)&&!e.shiftKey){e.preventDefault();undo();}
     };
     window.addEventListener("keydown",handler);
     return()=>window.removeEventListener("keydown",handler);
-  },[editingIdx,graphics.length]);
+  },[editingIdx,graphics.length,undo]);
   const [dragIdx,setDragIdx]=useState(null);
   const [dragOverIdx,setDragOverIdx]=useState(null);
   const handleDrop=(fromIdx,toIdx)=>{
     if(fromIdx===toIdx||fromIdx==null||toIdx==null) return;
+    pushUndo();
     const ng=[...graphics];
     const [moved]=ng.splice(fromIdx,1);
     ng.splice(toIdx,0,moved);
@@ -2437,6 +2460,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   };
 
   const updateGraphicContent=(i,changes,metaChanges)=>{
+    pushUndo();
     let updated;
     updateProject(prev=>{
       const ng=[...(prev.graphics||[])];
@@ -2487,7 +2511,11 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <AnimatedRobot/>
         <div style={{fontSize:20,fontWeight:900,marginBottom:4,letterSpacing:0.5}}>Analysing transcript…</div>
         <ThinkingDots/>
-        <div style={{opacity:0.4,fontSize:13,marginTop:10}}>Reading every line, finding the right moments</div>
+        <div style={{opacity:0.4,fontSize:13,marginTop:10}}>Reading {project.subtitles.length} lines, finding the right moments</div>
+        <div style={{marginTop:DS.md,display:"flex",alignItems:"center",justifyContent:"center",gap:DS.md}}>
+          <span style={{fontSize:DS.fsSm,color:DS.textMuted,fontFamily:"monospace"}}>{aiElapsed}s</span>
+          <button style={btn({fontSize:11,padding:"5px 14px",opacity:0.6})} onClick={()=>{clearInterval(aiTimerRef.current);setGStep("idle");setError("Cancelled");}}>Cancel</button>
+        </div>
       </>
       :<><div style={{fontSize:46,marginBottom:14}}>🎨</div><div style={{fontSize:20,fontWeight:900,marginBottom:6}}>Ready to generate graphics</div>
         {error&&<div style={{color:brand.colorAccent,fontSize:13,fontWeight:600,marginBottom:12}}>{error}</div>}
@@ -2553,6 +2581,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
           <option value="">All types</option>
           {[...new Set(graphics.map(g=>g.template))].map(t=><option key={t} value={t}>{(TMPL[t]||{}).label||t}</option>)}
         </select>
+        <button style={btn({fontSize:10,padding:"5px 9px",opacity:undoStack.current.length>0?0.8:0.3})} onClick={undo} disabled={undoStack.current.length===0} title="Undo last change (Ctrl+Z)">↩ Undo</button>
         <button style={{...sm,background:showMoreActions?"rgba(255,255,255,0.1)":"transparent",fontSize:10}} onClick={()=>setShowMoreActions(v=>!v)} title="More actions">⋯ {showMoreActions?"Less":"More"}</button>
         <span style={{fontSize:10,color:DS.textMuted,marginLeft:"auto"}}>{selected.size}/{graphics.length}{filterTpl?` (${filteredGraphics.length} shown)`:""}</span>
       </div>
@@ -3012,13 +3041,26 @@ function PosterTab({project,brand,updateProject}){
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state with example */}
       {!variations.length&&!generating&&(
-        <div style={emptyState({padding:"60px 0"})}>
+        <div style={emptyState({padding:"40px 0"})}>
           <div style={{fontSize:42,marginBottom:DS.md}}>🖼</div>
-          <div style={{fontSize:DS.fsLg,fontWeight:700}}>Social Media Poster Studio</div>
-          <div style={{fontSize:DS.fsSm,color:DS.textMuted,marginTop:DS.xs,maxWidth:400}}>
+          <div style={{fontSize:DS.fsLg,fontWeight:700,marginBottom:DS.sm}}>Social Media Poster Studio</div>
+          <div style={{fontSize:DS.fsSm,color:DS.textMuted,maxWidth:440,margin:"0 auto",lineHeight:1.6,marginBottom:DS.xl}}>
             Enter a topic above and AI will generate 3 copy variations — each rendered as 4 poster sizes ready for Instagram, TikTok, LinkedIn, and YouTube.
+          </div>
+          {/* Example output preview */}
+          <div style={{maxWidth:520,margin:"0 auto",background:DS.bgCard,border:`1px solid ${DS.borderSubtle}`,borderRadius:DS.rLg,padding:DS.lg,textAlign:"left"}}>
+            <div style={{fontSize:10,fontWeight:700,color:DS.textMuted,textTransform:"uppercase",letterSpacing:1,marginBottom:DS.sm}}>EXAMPLE OUTPUT</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:DS.sm}}>
+              {[{tone:"🔥 Shocking",hook:"Your rent could rise 50% overnight"},{tone:"💡 Relatable",hook:"That sinking feeling when the landlord calls"},{tone:"📊 Informative",hook:"5 rules every tenant must know"}].map((ex,i)=>(
+                <div key={i} style={{background:DS.bgInput,borderRadius:DS.rSm,padding:`${DS.sm}px ${DS.md}px`}}>
+                  <div style={{fontSize:10,fontWeight:700,marginBottom:4}}>{ex.tone}</div>
+                  <div style={{fontSize:11,color:DS.textSecondary,fontStyle:"italic",lineHeight:1.4,fontFamily:`"${brand.fontSerif||"Lora"}",serif`}}>{ex.hook}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{fontSize:10,color:DS.textMuted,marginTop:DS.sm,textAlign:"center"}}>Each variation exports as 16:9, 1:1, 9:16, and 4:5</div>
           </div>
         </div>
       )}
