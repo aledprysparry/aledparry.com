@@ -190,7 +190,6 @@ function loadFont(name) {
   const l = document.createElement("link");
   l.id = id; l.rel = "stylesheet";
   if (entry.ital) {
-    // Build ital,wght axis: 0,400;0,700;1,400;1,700
     const wArr = entry.weights.split(";");
     const axes = wArr.map(w=>`0,${w}`).concat(wArr.map(w=>`1,${w}`)).join(";");
     l.href = `https://fonts.googleapis.com/css2?family=${name.replace(/ /g,"+")}:ital,wght@${axes}&display=swap`;
@@ -198,6 +197,26 @@ function loadFont(name) {
     l.href = `https://fonts.googleapis.com/css2?family=${name.replace(/ /g,"+")}:wght@${entry.weights}&display=swap`;
   }
   document.head.appendChild(l);
+}
+
+/**
+ * Wait until specific font families are actually loaded and usable.
+ * document.fonts.ready resolves immediately if no fonts are pending,
+ * but Google Fonts loaded via <link> may not have started downloading yet.
+ * This polls until the font is confirmed or times out after 4 seconds.
+ */
+async function waitForFonts(families, timeoutMs=4000) {
+  await document.fonts.ready;
+  const start=Date.now();
+  const check=()=>families.every(f=>document.fonts.check(`bold 48px "${f}"`));
+  if(check()) return;
+  return new Promise(resolve=>{
+    const poll=()=>{
+      if(check()||Date.now()-start>timeoutMs){resolve();return;}
+      requestAnimationFrame(poll);
+    };
+    requestAnimationFrame(poll);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2293,7 +2312,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   };
 
   const doPreview=useCallback(async(g,i)=>{
-    await document.fonts.ready;
+    await waitForFonts([brand.fontFamily||"DM Sans",brand.fontSerif||"Lora"].filter(Boolean));
     const canvas=document.createElement("canvas");
     drawGraphic(canvas,g,brand,previewRatio,1);
     // Downscale for storage efficiency while keeping sharpness
@@ -2306,7 +2325,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   },[brand,previewRatio]);
 
   const previewAll=useCallback(async()=>{
-    await document.fonts.ready;
+    await waitForFonts([brand.fontFamily||"DM Sans",brand.fontSerif||"Lora"].filter(Boolean));
     const batch={};const AR=RATIOS[previewRatio]||RATIOS["16:9"];
     const thumbW=Math.min(AR.W,1200),thumbH=Math.round(thumbW*(AR.H/AR.W));
     graphics.forEach((g,i)=>{
@@ -5040,8 +5059,9 @@ function App(){
     if(activeBrand){
       preloadBrandLogos(activeBrand);
       // Re-render all previews when logos finish loading
-      const handler=()=>{
+      const handler=async()=>{
         if(activeProject?.graphics?.length){
+          await waitForFonts([activeBrand.fontFamily||"DM Sans",activeBrand.fontSerif||"Lora"].filter(Boolean));
           const batch={};const canvas=document.createElement("canvas");
           activeProject.graphics.forEach((g,i)=>{drawGraphic(canvas,g,activeBrand,activeProject.ratio||"16:9",1);batch[i]=canvas.toDataURL("image/png");});
           setProjects(ps=>ps.map(p=>p.id===activeProjectId?{...p,previews:{...(p.previews||{}),...batch}}:p));
