@@ -14,6 +14,8 @@ const GLOBAL_STYLES = `
   [data-app="social-editor"] button { transition: all 120ms cubic-bezier(0.16,1,0.3,1); will-change: transform; }
   [data-app="social-editor"] button:hover { filter: brightness(1.12); }
   [data-app="social-editor"] button:active { transform: scale(0.97); transition-duration: 0ms; }
+  /* Smooth card/graphic borders */
+  [data-app="social-editor"] img { transition: opacity 200ms ease-out; }
   [data-app="social-editor"] input, [data-app="social-editor"] textarea, [data-app="social-editor"] select {
     transition: border-color 120ms cubic-bezier(0.16,1,0.3,1), box-shadow 120ms cubic-bezier(0.16,1,0.3,1);
   }
@@ -3392,15 +3394,7 @@ function ExportTab({project,brand,updateProject}){
         </div>
       </div>
 
-      {/* Preview ratio switcher */}
-      <div style={{marginBottom:18}}>
-        <div style={{fontSize:10,fontWeight:700,opacity:0.5,letterSpacing:1,marginBottom:8}}>PREVIEW RATIO</div>
-        <div style={{display:"flex",gap:6}}>
-          {Object.keys(RATIOS).map(k=>(
-            <button key={k} style={{...sm,background:previewRatio===k?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.07)",border:`1px solid ${previewRatio===k?"#2A9D8F":"rgba(255,255,255,0.13)"}`}} onClick={()=>setPreviewRatio(k)}>{k}</button>
-          ))}
-        </div>
-      </div>
+      {/* Preview ratio removed — use the global one in the project header */}
 
       {/* Summary */}
       <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,padding:"14px 18px",marginBottom:16}}>
@@ -3461,7 +3455,9 @@ function ExportTab({project,brand,updateProject}){
 //  TITLE CARD PANEL  — per-project override of brand title card
 // ═══════════════════════════════════════════════════════════════
 function TitleCardPanel({project, brand, updateProject}){
-  const [open, setOpen] = useState(false);
+  // Auto-expand if title card fields are empty (first-time prompt)
+  const needsSetup=!brand.titleCardTitle&&!project.titleCardOverride?.titleCardTitle;
+  const [open, setOpen] = useState(needsSetup);
   const [previewRatio, setPreviewRatio] = useState("16:9");
   const [showAnim, setShowAnim] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -3649,7 +3645,7 @@ function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand
     app:{fontFamily:`"${brand.fontFamily}","Arial",sans-serif`,background:DS.bgPage,minHeight:"100vh",color:DS.textPrimary},
     topbar:{background:"linear-gradient(135deg, #0d1926 0%, #132438 100%)",padding:`${DS.md}px ${DS.xl}px`,display:"flex",alignItems:"center",gap:DS.md,borderBottom:"none"},
     tabbar:{background:"rgba(13,25,38,0.85)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${brand.colorAccent}22`,display:"flex",padding:`0 ${DS.xl}px`,gap:0},
-    tab:a=>({padding:`${DS.lg}px ${DS.xl}px`,cursor:"pointer",fontWeight:a?700:500,fontSize:DS.fsMd,color:a?DS.textPrimary:"rgba(255,255,255,0.45)",background:"none",border:"none",borderBottom:a?`3px solid ${brand.colorAccent}`:"3px solid transparent",fontFamily:"inherit",transition:"all 0.2s",letterSpacing:0.3}),
+    tab:a=>({padding:`${DS.lg}px ${DS.xl}px`,cursor:"pointer",fontWeight:a?700:500,fontSize:DS.fsMd,color:a?DS.textPrimary:"rgba(255,255,255,0.45)",background:"none",border:"none",borderBottom:a?`3px solid ${brand.colorAccent}`:"3px solid transparent",fontFamily:"inherit",transition:`color ${DS.durFast} ${DS.easeOut}, border-color ${DS.durStd} ${DS.easeOut}`,letterSpacing:0.3}),
     sm:btn({padding:"6px 12px"}),
     wrap:{maxWidth:1200,margin:"0 auto",padding:`${DS.xl}px ${DS.xl}px`},
   };
