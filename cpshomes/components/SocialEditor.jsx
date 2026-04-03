@@ -2629,13 +2629,13 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                     </div>
                     <div style={{color:DS.textMuted,fontSize:11}}>⏱ {g.timestamp} · {g.duration}s</div>
                   </div>
-                  <div style={{display:"flex",gap:5,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-                    <button style={sm} onClick={()=>doPreview(g,i)} title="Preview graphic">{previews[i]?"🔄":"👁"}</button>
-                    <button style={{...sm,background:showAnim?DS.positive:undefined}} onClick={()=>{if(showAnim){setAnimIdx(null);setTimeout(()=>setAnimIdx(i),50);}else{setAnimIdx(i);}}} title={showAnim?"Replay animation":"Play animation"}>{showAnim?"🔄":"▶"}</button>
-                    <button style={{...sm,opacity:isExp?0.6:1}} onClick={()=>!isExp&&exportWebM(g,i)} title="Export as WebM">{isExp?"⏳":"🎞"}</button>
-                    <button style={{...sm,background:editingIdx===i?DS.borderMedium:undefined}} onClick={()=>setEditingIdx(editingIdx===i?null:i)} title="Edit prompt & content">✏</button>
-                    <button style={sm} onClick={()=>{const dup={...JSON.parse(JSON.stringify(g)),id:Date.now(),label:(g.label||"graphic")+"-copy"};const ng=[...graphics.slice(0,i+1),dup,...graphics.slice(i+1)];setGraphics(ng);setTimeout(()=>previewAll(),200);}} title="Duplicate graphic">⧉</button>
-                    <button style={{...sm,opacity:0.4}} onClick={()=>{if(graphics.length<=1)return;const ng=graphics.filter((_,j)=>j!==i);setGraphics(ng);if(editingIdx===i)setEditingIdx(null);}} title="Delete graphic">🗑</button>
+                  <div style={{display:"flex",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                    <button style={btn({fontSize:10,padding:"4px 10px",background:editingIdx===i?DS.positive:DS.bgInput})} onClick={()=>setEditingIdx(editingIdx===i?null:i)} title="Edit prompt & content">✏ Edit</button>
+                    <button style={btn({fontSize:10,padding:"4px 8px"})} onClick={()=>doPreview(g,i)} title="Preview graphic">{previews[i]?"🔄":"👁"}</button>
+                    <button style={btn({fontSize:10,padding:"4px 8px",background:showAnim?DS.positive:undefined})} onClick={()=>{if(showAnim){setAnimIdx(null);setTimeout(()=>setAnimIdx(i),50);}else{setAnimIdx(i);}}} title={showAnim?"Replay":"Play"}>▶</button>
+                    <button style={btn({fontSize:10,padding:"4px 8px",opacity:isExp?0.6:1})} onClick={()=>!isExp&&exportWebM(g,i)} title="Export WebM">🎞</button>
+                    <button style={btn({fontSize:10,padding:"4px 8px"})} onClick={()=>{const dup={...JSON.parse(JSON.stringify(g)),id:Date.now(),label:(g.label||"graphic")+"-copy"};const ng=[...graphics.slice(0,i+1),dup,...graphics.slice(i+1)];setGraphics(ng);setTimeout(()=>previewAll(),200);}} title="Duplicate">⧉</button>
+                    <button style={btn({fontSize:10,padding:"4px 8px",opacity:0.35})} onClick={()=>{if(graphics.length<=1)return;const ng=graphics.filter((_,j)=>j!==i);setGraphics(ng);if(editingIdx===i)setEditingIdx(null);}} title="Delete">🗑</button>
                   </div>
                 </div>
                 {previews[i]&&!showAnim&&<img src={previews[i]} alt={`Preview: ${meta.label}`} style={{width:"100%",borderRadius:`0 0 ${DS.sm}px ${DS.sm}px`,border:`1px solid ${DS.borderSubtle}`,borderTop:"none",background:"repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%) 0 0/22px 22px",imageRendering:"auto"}}/>}
@@ -3554,10 +3554,21 @@ function TitleCardPanel({project, brand, updateProject}){
 // ═══════════════════════════════════════════════════════════════
 //  PROJECT VIEW
 // ═══════════════════════════════════════════════════════════════
-function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand}){
+function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand,onSyncStatus}){
   const [tab,setTab]=useState("graphics");
   const [previewRatio,setPreviewRatio]=useState("16:9");
+  const [saveIndicator,setSaveIndicator]=useState("");
   const fileRef=useRef();
+
+  // Listen for sync status from App
+  useEffect(()=>{
+    if(!onSyncStatus) return;
+    const unsub=onSyncStatus((status)=>{
+      setSaveIndicator(status);
+      if(status==="saved"||status==="error") setTimeout(()=>setSaveIndicator(""),2500);
+    });
+    return unsub;
+  },[onSyncStatus]);
   // Clear stale blob URLs on mount (blob URLs don't survive page refresh)
   useEffect(()=>{if(project.videoUrl&&project.videoUrl.startsWith("blob:"))updateProject({videoUrl:null,videoName:null});},[]);// eslint-disable-line
 
@@ -3619,13 +3630,14 @@ function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand
         <div style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:DS.sm}}>
           <button style={btn({background:"transparent",border:"none",opacity:0.5,padding:"4px 8px",fontSize:DS.fsSm})} onClick={onBack} title="Back to home">←</button>
           <select value={project.brandId} onChange={e=>onChangeBrand&&onChangeBrand(Number(e.target.value))}
-            style={{background:"transparent",border:"none",color:DS.textMuted,fontSize:DS.fsSm,cursor:"pointer",fontFamily:"inherit",outline:"none",padding:"2px 4px"}}>
+            style={{background:DS.bgInput,border:`1px solid ${DS.borderSubtle}`,borderRadius:DS.rSm,color:DS.textSecondary,fontSize:DS.fsSm,cursor:"pointer",fontFamily:"inherit",outline:"none",padding:"4px 8px",fontWeight:600}}>
             {(allBrands||[{id:project.brandId,name:brand.name}]).map(b=><option key={b.id} value={b.id} style={{background:DS.bgModal}}>{b.name}</option>)}
           </select>
           <span style={{color:DS.textMuted,fontSize:DS.fsXs}}>/</span>
           <div style={{fontWeight:700,fontSize:DS.fsLg,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
         </div>
         <div style={{display:"flex",gap:DS.xs,alignItems:"center",flexShrink:0}}>
+          {saveIndicator&&<span style={{fontSize:10,fontWeight:600,color:saveIndicator==="saved"?DS.green:saveIndicator==="error"?DS.accent:DS.textMuted,marginRight:DS.xs,transition:"opacity 0.3s"}}>{saveIndicator==="saving"?"Saving…":saveIndicator==="saved"?"✓ Saved":saveIndicator==="error"?"Save failed":""}</span>}
           <span style={{fontSize:DS.fsXs,color:DS.textMuted,marginRight:DS.xs}}>Preview</span>
           {Object.keys(RATIOS).map(k=>(
             <button key={k} style={btn({background:previewRatio===k?DS.borderActive:DS.bgButton,fontSize:11,padding:"4px 8px",fontWeight:previewRatio===k?700:500})} onClick={()=>setPreviewRatio(k)}>{k}</button>
@@ -4925,18 +4937,21 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
               {brandProjects.length>0?[...brandProjects].reverse().map(p=>{
                 const hasContent=p.subtitles?.length>0;
                 const hasGraphics=p.graphics?.length>0;
+                const status=!hasContent?"empty":!hasGraphics?"srt_only":p.status==="EXPORTED"?"exported":"ready";
+                const statusColors={empty:DS.borderMedium,srt_only:"#f0b429",ready:selBrand?.colorAccent||DS.accent,exported:DS.green};
+                const statusLabels={empty:"No content",srt_only:"SRT loaded — ready to analyse",ready:"Graphics ready",exported:"Exported"};
                 return(
                 <div key={p.id} style={{...card({padding:0,marginBottom:DS.sm+2,cursor:"pointer",transition:"all 0.2s",overflow:"hidden"}),display:"flex"}} onClick={()=>onOpenProject(p.id)}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor=DS.accent+"66";e.currentTarget.style.transform="translateY(-1px)";}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor=DS.borderSubtle;e.currentTarget.style.transform="translateY(0)";}}>
-                  <div style={{width:4,background:hasGraphics?selBrand?.colorAccent||DS.accent:DS.borderMedium,flexShrink:0}}/>
+                  <div style={{width:4,background:statusColors[status],flexShrink:0}}/>
                   <div style={{flex:1,padding:`${DS.lg}px`,display:"flex",alignItems:"center",gap:DS.lg}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:700,fontSize:DS.fsLg,marginBottom:DS.xs+2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
                       <div style={{fontSize:DS.fsSm-2,color:DS.textMuted,display:"flex",gap:DS.md,flexWrap:"wrap",alignItems:"center"}}>
                         {hasContent&&<span style={{display:"flex",alignItems:"center",gap:4,background:DS.bgInput,padding:"2px 8px",borderRadius:DS.xs,fontSize:10}}>📄 {p.subtitles.length} lines</span>}
                         {hasGraphics&&<span style={{display:"flex",alignItems:"center",gap:4,background:DS.positive,padding:"2px 8px",borderRadius:DS.xs,fontSize:10,fontWeight:600}}>🎨 {p.graphics.length}</span>}
-                        {!hasContent&&!hasGraphics&&<span style={{opacity:0.4}}>Empty project</span>}
+                        <span style={{fontSize:10,color:statusColors[status],fontWeight:600}}>{statusLabels[status]}</span>
                         <span style={{fontSize:10,opacity:0.3}}>{new Date(p.createdAt).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span>
                       </div>
                     </div>
@@ -4946,7 +4961,21 @@ function Home({brands,projects,onNewBrand,onEditBrand,onOpenProject,onNewProject
                     </div>
                   </div>
                 </div>
-              );}):<div style={emptyState({padding:`${DS.xxl+16}px 0`})}><div style={{fontSize:DS.fsXl,marginBottom:DS.sm}}>No projects yet</div><div style={{fontSize:DS.fsMd}}>Create your first project above</div></div>}
+              );}):(
+                <div style={{...card({padding:`${DS.xxl}px`,textAlign:"center"}),border:`2px dashed ${DS.borderMedium}`}}>
+                  <div style={{fontSize:42,marginBottom:DS.md}}>🎬</div>
+                  <div style={{fontSize:DS.fsLg,fontWeight:700,marginBottom:DS.sm}}>Create your first project</div>
+                  <div style={{fontSize:DS.fsSm,color:DS.textMuted,lineHeight:1.6,maxWidth:400,margin:"0 auto",marginBottom:DS.lg}}>
+                    Type a project name above and click Create. Then upload an SRT transcript or video file — the AI will generate graphics automatically.
+                  </div>
+                  <div style={{display:"flex",gap:DS.md,justifyContent:"center",fontSize:DS.fsXs,color:DS.textMuted}}>
+                    <span>1. Create project</span><span style={{opacity:0.3}}>→</span>
+                    <span>2. Upload SRT</span><span style={{opacity:0.3}}>→</span>
+                    <span>3. AI generates graphics</span><span style={{opacity:0.3}}>→</span>
+                    <span>4. Export</span>
+                  </div>
+                </div>
+              )}
             </>
           ):<div style={emptyState({padding:`80px 0`})}><div style={{fontSize:DS.fsXl,marginBottom:DS.sm}}>Select a brand</div><div style={{fontSize:DS.fsMd}}>Choose a brand from the sidebar or create a new one</div></div>}
         </div>
@@ -5010,19 +5039,23 @@ function App(){
 
   // ── Per-project server sync — saves only the active project, small payload ──
   const syncRetries=useRef(0);
+  const _syncListeners=useRef([]);
+  const onSyncStatus=useCallback((fn)=>{_syncListeners.current.push(fn);return()=>{_syncListeners.current=_syncListeners.current.filter(f=>f!==fn);};},[]);
+  const _notifySync=(status)=>{_syncListeners.current.forEach(fn=>fn(status));};
   const syncProject=useCallback((proj)=>{
     if(!proj||syncRetries.current>5) return;
     if(syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current=setTimeout(()=>{
+      _notifySync("saving");
       const light={...proj,previews:{},videoUrl:null,videoName:null};
       const payload=JSON.stringify(light);
-      if(payload.length>2*1024*1024){console.warn("[Sync] Project too large — skipping");return;}
-      fetch(`/api/studio?project=${proj.id}`,{method:"POST",headers:{"Content-Type":"application/json"},body:payload})
+      if(payload.length>2*1024*1024){console.warn("[Sync] Project too large — skipping");_notifySync("error");return;}
+      fetch(`${API_BASE}/api/studio?project=${proj.id}`,{method:"POST",headers:{"Content-Type":"application/json"},body:payload})
         .then(r=>{
-          if(r.ok){syncRetries.current=0;console.log("[Sync] Saved project:",proj.name,Math.round(payload.length/1024)+"KB");}
-          else{syncRetries.current++;console.warn("[Sync] Failed:",r.status);}
+          if(r.ok){syncRetries.current=0;_notifySync("saved");console.log("[Sync] Saved project:",proj.name,Math.round(payload.length/1024)+"KB");}
+          else{syncRetries.current++;_notifySync("error");console.warn("[Sync] Failed:",r.status);}
         })
-        .catch(e=>{syncRetries.current++;console.warn("[Sync] Error:",e.message);});
+        .catch(e=>{syncRetries.current++;_notifySync("error");console.warn("[Sync] Error:",e.message);});
     },2000);
   },[]);
   // Keep full sync for manual snapshots only
@@ -5113,6 +5146,7 @@ function App(){
         onBack={()=>{setView("home");pushHash("home");}}
         allBrands={brands}
         onChangeBrand={newId=>updateProject({brandId:newId})}
+        onSyncStatus={onSyncStatus}
       />
     );
   }
