@@ -729,6 +729,18 @@ function rrPath(ctx,x,y,w,h,r){
   ctx.lineTo(x+bl,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-bl);
   ctx.lineTo(x,y+tl);ctx.quadraticCurveTo(x,y,x+tl,y);ctx.closePath();
 }
+// Draw a rounded-rect shadow that matches the card shape (no corner artefacts).
+// Uses ctx.filter blur instead of shadowBlur, which renders a rectangular shadow
+// that peeks through rounded corners on transparent backgrounds.
+function drawCardShadow(ctx,x,y,w,h,r,blur=18,color="rgba(0,0,0,0.15)"){
+  ctx.save();
+  ctx.filter=`blur(${blur}px)`;
+  ctx.fillStyle=color;
+  rrPath(ctx,x,y+blur*0.3,w,h,r);
+  ctx.fill();
+  ctx.filter="none";
+  ctx.restore();
+}
 function fitFont(ctx,text,maxW,maxH,baseSz,weight,maxLines,ff,lhMult=1.30){
   let sz=baseSz;
   while(sz>20){
@@ -1098,7 +1110,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     if(isCompact){
       const bW=W-PAD,bH=Math.round(300*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
       ctx.save();ctx.translate(0,(1-ENT)*bH*0.7);ctx.globalAlpha=ENT;
-      ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+      drawCardShadow(ctx,bX,bY,bW,bH,R,18,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
       const ix=bX+cp,iw=bW-cp*2;let y=bY+cp;
       // Label
@@ -1114,7 +1126,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     } else {
       const bW=Math.round(660*sc),bH=Math.round(250*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
       ctx.save();ctx.translate((1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
-      ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=36;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+      drawCardShadow(ctx,bX,bY,bW,bH,R,18,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,Math.round(6*sc),bH,[R,0,0,R]);ctx.fill();
       const ix=bX+cp,iw=bW-cp*2;let y=bY+cp;
       // Label
@@ -1135,7 +1147,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     if(isCompact){
       const bW=W-PAD,bH=Math.round(260*sc),bX=PAD/2,bY=Math.round(80*sc);
       const sc2=easeBack(ENT);ctx.save();ctx.translate(W/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-W/2,-(bY+bH/2));ctx.globalAlpha=ENT;
-      ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=28;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+      drawCardShadow(ctx,bX,bY,bW,bH,R,14,"rgba(0,0,0,0.12)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(W/2-24*sc,bY+bH);ctx.lineTo(W/2,bY+bH+40*sc);ctx.lineTo(W/2+24*sc,bY+bH);ctx.closePath();ctx.fill();
       // Centred text within card
       DT(c.text||"",bX+bW/2,bY+cp,bW-cp*2,bH-cp*2,Math.round(46*sc),"600","center",B.colorPrimary,3,FFS);
@@ -1143,7 +1155,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     } else {
       const bW=Math.round(640*sc),bH=Math.round(200*sc),bX=W-bW-Math.round(100*sc),bY=Math.round(76*sc);
       const sc2=easeBack(ENT);ctx.save();ctx.translate(W-Math.round(60*sc),bY);ctx.scale(sc2,sc2);ctx.translate(-(W-Math.round(60*sc)),-bY);ctx.globalAlpha=ENT;
-      ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=28;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+      drawCardShadow(ctx,bX,bY,bW,bH,R,14,"rgba(0,0,0,0.12)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(bX+40*sc,bY+bH);ctx.lineTo(bX+16*sc,bY+bH+40*sc);ctx.lineTo(bX+100*sc,bY+bH);ctx.closePath();ctx.fill();
       // Centred text within card
       DT(c.text||"",bX+bW/2,bY+cp,bW-cp*2,bH-cp*2,Math.round(42*sc),"600","center",B.colorPrimary,3,FFS);
@@ -1155,7 +1167,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const bW=Math.round(520*sc),bH=Math.round(270*sc),bX=isCompact?(W-bW)/2:Math.round(80*sc),bY=H-bH-Math.round(100*sc);
     const cp=Math.round(28*sc);
     ctx.save();ctx.translate(0,(1-ENT)*bH*0.6);ctx.globalAlpha=ENT;
-    ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=32;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+    drawCardShadow(ctx,bX,bY,bW,bH,R,16,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
     ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
     // Stat value — punchy, auto-sized to fit card width
     const rs=c.stat||"",nm=rs.match(/^([^0-9]*)([0-9.]+)(.*)$/);
@@ -1171,7 +1183,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Warm cream card with teal elements
     const bW=Math.round(Math.min(1220,W-160)*sc),bH=Math.round(220*sc),bX=(W-bW)/2,bY=H-bH-80*sc;
     ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*50*sc);
-    ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=30;rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+    drawCardShadow(ctx,bX,bY,bW,bH,R,15,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
     DT(c.label||"TIMELINE",bX+bW/2,bY+46*sc,bW-80*sc,52*sc,Math.round(36*sc),"600","center",B.colorPrimary+"88",1,FFS);
     const ty=bY+138*sc,tx0=bX+80*sc,txW=bW-160*sc;
     ctx.strokeStyle=B.colorPrimary+"33";ctx.lineWidth=Math.round(4*sc);ctx.beginPath();ctx.moveTo(tx0,ty);ctx.lineTo(tx0+txW*ENT,ty);ctx.stroke();
@@ -1202,8 +1214,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const slideDir=isLandlord?1:-1;
     ctx.save();ctx.translate(slideDir*(1-ENT)*bW*0.5,0);ctx.globalAlpha=ENT;
     // Card
-    ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=32;
-    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+    drawCardShadow(ctx,bX,bY,bW,bH,R,16,"rgba(0,0,0,0.12)");
+    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
     // Accent bar — clipped inside card shape
     ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
     ctx.fillStyle=accentCol;ctx.fillRect(bX,bY,bW,Math.round(5*sc));
@@ -1235,8 +1247,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const sc2=easeBack(ENT);
     ctx.save();ctx.translate(bX+bW/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-(bX+bW/2),-(bY+bH/2));ctx.globalAlpha=ENT;
     // Card with shadow
-    ctx.shadowColor="rgba(0,0,0,0.25)";ctx.shadowBlur=32;
-    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=B.colorPrimary;ctx.fill();ctx.shadowBlur=0;
+    drawCardShadow(ctx,bX,bY,bW,bH,R,16,"rgba(0,0,0,0.15)");
+    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=B.colorPrimary;ctx.fill();
     // Accent bar top — salmon
     ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
     ctx.fillStyle=B.colorAccent;ctx.fillRect(bX,bY,bW,Math.round(5*sc));
@@ -1264,8 +1276,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Slide in from left
     ctx.save();ctx.translate(-(1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
     // Dark semi-transparent card
-    ctx.shadowColor="rgba(0,0,0,0.3)";ctx.shadowBlur=24;
-    rrPath(ctx,bX,bY,bW,bH,Math.round(8*sc));ctx.fillStyle="rgba(0,0,0,0.75)";ctx.fill();ctx.shadowBlur=0;
+    drawCardShadow(ctx,bX,bY,bW,bH,Math.round(8*sc),12,"rgba(0,0,0,0.2)");
+    rrPath(ctx,bX,bY,bW,bH,Math.round(8*sc));ctx.fillStyle="rgba(0,0,0,0.75)";ctx.fill();
     // Teal accent bar left edge (clipped inside card)
     ctx.save();rrPath(ctx,bX,bY,bW,bH,Math.round(8*sc));ctx.clip();
     ctx.fillStyle=B.colorPrimary;ctx.fillRect(bX,bY,Math.round(5*sc),bH);
@@ -1289,8 +1301,8 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const sc2=easeBack(ENT);
     ctx.save();ctx.translate(bX+bW/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-(bX+bW/2),-(bY+bH/2));ctx.globalAlpha=ENT;
     // Card
-    ctx.shadowColor="rgba(0,0,0,0.22)";ctx.shadowBlur=32;
-    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();ctx.shadowBlur=0;
+    drawCardShadow(ctx,bX,bY,bW,bH,R,16,"rgba(0,0,0,0.12)");
+    rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
     // Salmon accent bar top (clipped)
     ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
     ctx.fillStyle=B.colorAccent;ctx.fillRect(bX,bY,bW,Math.round(5*sc));
