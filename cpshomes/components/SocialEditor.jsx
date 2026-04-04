@@ -752,6 +752,18 @@ function fitFont(ctx,text,maxW,maxH,baseSz,weight,maxLines,ff,lhMult=1.30){
   }
   return{sz,lh:sz*lhMult};
 }
+// Measure how tall text would be without drawing it.
+// Returns { height, lineCount, fontSize } so cards can size dynamically.
+function measureTextHeight(ctx,text,maxW,baseSz,weight,maxLines=3,ff="Montserrat",lhMult=1.30){
+  if(!text) return {height:0,lineCount:0,fontSize:baseSz};
+  const{sz,lh}=fitFont(ctx,text,maxW,9999,baseSz,weight||"700",maxLines,ff,lhMult);
+  ctx.font=`${weight||"700"} ${sz}px "${ff}","Arial",sans-serif`;
+  const words=text.replace(/\n/g," ").split(" ");
+  let lines=0,line="";
+  for(const w of words){const t=line+w+" ";if(ctx.measureText(t).width>maxW&&line){lines++;line=w+" ";}else line=t;}
+  if(line.trim())lines++;
+  return{height:Math.round(lines*lh),lineCount:lines,fontSize:sz};
+}
 function drawText(ctx,text,x,y,maxW,maxH,baseSz,weight,align,color,maxLines=3,ff="Montserrat",lhMult=1.30){
   if(!text)return y;
   const{sz,lh}=fitFont(ctx,text,maxW,maxH,baseSz,weight||"700",maxLines,ff,lhMult);
@@ -1108,7 +1120,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Overlay card — clean label + body, no icon clutter
     const cp=Math.round(28*sc);
     if(isCompact){
-      const bW=W-PAD,bH=Math.round(300*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
+      const bW=W-PAD;
+      const bodyM=measureTextHeight(ctx,c.body||"",bW-cp*4,Math.round(40*sc),"500",4,FF);
+      const bH=Math.max(Math.round(180*sc),Math.round(36*sc)+Math.round(18*sc)+bodyM.height+cp*2+Math.round(10*sc));
+      const bX=PAD/2,bY=H-bH-Math.round(90*sc);
       ctx.save();ctx.translate(0,(1-ENT)*bH*0.7);ctx.globalAlpha=ENT;
       drawCardShadow(ctx,bX,bY,bW,bH,R,18,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       // Accent bar — clipped to card shape
@@ -1127,7 +1142,14 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(40*sc),"500","left",B.colorPrimary+"cc",4);
       ctx.restore();
     } else {
-      const bW=Math.round(660*sc),bH=Math.round(250*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
+      // Dynamic card height based on text content
+      const bW=Math.round(660*sc);
+      const labelH=Math.round(34*sc); // headline + gap
+      const sepH=Math.round(16*sc);   // separator + gap
+      const bodyMeasure=measureTextHeight(ctx,c.body||"",bW-cp*4,Math.round(36*sc),"500",4,FF);
+      const contentH=labelH+sepH+Math.max(bodyMeasure.height,Math.round(40*sc));
+      const bH=Math.max(Math.round(140*sc),contentH+cp*2); // min height + padding
+      const bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
       ctx.save();ctx.translate((1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
       drawCardShadow(ctx,bX,bY,bW,bH,R,18,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       // Accent bar — clipped to card shape
@@ -1143,7 +1165,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       ctx.fillStyle=B.colorAccent+"66";ctx.fillRect(ix,y,Math.round(50*sc),Math.round(2*sc));
       y+=Math.round(16*sc);
       // Body
-      DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(36*sc),"500","left",B.colorPrimary+"cc",3);
+      DT(c.body||"",ix,y,iw,bH-(y-bY)-cp,Math.round(36*sc),"500","left",B.colorPrimary+"cc",4);
       ctx.restore();
     }
   }
@@ -1151,15 +1173,20 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Overlay bubble — text vertically centred
     const cp=Math.round(30*sc);
     if(isCompact){
-      const bW=W-PAD,bH=Math.round(260*sc),bX=PAD/2,bY=Math.round(80*sc);
+      const bW=W-PAD;
+      const bubbleM=measureTextHeight(ctx,c.text||"",bW-cp*2,Math.round(46*sc),"600",3,FFS);
+      const bH=Math.max(Math.round(140*sc),bubbleM.height+cp*2);
+      const bX=PAD/2,bY=Math.round(80*sc);
       const sc2=easeBack(ENT);ctx.save();ctx.translate(W/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-W/2,-(bY+bH/2));ctx.globalAlpha=ENT;
       drawCardShadow(ctx,bX,bY,bW,bH,R,14,"rgba(0,0,0,0.12)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(W/2-24*sc,bY+bH);ctx.lineTo(W/2,bY+bH+40*sc);ctx.lineTo(W/2+24*sc,bY+bH);ctx.closePath();ctx.fill();
-      // Centred text within card
       DT(c.text||"",bX+bW/2,bY+cp,bW-cp*2,bH-cp*2,Math.round(46*sc),"600","center",B.colorPrimary,3,FFS);
       ctx.restore();
     } else {
-      const bW=Math.round(640*sc),bH=Math.round(200*sc),bX=W-bW-Math.round(100*sc),bY=Math.round(76*sc);
+      const bW=Math.round(640*sc);
+      const bubbleM2=measureTextHeight(ctx,c.text||"",bW-cp*2,Math.round(42*sc),"600",3,FFS);
+      const bH=Math.max(Math.round(140*sc),bubbleM2.height+cp*2);
+      const bX=W-bW-Math.round(100*sc),bY=Math.round(76*sc);
       const sc2=easeBack(ENT);ctx.save();ctx.translate(W-Math.round(60*sc),bY);ctx.scale(sc2,sc2);ctx.translate(-(W-Math.round(60*sc)),-bY);ctx.globalAlpha=ENT;
       drawCardShadow(ctx,bX,bY,bW,bH,R,14,"rgba(0,0,0,0.12)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(bX+40*sc,bY+bH);ctx.lineTo(bX+16*sc,bY+bH+40*sc);ctx.lineTo(bX+100*sc,bY+bH);ctx.closePath();ctx.fill();
@@ -1215,7 +1242,11 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const labelText=isLandlord?"LANDLORDS ASK":"TENANTS ASK";
     const cp=Math.round(28*sc);
     const bW=isCompact?W-PAD*1.5:Math.round(620*sc);
-    const bH=isCompact?Math.round(320*sc):Math.round(260*sc);
+    // Dynamic height: label + separator + text content
+    const labelH=Math.round(16*sc)+Math.round(12*sc); // label + sep gap
+    const sepH=Math.round(18*sc);
+    const textM=measureTextHeight(ctx,c.text||"",bW-cp*2-Math.round(14*sc),Math.round(36*sc),"600",4,FFS);
+    const bH=Math.max(Math.round(160*sc),cp+labelH+sepH+textM.height+cp);
     // Position: landlord=right, tenant=left
     const bX=isLandlord?(isCompact?PAD*0.75:W-bW-Math.round(80*sc)):(isCompact?PAD*0.75:Math.round(80*sc));
     const bY=isCompact?(H-bH-Math.round(100*sc)):(H/2-bH/2);
@@ -1300,10 +1331,13 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.restore();
   }
   else if(t==="advice"){
-    // Advice overlay — warm cream card with lightbulb icon, centered bottom
+    // Advice overlay — warm cream card, centered bottom
     const cp=Math.round(28*sc);
     const bW=isCompact?W-PAD*1.5:Math.round(620*sc);
-    const bH=isCompact?Math.round(260*sc):Math.round(220*sc);
+    // Dynamic height: label + separator + text
+    const advLabelH=Math.round(16*sc)+Math.round(28*sc); // "ADVICE" + sep
+    const advTextM=measureTextHeight(ctx,c.text||"",bW-cp*2,Math.round(36*sc),"600",4,FFS);
+    const bH=Math.max(Math.round(160*sc),cp+advLabelH+Math.round(16*sc)+advTextM.height+cp);
     const bX=(W-bW)/2;
     const bY=isCompact?H-bH-Math.round(100*sc):H-bH-Math.round(80*sc);
     // Scale-bounce entrance
