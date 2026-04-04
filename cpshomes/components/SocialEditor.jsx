@@ -1111,7 +1111,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       const bW=W-PAD,bH=Math.round(300*sc),bX=PAD/2,bY=H-bH-Math.round(90*sc);
       ctx.save();ctx.translate(0,(1-ENT)*bH*0.7);ctx.globalAlpha=ENT;
       drawCardShadow(ctx,bX,bY,bW,bH,R,18,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
-      ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
+      // Accent bar — clipped to card shape
+      ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
+      ctx.fillStyle=B.colorPrimary;ctx.fillRect(bX,bY,bW,Math.round(5*sc));
+      ctx.restore();
       const ix=bX+cp,iw=bW-cp*2;let y=bY+cp;
       // Label
       ctx.font=`700 ${Math.round(26*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle=B.colorPrimary;ctx.textAlign="left";ctx.textBaseline="alphabetic";
@@ -1127,7 +1130,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       const bW=Math.round(660*sc),bH=Math.round(250*sc),bX=W-bW-Math.round(80*sc),bY=H/2-bH/2;
       ctx.save();ctx.translate((1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
       drawCardShadow(ctx,bX,bY,bW,bH,R,18,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
-      ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,Math.round(6*sc),bH,[R,0,0,R]);ctx.fill();
+      // Accent bar — clipped to card shape
+      ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
+      ctx.fillStyle=B.colorPrimary;ctx.fillRect(bX,bY,Math.round(6*sc),bH);
+      ctx.restore();
       const ix=bX+cp,iw=bW-cp*2;let y=bY+cp;
       // Label
       ctx.font=`700 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle=B.colorPrimary;ctx.textAlign="left";ctx.textBaseline="alphabetic";
@@ -1168,7 +1174,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const cp=Math.round(28*sc);
     ctx.save();ctx.translate(0,(1-ENT)*bH*0.6);ctx.globalAlpha=ENT;
     drawCardShadow(ctx,bX,bY,bW,bH,R,16,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
-    ctx.fillStyle=B.colorPrimary;rrPath(ctx,bX,bY,bW,Math.round(5*sc),[R,R,0,0]);ctx.fill();
+    // Accent bar — clipped to card shape
+    ctx.save();rrPath(ctx,bX,bY,bW,bH,R);ctx.clip();
+    ctx.fillStyle=B.colorPrimary;ctx.fillRect(bX,bY,bW,Math.round(5*sc));
+    ctx.restore();
     // Stat value — punchy, auto-sized to fit card width
     const rs=c.stat||"",nm=rs.match(/^([^0-9]*)([0-9.]+)(.*)$/);
     let ds=rs;if(nm){const n=parseFloat(nm[2]),d=Math.round(n*TXT*10)/10;ds=nm[1]+(Number.isInteger(n)?Math.round(d):d.toFixed(1))+nm[3];}
