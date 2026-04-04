@@ -1688,12 +1688,19 @@ export default function GuessThePrice({ displayMode = false }) {
     return () => { _imgLoadCallback = null; };
   }, []);
 
+  // ── Font + image preloading ──
+  const [fontsReady, setFontsReady] = useState(false);
+
   // ── Load from localStorage on mount ──
   useEffect(() => {
     loadFont("DM Sans");
     loadFont("Lora");
     getCachedImage(BRAND.logoUrl);
     getCachedImage(BRAND.logoUrlLight);
+    // Wait for fonts before first render
+    document.fonts?.ready?.then(() => setFontsReady(true))
+      .catch(() => setFontsReady(true)); // fallback if fonts API unavailable
+    setTimeout(() => setFontsReady(true), 2000); // max wait 2s
 
     const saved = loadEpisodes();
     if (saved && saved.episodes && saved.episodes.length > 0) {
@@ -1711,7 +1718,9 @@ export default function GuessThePrice({ displayMode = false }) {
       EPISODE = def;
     }
 
-    const t = setTimeout(() => render(), 500);
+    // Delay first render until fonts are ready
+    document.fonts?.ready?.then(() => render()).catch(() => render());
+    const t = setTimeout(() => render(), 2000); // max wait fallback
     return () => clearTimeout(t);
   }, []);
 
@@ -2966,7 +2975,22 @@ export default function GuessThePrice({ displayMode = false }) {
           <div style={{ ...label(), marginTop: DS.md }}>Location Label</div>
           <input style={inputS()} value={S.optionLocation} onChange={e => { updateS("optionLocation", e.target.value); updateRoundField("location", e.target.value); }} />
 
-          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>PROPERTY DETAILS</div>
+          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>ROLES</div>
+          <div style={{ display: "flex", gap: DS.sm, alignItems: "center", marginBottom: DS.md }}>
+            <div style={{ flex: 1, fontSize: DS.fsXs, color: DS.textSecondary }}>
+              <span style={{ fontWeight: 700, color: DS.textPrimary }}>{rd.propertyAgent}</span> chose property
+            </div>
+            <button onClick={() => {
+              updateRoundField("propertyAgent", rd.guesser);
+              updateRoundField("guesser", rd.propertyAgent);
+              updateS("lockAgent", rd.propertyAgent); // swap: old propertyAgent becomes new guesser
+            }} style={btn({ padding: "3px 10px", fontSize: DS.fsXs })}>Swap</button>
+            <div style={{ flex: 1, fontSize: DS.fsXs, color: DS.textSecondary, textAlign: "right" }}>
+              <span style={{ fontWeight: 700, color: GAME.gold }}>{rd.guesser}</span> guesses
+            </div>
+          </div>
+
+          <div style={{ ...sectionHead(), fontSize: DS.fsXs, color: GAME.gold }}>PROPERTY DETAILS</div>
           <div style={{ display: "flex", gap: DS.sm, marginTop: DS.sm }}>
             <div style={{ flex: 1 }}>
               <div style={label()}>Beds</div>
@@ -3004,6 +3028,18 @@ export default function GuessThePrice({ displayMode = false }) {
             <button onClick={async () => {
               const propUrl = rd.rightmoveUrl;
               if (!propUrl) return;
+              // Capture episode/round at fetch start — prevents cross-contamination if user switches
+              const fetchEpId = activeEpisodeId;
+              const fetchRoundIdx = currentRound;
+              const updateFetchRound = (field, value) => {
+                setEpisodes(prev => prev.map(ep => {
+                  if (ep.id !== fetchEpId) return ep;
+                  const rounds = [...ep.rounds];
+                  if (rounds[fetchRoundIdx]) rounds[fetchRoundIdx] = { ...rounds[fetchRoundIdx], [field]: value };
+                  return { ...ep, rounds };
+                }));
+                setDirty(true);
+              };
               setSaveStatus("Fetching property…");
               try {
                 const res = await fetch("/api/gtp/scrape", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: propUrl }) });
@@ -3011,60 +3047,56 @@ export default function GuessThePrice({ displayMode = false }) {
                 if (!data.success) { setSaveStatus(data.error || "Fetch failed"); setTimeout(() => setSaveStatus(""), 3000); return; }
                 const p = data.property;
                 // Populate round fields
-                if (p.address) { updateRoundField("address", p.address); updateS("propAddress", p.address); }
-                if (p.location) { updateRoundField("location", p.location); updateS("optionLocation", p.location); }
-                if (p.beds) { updateRoundField("beds", p.beds); updateS("propBeds", p.beds); }
-                if (p.type) { updateRoundField("type", p.type); updateS("propType", p.type); }
-                if (p.tenure) { updateRoundField("tenure", p.tenure); updateS("propTenure", p.tenure); }
-                if (p.addedDate) { updateRoundField("addedDate", p.addedDate); updateS("propAddedDate", p.addedDate); }
+                if (p.address) { updateFetchRound("address", p.address); updateS("propAddress", p.address); }
+                if (p.location) { updateFetchRound("location", p.location); updateS("optionLocation", p.location); }
+                if (p.beds) { updateFetchRound("beds", p.beds); updateS("propBeds", p.beds); }
+                if (p.type) { updateFetchRound("type", p.type); updateS("propType", p.type); }
+                if (p.tenure) { updateFetchRound("tenure", p.tenure); updateS("propTenure", p.tenure); }
+                if (p.addedDate) { updateFetchRound("addedDate", p.addedDate); updateS("propAddedDate", p.addedDate); }
                 // Auto-generate A/B/C price options from listing price
                 if (p.price) {
                   const rawPrice = parseInt(p.price.replace(/[^0-9]/g, ""));
                   if (rawPrice > 0) {
-                    // Generate two plausible wrong prices (±10-20%)
                     const variance1 = Math.round(rawPrice * (0.10 + Math.random() * 0.10));
                     const variance2 = Math.round(rawPrice * (0.10 + Math.random() * 0.10));
                     const wrong1 = rawPrice - variance1;
                     const wrong2 = rawPrice + variance2;
-                    // Round to nearest £5,000 for realism
                     const round5k = (v) => Math.round(v / 5000) * 5000;
                     const prices = [round5k(wrong1), rawPrice, round5k(wrong2)].sort(() => Math.random() - 0.5);
                     const fmt = (v) => `£${v.toLocaleString()}`;
                     const correctIdx = prices.indexOf(rawPrice);
                     const correctLetter = ["A", "B", "C"][correctIdx];
-                    updateRoundField("optionA", fmt(prices[0])); updateS("optionA", fmt(prices[0]));
-                    updateRoundField("optionB", fmt(prices[1])); updateS("optionB", fmt(prices[1]));
-                    updateRoundField("optionC", fmt(prices[2])); updateS("optionC", fmt(prices[2]));
-                    updateRoundField("correctLetter", correctLetter); updateS("revealLetter", correctLetter);
-                    updateRoundField("correctPrice", rawPrice.toLocaleString()); updateS("revealPrice", rawPrice.toLocaleString());
+                    updateFetchRound("optionA", fmt(prices[0])); updateS("optionA", fmt(prices[0]));
+                    updateFetchRound("optionB", fmt(prices[1])); updateS("optionB", fmt(prices[1]));
+                    updateFetchRound("optionC", fmt(prices[2])); updateS("optionC", fmt(prices[2]));
+                    updateFetchRound("correctLetter", correctLetter); updateS("revealLetter", correctLetter);
+                    updateFetchRound("correctPrice", rawPrice.toLocaleString()); updateS("revealPrice", rawPrice.toLocaleString());
                   }
                 }
                 // Download and upload photos
                 if (p.photos && p.photos.length > 0) {
                   setSaveStatus(`Downloading ${p.photos.length} photos…`);
-                  const roundIdx = currentRound;
                   for (let pi = 0; pi < p.photos.length; pi++) {
                     try {
                       setSaveStatus(`Photo ${pi + 1}/${p.photos.length}…`);
-                      // Delay between downloads to avoid rate limiting
                       if (pi > 0) await new Promise(r => setTimeout(r, 300));
                       const imgRes = await fetch(`/api/gtp/scrape?img=${encodeURIComponent(p.photos[pi])}`);
-                      if (!imgRes.ok) continue; // skip failed downloads
+                      if (!imgRes.ok) continue;
                       const imgBlob = await imgRes.blob();
                       if (imgBlob.size < 50000) continue;
                       const form = new FormData();
                       form.append("photo", imgBlob, "photo.jpg");
-                      form.append("episodeId", String(activeEpisodeId));
-                      form.append("round", String(roundIdx));
+                      form.append("episodeId", String(fetchEpId));
+                      form.append("round", String(fetchRoundIdx));
                       form.append("index", String(Date.now()));
                       const upRes = await fetch("/api/gtp/photo", { method: "POST", body: form });
                       const upData = await upRes.json();
                       if (upData.url) {
                         setEpisodes(prev => prev.map(ep => {
-                          if (ep.id !== activeEpisodeId) return ep;
+                          if (ep.id !== fetchEpId) return ep;
                           const rounds = [...ep.rounds];
-                          if (rounds[roundIdx]) {
-                            rounds[roundIdx] = { ...rounds[roundIdx], photos: [...(rounds[roundIdx].photos || []), upData.url] };
+                          if (rounds[fetchRoundIdx]) {
+                            rounds[fetchRoundIdx] = { ...rounds[fetchRoundIdx], photos: [...(rounds[fetchRoundIdx].photos || []), upData.url] };
                           }
                           return { ...ep, rounds };
                         }));
@@ -3710,16 +3742,12 @@ export default function GuessThePrice({ displayMode = false }) {
             style={btn({ padding: "4px 12px", fontSize: DS.fsSm, background: showEpisodePanel ? "rgba(251,135,112,0.15)" : DS.bgButton, border: showEpisodePanel ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}` })}>
             Ep {episode.episode} {showEpisodePanel ? "▲" : "▼"}
           </button>
-          <button onClick={createNewEpisode}
-            style={btn({ padding: "4px 10px", fontSize: DS.fsXs })}>
-            + New
-          </button>
-          {saveStatus && <span style={{ fontSize: DS.fsXs, color: GAME.gold }}>{saveStatus}</span>}
-          {dirty && !saveStatus && <span style={{ fontSize: DS.fsXs, color: DS.textMuted }}>unsaved</span>}
         </div>
         <div style={{ display: "flex", gap: DS.xs, alignItems: "center" }}>
           {/* Save group */}
           <button onClick={() => syncToServer()} style={btn({ padding: "4px 12px", fontSize: DS.fsXs })}>Save</button>
+          {saveStatus && <span style={{ fontSize: DS.fsXs, color: GAME.gold, marginLeft: DS.xs }}>{saveStatus}</span>}
+          {dirty && !saveStatus && <span style={{ fontSize: DS.fsXs, color: DS.textMuted, marginLeft: DS.xs }}>unsaved</span>}
           <button onClick={() => { const name = `Ep${episode.episode}_${new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}`; saveSnapshot(name); }}
             style={btn({ padding: "4px 12px", fontSize: DS.fsXs })}>Snapshot</button>
           <span style={{ width: DS.sm }} />
