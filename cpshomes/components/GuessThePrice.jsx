@@ -2981,9 +2981,23 @@ export default function GuessThePrice({ displayMode = false }) {
               <span style={{ fontWeight: 700, color: DS.textPrimary }}>{rd.propertyAgent}</span> chose property
             </div>
             <button onClick={() => {
-              updateRoundField("propertyAgent", rd.guesser);
-              updateRoundField("guesser", rd.propertyAgent);
-              updateS("lockAgent", rd.propertyAgent); // swap: old propertyAgent becomes new guesser
+              // Swap this round
+              const newPA = rd.guesser, newG = rd.propertyAgent;
+              updateS("lockAgent", newG);
+              // Update all rounds: alternate from current round onwards
+              setEpisodes(prev => prev.map(ep => {
+                if (ep.id !== activeEpisodeId) return ep;
+                const rounds = ep.rounds.map((r, i) => {
+                  if (i < currentRound) return r; // leave earlier rounds unchanged
+                  const offset = i - currentRound;
+                  // Alternate every 3 rounds (same pattern as default)
+                  const pa = offset % 6 < 3 ? newPA : newG;
+                  const gu = offset % 6 < 3 ? newG : newPA;
+                  return { ...r, propertyAgent: pa, guesser: gu };
+                });
+                return { ...ep, rounds };
+              }));
+              setDirty(true);
             }} style={btn({ padding: "3px 10px", fontSize: DS.fsXs })}>Swap</button>
             <div style={{ flex: 1, fontSize: DS.fsXs, color: DS.textSecondary, textAlign: "right" }}>
               <span style={{ fontWeight: 700, color: GAME.gold }}>{rd.guesser}</span> guesses
