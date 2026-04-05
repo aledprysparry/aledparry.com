@@ -618,7 +618,7 @@ const SEED_STORIES = [];
 // Token storage: sessionStorage (survives refresh, clears on tab close)
 // Auto-refresh: deduped promise, retries original request once on 401
 
-const BASE = process.env.NEXT_PUBLIC_PMA_API_URL || "https://pma-production-1760.up.railway.app/api";
+const BASE = process.env.NEXT_PUBLIC_PMA_API_URL || "https://pma-production-6ddd.up.railway.app/api";
 
 // ─── Token storage ────────────────────────────────────────────────────────────
 let _access  = null;
