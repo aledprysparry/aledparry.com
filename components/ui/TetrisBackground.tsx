@@ -84,7 +84,6 @@ interface GameState {
   clearTimer: number;
   targetCol: number;
   popup: ScorePopup | null;
-  pressing: boolean;
   // Cached grid dimensions (updated in render, used in input handlers)
   gridX: number;
   gridCellSize: number;
@@ -193,7 +192,6 @@ export function TetrisBackground() {
       clearTimer: 0,
       targetCol: 3,
       popup: null,
-      pressing: false,
       gridX: 0,
       gridCellSize: 40,
     };
@@ -387,14 +385,7 @@ export function TetrisBackground() {
       }
     }
 
-    // Mouse/touch hold = soft drop (pieces fall faster, only after 200ms hold)
-    let pressStart = 0;
-    function onMouseDown() { pressStart = Date.now(); g.pressing = false; }
-    function onMouseUp() { g.pressing = false; pressStart = 0; }
-
     document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("mouseup", onMouseUp);
     document.addEventListener("click", onClick);
     document.addEventListener("touchstart", onTouchStart, { passive: true });
     document.addEventListener("touchmove", onTouchMove, { passive: true });
@@ -425,15 +416,10 @@ export function TetrisBackground() {
       while (g.current.x < g.targetCol && movePiece(1, 0)) { /* keep going */ }
       while (g.current.x > g.targetCol && movePiece(-1, 0)) { /* keep going */ }
 
-      // Activate soft drop only after 200ms hold
-      if (pressStart > 0 && Date.now() - pressStart > 200) g.pressing = true;
-
-      // Gravity — holding mouse makes pieces fall 6x faster
+      // Gravity only — no mouse-driven scoring
       g.dropTimer++;
-      const interval = g.pressing ? Math.max(1, Math.floor(getDropInterval(g.level) / 6)) : getDropInterval(g.level);
-      if (g.dropTimer >= interval) {
+      if (g.dropTimer >= getDropInterval(g.level)) {
         g.dropTimer = 0;
-        if (g.pressing) { g.score += 1; setScoreState(g.score); }
         if (!movePiece(0, 1)) lockPiece();
       }
     }
@@ -579,8 +565,6 @@ export function TetrisBackground() {
       cancelAnimationFrame(animId);
       window.removeEventListener("resize", resize);
       document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("click", onClick);
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchmove", onTouchMove);
