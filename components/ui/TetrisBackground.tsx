@@ -387,9 +387,10 @@ export function TetrisBackground() {
       }
     }
 
-    // Mouse/touch hold = soft drop (pieces fall faster)
-    function onMouseDown() { g.pressing = true; }
-    function onMouseUp() { g.pressing = false; }
+    // Mouse/touch hold = soft drop (pieces fall faster, only after 200ms hold)
+    let pressStart = 0;
+    function onMouseDown() { pressStart = Date.now(); g.pressing = false; }
+    function onMouseUp() { g.pressing = false; pressStart = 0; }
 
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mousedown", onMouseDown);
@@ -424,7 +425,10 @@ export function TetrisBackground() {
       while (g.current.x < g.targetCol && movePiece(1, 0)) { /* keep going */ }
       while (g.current.x > g.targetCol && movePiece(-1, 0)) { /* keep going */ }
 
-      // Gravity — pressing (mousedown/hold) makes pieces fall 6x faster
+      // Activate soft drop only after 200ms hold
+      if (pressStart > 0 && Date.now() - pressStart > 200) g.pressing = true;
+
+      // Gravity — holding mouse makes pieces fall 6x faster
       g.dropTimer++;
       const interval = g.pressing ? Math.max(1, Math.floor(getDropInterval(g.level) / 6)) : getDropInterval(g.level);
       if (g.dropTimer >= interval) {
