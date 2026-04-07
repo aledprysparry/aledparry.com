@@ -163,7 +163,7 @@ export const cy: SiteContent = {
         heading: "Cefndir",
         intro: "",
         items: [],
-        outro: "Mae fy nghefndir mewn Cyfathrebu Graffig, sy\u2019n sail i fy null gweithio o ran adrodd straeon, dylunio a phrofiad defnyddiwr. Rwy\u2019n rhugl yn Gymraeg a Saesneg, ac mae llawer o fy ngwaith yn canolbwyntio ar greu cynnwys sy\u2019n gweithio\u2019n naturiol ar draws y ddwy iaith.",
+        outro: "Mae fy nghefndir mewn Cyfathrebu Graffig, sy\u2019n sail i fy null gweithio o ran adrodd straeon, dylunio a phrofiad defnyddiwr. Rwy\u2019n rhugl yn Gymraeg a Saesneg, ac mae llawer o fy ngwaith yn canolbwyntio ar greu cynnwys sy\u2019n gweithio\u2019n naturiol ar draws y ddwy iaith a diwylliant.",
       },
     ],
     skills: {

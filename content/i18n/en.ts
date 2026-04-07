@@ -162,7 +162,7 @@ export const en: SiteContent = {
         heading: "Background",
         intro: "",
         items: [],
-        outro: "My background is in Graphic Communication, which underpins my approach to storytelling, design and user experience. I\u2019m fluent in Welsh and English, and much of my work focuses on creating content that works naturally across both languages.",
+        outro: "My background is in Graphic Communication, which underpins my approach to storytelling, design and user experience. I\u2019m fluent in Welsh and English, and much of my work focuses on creating content that works naturally across both languages and cultures.",
       },
     ],
     skills: {

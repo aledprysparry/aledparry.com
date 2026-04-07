@@ -13,23 +13,23 @@ export function AboutContent() {
         <h1 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-8">
           {t.about.heading}
         </h1>
-        <p className="text-xl md:text-2xl text-stone-600 leading-relaxed max-w-3xl mb-16">
+        <p className="text-xl md:text-2xl text-stone-600 leading-relaxed max-w-3xl mb-12">
           {t.about.hero}
         </p>
       </FadeIn>
 
-      {/* Two-column: bio + photo */}
+      {/* Bio + photo */}
       <FadeIn>
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 mb-24">
-          <div className="lg:col-span-3 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-20 items-start">
+          <div className="md:col-span-2 space-y-5">
             {t.about.bio.map((paragraph, i) => (
-              <p key={i} className="text-base text-stone-700 leading-relaxed">
+              <p key={i} className="text-base text-stone-600 leading-relaxed">
                 {paragraph}
               </p>
             ))}
           </div>
-          <div className="lg:col-span-2">
-            <div className="aspect-[3/4] bg-stone-200 overflow-hidden">
+          <div>
+            <div className="aspect-square bg-stone-100 overflow-hidden max-w-[280px] md:max-w-none">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/images/aled-parry.jpg"
@@ -42,50 +42,52 @@ export function AboutContent() {
       </FadeIn>
 
       {/* Content sections */}
-      {t.about.sections.map((section, i) => (
-        <FadeIn key={i}>
-          <div className="mb-16">
-            <h2 className="text-2xl font-serif font-bold text-stone-900 mb-6">
-              {section.heading}
-            </h2>
-            {section.intro && (
-              <p className="text-base text-stone-700 leading-relaxed mb-4">
-                {section.intro}
-              </p>
-            )}
-            {section.items.length > 0 && (
-              <ul className="space-y-2 mb-6 pl-1">
-                {section.items.map((item, j) => (
-                  <li
-                    key={j}
-                    className="text-base text-stone-700 leading-relaxed flex items-start gap-3"
-                  >
-                    <span className="text-stone-400 mt-1.5 text-xs">&#9642;</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {section.outro && (
-              <p className="text-base text-stone-700 leading-relaxed">
-                {section.outro}
-              </p>
-            )}
-          </div>
-        </FadeIn>
-      ))}
+      <div className="max-w-2xl">
+        {t.about.sections.map((section, i) => (
+          <FadeIn key={i}>
+            <div className="mb-14">
+              <h2 className="text-xl font-serif font-bold text-stone-900 mb-4">
+                {section.heading}
+              </h2>
+              {section.intro && (
+                <p className="text-base text-stone-600 leading-relaxed mb-4">
+                  {section.intro}
+                </p>
+              )}
+              {section.items.length > 0 && (
+                <ul className="space-y-2 mb-4 pl-1">
+                  {section.items.map((item, j) => (
+                    <li
+                      key={j}
+                      className="text-base text-stone-600 leading-relaxed flex items-start gap-3"
+                    >
+                      <span className="text-stone-300 mt-1.5 text-xs">&#9642;</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {section.outro && (
+                <p className="text-base text-stone-600 leading-relaxed">
+                  {section.outro}
+                </p>
+              )}
+            </div>
+          </FadeIn>
+        ))}
+      </div>
 
       {/* Skills */}
       <FadeIn>
-        <div className="mb-24">
-          <h2 className="text-2xl font-serif font-bold text-stone-900 mb-8">
+        <div className="mb-20">
+          <h2 className="text-xl font-serif font-bold text-stone-900 mb-6">
             {t.about.skills.heading}
           </h2>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {t.about.skills.items.map((skill) => (
               <span
                 key={skill}
-                className="text-sm font-sans text-stone-600 bg-stone-100 px-4 py-2"
+                className="text-sm font-sans text-stone-500 bg-stone-100 px-3 py-1.5"
               >
                 {skill}
               </span>
@@ -96,13 +98,10 @@ export function AboutContent() {
 
       {/* CTA */}
       <FadeIn>
-        <div className="text-center py-16 border-t border-stone-200">
-          <h2 className="text-3xl font-serif font-bold text-stone-900 mb-6">
+        <div className="text-center py-14 border-t border-stone-200">
+          <h2 className="text-2xl font-serif font-bold text-stone-900 mb-4">
             {t.about.cta.heading}
           </h2>
-          <p className="text-base text-stone-500 leading-relaxed mb-8 max-w-md mx-auto">
-            If you&apos;ve got a project, format or idea you&apos;d like to explore, feel free to get in touch.
-          </p>
           <Button href="/contact">{t.about.cta.button}</Button>
         </div>
       </FadeIn>
