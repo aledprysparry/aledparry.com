@@ -18,26 +18,20 @@ export function AboutContent() {
         </p>
       </FadeIn>
 
-      {/* Bio + photo */}
+      {/* Bio + photo (text wraps around floated image) */}
       <FadeIn>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-20 items-start">
-          <div className="md:col-span-2 space-y-5">
-            {t.about.bio.map((paragraph, i) => (
-              <p key={i} className="text-base text-stone-600 leading-relaxed">
-                {paragraph}
-              </p>
-            ))}
-          </div>
-          <div>
-            <div className="aspect-square bg-stone-100 overflow-hidden max-w-[280px] md:max-w-none">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/images/aled-parry.jpg"
-                alt="Aled Parry"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
+        <div className="mb-16 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/aled-parry.jpg"
+            alt="Aled Parry"
+            className="float-right ml-8 mb-6 w-[200px] md:w-[240px] aspect-square object-cover bg-stone-100"
+          />
+          {t.about.bio.map((paragraph, i) => (
+            <p key={i} className="text-base text-stone-600 leading-relaxed mb-5">
+              {paragraph}
+            </p>
+          ))}
         </div>
       </FadeIn>
 
