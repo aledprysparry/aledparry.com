@@ -48,6 +48,105 @@ const REFRAME_LBL  = {
 const DURATIONS    = ["30 sec","60 sec","90 sec","2:00","3:00","5:00","Other"];
 const LINK_TYPES   = ["Rushes","Footage","Transcript","Audio","Reference","Script","Other"];
 
+// ─── YOUTUBE TARGET AUDIENCES ─────────────────────────────────────────────────
+// Each audience profile carries platform-informed guidance that shapes the brief.
+// Based on current YouTube strategy best practices and audience behaviour data.
+const YT_AUDIENCES = {
+  NONE: { label:"— Select target audience —", icon:"" },
+  YOUNG_WELSH_SPEAKERS: {
+    label: "Young Welsh Speakers (16–25)",
+    icon: "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+    guidance: {
+      hook: "Lead with emotion or a bold visual — you have 3 seconds. Use Welsh-language text on screen in the first frame. Questions and challenges work well ('Allwch chi…?').",
+      tone: "Authentic, fast-paced, peer-to-peer. Avoid institutional or 'school Welsh' tone. Code-switching is OK if it feels natural.",
+      pacing: "Front-load the best moment. Aim for 6–10 min for long-form, under 60s for Shorts. Drop anything that doesn't earn the next 30 seconds.",
+      thumbnail: "Close-up face with emotion + 3–4 words max in Welsh. High contrast, saturated colours. Avoid logos or branding in the thumbnail.",
+      length: "Sweet spot: 7–10 min (long-form) or under 45s (Shorts). Avoid 2–5 min dead zone — too long for scroll, too short for session time.",
+      cta: "Pin a comment in Welsh. Use end-screen to push the next video in the series. Ask a question to drive comments.",
+      searchIntent: "This audience discovers via Shorts, suggested videos, and social shares — not search. Optimise titles for curiosity, not keywords.",
+    }
+  },
+  WELSH_LEARNERS: {
+    label: "Welsh Learners (all ages)",
+    icon: "📗",
+    guidance: {
+      hook: "Open with a familiar concept, then introduce the Welsh angle. Bilingual titles work well — Welsh first, English in brackets.",
+      tone: "Warm, encouraging, patient. Celebrate the language without gatekeeping. Subtitles are essential — always include both languages.",
+      pacing: "Slightly slower than native content. Repeat key Welsh phrases naturally. 8–15 min is ideal — learners want depth but not lectures.",
+      thumbnail: "Include a Welsh word or phrase prominently. Friendly face + text. Green/red/white palette ties to Welsh identity.",
+      length: "10–15 min for tutorials/explainers. 3–5 min for vocabulary/phrase videos. Longer content performs if structured with clear chapters.",
+      cta: "Link to playlists organised by difficulty level. Encourage viewers to try phrases in comments. Community tab for weekly challenges.",
+      searchIntent: "High search intent — 'how to say X in Welsh', 'Welsh for beginners', 'learn Welsh'. Optimise titles and descriptions for these queries.",
+    }
+  },
+  FAMILIES_PARENTS: {
+    label: "Families & Parents",
+    icon: "👨‍👩‍👧‍👦",
+    guidance: {
+      hook: "Start with the child's perspective or a relatable parenting moment. Show, don't tell. The first shot should make a parent think 'that's my kid'.",
+      tone: "Warm, real, unpolished-feeling (even if it's carefully produced). Avoid preachiness. Humour and heart together.",
+      pacing: "Moderate pace. 5–12 min for features. Quick cuts for activity/craft content. Leave breathing room for emotional moments.",
+      thumbnail: "Kids in action (not posed). Bright, warm lighting. Text should promise a clear benefit or outcome.",
+      length: "5–8 min is the sweet spot — fits into a school-run commute or lunch break. Series format with recurring segments builds habit.",
+      cta: "Encourage sharing ('tag someone who needs this'). Link to related family content. Playlists by age group or activity type.",
+      searchIntent: "Mixed — some search ('activities for kids in Welsh'), some browse. Seasonal content (half term, Nadolig) spikes hard — plan ahead.",
+    }
+  },
+  GENERAL_WELSH_INTEREST: {
+    label: "General Welsh Interest / Culture",
+    icon: "🐉",
+    guidance: {
+      hook: "Open with a surprising fact, stunning landscape, or a bold claim. 'You've never heard of…' and 'The story behind…' formats perform well.",
+      tone: "Confident, proud, storytelling-led. Think documentary tone but with personality. Let contributors carry the narrative.",
+      pacing: "Classic YouTube structure: hook (0–30s) → context (30s–2min) → deep dive → payoff. 10–20 min for features, 3–5 min for explainers.",
+      thumbnail: "Dramatic landscape or cultural moment + bold text. One clear subject. Avoid cluttered compositions.",
+      length: "12–18 min for documentary-style. 5–8 min for explainers. This audience has patience if the story earns it.",
+      cta: "Drive to playlist or series. Suggest related Welsh culture content. End with a question that invites local knowledge in comments.",
+      searchIntent: "Mix of search ('history of Welsh castles') and browse. Evergreen content has long tail here — invest in SEO for descriptions.",
+    }
+  },
+  DIASPORA_INTERNATIONAL: {
+    label: "Diaspora & International",
+    icon: "🌍",
+    guidance: {
+      hook: "Lead with universal emotion, then reveal the Welsh context. Assume zero prior knowledge — 'In Wales, there's a tradition called…'.",
+      tone: "Accessible, subtitled, globally-minded but locally rooted. English-first with Welsh woven in naturally. Cultural pride without exclusion.",
+      pacing: "Standard YouTube pacing. 8–15 min. Strong chapter markers for skimmability. International audiences scrub more — make each section self-contained.",
+      thumbnail: "Iconic Welsh imagery (castles, coastline, rugby, flags) + English text. Must be legible at mobile thumbnail size.",
+      length: "10–15 min. This audience watches longer when the content feels like discovery. Mini-docs and 'hidden gem' formats excel.",
+      cta: "Encourage subscribing for the series. Link to Welsh tourism or cultural resources. Comments often become diaspora reunion threads — engage with them.",
+      searchIntent: "High search intent — 'things to do in Wales', 'Welsh traditions', 'moving to Wales'. Title in English, mention Welsh terms in description.",
+    }
+  },
+  INDUSTRY_PROFESSIONALS: {
+    label: "Industry / Creative Professionals",
+    icon: "🎬",
+    guidance: {
+      hook: "Show the end result first, then 'here's how we did it'. BTS and process content hooks this audience instantly.",
+      tone: "Knowledgeable, peer-level, generous with craft details. Don't oversimplify — this audience wants the 'how' and 'why'.",
+      pacing: "Can be slower and more detailed. 15–25 min is fine. Chapters are essential. This audience will watch long content if it delivers value.",
+      thumbnail: "Production stills, gear, or before/after. Clean, minimal text. Professional aesthetic — avoid clickbait styling.",
+      length: "15–25 min for deep dives. 5–10 min for technique spotlights. Podcasts/interviews can go 30–60 min if the guest is compelling.",
+      cta: "Link to tools, resources, or case studies mentioned. Cross-promote with industry partners. LinkedIn sharing is high for this audience.",
+      searchIntent: "Niche search — 'bilingual production workflow', 'Welsh language broadcast'. Low volume but high intent and high value per viewer.",
+    }
+  },
+};
+const YT_AUDIENCE_KEYS = Object.keys(YT_AUDIENCES).filter(k => k !== "NONE");
+const YT_GUIDANCE_LABELS = {
+  hook: "Hook Strategy (first 30s)",
+  tone: "Recommended Tone",
+  pacing: "Pacing & Structure",
+  thumbnail: "Thumbnail Approach",
+  length: "Optimal Length",
+  cta: "Calls to Action",
+  searchIntent: "Discovery & Search Intent",
+};
+const YT_GUIDANCE_ICONS = {
+  hook: "🎣", tone: "🎭", pacing: "⏱", thumbnail: "🖼",
+  length: "📏", cta: "📣", searchIntent: "🔍",
+};
+
 // ─── LANGUAGES ────────────────────────────────────────────────────────────────
 const LANGUAGES = { CY:"Welsh", EN:"English" };
 const TRANSLATION_STATUS = {
@@ -287,6 +386,18 @@ ${FONT_IMPORT}
 .chip{padding:5px 12px;background:var(--surface3);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:500;color:var(--text3);cursor:pointer}
 .chip:hover{border-color:var(--border2);color:var(--text2)}
 .chip.sel{background:var(--accent-dim);border-color:var(--accent);color:#7b9fff}
+
+/* ── YOUTUBE STRATEGY GUIDANCE ──────────────── */
+.yt-audience-card{border-color:var(--teal-mid,rgba(45,212,191,.25))}
+.yt-audience-card .card-hd{border-bottom-color:var(--teal-mid,rgba(45,212,191,.15))}
+.yt-guidance{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.yt-guidance-hd{padding:10px 14px;background:var(--surface3);border-bottom:1px solid var(--border)}
+.yt-guidance-grid{display:grid;grid-template-columns:1fr;gap:0}
+.yt-guidance-item{padding:12px 14px;border-bottom:1px solid var(--border)}
+.yt-guidance-item:last-child{border-bottom:none}
+.yt-guidance-label{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--teal,#2dd4bf);margin-bottom:5px}
+.yt-guidance-text{font-size:12.5px;line-height:1.55;color:var(--text2)}
+@media(min-width:640px){.yt-guidance-grid{grid-template-columns:1fr 1fr}}
 
 /* ── DELIVERABLE ─────────────────────────────── */
 .del-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
@@ -2040,6 +2151,7 @@ function PSCBriefTab({ story, onUpdate }) {
   const locked = ["IN_EDIT","DELIVERED","ARCHIVED"].includes(story.status);
   const canEdit = !locked && canDo(session?.user?.role, "EDIT_BRIEF");
   const lang = b.story_hook?.original_language || story.input_language || "CY";
+  const [ytExpanded, setYtExpanded] = useState(true);
 
   const save = useDebounced((briefUpdates) => {
     api.stories.updateBrief(story.id, briefUpdates).catch(()=>{});
@@ -2067,6 +2179,50 @@ function PSCBriefTab({ story, onUpdate }) {
     <div>
       {locked && <Notice type="purple" icon="🔒">PSC Brief is locked while in edit or delivered.</Notice>}
       {!canEdit && !locked && <Notice type="amber" icon="⚠️">Your role ({session?.user?.role}) does not have permission to edit PSC Briefs.</Notice>}
+
+      <div className="card yt-audience-card">
+        <div className="card-hd">
+          <div className="card-hd-l">
+            <span className="card-title">Target Audience</span>
+            <span className="badge b-teal">YouTube Strategy</span>
+          </div>
+        </div>
+        <div className="card-bd">
+          <p style={{ fontSize:12, color:"var(--text3)", marginBottom:12 }}>
+            Select who this content is for. Guidance below will adapt to current YouTube best practices for your chosen audience.
+          </p>
+          <select className="fsel" disabled={!canEdit}
+            value={b.target_audience || "NONE"}
+            onChange={e => upd("target_audience", e.target.value)}>
+            {Object.entries(YT_AUDIENCES).map(([k,v]) => (
+              <option key={k} value={k}>{v.icon ? `${v.icon} ` : ""}{v.label}</option>
+            ))}
+          </select>
+
+          {b.target_audience && b.target_audience !== "NONE" && YT_AUDIENCES[b.target_audience] && (
+            <div className="yt-guidance" style={{ marginTop:16 }}>
+              <div className="yt-guidance-hd" onClick={() => setYtExpanded(v => !v)} style={{ cursor:"pointer", userSelect:"none" }}>
+                <span style={{ fontFamily:"'Syne',sans-serif", fontSize:13, fontWeight:700, color:"var(--text)" }}>
+                  {ytExpanded ? "▾" : "▸"} Platform Guidance for {YT_AUDIENCES[b.target_audience].icon} {YT_AUDIENCES[b.target_audience].label}
+                </span>
+              </div>
+              {ytExpanded && (
+                <div className="yt-guidance-grid">
+                  {Object.entries(YT_AUDIENCES[b.target_audience].guidance).map(([key, text]) => (
+                    <div key={key} className="yt-guidance-item">
+                      <div className="yt-guidance-label">
+                        <span>{YT_GUIDANCE_ICONS[key]}</span>
+                        <span>{YT_GUIDANCE_LABELS[key]}</span>
+                      </div>
+                      <div className="yt-guidance-text">{text}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="card">
         <div className="card-hd">
@@ -3450,6 +3606,10 @@ const EXTRA_CSS = `
 .pma .del-card{transition:all var(--dur-base) var(--ease-in-out)}
 .pma .del-card:hover{border-color:var(--border2)}
 .pma .notice{animation:fadeIn var(--dur-enter) var(--ease-out)}
+.pma .yt-guidance{animation:fadeIn var(--dur-enter) var(--ease-out)}
+.pma .yt-guidance-hd{transition:background var(--dur-base) var(--ease-in-out)}
+.pma .yt-guidance-hd:hover{background:var(--surface2)}
+.pma .yt-audience-card{transition:border-color var(--dur-base) var(--ease-in-out)}
 .pma .toast-enter{animation:slideInRight var(--dur-slow) var(--ease-spring)}
 
 /* ── POLISH: REDUCED MOTION ─────────────────── */
