@@ -1,10 +1,10 @@
 /**
- * Demo registry — the single source of truth for all client demos.
+ * Demo registry – the single source of truth for all client demos.
  *
  * To add a new demo:
  * 1. Create your component in components/demos/ (e.g. PropertySearch.tsx)
  * 2. Add an entry here with the correct componentPath
- * 3. That's it — index page, routing, and dynamic imports are automatic
+ * 3. That's it – index page, routing, and dynamic imports are automatic
  *
  * Note: componentPath must match the file in components/demos/ (without extension).
  * The component must `export default` and should include "use client" if it uses
@@ -44,7 +44,7 @@ export const demos: DemoEntry[] = [
     toolSlug: "guessprice",
     toolName: "Guess the Price",
     description:
-      "Graphics generator for the Guess the Price social video format — property frames, A/B/C options, reveals, and scoreboards.",
+      "Graphics generator for the Guess the Price social video format – property frames, A/B/C options, reveals, and scoreboards.",
     componentPath: "GuessThePrice",
   },
   {
@@ -53,7 +53,7 @@ export const demos: DemoEntry[] = [
     toolSlug: "cwis-bob-dydd",
     toolName: "Cwis Bob Dydd",
     description:
-      "Quiz content creation suite — question bank, leaderboards, social media planner, and branded graphic builder.",
+      "Quiz content creation suite – question bank, leaderboards, social media planner, and branded graphic builder.",
     componentPath: "",
     href: "https://cwis-creator-hub.vercel.app",
   },
@@ -63,7 +63,7 @@ export const demos: DemoEntry[] = [
     toolSlug: "pressroom",
     toolName: "Pressroom Intelligence",
     description:
-      "Newspaper analysis platform — OCR scanning, NLP theme extraction, sentiment analysis, and AI-powered story angle suggestions. Bilingual Welsh and English.",
+      "Newspaper analysis platform – OCR scanning, NLP theme extraction, sentiment analysis, and AI-powered story angle suggestions. Bilingual Welsh and English.",
     componentPath: "",
     href: "#",
   },
@@ -83,7 +83,7 @@ export const demos: DemoEntry[] = [
     toolSlug: "pma",
     toolName: "PMA",
     description:
-      "Production management app for broadcast teams — scheduling, task tracking, and resource planning.",
+      "Production management app for broadcast teams – scheduling, task tracking, and resource planning.",
     componentPath: "",
     href: "https://edit-intelligence.vercel.app/",
   },

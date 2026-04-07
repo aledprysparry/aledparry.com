@@ -2,7 +2,7 @@ import { SiteContent } from "./types";
 
 export const en: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry — Award-Winning Digital Producer & Creative Director",
+    siteTitle: "Aled Parry – Award-Winning Digital Producer & Creative Director",
     siteDescription:
       "BAFTA-winning digital producer and creative director. Over 20 years creating interactive content, games, websites and apps for S4C, BBC, ITV, Sesame Street and more. Bilingual in English and Welsh.",
   },
@@ -99,7 +99,7 @@ export const en: SiteContent = {
       {
         title: "Bilingual Content Strategy",
         description:
-          "Content strategy that works authentically in both Welsh and English. Not translation — genuine bilingual thinking from the ground up.",
+          "Content strategy that works authentically in both Welsh and English. Not translation – genuine bilingual thinking from the ground up.",
         goodFor:
           "Welsh-language broadcasters, public sector, bilingual organisations",
       },
@@ -120,7 +120,7 @@ export const en: SiteContent = {
     heading: "About",
     hero: "I\u2019m a BAFTA-winning Digital Producer and Creative Director working across TV, apps and interactive content.",
     bio: [
-      "I create formats, products and experiences that connect with audiences \u2014 from broadcast programmes and short-form video to apps, games and digital platforms. My work sits at the intersection of editorial, technology and audience engagement, helping broadcasters and brands move beyond traditional content into more interactive, scalable experiences.",
+      "I create formats, products and experiences that connect with audiences \u2013 from broadcast programmes and short-form video to apps, games and digital platforms. My work sits at the intersection of editorial, technology and audience engagement, helping broadcasters and brands move beyond traditional content into more interactive, scalable experiences.",
       "I\u2019ve worked with broadcasters and partners across the UK and internationally, developing projects from concept through to production and live operation.",
     ],
     sections: [
@@ -134,7 +134,7 @@ export const en: SiteContent = {
           "Create content that drives engagement and repeat use",
           "Prototype and test new concepts quickly",
         ],
-        outro: "My approach is practical and collaborative \u2014 combining creative thinking with delivery.",
+        outro: "My approach is practical and collaborative \u2013 combining creative thinking with delivery.",
       },
       {
         heading: "Approach",
@@ -145,7 +145,7 @@ export const en: SiteContent = {
           "Using data and insight to refine ideas over time",
           "Creating systems that scale, not just one-off projects",
         ],
-        outro: "Much of my recent work has focused on building digital products that sit alongside broadcast \u2014 creating longer-term value and deeper audience relationships.",
+        outro: "Much of my recent work has focused on building digital products that sit alongside broadcast \u2013 creating longer-term value and deeper audience relationships.",
       },
       {
         heading: "Current Focus (2026)",
@@ -156,7 +156,7 @@ export const en: SiteContent = {
           "Explore new ways of creating and delivering content",
           "Support the development and pitching of new ideas",
         ],
-        outro: "This allows me to move quickly from concept to working prototype \u2014 and test ideas in real-world scenarios.",
+        outro: "This allows me to move quickly from concept to working prototype \u2013 and test ideas in real-world scenarios.",
       },
       {
         heading: "Background",
