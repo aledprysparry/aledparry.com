@@ -39,10 +39,16 @@ export function HomeContent() {
               {t.home.hero.cta}
             </a>
             <a
+              href="/about"
+              className="text-sm font-sans text-stone-500 hover:text-stone-900 transition-colors underline underline-offset-4 decoration-stone-300 hover:decoration-stone-500"
+            >
+              About
+            </a>
+            <a
               href="https://linkedin.com/in/aledparry"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-sans text-stone-500 hover:text-stone-900 transition-colors underline underline-offset-4 decoration-accent/40 hover:decoration-accent"
+              className="text-sm font-sans text-stone-500 hover:text-stone-900 transition-colors underline underline-offset-4 decoration-stone-300 hover:decoration-stone-500"
             >
               LinkedIn
             </a>
