@@ -118,13 +118,52 @@ export const en: SiteContent = {
   },
   about: {
     heading: "About",
-    hero: "I'm a BAFTA-winning digital producer and creative director based in Wales, with over 25 years of experience leading interactive content for broadcasters and brands across the UK and beyond.",
+    hero: "I\u2019m a BAFTA-winning Digital Producer and Creative Director working across TV, apps and interactive content.",
     bio: [
-      "I started as a print and branding designer at the moment digital was emerging \u2014 and made the move early, retraining as a web designer and front-end developer. That combination of design instinct and technical fluency has defined everything I\u2019ve done since.",
-      "As Creative Director at Cube Interactive, I led the team to become a leading provider of interactive digital content for S4C, BBC, Channel 4, ITV and Microsoft. Our work won multiple BAFTAs and Broadcast Digital Awards \u2014 including projects spanning children\u2019s apps for Teletubbies and Sesame Street, interactive game shows for Catchphrase and Family Fortunes, and original formats like Ludus, one of the world\u2019s first live play-along formats for children.",
-      "More recently I\u2019ve been working with Tinint, part of the Tinopolis Group, creating digital productions and bringing stories to life as a self-shooting producer and editor \u2014 from filming through to final cut.",
-      "I also build custom production tools that combine my creative and technical background to make workflows faster and smarter.",
-      "Bilingual in English and Welsh, I bring genuine dual-language thinking to every project \u2014 not translation, but authentic content that connects with both audiences from the start.",
+      "I create formats, products and experiences that connect with audiences \u2014 from broadcast programmes and short-form video to apps, games and digital platforms. My work sits at the intersection of editorial, technology and audience engagement, helping broadcasters and brands move beyond traditional content into more interactive, scalable experiences.",
+      "I\u2019ve worked with broadcasters and partners across the UK and internationally, developing projects from concept through to production and live operation.",
+    ],
+    sections: [
+      {
+        heading: "What I Do",
+        intro: "I work with broadcasters, digital teams and brands to:",
+        items: [
+          "Develop new content formats and ideas",
+          "Build digital products and audience experiences",
+          "Extend broadcast IP into apps, games and platforms",
+          "Create content that drives engagement and repeat use",
+          "Prototype and test new concepts quickly",
+        ],
+        outro: "My approach is practical and collaborative \u2014 combining creative thinking with delivery.",
+      },
+      {
+        heading: "Approach",
+        intro: "I\u2019m particularly interested in how content evolves beyond a single platform. That means:",
+        items: [
+          "Designing formats that work across TV and digital",
+          "Building products that encourage habit and repeat engagement",
+          "Using data and insight to refine ideas over time",
+          "Creating systems that scale, not just one-off projects",
+        ],
+        outro: "Much of my recent work has focused on building digital products that sit alongside broadcast \u2014 creating longer-term value and deeper audience relationships.",
+      },
+      {
+        heading: "Current Focus (2026)",
+        intro: "I\u2019m currently focused on using AI and large language models to:",
+        items: [
+          "Rapidly prototype apps and digital products",
+          "Develop proof of concepts at speed",
+          "Explore new ways of creating and delivering content",
+          "Support the development and pitching of new ideas",
+        ],
+        outro: "This allows me to move quickly from concept to working prototype \u2014 and test ideas in real-world scenarios.",
+      },
+      {
+        heading: "Background",
+        intro: "",
+        items: [],
+        outro: "My background is in Graphic Communication, which underpins my approach to storytelling, design and user experience. I\u2019m fluent in Welsh and English, and much of my work focuses on creating content that works naturally across both languages.",
+      },
     ],
     skills: {
       heading: "Skills & Experience",
@@ -142,8 +181,8 @@ export const en: SiteContent = {
       ],
     },
     cta: {
-      heading: "Got a project in mind?",
-      button: "Let\u2019s talk \u2192",
+      heading: "Let\u2019s Work Together",
+      button: "Get in touch \u2192",
     },
   },
   contact: {

@@ -119,11 +119,52 @@ export const cy: SiteContent = {
   },
   about: {
     heading: "Amdanaf",
-    hero: "Rwy'n gynhyrchydd digidol a chyfarwyddwr creadigol wedi fy lleoli yng Nghymru, yn gweithio ar groesffordd darlledu, technoleg, ac adrodd straeon dwyieithog.",
+    hero: "Cynhyrchydd Digidol a Chyfarwyddwr Creadigol sydd wedi ennill BAFTA, yn gweithio ar draws teledu, apiau a chynnwys rhyngweithiol.",
     bio: [
-      "Gyda dros ddegawd o brofiad mewn cynhyrchu darlledu a digidol, rwyf wedi gweithio gyda rhai o'r enwau mwyaf adnabyddus ym myd cyfryngau Cymru a'r DU. Mae fy ngwaith yn cwmpasu teledu, llwyfannau digidol, a chynnwys brand.",
-      "Rwy'n arbenigo mewn cynhyrchu dwyieithog — creu cynnwys sy'n gweithio'n ddilys yn Gymraeg a Saesneg, nid fel ymarfer cyfieithu, ond fel adrodd straeon dwy iaith go iawn.",
-      "Boed yn cynhyrchu cyfres ddarlledu, cyfarwyddo ymgyrch ddigidol, neu ddatblygu fformat newydd, rwy'n dod â'r un ymrwymiad i grefft, eglurder, ac uchelgais creadigol.",
+      "Rwy\u2019n creu fformatau, cynnyrch a phrofiadau sy\u2019n cysylltu \u00e2 chynulleidfaoedd \u2014 o raglenni darlledu a fideo ffurf-fer i apiau, gemau a llwyfannau digidol. Mae fy ngwaith ar y croestoriad rhwng golygu, technoleg ac ymgysylltu cynulleidfaoedd, yn helpu darlledwyr a brandiau i symud y tu hwnt i gynnwys traddodiadol tuag at brofiadau mwy rhyngweithiol a graddadwy.",
+      "Rwyf wedi gweithio gyda darlledwyr a phartneriaid ar draws y DU ac yn rhyngwladol, yn datblygu prosiectau o\u2019r cysyniad hyd at gynhyrchu a gweithrediad byw.",
+    ],
+    sections: [
+      {
+        heading: "Beth Rwy\u2019n ei Wneud",
+        intro: "Rwy\u2019n gweithio gyda darlledwyr, timau digidol a brandiau i:",
+        items: [
+          "Datblygu fformatau a syniadau cynnwys newydd",
+          "Adeiladu cynnyrch digidol a phrofiadau cynulleidfa",
+          "Ymestyn IP darlledu i apiau, gemau a llwyfannau",
+          "Creu cynnwys sy\u2019n gyrru ymgysylltiad a defnydd rheolaidd",
+          "Prototeip a phrofi cysyniadau newydd yn gyflym",
+        ],
+        outro: "Mae fy null gweithio yn ymarferol a chydweithredol \u2014 yn cyfuno meddwl creadigol \u00e2 chyflawni.",
+      },
+      {
+        heading: "Dull Gweithio",
+        intro: "Mae gen i ddiddordeb arbennig yn y ffordd mae cynnwys yn esblygu y tu hwnt i un llwyfan. Mae hynny\u2019n golygu:",
+        items: [
+          "Dylunio fformatau sy\u2019n gweithio ar draws teledu a digidol",
+          "Adeiladu cynnyrch sy\u2019n annog arfer ac ymgysylltiad rheolaidd",
+          "Defnyddio data a mewnwelediad i fireinio syniadau dros amser",
+          "Creu systemau sy\u2019n graddio, nid prosiectau untro yn unig",
+        ],
+        outro: "Mae llawer o fy ngwaith diweddar wedi canolbwyntio ar adeiladu cynnyrch digidol sy\u2019n eistedd ochr yn ochr \u00e2 darlledu \u2014 yn creu gwerth tymor hwy a pherthnasoedd dyfnach \u00e2 chynulleidfaoedd.",
+      },
+      {
+        heading: "Ffocws Presennol (2026)",
+        intro: "Ar hyn o bryd rwy\u2019n canolbwyntio ar ddefnyddio AI a modelau iaith mawr i:",
+        items: [
+          "Prototeip apiau a chynnyrch digidol yn gyflym",
+          "Datblygu profion cysyniad ar gyflymder",
+          "Archwilio ffyrdd newydd o greu a darparu cynnwys",
+          "Cefnogi datblygiad a chyflwyno syniadau newydd",
+        ],
+        outro: "Mae hyn yn fy ngalluogi i symud yn gyflym o gysyniad i brototeip gweithredol \u2014 a phrofi syniadau mewn sefyllfaoedd go iawn.",
+      },
+      {
+        heading: "Cefndir",
+        intro: "",
+        items: [],
+        outro: "Mae fy nghefndir mewn Cyfathrebu Graffig, sy\u2019n sail i fy null gweithio o ran adrodd straeon, dylunio a phrofiad defnyddiwr. Rwy\u2019n rhugl yn Gymraeg a Saesneg, ac mae llawer o fy ngwaith yn canolbwyntio ar greu cynnwys sy\u2019n gweithio\u2019n naturiol ar draws y ddwy iaith.",
+      },
     ],
     skills: {
       heading: "Cefndir",
@@ -139,8 +180,8 @@ export const cy: SiteContent = {
       ],
     },
     cta: {
-      heading: "Gadewch i ni weithio gyda'n gilydd",
-      button: "Cysylltwch",
+      heading: "Gadewch i ni Weithio Gyda\u2019n Gilydd",
+      button: "Cysylltwch \u2192",
     },
   },
   contact: {

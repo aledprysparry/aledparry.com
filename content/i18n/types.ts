@@ -78,6 +78,12 @@ export interface SiteContent {
     heading: string;
     hero: string;
     bio: string[];
+    sections: {
+      heading: string;
+      intro: string;
+      items: string[];
+      outro: string;
+    }[];
     skills: {
       heading: string;
       items: string[];

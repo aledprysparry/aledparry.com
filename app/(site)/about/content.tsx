@@ -41,6 +41,40 @@ export function AboutContent() {
         </div>
       </FadeIn>
 
+      {/* Content sections */}
+      {t.about.sections.map((section, i) => (
+        <FadeIn key={i}>
+          <div className="mb-16">
+            <h2 className="text-2xl font-serif font-bold text-stone-900 mb-6">
+              {section.heading}
+            </h2>
+            {section.intro && (
+              <p className="text-base text-stone-700 leading-relaxed mb-4">
+                {section.intro}
+              </p>
+            )}
+            {section.items.length > 0 && (
+              <ul className="space-y-2 mb-6 pl-1">
+                {section.items.map((item, j) => (
+                  <li
+                    key={j}
+                    className="text-base text-stone-700 leading-relaxed flex items-start gap-3"
+                  >
+                    <span className="text-stone-400 mt-1.5 text-xs">&#9642;</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {section.outro && (
+              <p className="text-base text-stone-700 leading-relaxed">
+                {section.outro}
+              </p>
+            )}
+          </div>
+        </FadeIn>
+      ))}
+
       {/* Skills */}
       <FadeIn>
         <div className="mb-24">
@@ -66,6 +100,9 @@ export function AboutContent() {
           <h2 className="text-3xl font-serif font-bold text-stone-900 mb-6">
             {t.about.cta.heading}
           </h2>
+          <p className="text-base text-stone-500 leading-relaxed mb-8 max-w-md mx-auto">
+            If you&apos;ve got a project, format or idea you&apos;d like to explore, feel free to get in touch.
+          </p>
           <Button href="/contact">{t.about.cta.button}</Button>
         </div>
       </FadeIn>
