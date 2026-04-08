@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/Button";
 import { FadeIn } from "@/components/ui/FadeIn";
@@ -10,14 +9,6 @@ export function AboutContent() {
 
   return (
     <>
-      <div className="mb-10">
-        <Link
-          href="/"
-          className="text-sm font-sans text-stone-400 hover:text-stone-900 transition-colors"
-        >
-          &larr; Home
-        </Link>
-      </div>
       <FadeIn>
         <h1 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-8">
           {t.about.heading}
