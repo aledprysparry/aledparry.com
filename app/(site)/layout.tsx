@@ -9,12 +9,12 @@ export default function SiteLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isHome = pathname === "/";
+  const hideNav = pathname === "/" || pathname === "/about";
 
   return (
     <>
-      {!isHome && <Header />}
-      <main className={isHome ? "min-h-screen" : "min-h-screen pt-20"}>
+      {!hideNav && <Header />}
+      <main className={hideNav ? "min-h-screen" : "min-h-screen pt-20"}>
         {children}
       </main>
     </>
