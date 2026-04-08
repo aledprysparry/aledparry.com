@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 
 interface Stat {
   label: string;
   labelCy: string;
   value: string;
+}
+
+interface ProjectListItem {
+  slug: string;
+  title: string;
+  client: string;
+  year: number;
+  type: string;
+  featured: boolean;
 }
 
 const emptyStats: Stat[] = [
@@ -14,10 +23,19 @@ const emptyStats: Stat[] = [
   { label: "", labelCy: "", value: "" },
 ];
 
+type View = "list" | "form";
+
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [authed, setAuthed] = useState(false);
   const [authError, setAuthError] = useState("");
+
+  // View state
+  const [view, setView] = useState<View>("list");
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [loadingList, setLoadingList] = useState(false);
+  const [editSlug, setEditSlug] = useState<string | null>(null);
+  const [loadingProject, setLoadingProject] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -55,6 +73,8 @@ export default function AdminPage() {
     }
   });
 
+  const getAuthHeader = () => sessionStorage.getItem("admin_pw") || "";
+
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setAuthError("");
@@ -71,6 +91,115 @@ export default function AdminPage() {
     }
   };
 
+  // Load project list
+  const loadProjects = async () => {
+    setLoadingList(true);
+    try {
+      const res = await fetch("/api/admin/project", {
+        headers: { "x-admin-password": getAuthHeader() },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data);
+      }
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
+  useEffect(() => {
+    if (authed) loadProjects();
+  }, [authed]);
+
+  // Load single project for editing
+  const loadProject = async (slug: string) => {
+    setLoadingProject(true);
+    try {
+      const res = await fetch(`/api/admin/project?slug=${slug}`, {
+        headers: { "x-admin-password": getAuthHeader() },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEditSlug(slug);
+        setTitle(data.title || "");
+        setTitleCy(data.titleCy || "");
+        setClient(data.client || "");
+        setYear(data.year || new Date().getFullYear());
+        setRole(data.role || "");
+        setRoleCy(data.roleCy || "");
+        setType(data.type || "digital");
+        setFeatured(data.featured || false);
+        setSummary(data.summary || "");
+        setSummaryCy(data.summaryCy || "");
+        setBrief(data.brief || "");
+        setMyRole(data.myRole || "");
+        setApproach(data.approach || "");
+        setOutcome(data.outcome || "");
+
+        // Stats
+        if (data.stats && data.stats.length > 0) {
+          const loaded = data.stats.map((s: { label?: string; labelCy?: string; value?: string }) => ({
+            label: s.label || "",
+            labelCy: s.labelCy || "",
+            value: s.value || "",
+          }));
+          while (loaded.length < 3) loaded.push({ label: "", labelCy: "", value: "" });
+          setStats(loaded);
+        } else {
+          setStats(emptyStats);
+        }
+
+        // Testimonial
+        if (data.testimonial) {
+          setTestimonialQuote(data.testimonial.quote || "");
+          setTestimonialQuoteCy(data.testimonial.quoteCy || "");
+          setTestimonialAuthor(data.testimonial.author || "");
+          setTestimonialRole(data.testimonial.role || "");
+          setShowTestimonial(true);
+        } else {
+          setTestimonialQuote("");
+          setTestimonialQuoteCy("");
+          setTestimonialAuthor("");
+          setTestimonialRole("");
+          setShowTestimonial(false);
+        }
+
+        setHeroImage(null);
+        setStatus("idle");
+        setView("form");
+      }
+    } finally {
+      setLoadingProject(false);
+    }
+  };
+
+  const clearForm = () => {
+    setEditSlug(null);
+    setTitle("");
+    setTitleCy("");
+    setClient("");
+    setYear(new Date().getFullYear());
+    setRole("");
+    setRoleCy("");
+    setType("digital");
+    setFeatured(false);
+    setHeroImage(null);
+    setSummary("");
+    setSummaryCy("");
+    setStats(emptyStats);
+    setTestimonialQuote("");
+    setTestimonialQuoteCy("");
+    setTestimonialAuthor("");
+    setTestimonialRole("");
+    setShowTestimonial(false);
+    setBrief("");
+    setMyRole("");
+    setApproach("");
+    setOutcome("");
+    setStatus("idle");
+    setErrorMsg("");
+  };
+
   const updateStat = (index: number, field: keyof Stat, value: string) => {
     const next = [...stats];
     next[index] = { ...next[index], [field]: value };
@@ -83,6 +212,7 @@ export default function AdminPage() {
     setErrorMsg("");
 
     const formData = new FormData();
+    if (editSlug) formData.append("editSlug", editSlug);
     formData.append("title", title);
     formData.append("titleCy", titleCy);
     formData.append("client", client);
@@ -111,14 +241,12 @@ export default function AdminPage() {
       );
     }
 
-    if (heroImage) {
-      formData.append("heroImage", heroImage);
-    }
+    if (heroImage) formData.append("heroImage", heroImage);
 
     try {
       const res = await fetch("/api/admin/project", {
         method: "POST",
-        headers: { "x-admin-password": sessionStorage.getItem("admin_pw") || "" },
+        headers: { "x-admin-password": getAuthHeader() },
         body: formData,
       });
       const data = await res.json();
@@ -140,7 +268,7 @@ export default function AdminPage() {
   const labelClass = "block text-sm font-sans font-medium text-stone-700 mb-1";
   const sectionClass = "border-t border-stone-200 pt-8 mt-8";
 
-  // Password gate
+  // ── Password gate ─────────────────────────────────────────────────
   if (!authed) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -168,13 +296,16 @@ export default function AdminPage() {
     );
   }
 
-  // Success state
+  // ── Success state ─────────────────────────────────────────────────
   if (status === "success") {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-serif font-bold text-stone-900">Project saved</h1>
+        <h1 className="text-2xl font-serif font-bold text-stone-900">
+          Project {editSlug ? "updated" : "saved"}
+        </h1>
         <p className="text-stone-600">
-          Created <code className="bg-stone-100 px-2 py-0.5 text-sm">content/case-studies/{resultSlug}.mdx</code>
+          {editSlug ? "Updated" : "Created"}{" "}
+          <code className="bg-stone-100 px-2 py-0.5 text-sm">{resultSlug}.mdx</code>
         </p>
         <div className="flex gap-4">
           <a
@@ -185,42 +316,84 @@ export default function AdminPage() {
           </a>
           <button
             onClick={() => {
-              setStatus("idle");
-              setTitle("");
-              setTitleCy("");
-              setClient("");
-              setYear(new Date().getFullYear());
-              setRole("");
-              setRoleCy("");
-              setType("digital");
-              setFeatured(false);
-              setHeroImage(null);
-              setSummary("");
-              setSummaryCy("");
-              setStats(emptyStats);
-              setTestimonialQuote("");
-              setTestimonialQuoteCy("");
-              setTestimonialAuthor("");
-              setTestimonialRole("");
-              setShowTestimonial(false);
-              setBrief("");
-              setMyRole("");
-              setApproach("");
-              setOutcome("");
+              clearForm();
+              setView("list");
+              loadProjects();
             }}
             className="border border-stone-900 text-stone-900 px-4 py-2.5 text-sm font-sans hover:bg-stone-900 hover:text-white transition-colors"
           >
-            Add another
+            Back to list
           </button>
         </div>
       </div>
     );
   }
 
-  // Form
+  // ── Project list ──────────────────────────────────────────────────
+  if (view === "list") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-serif font-bold text-stone-900">Projects</h1>
+          <button
+            onClick={() => {
+              clearForm();
+              setView("form");
+            }}
+            className="bg-stone-900 text-white px-4 py-2.5 text-sm font-sans font-medium hover:bg-stone-800 transition-colors"
+          >
+            + Add New
+          </button>
+        </div>
+
+        {loadingList ? (
+          <p className="text-sm text-stone-500">Loading...</p>
+        ) : (
+          <div className="space-y-1">
+            {projects.map((p) => (
+              <button
+                key={p.slug}
+                onClick={() => loadProject(p.slug)}
+                disabled={loadingProject}
+                className="w-full text-left px-4 py-3 border border-stone-100 hover:border-stone-300 hover:bg-stone-50 transition-colors flex items-center justify-between group"
+              >
+                <div>
+                  <span className="text-sm font-sans font-medium text-stone-900 group-hover:text-accent-dark">
+                    {p.title}
+                  </span>
+                  <span className="text-xs text-stone-400 ml-3">
+                    {p.client} &middot; {p.year}
+                  </span>
+                </div>
+                <span className="text-xs font-sans text-stone-400 bg-stone-100 px-2 py-0.5">
+                  {p.type}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Form (create or edit) ─────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <h1 className="text-2xl font-serif font-bold text-stone-900">Add Project</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-serif font-bold text-stone-900">
+          {editSlug ? `Edit: ${title || editSlug}` : "Add Project"}
+        </h1>
+        <button
+          type="button"
+          onClick={() => {
+            clearForm();
+            setView("list");
+          }}
+          className="text-sm font-sans text-stone-500 hover:text-stone-900 transition-colors"
+        >
+          &larr; Back to list
+        </button>
+      </div>
 
       {/* Core metadata */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -279,7 +452,7 @@ export default function AdminPage() {
       </div>
 
       <div>
-        <label className={labelClass}>Hero Image</label>
+        <label className={labelClass}>Hero Image {editSlug && "(leave empty to keep current)"}</label>
         <input
           type="file"
           accept="image/*"
@@ -309,24 +482,9 @@ export default function AdminPage() {
         <div className="space-y-3">
           {stats.map((stat, i) => (
             <div key={i} className="grid grid-cols-3 gap-3">
-              <input
-                placeholder="Label (EN)"
-                value={stat.label}
-                onChange={(e) => updateStat(i, "label", e.target.value)}
-                className={inputClass}
-              />
-              <input
-                placeholder="Label (CY)"
-                value={stat.labelCy}
-                onChange={(e) => updateStat(i, "labelCy", e.target.value)}
-                className={inputClass}
-              />
-              <input
-                placeholder="Value"
-                value={stat.value}
-                onChange={(e) => updateStat(i, "value", e.target.value)}
-                className={inputClass}
-              />
+              <input placeholder="Label (EN)" value={stat.label} onChange={(e) => updateStat(i, "label", e.target.value)} className={inputClass} />
+              <input placeholder="Label (CY)" value={stat.labelCy} onChange={(e) => updateStat(i, "labelCy", e.target.value)} className={inputClass} />
+              <input placeholder="Value" value={stat.value} onChange={(e) => updateStat(i, "value", e.target.value)} className={inputClass} />
             </div>
           ))}
         </div>
@@ -339,7 +497,7 @@ export default function AdminPage() {
           onClick={() => setShowTestimonial(!showTestimonial)}
           className="text-sm font-sans font-medium text-accent-dark hover:text-stone-900 transition-colors"
         >
-          {showTestimonial ? "− Remove testimonial" : "+ Add testimonial"}
+          {showTestimonial ? "- Remove testimonial" : "+ Add testimonial"}
         </button>
         {showTestimonial && (
           <div className="mt-4 space-y-4">
@@ -397,7 +555,7 @@ export default function AdminPage() {
         disabled={status === "submitting"}
         className="bg-stone-900 text-white px-6 py-3 text-sm font-sans font-medium hover:bg-stone-800 transition-colors disabled:opacity-50"
       >
-        {status === "submitting" ? "Saving..." : "Save Project"}
+        {status === "submitting" ? "Saving..." : editSlug ? "Update Project" : "Save Project"}
       </button>
     </form>
   );

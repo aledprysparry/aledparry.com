@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import fs from "fs";
 import path from "path";
+import matter from "gray-matter";
 
 function slugify(text: string): string {
   return text
@@ -17,14 +18,79 @@ function escapeYaml(str: string): string {
   return `"${str}"`;
 }
 
-export async function POST(request: Request) {
+function checkAuth(request: Request): boolean {
   const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) {
-    return NextResponse.json({ error: "Admin not configured" }, { status: 401 });
+  if (!adminPassword) return false;
+  return request.headers.get("x-admin-password") === adminPassword;
+}
+
+// ── GET: List all projects or load one by slug ──────────────────────────────
+export async function GET(request: NextRequest) {
+  if (!checkAuth(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const providedPassword = request.headers.get("x-admin-password");
-  if (providedPassword !== adminPassword) {
+  const slug = request.nextUrl.searchParams.get("slug");
+  const caseStudiesDir = path.join(process.cwd(), "content/case-studies");
+
+  // Single project by slug
+  if (slug) {
+    const mdxPath = path.join(caseStudiesDir, `${slug}.mdx`);
+    if (!fs.existsSync(mdxPath)) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const raw = fs.readFileSync(mdxPath, "utf-8");
+    const { data, content } = matter(raw);
+
+    // Parse body sections
+    const sections: Record<string, string> = {};
+    const sectionRegex = /^## (.+)$/gm;
+    let match;
+    const matches: { heading: string; index: number }[] = [];
+    while ((match = sectionRegex.exec(content)) !== null) {
+      matches.push({ heading: match[1], index: match.index + match[0].length });
+    }
+    for (let i = 0; i < matches.length; i++) {
+      const end = i + 1 < matches.length ? matches[i + 1].index - matches[i + 1].heading.length - 3 : content.length;
+      const text = content.slice(matches[i].index, end).trim();
+      const key = matches[i].heading.toLowerCase().replace(/\s+/g, "_").replace(/^the_/, "");
+      sections[key] = text;
+    }
+
+    return NextResponse.json({
+      slug,
+      ...data,
+      brief: sections["brief"] || "",
+      myRole: sections["my_role"] || "",
+      approach: sections["approach"] || "",
+      outcome: sections["outcome"] || "",
+    });
+  }
+
+  // List all projects
+  if (!fs.existsSync(caseStudiesDir)) {
+    return NextResponse.json([]);
+  }
+  const files = fs.readdirSync(caseStudiesDir).filter((f) => f.endsWith(".mdx"));
+  const projects = files.map((file) => {
+    const raw = fs.readFileSync(path.join(caseStudiesDir, file), "utf-8");
+    const { data } = matter(raw);
+    return {
+      slug: file.replace(".mdx", ""),
+      title: data.title || file.replace(".mdx", ""),
+      client: data.client || "",
+      year: data.year || 0,
+      type: data.type || "",
+      featured: data.featured || false,
+    };
+  });
+  projects.sort((a, b) => b.year - a.year);
+  return NextResponse.json(projects);
+}
+
+// ── POST: Create or update a project ────────────────────────────────────────
+export async function POST(request: Request) {
+  if (!checkAuth(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -40,6 +106,7 @@ export async function POST(request: Request) {
   // Parse form data
   const formData = await request.formData();
 
+  const editSlug = formData.get("editSlug") as string | null; // If present, this is an update
   const title = formData.get("title") as string;
   const titleCy = formData.get("titleCy") as string;
   const client = formData.get("client") as string;
@@ -65,21 +132,30 @@ export async function POST(request: Request) {
     );
   }
 
-  const slug = slugify(title);
   const caseStudiesDir = path.join(process.cwd(), "content/case-studies");
   const imagesDir = path.join(process.cwd(), "public/images/work");
 
-  // Check if slug already exists
+  // Determine slug: use editSlug for updates, generate new for creates
+  const slug = editSlug || slugify(title);
   const mdxPath = path.join(caseStudiesDir, `${slug}.mdx`);
-  if (fs.existsSync(mdxPath)) {
+
+  // For new projects, check duplicate
+  if (!editSlug && fs.existsSync(mdxPath)) {
     return NextResponse.json(
       { error: `A project with slug "${slug}" already exists.` },
       { status: 409 }
     );
   }
 
-  // Save hero image
+  // Read existing heroImage path if updating (preserve if no new image uploaded)
   let heroImagePath = `/images/work/${slug}-hero.jpg`;
+  if (editSlug && fs.existsSync(mdxPath)) {
+    const raw = fs.readFileSync(mdxPath, "utf-8");
+    const { data } = matter(raw);
+    if (data.heroImage) heroImagePath = data.heroImage;
+  }
+
+  // Save hero image if new one uploaded
   if (heroImageFile && heroImageFile.size > 0) {
     const ext = heroImageFile.name.split(".").pop() || "jpg";
     heroImagePath = `/images/work/${slug}-hero.${ext}`;
@@ -164,5 +240,5 @@ export async function POST(request: Request) {
   fs.mkdirSync(caseStudiesDir, { recursive: true });
   fs.writeFileSync(mdxPath, lines.join("\n"), "utf-8");
 
-  return NextResponse.json({ success: true, slug });
+  return NextResponse.json({ success: true, slug, updated: !!editSlug });
 }
