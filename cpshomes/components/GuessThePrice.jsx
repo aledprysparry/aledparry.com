@@ -1641,7 +1641,14 @@ export default function GuessThePrice({ displayMode = false }) {
   const animRef = useRef(null);
   const animProgressRef = useRef(0);
   const saveTimerRef = useRef(null);
-  const [ratio, setRatio] = useState("16:9");
+  const [ratio, setRatio] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("gtp_ratio");
+      if (saved && RATIOS[saved]) return saved;
+    }
+    return "16:9";
+  });
+  useEffect(() => { localStorage.setItem("gtp_ratio", ratio); }, [ratio]);
   const [activeAsset, setActiveAsset] = useState("intro");
   const [currentRound, setCurrentRound] = useState(0);
   const [scores, setScores] = useState([0, 0]);
