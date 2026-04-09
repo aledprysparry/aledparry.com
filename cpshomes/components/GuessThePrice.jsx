@@ -3114,6 +3114,40 @@ export default function GuessThePrice({ displayMode = false }) {
                     } catch {}
                   }
                 }
+                // Download floorplan and map as final images
+                const extraImages = [
+                  p.floorplan ? { url: p.floorplan, label: "floorplan" } : null,
+                  p.mapUrl ? { url: p.mapUrl, label: "map" } : (p.mapFallbackUrl ? { url: p.mapFallbackUrl, label: "map" } : null),
+                ].filter(Boolean);
+                for (const extra of extraImages) {
+                  try {
+                    setSaveStatus(`Downloading ${extra.label}…`);
+                    await new Promise(r => setTimeout(r, 300));
+                    const imgRes = await fetch(`/api/gtp/scrape?img=${encodeURIComponent(extra.url)}`);
+                    if (!imgRes.ok) continue;
+                    const imgBlob = await imgRes.blob();
+                    if (imgBlob.size < 5000) continue; // very small = failed
+                    const form = new FormData();
+                    form.append("photo", imgBlob, "photo.jpg");
+                    form.append("episodeId", String(fetchEpId));
+                    form.append("round", String(fetchRoundIdx));
+                    form.append("index", String(Date.now()));
+                    const upRes = await fetch("/api/gtp/photo", { method: "POST", body: form });
+                    const upData = await upRes.json();
+                    if (upData.url) {
+                      setEpisodes(prev => prev.map(ep => {
+                        if (ep.id !== fetchEpId) return ep;
+                        const rounds = [...ep.rounds];
+                        if (rounds[fetchRoundIdx]) {
+                          rounds[fetchRoundIdx] = { ...rounds[fetchRoundIdx], photos: [...(rounds[fetchRoundIdx].photos || []), upData.url] };
+                        }
+                        return { ...ep, rounds };
+                      }));
+                      setDirty(true);
+                      getCachedImage(upData.url);
+                    }
+                  } catch {}
+                }
                 setSaveStatus(`Property loaded ✓`);
                 setTimeout(() => setSaveStatus(""), 3000);
               } catch (err) {

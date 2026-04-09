@@ -125,6 +125,24 @@ function parseRightmove(html: string) {
           if (!byHash[hash] || u.length > byHash[hash].length) byHash[hash] = u;
         }
         property.photos = Object.values(byHash).slice(0, 30);
+
+        // Floorplan — append as last-but-one photo
+        if (pd.floorplans && pd.floorplans.length > 0) {
+          const fp = pd.floorplans[0];
+          const fpUrl = fp.url || fp.srcUrl || "";
+          if (fpUrl) property.floorplan = fpUrl;
+        }
+
+        // Location — generate static map URL from coordinates
+        if (pd.location?.latitude && pd.location?.longitude) {
+          const lat = pd.location.latitude;
+          const lng = pd.location.longitude;
+          const zoom = pd.location.zoomLevel || 15;
+          // OpenStreetMap static map via third-party tile server (no API key needed)
+          property.mapUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=1200&height=800&center=lonlat:${lng},${lat}&zoom=${zoom}&marker=lonlat:${lng},${lat};color:%23FB8770;size:large&apiKey=demo`;
+          // Fallback: use a simple OSM embed screenshot approach
+          property.mapFallbackUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=${zoom}&size=1200x800&markers=${lat},${lng},ol-marker`;
+        }
       }
     } catch {}
   }
