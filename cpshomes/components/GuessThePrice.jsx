@@ -3135,11 +3135,11 @@ export default function GuessThePrice({ displayMode = false }) {
                 for (const extra of extraImages) {
                   try {
                     setSaveStatus(`Downloading ${extra.label}…`);
-                    await new Promise(r => setTimeout(r, 300));
+                    await new Promise(r => setTimeout(r, 500));
                     const imgRes = await fetch(`/api/gtp/scrape?img=${encodeURIComponent(extra.url)}`);
-                    if (!imgRes.ok) continue;
+                    if (!imgRes.ok) { setSaveStatus(`${extra.label} failed (${imgRes.status})`); await new Promise(r => setTimeout(r, 1000)); continue; }
                     const imgBlob = await imgRes.blob();
-                    if (imgBlob.size < 5000) continue;
+                    if (imgBlob.size < 5000) { setSaveStatus(`${extra.label} too small`); await new Promise(r => setTimeout(r, 1000)); continue; }
                     const form = new FormData();
                     form.append("photo", imgBlob, "photo.jpg");
                     form.append("episodeId", String(fetchEpId));
