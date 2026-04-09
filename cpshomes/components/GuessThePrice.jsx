@@ -691,18 +691,11 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.globalAlpha = alpha;
 
     if (isFloorplan) {
-      // Dark background with white card for floorplan
-      drawBg(ctx, W, H);
-      const pad = W * 0.12; // 12% from each edge
-      const cardX = pad, cardY = pad;
-      const cardW = W - pad * 2, cardH = H - pad * 2;
-      // White card with rounded corners
+      // White background with padding
       ctx.fillStyle = "#ffffff";
-      roundRect(ctx, cardX, cardY, cardW, cardH, 20);
-      ctx.fill();
-      // Contain-fit floorplan inside the card with generous inner padding
-      const innerPad = W * 0.10;
-      const fitScale = Math.min((cardW - innerPad * 2) / iw, (cardH - innerPad * 2) / ih);
+      ctx.fillRect(0, 0, W, H);
+      const pad = W * 0.15;
+      const fitScale = Math.min((W - pad * 2) / iw, (H - pad * 2) / ih);
       const dw = iw * fitScale, dh = ih * fitScale;
       ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
     } else {
