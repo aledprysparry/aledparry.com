@@ -3432,9 +3432,10 @@ export default function GuessThePrice({ displayMode = false }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Use admin's canvas dimensions for pixel-identical rendering
-    const cW = ds.canvasW || 1920;
-    const cH = ds.canvasH || 1080;
+    // Render at screen dimensions — fills display with no bars or stretching
+    const dpr = window.devicePixelRatio || 1;
+    const cW = Math.round(window.innerWidth * dpr);
+    const cH = Math.round(window.innerHeight * dpr);
     if (canvas.width !== cW || canvas.height !== cH) { canvas.width = cW; canvas.height = cH; }
 
     const drawFn = DRAW_FNS[ds.asset];
@@ -3558,7 +3559,7 @@ export default function GuessThePrice({ displayMode = false }) {
         onMouseMove={dispShowUIBriefly} onMouseDown={(e) => { if (e.detail > 0 && !("ontouchstart" in window)) dispHandleTap(); }}
         onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
         <canvas ref={canvasRef}
-          style={{ width: "100vw", height: "100dvh", display: "block" }} />
+          style={{ position: "absolute", top: 0, left: 0, width: "100vw", height: "100dvh", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
