@@ -683,24 +683,23 @@ function drawProperty(ctx, W, H, S, progress) {
     if (!img || !img.complete || !img.naturalWidth) return;
     const iw = img.naturalWidth, ih = img.naturalHeight;
 
-    // Detect floorplan: check stored index OR detect by sampling the image corners
-    // (floorplans have light/white backgrounds; property photos have dark/coloured pixels)
+    // Detect floorplan: stored index OR auto-detect by sampling image corners
     let isFloorplan = photoI === (rd?.floorplanIndex ?? -1);
-    if (!isFloorplan && photoI >= 0) {
-      // Auto-detect: sample 4 corners of the image — if all are very light, it's a floorplan
+    if (!isFloorplan) {
       try {
-        const testCanvas = document.createElement("canvas");
-        testCanvas.width = iw; testCanvas.height = ih;
-        const tc = testCanvas.getContext("2d");
-        tc.drawImage(img, 0, 0);
-        const samples = [
-          tc.getImageData(5, 5, 1, 1).data,
-          tc.getImageData(iw - 5, 5, 1, 1).data,
-          tc.getImageData(5, ih - 5, 1, 1).data,
-          tc.getImageData(iw - 5, ih - 5, 1, 1).data,
-        ];
-        const allLight = samples.every(d => d[0] > 200 && d[1] > 200 && d[2] > 200);
-        if (allLight) isFloorplan = true;
+        const tc = document.createElement("canvas");
+        tc.width = 10; tc.height = 10;
+        const tx = tc.getContext("2d");
+        // Sample top-left corner
+        tx.drawImage(img, 0, 0, 10, 10, 0, 0, 10, 10);
+        const tl = tx.getImageData(1, 1, 1, 1).data;
+        // Sample bottom-right corner
+        tx.drawImage(img, iw - 10, ih - 10, 10, 10, 0, 0, 10, 10);
+        const br = tx.getImageData(1, 1, 1, 1).data;
+        // Both corners light = floorplan
+        if (tl[0] > 200 && tl[1] > 200 && tl[2] > 200 && br[0] > 200 && br[1] > 200 && br[2] > 200) {
+          isFloorplan = true;
+        }
       } catch {}
     }
 

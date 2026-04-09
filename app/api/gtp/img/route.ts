@@ -18,6 +18,7 @@ export async function GET(req: Request) {
     const headers = new Headers();
     headers.set("Content-Type", result.blob.contentType || "image/jpeg");
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    headers.set("Access-Control-Allow-Origin", "*");
 
     return new NextResponse(result.stream, { headers });
   } catch {
