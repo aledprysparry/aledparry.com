@@ -1460,7 +1460,7 @@ function drawRoundTitle(ctx, W, H, S, progress) {
   ctx.fillStyle = GAME.goldLight;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("ROUND", W / 2, centerY - sz(W, H, 0.10));
+  ctx.fillText("ROUND", W / 2, centerY - sz(W, H, 0.14));
   ctx.restore();
 
   // Giant round number — scales in with elastic
