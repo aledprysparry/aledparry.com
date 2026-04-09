@@ -133,10 +133,13 @@ function parseRightmove(html: string) {
           if (fpUrl) property.floorplan = fpUrl;
         }
 
-        // Location coordinates (stored for future use — no reliable free static map API)
+        // Location — Mapbox Static Images API (50K free/month)
         if (pd.location?.latitude && pd.location?.longitude) {
-          property.lat = pd.location.latitude;
-          property.lng = pd.location.longitude;
+          const lat = pd.location.latitude;
+          const lng = pd.location.longitude;
+          const zoom = Math.min(pd.location.zoomLevel || 15, 16);
+          const mbToken = process.env.MAPBOX_TOKEN || "pk.eyJ1IjoicGFycnlhbGVkIiwiYSI6ImdUamlQOEEifQ.6Iz2eiYuDt5fpQk_kfhhrw";
+          property.mapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-l+FB8770(${lng},${lat})/${lng},${lat},${zoom},0/1200x800@2x?access_token=${mbToken}`;
         }
       }
     } catch {}
