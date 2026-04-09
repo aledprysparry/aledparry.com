@@ -606,7 +606,7 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.restore();
 
     // Role badge — pill with label
-    const badgeY = nameY + nameS * 1.4;
+    const badgeY = nameY + nameS * 1.8;
     const badgeS = sz(W, H, 0.015);
     const badgeText = isGuesser ? "GUESSING" : isPropertyAgent ? "PROPERTY CHOICE" : "";
     if (badgeText) {
