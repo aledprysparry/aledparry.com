@@ -1329,6 +1329,22 @@ function drawTimer(ctx, W, H, S, progress) {
 
 function drawReveal(ctx, W, H, S, progress) {
   drawBg(ctx, W, H);
+  // Property hero photo as subtle background
+  const revRd = EPISODE.rounds ? EPISODE.rounds[(S.propRound || 1) - 1] : null;
+  const heroSrc = revRd?.photos?.[revRd.heroPhotoIndex || 0];
+  const heroImg = heroSrc ? getCachedImage(heroSrc) : null;
+  if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
+    const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
+    const scale = Math.max(W / iw, H / ih);
+    const dw = iw * scale, dh = ih * scale;
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.drawImage(heroImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    ctx.restore();
+    // Darken overlay to keep text readable
+    ctx.fillStyle = "rgba(10,22,40,0.7)";
+    ctx.fillRect(0, 0, W, H);
+  }
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
   const cl = S.revealLetter || "B";
