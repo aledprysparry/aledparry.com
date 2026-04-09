@@ -1904,13 +1904,13 @@ export default function GuessThePrice({ displayMode = false }) {
         setLastPushOk(true);
         setLastPushTs(Date.now());
       }).catch(() => {
-        setLiveConnected(false);
+        // Don't disconnect — just show error on status dot, auto-sync keeps trying
         setLastPushOk(false);
         setLastPushTs(Date.now());
       });
       if (!liveConnected) setLiveConnected(true);
     } catch {
-      setLiveConnected(false);
+      // Don't disconnect on error
       setLastPushOk(false);
       setLastPushTs(Date.now());
     }
