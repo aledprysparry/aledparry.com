@@ -683,25 +683,7 @@ function drawProperty(ctx, W, H, S, progress) {
     if (!img || !img.complete || !img.naturalWidth) return;
     const iw = img.naturalWidth, ih = img.naturalHeight;
 
-    // Detect floorplan: stored index OR auto-detect by sampling image corners
-    let isFloorplan = photoI === (rd?.floorplanIndex ?? -1);
-    if (!isFloorplan) {
-      try {
-        const tc = document.createElement("canvas");
-        tc.width = 10; tc.height = 10;
-        const tx = tc.getContext("2d");
-        // Sample top-left corner
-        tx.drawImage(img, 0, 0, 10, 10, 0, 0, 10, 10);
-        const tl = tx.getImageData(1, 1, 1, 1).data;
-        // Sample bottom-right corner
-        tx.drawImage(img, iw - 10, ih - 10, 10, 10, 0, 0, 10, 10);
-        const br = tx.getImageData(1, 1, 1, 1).data;
-        // Both corners light = floorplan
-        if (tl[0] > 200 && tl[1] > 200 && tl[2] > 200 && br[0] > 200 && br[1] > 200 && br[2] > 200) {
-          isFloorplan = true;
-        }
-      } catch {}
-    }
+    const isFloorplan = photoI === (rd?.floorplanIndex ?? -1);
 
     ctx.save();
     ctx.globalAlpha = alpha;
