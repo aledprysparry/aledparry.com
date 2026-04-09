@@ -133,13 +133,10 @@ function parseRightmove(html: string) {
           if (fpUrl) property.floorplan = fpUrl;
         }
 
-        // Location — generate static map URL from coordinates
+        // Location coordinates (stored for future use — no reliable free static map API)
         if (pd.location?.latitude && pd.location?.longitude) {
-          const lat = pd.location.latitude;
-          const lng = pd.location.longitude;
-          const zoom = pd.location.zoomLevel || 15;
-          // OpenStreetMap static map (no API key needed)
-          property.mapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=${zoom}&size=1200x800&markers=${lat},${lng},ol-marker`;
+          property.lat = pd.location.latitude;
+          property.lng = pd.location.longitude;
         }
       }
     } catch {}
