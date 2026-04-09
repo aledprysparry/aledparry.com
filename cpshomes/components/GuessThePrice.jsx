@@ -1077,7 +1077,7 @@ function drawOptions(ctx, W, H, S, progress) {
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(`ROUND ${S.propRound || 1}  \u00b7  ${S.optionLocation || ""}`, W / 2, headerY);
+  ctx.fillText(`ROUND ${S.propRound || 1}  \u00b7  ${S.propAddress || ""}`, W / 2, headerY);
   ctx.restore();
 
   const questionP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.05) / 0.3)));
