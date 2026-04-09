@@ -1338,11 +1338,11 @@ function drawReveal(ctx, W, H, S, progress) {
     const scale = Math.max(W / iw, H / ih);
     const dw = iw * scale, dh = ih * scale;
     ctx.save();
-    ctx.globalAlpha = 0.10;
+    ctx.globalAlpha = 0.20;
     ctx.drawImage(heroImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
     ctx.restore();
     // Darken overlay to keep text readable
-    ctx.fillStyle = "rgba(10,22,40,0.7)";
+    ctx.fillStyle = "rgba(10,22,40,0.6)";
     ctx.fillRect(0, 0, W, H);
   }
   const ar = aspect(W, H);
