@@ -3558,7 +3558,7 @@ export default function GuessThePrice({ displayMode = false }) {
         onMouseMove={dispShowUIBriefly} onMouseDown={(e) => { if (e.detail > 0 && !("ontouchstart" in window)) dispHandleTap(); }}
         onTouchStart={dispHandleTouchStart} onTouchEnd={dispHandleTouchEnd}>
         <canvas ref={canvasRef}
-          style={{ width: dispCssW, height: dispCssH, display: "block" }} />
+          style={{ width: "100vw", height: "100dvh", display: "block" }} />
         {!displayState && (
           <div style={{ position: "absolute", color: "rgba(255,255,255,0.3)", fontFamily: DS.font, fontSize: 14 }}>
             Waiting for controller...
