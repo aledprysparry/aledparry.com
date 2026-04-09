@@ -694,7 +694,7 @@ function drawProperty(ctx, W, H, S, progress) {
       // White background with padding — floorplans are white line drawings
       ctx.fillStyle = "#f5f5f0";
       ctx.fillRect(0, 0, W, H);
-      const pad = 200;
+      const pad = 350;
       const fitScale = Math.min((W - pad * 2) / iw, (H - pad * 2) / ih);
       const dw = iw * fitScale, dh = ih * fitScale;
       ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
