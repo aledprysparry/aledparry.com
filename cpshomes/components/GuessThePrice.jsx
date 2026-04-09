@@ -700,8 +700,8 @@ function drawProperty(ctx, W, H, S, progress) {
       ctx.fillStyle = "#ffffff";
       roundRect(ctx, cardX, cardY, cardW, cardH, 20);
       ctx.fill();
-      // Contain-fit floorplan inside the card with inner padding
-      const innerPad = W * 0.04;
+      // Contain-fit floorplan inside the card with generous inner padding
+      const innerPad = W * 0.10;
       const fitScale = Math.min((cardW - innerPad * 2) / iw, (cardH - innerPad * 2) / ih);
       const dw = iw * fitScale, dh = ih * fitScale;
       ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
