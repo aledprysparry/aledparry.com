@@ -678,20 +678,37 @@ function drawProperty(ctx, W, H, S, progress) {
   const numPhotos = Math.max(1, photos.length);
 
   // Helper: draw a single photo cover-fit with Ken Burns zoom
-  const floorplanIdx = rd?.floorplanIndex ?? -1;
-  const mapIdx = rd?.mapIndex ?? -1;
   const drawPhoto = (src, localP, alpha, photoI) => {
     const img = src ? getCachedImage(src) : null;
     if (!img || !img.complete || !img.naturalWidth) return;
     const iw = img.naturalWidth, ih = img.naturalHeight;
-    const isFloorplan = photoI === floorplanIdx;
-    const isMap = photoI === mapIdx;
+
+    // Detect floorplan: check stored index OR detect by sampling the image corners
+    // (floorplans have light/white backgrounds; property photos have dark/coloured pixels)
+    let isFloorplan = photoI === (rd?.floorplanIndex ?? -1);
+    if (!isFloorplan && photoI >= 0) {
+      // Auto-detect: sample 4 corners of the image — if all are very light, it's a floorplan
+      try {
+        const testCanvas = document.createElement("canvas");
+        testCanvas.width = iw; testCanvas.height = ih;
+        const tc = testCanvas.getContext("2d");
+        tc.drawImage(img, 0, 0);
+        const samples = [
+          tc.getImageData(5, 5, 1, 1).data,
+          tc.getImageData(iw - 5, 5, 1, 1).data,
+          tc.getImageData(5, ih - 5, 1, 1).data,
+          tc.getImageData(iw - 5, ih - 5, 1, 1).data,
+        ];
+        const allLight = samples.every(d => d[0] > 200 && d[1] > 200 && d[2] > 200);
+        if (allLight) isFloorplan = true;
+      } catch {}
+    }
 
     ctx.save();
     ctx.globalAlpha = alpha;
 
     if (isFloorplan) {
-      // White background with padding
+      // White background with generous padding
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, W, H);
       const pad = W * 0.15;
