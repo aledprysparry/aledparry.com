@@ -678,16 +678,33 @@ function drawProperty(ctx, W, H, S, progress) {
   const numPhotos = Math.max(1, photos.length);
 
   // Helper: draw a single photo cover-fit with Ken Burns zoom
-  const drawPhoto = (src, localP, alpha) => {
+  const floorplanIdx = rd?.floorplanIndex ?? -1;
+  const mapIdx = rd?.mapIndex ?? -1;
+  const drawPhoto = (src, localP, alpha, photoI) => {
     const img = src ? getCachedImage(src) : null;
     if (!img || !img.complete || !img.naturalWidth) return;
     const iw = img.naturalWidth, ih = img.naturalHeight;
-    const zoomScale = 1.0 + 0.04 * localP;
-    const scale = Math.max(W / iw, H / ih) * zoomScale;
-    const dw = iw * scale, dh = ih * scale;
+    const isFloorplan = photoI === floorplanIdx;
+    const isMap = photoI === mapIdx;
+
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+
+    if (isFloorplan) {
+      // White background with padding — floorplans are white line drawings
+      ctx.fillStyle = "#f5f5f0";
+      ctx.fillRect(0, 0, W, H);
+      const pad = Math.min(W, H) * 0.08;
+      const fitScale = Math.min((W - pad * 2) / iw, (H - pad * 2) / ih);
+      const dw = iw * fitScale, dh = ih * fitScale;
+      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    } else {
+      // Normal cover-fit with Ken Burns zoom
+      const zoomScale = 1.0 + 0.04 * localP;
+      const scale = Math.max(W / iw, H / ih) * zoomScale;
+      const dw = iw * scale, dh = ih * scale;
+      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    }
     ctx.restore();
   };
 
@@ -698,18 +715,14 @@ function drawProperty(ctx, W, H, S, progress) {
   const crossfadeDuration = 0.15; // 15% of each photo's slot = smooth crossfade
 
   if (numPhotos <= 1) {
-    // Single photo — just draw it
-    drawPhoto(photos[0] || photos[rd?.heroPhotoIndex || 0], p, 1);
+    drawPhoto(photos[0] || photos[rd?.heroPhotoIndex || 0], p, 1, 0);
   } else {
-    // Multi-photo: crossfade between current and previous
     if (photoIdx > 0 && photoLocalP < crossfadeDuration) {
-      // Outgoing photo (fading out)
       const fadeOut = 1 - easeOutExpo(photoLocalP / crossfadeDuration);
-      drawPhoto(photos[photoIdx - 1], 1, fadeOut);
+      drawPhoto(photos[photoIdx - 1], 1, fadeOut, photoIdx - 1);
     }
-    // Current photo (fading in, or fully visible)
     const fadeIn = photoIdx === 0 ? 1 : (photoLocalP < crossfadeDuration ? easeOutExpo(photoLocalP / crossfadeDuration) : 1);
-    drawPhoto(photos[photoIdx], photoLocalP, fadeIn);
+    drawPhoto(photos[photoIdx], photoLocalP, fadeIn, photoIdx);
   }
   // Darken bottom for readability
   const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
@@ -3114,10 +3127,10 @@ export default function GuessThePrice({ displayMode = false }) {
                     } catch {}
                   }
                 }
-                // Download floorplan and map as final images
+                // Download floorplan and map as final images, track their indices
                 const extraImages = [
-                  p.floorplan ? { url: p.floorplan, label: "floorplan" } : null,
-                  p.mapUrl ? { url: p.mapUrl, label: "map" } : (p.mapFallbackUrl ? { url: p.mapFallbackUrl, label: "map" } : null),
+                  p.floorplan ? { url: p.floorplan, label: "floorplan", type: "floorplan" } : null,
+                  p.mapUrl ? { url: p.mapUrl, label: "map", type: "map" } : (p.mapFallbackUrl ? { url: p.mapFallbackUrl, label: "map", type: "map" } : null),
                 ].filter(Boolean);
                 for (const extra of extraImages) {
                   try {
@@ -3126,7 +3139,7 @@ export default function GuessThePrice({ displayMode = false }) {
                     const imgRes = await fetch(`/api/gtp/scrape?img=${encodeURIComponent(extra.url)}`);
                     if (!imgRes.ok) continue;
                     const imgBlob = await imgRes.blob();
-                    if (imgBlob.size < 5000) continue; // very small = failed
+                    if (imgBlob.size < 5000) continue;
                     const form = new FormData();
                     form.append("photo", imgBlob, "photo.jpg");
                     form.append("episodeId", String(fetchEpId));
@@ -3139,7 +3152,12 @@ export default function GuessThePrice({ displayMode = false }) {
                         if (ep.id !== fetchEpId) return ep;
                         const rounds = [...ep.rounds];
                         if (rounds[fetchRoundIdx]) {
-                          rounds[fetchRoundIdx] = { ...rounds[fetchRoundIdx], photos: [...(rounds[fetchRoundIdx].photos || []), upData.url] };
+                          const newPhotos = [...(rounds[fetchRoundIdx].photos || []), upData.url];
+                          const update = { ...rounds[fetchRoundIdx], photos: newPhotos };
+                          // Tag floorplan/map index for special rendering
+                          if (extra.type === "floorplan") update.floorplanIndex = newPhotos.length - 1;
+                          if (extra.type === "map") update.mapIndex = newPhotos.length - 1;
+                          rounds[fetchRoundIdx] = update;
                         }
                         return { ...ep, rounds };
                       }));
