@@ -138,10 +138,8 @@ function parseRightmove(html: string) {
           const lat = pd.location.latitude;
           const lng = pd.location.longitude;
           const zoom = pd.location.zoomLevel || 15;
-          // OpenStreetMap static map via third-party tile server (no API key needed)
-          property.mapUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=1200&height=800&center=lonlat:${lng},${lat}&zoom=${zoom}&marker=lonlat:${lng},${lat};color:%23FB8770;size:large&apiKey=demo`;
-          // Fallback: use a simple OSM embed screenshot approach
-          property.mapFallbackUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=${zoom}&size=1200x800&markers=${lat},${lng},ol-marker`;
+          // OpenStreetMap static map (no API key needed)
+          property.mapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=${zoom}&size=1200x800&markers=${lat},${lng},ol-marker`;
         }
       }
     } catch {}

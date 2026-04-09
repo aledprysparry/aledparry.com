@@ -3130,7 +3130,7 @@ export default function GuessThePrice({ displayMode = false }) {
                 // Download floorplan and map as final images, track their indices
                 const extraImages = [
                   p.floorplan ? { url: p.floorplan, label: "floorplan", type: "floorplan" } : null,
-                  p.mapUrl ? { url: p.mapUrl, label: "map", type: "map" } : (p.mapFallbackUrl ? { url: p.mapFallbackUrl, label: "map", type: "map" } : null),
+                  p.mapUrl ? { url: p.mapUrl, label: "map", type: "map" } : null,
                 ].filter(Boolean);
                 for (const extra of extraImages) {
                   try {
