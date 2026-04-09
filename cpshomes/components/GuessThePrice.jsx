@@ -2998,36 +2998,7 @@ export default function GuessThePrice({ displayMode = false }) {
           <div style={{ ...label(), marginTop: DS.md }}>Location Label</div>
           <input style={inputS()} value={S.optionLocation} onChange={e => { updateS("optionLocation", e.target.value); updateRoundField("location", e.target.value); }} />
 
-          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>ROLES</div>
-          <div style={{ display: "flex", gap: DS.sm, alignItems: "center", marginBottom: DS.md }}>
-            <div style={{ flex: 1, fontSize: DS.fsXs, color: DS.textSecondary }}>
-              <span style={{ fontWeight: 700, color: DS.textPrimary }}>{rd.propertyAgent}</span> chose property
-            </div>
-            <button onClick={() => {
-              // Swap this round
-              const newPA = rd.guesser, newG = rd.propertyAgent;
-              updateS("lockAgent", newG);
-              // Update all rounds: alternate from current round onwards
-              setEpisodes(prev => prev.map(ep => {
-                if (ep.id !== activeEpisodeId) return ep;
-                const rounds = ep.rounds.map((r, i) => {
-                  if (i < currentRound) return r; // leave earlier rounds unchanged
-                  const offset = i - currentRound;
-                  // Alternate every 3 rounds (same pattern as default)
-                  const pa = offset % 6 < 3 ? newPA : newG;
-                  const gu = offset % 6 < 3 ? newG : newPA;
-                  return { ...r, propertyAgent: pa, guesser: gu };
-                });
-                return { ...ep, rounds };
-              }));
-              setDirty(true);
-            }} style={btn({ padding: "3px 10px", fontSize: DS.fsXs })}>Swap</button>
-            <div style={{ flex: 1, fontSize: DS.fsXs, color: DS.textSecondary, textAlign: "right" }}>
-              <span style={{ fontWeight: 700, color: GAME.gold }}>{rd.guesser}</span> guesses
-            </div>
-          </div>
-
-          <div style={{ ...sectionHead(), fontSize: DS.fsXs, color: GAME.gold }}>PROPERTY DETAILS</div>
+          <div style={{ ...sectionHead(), marginTop: DS.xl, fontSize: DS.fsXs, color: GAME.gold }}>PROPERTY DETAILS</div>
           <div style={{ display: "flex", gap: DS.sm, marginTop: DS.sm }}>
             <div style={{ flex: 1 }}>
               <div style={label()}>Beds</div>
@@ -3861,6 +3832,31 @@ export default function GuessThePrice({ displayMode = false }) {
                 <div style={{ fontSize: DS.fsXs, color: DS.textMuted, marginBottom: 2 }}>Agent 2</div>
                 <input style={inputS({ width: 110 })} value={episode.agents[1]} onChange={e => updateAgentName(1, e.target.value)} />
               </div>
+            </div>
+            <div style={{ ...sectionHead(), marginTop: DS.md, marginBottom: DS.xs }}>Who Goes First?</div>
+            <div style={{ display: "flex", gap: DS.sm, alignItems: "center", marginBottom: DS.md }}>
+              <span style={{ fontSize: DS.fsXs, color: DS.textSecondary }}>R1-3:</span>
+              <span style={{ fontSize: DS.fsXs, fontWeight: 700, color: GAME.gold }}>{episode.rounds[0]?.propertyAgent}</span>
+              <span style={{ fontSize: DS.fsXs, color: DS.textMuted }}>picks →</span>
+              <span style={{ fontSize: DS.fsXs, fontWeight: 700, color: DS.textPrimary }}>{episode.rounds[0]?.guesser}</span>
+              <span style={{ fontSize: DS.fsXs, color: DS.textMuted }}>guesses</span>
+              <button onClick={() => {
+                const a1 = episode.agents[0], a2 = episode.agents[1];
+                // Check current R1 pattern and flip it
+                const currentFirst = episode.rounds[0]?.propertyAgent;
+                const newFirst = currentFirst === a1 ? a2 : a1;
+                const newSecond = currentFirst === a1 ? a1 : a2;
+                setEpisodes(prev => prev.map(ep => {
+                  if (ep.id !== activeEpisodeId) return ep;
+                  const rounds = ep.rounds.map((r, i) => {
+                    const pa = i < 3 ? newFirst : newSecond;
+                    const gu = i < 3 ? newSecond : newFirst;
+                    return { ...r, propertyAgent: pa, guesser: gu };
+                  });
+                  return { ...ep, rounds };
+                }));
+                setDirty(true);
+              }} style={btn({ padding: "3px 10px", fontSize: DS.fsXs })}>Swap</button>
             </div>
             <div style={{ display: "flex", gap: DS.xs }}>
               <button onClick={() => duplicateEpisode(episode)}
