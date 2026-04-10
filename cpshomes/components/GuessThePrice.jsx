@@ -3615,6 +3615,18 @@ export default function GuessThePrice({ displayMode = false }) {
               ))}
             </div>
 
+            {/* Lock-in letter selector (lockin step only) */}
+            {currentFlowAsset === "lockin" && (
+              <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12 }}>
+                {["A", "B", "C"].map(l => (
+                  <button key={l} onClick={() => { updateS("lockLetter", l); pushToLiveRef.current?.(); }}
+                    style={{ padding: `${DS.sm}px ${DS.xl}px`, fontSize: 18, fontWeight: 800, border: "none", borderRadius: DS.rSm, minWidth: 60, minHeight: 48, cursor: "pointer",
+                      background: S.lockLetter === l ? ({ A: GAME.optionA, B: GAME.optionB, C: GAME.optionC }[l]) : "rgba(255,255,255,0.15)",
+                      color: "#fff" }}>{l}</button>
+                ))}
+              </div>
+            )}
+
             {/* Nav + Scores */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
               <button onClick={liveGoBack} style={{ padding: `${DS.sm}px ${DS.lg}px`, fontSize: DS.fsMd, fontWeight: 700, border: "none", borderRadius: DS.rSm, background: "rgba(255,255,255,0.1)", color: DS.textPrimary, cursor: "pointer" }}>Back</button>
