@@ -3983,8 +3983,10 @@ export default function GuessThePrice({ displayMode = false }) {
                 onDragLeave={e => { e.currentTarget.style.borderLeft = "2px solid transparent"; }}
                 onDrop={e => { e.preventDefault(); e.currentTarget.style.borderLeft = "2px solid transparent"; if (dragRoundIdx !== null) reorderRounds(dragRoundIdx, i); setDragRoundIdx(null); }}
                 onDragEnd={() => setDragRoundIdx(null)}
-                style={btn({ padding: "6px 14px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: dragRoundIdx === i ? 0.4 : empty ? 0.4 : 1, cursor: "grab", letterSpacing: "0.05em", borderLeft: "2px solid transparent" })}>
-                R{i + 1}{!empty && <span onClick={(e) => {
+                style={btn({ padding: "6px 10px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: dragRoundIdx === i ? 0.4 : empty ? 0.4 : 1, cursor: "grab", letterSpacing: "0.05em", borderLeft: "2px solid transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, minWidth: 80 })}>
+                <span>R{i + 1}</span>
+                {!empty && <span style={{ fontSize: 8, opacity: 0.6, fontWeight: 400, maxWidth: 70, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rd.address ? rd.address.split(",")[0] : ""}</span>}
+                {!empty && <span onClick={(e) => {
                   e.stopPropagation();
                   const ri = i;
                   setEpisodes(prev => prev.map(ep => {
