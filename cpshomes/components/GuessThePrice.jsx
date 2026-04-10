@@ -2237,6 +2237,21 @@ export default function GuessThePrice({ displayMode = false }) {
     }
   }, [ratio]);
 
+  // Auto-score when scoreboard is shown (any mode — editor, live, or sequence)
+  const lastScoredRoundRef = useRef(-1);
+  useEffect(() => {
+    if (activeAsset !== "scoreboard") return;
+    // Only score once per round (prevent double-scoring on re-renders)
+    if (lastScoredRoundRef.current === currentRound) return;
+    const rd = episode.rounds[currentRound];
+    if (rd && S.lockLetter && rd.correctLetter && S.lockLetter === rd.correctLetter) {
+      const guesserIdx = episode.agents.indexOf(rd.guesser);
+      if (guesserIdx >= 0) { addScore(guesserIdx); lastScoredRoundRef.current = currentRound; }
+    } else if (rd && S.lockLetter) {
+      lastScoredRoundRef.current = currentRound; // wrong answer — mark as scored so we don't retry
+    }
+  }, [activeAsset, currentRound]);
+
   // Auto-play entrance animations for ALL assets — matches /live behaviour
   const [sequenceMode, setSequenceMode] = useState(true);
   const sequenceRef = useRef(null);
@@ -2334,13 +2349,8 @@ export default function GuessThePrice({ displayMode = false }) {
                   if (p3 < 1) { animRef.current = requestAnimationFrame(tick3); }
                   else {
                     setIsPlaying(false);
-                    // Auto-score + show scoreboard after reveal
+                    // Show scoreboard after reveal (auto-score handled by useEffect)
                     sequenceRef.current = setTimeout(() => {
-                      const rd = episode.rounds[currentRound];
-                      if (rd && S.lockLetter && rd.correctLetter && S.lockLetter === rd.correctLetter) {
-                        const guesserIdx = episode.agents.indexOf(rd.guesser);
-                        if (guesserIdx >= 0) addScore(guesserIdx);
-                      }
                       setActiveAsset("scoreboard");
                       setAnimProgress(1);
                       // Draw scoreboard directly — renderRef still has stale activeAsset
@@ -2866,15 +2876,6 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // Asset cross-fade transition
   const transitionToAsset = (newAsset) => {
-    // Auto-score: when moving to scoreboard, award point if guesser got it right
-    if (newAsset === "scoreboard") {
-      const rd = episode.rounds[currentRound];
-      if (rd && S.lockLetter && rd.correctLetter && S.lockLetter === rd.correctLetter) {
-        // Find which agent is the guesser (index 0 or 1)
-        const guesserIdx = episode.agents.indexOf(rd.guesser);
-        if (guesserIdx >= 0) addScore(guesserIdx);
-      }
-    }
     const canvas = canvasRef.current;
     if (!canvas) { setActiveAsset(newAsset); return; }
     const r2 = RATIOS[ratio];
