@@ -1440,6 +1440,31 @@ function drawReveal(ctx, W, H, S, progress) {
       ctx.textAlign = "center";
       ctx.fillText("CORRECT PRICE", W / 2, centerY + sz(W, H, ar === "portrait" ? 0.26 : 0.23));
     }
+
+    // Result indicator — did they get it right?
+    if (rp > 0.75 && S.lockLetter) {
+      const resP = easeOutExpo(Math.min(1, (rp - 0.75) / 0.2));
+      const gotItRight = S.lockLetter === cl;
+      const resY = centerY + sz(W, H, ar === "portrait" ? 0.32 : 0.30);
+      const resSz = sz(W, H, 0.035) * (0.8 + 0.2 * easeOutBack(resP));
+      ctx.save();
+      ctx.globalAlpha = resP;
+      ctx.font = `800 ${Math.round(resSz)}px 'DM Sans', sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      if (gotItRight) {
+        ctx.shadowColor = BRAND.colorPositive;
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = BRAND.colorPositive;
+        ctx.fillText(`${S.lockAgent || "Agent"} GOT IT RIGHT! ✓`, W / 2, resY);
+      } else {
+        ctx.shadowColor = GAME.gold;
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = GAME.gold;
+        ctx.fillText(`${S.lockAgent || "Agent"} said ${S.lockLetter} — WRONG!`, W / 2, resY);
+      }
+      ctx.restore();
+    }
   }
 
   // Disclaimer
