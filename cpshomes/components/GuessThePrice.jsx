@@ -575,15 +575,11 @@ function drawIntro(ctx, W, H, S, progress) {
     // Name — BIG and bold
     const nameS = sz(W, H, ar === "portrait" ? 0.05 : 0.042);
     const nameY = y + headR + headR * 0.2;
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = 8;
     ctx.font = `800 ${nameS}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(name.toUpperCase(), x, nameY);
-    ctx.restore();
 
     // Role badge — pill with label
     const badgeY = nameY + nameS * 1.8;
