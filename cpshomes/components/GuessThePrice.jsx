@@ -3984,7 +3984,18 @@ export default function GuessThePrice({ displayMode = false }) {
                 onDrop={e => { e.preventDefault(); e.currentTarget.style.borderLeft = "2px solid transparent"; if (dragRoundIdx !== null) reorderRounds(dragRoundIdx, i); setDragRoundIdx(null); }}
                 onDragEnd={() => setDragRoundIdx(null)}
                 style={btn({ padding: "6px 14px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: dragRoundIdx === i ? 0.4 : empty ? 0.4 : 1, cursor: "grab", letterSpacing: "0.05em", borderLeft: "2px solid transparent" })}>
-                R{i + 1}{!empty && <span style={{ fontSize: DS.fsXs - 2, opacity: 0.5, marginLeft: 4 }}>{rd.propertyAgent?.charAt(0)}</span>}
+                R{i + 1}{!empty && <span onClick={(e) => {
+                  e.stopPropagation();
+                  const ri = i;
+                  setEpisodes(prev => prev.map(ep => {
+                    if (ep.id !== activeEpisodeId) return ep;
+                    const rounds = [...ep.rounds];
+                    const r = rounds[ri];
+                    if (r) rounds[ri] = { ...r, propertyAgent: r.guesser, guesser: r.propertyAgent };
+                    return { ...ep, rounds };
+                  }));
+                  setDirty(true);
+                }} style={{ fontSize: DS.fsXs - 2, opacity: 0.7, marginLeft: 4, cursor: "pointer", padding: "2px 4px", borderRadius: 3, background: "rgba(255,255,255,0.1)" }}>{rd.propertyAgent?.charAt(0)}</span>}
               </button>
             );
           })}
