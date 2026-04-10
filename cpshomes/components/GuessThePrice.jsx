@@ -1698,6 +1698,7 @@ export default function GuessThePrice({ displayMode = false }) {
   const [episodes, setEpisodes] = useState([]);
   const [activeEpisodeId, setActiveEpisodeId] = useState(null);
   const [showEpisodePanel, setShowEpisodePanel] = useState(false);
+  const [roundEditMode, setRoundEditMode] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
   const [dirty, setDirty] = useState(false);
 
@@ -3972,44 +3973,57 @@ export default function GuessThePrice({ displayMode = false }) {
 
       {/* ROUND BAR */}
       <div style={{ padding: `${DS.sm}px ${DS.xl}px`, borderBottom: `1px solid ${DS.borderSubtle}`, background: "rgba(11,29,58,0.4)", display: "flex", alignItems: "center", gap: DS.lg, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: DS.xs }}>
+        <div style={{ display: "flex", gap: DS.xs, alignItems: "center" }}>
           {episode.rounds.map((rd, i) => {
             const isActive = currentRound === i;
             const empty = isRoundEmpty(rd);
+            if (roundEditMode) {
+              // ── Edit mode: address + agent toggle + drag ──
+              return (
+                <div key={i} draggable
+                  onDragStart={() => setDragRoundIdx(i)}
+                  onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderLeft = `2px solid ${GAME.gold}`; }}
+                  onDragLeave={e => { e.currentTarget.style.borderLeft = "2px solid transparent"; }}
+                  onDrop={e => { e.preventDefault(); e.currentTarget.style.borderLeft = "2px solid transparent"; if (dragRoundIdx !== null) reorderRounds(dragRoundIdx, i); setDragRoundIdx(null); }}
+                  onDragEnd={() => setDragRoundIdx(null)}
+                  style={{ padding: "6px 10px", borderRadius: DS.rSm, background: isActive ? "rgba(251,135,112,0.15)" : DS.bgButton, border: `1px solid ${isActive ? "rgba(251,135,112,0.3)" : DS.borderSubtle}`, cursor: "grab", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 90, opacity: dragRoundIdx === i ? 0.4 : 1, borderLeft: "2px solid transparent" }}>
+                  <span style={{ fontSize: DS.fsXs, fontWeight: 700, color: isActive ? GAME.gold : DS.textPrimary }}>R{i + 1}</span>
+                  <span style={{ fontSize: 8, color: DS.textMuted, maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rd.address ? rd.address.split(",")[0] : "Empty"}</span>
+                  {!empty && <div onClick={() => {
+                    const ri = i;
+                    setEpisodes(prev => prev.map(ep => {
+                      if (ep.id !== activeEpisodeId) return ep;
+                      const rounds = [...ep.rounds];
+                      const r = rounds[ri];
+                      if (r) rounds[ri] = { ...r, propertyAgent: r.guesser, guesser: r.propertyAgent };
+                      return { ...ep, rounds };
+                    }));
+                    setDirty(true);
+                  }} style={{ display: "flex", cursor: "pointer", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)" }}>
+                    <span style={{ fontSize: 8, padding: "2px 6px", fontWeight: 700,
+                      background: rd.propertyAgent === episode.agents[0] ? GAME.gold : "transparent",
+                      color: rd.propertyAgent === episode.agents[0] ? GAME.navy : "rgba(255,255,255,0.4)",
+                    }}>{episode.agents[0].split(" ")[0]}</span>
+                    <span style={{ fontSize: 8, padding: "2px 6px", fontWeight: 700,
+                      background: rd.propertyAgent === episode.agents[1] ? GAME.gold : "transparent",
+                      color: rd.propertyAgent === episode.agents[1] ? GAME.navy : "rgba(255,255,255,0.4)",
+                    }}>{episode.agents[1].split(" ")[0]}</span>
+                  </div>}
+                </div>
+              );
+            }
+            // ── Compact mode: just R1-R6 ──
             return (
-              <button key={i} draggable onClick={() => loadRound(i + 1)}
-                onDragStart={() => setDragRoundIdx(i)}
-                onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderLeft = `2px solid ${GAME.gold}`; }}
-                onDragLeave={e => { e.currentTarget.style.borderLeft = "2px solid transparent"; }}
-                onDrop={e => { e.preventDefault(); e.currentTarget.style.borderLeft = "2px solid transparent"; if (dragRoundIdx !== null) reorderRounds(dragRoundIdx, i); setDragRoundIdx(null); }}
-                onDragEnd={() => setDragRoundIdx(null)}
-                style={btn({ padding: "6px 10px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: dragRoundIdx === i ? 0.4 : empty ? 0.4 : 1, cursor: "grab", letterSpacing: "0.05em", borderLeft: "2px solid transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, minWidth: 80 })}>
-                <span>R{i + 1}</span>
-                {!empty && <span style={{ fontSize: 8, opacity: 0.6, fontWeight: 400, maxWidth: 75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rd.address ? rd.address.split(",")[0] : ""}</span>}
-                {!empty && <div onClick={(e) => {
-                  e.stopPropagation();
-                  const ri = i;
-                  setEpisodes(prev => prev.map(ep => {
-                    if (ep.id !== activeEpisodeId) return ep;
-                    const rounds = [...ep.rounds];
-                    const r = rounds[ri];
-                    if (r) rounds[ri] = { ...r, propertyAgent: r.guesser, guesser: r.propertyAgent };
-                    return { ...ep, rounds };
-                  }));
-                  setDirty(true);
-                }} style={{ display: "flex", marginTop: 3, cursor: "pointer", borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)" }}>
-                  <span style={{ fontSize: 7, padding: "2px 6px", fontWeight: 700,
-                    background: rd.propertyAgent === episode.agents[0] ? GAME.gold : "transparent",
-                    color: rd.propertyAgent === episode.agents[0] ? GAME.navy : "rgba(255,255,255,0.4)",
-                  }}>{episode.agents[0].split(" ")[0]}</span>
-                  <span style={{ fontSize: 7, padding: "2px 6px", fontWeight: 700,
-                    background: rd.propertyAgent === episode.agents[1] ? GAME.gold : "transparent",
-                    color: rd.propertyAgent === episode.agents[1] ? GAME.navy : "rgba(255,255,255,0.4)",
-                  }}>{episode.agents[1].split(" ")[0]}</span>
-                </div>}
+              <button key={i} onClick={() => loadRound(i + 1)}
+                style={btn({ padding: "6px 14px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: empty ? 0.4 : 1, letterSpacing: "0.05em" })}>
+                R{i + 1}
               </button>
             );
           })}
+          <button onClick={() => setRoundEditMode(!roundEditMode)}
+            style={btn({ padding: "4px 8px", fontSize: 9, color: roundEditMode ? GAME.gold : DS.textMuted, background: roundEditMode ? "rgba(251,135,112,0.1)" : "transparent", border: `1px solid ${roundEditMode ? "rgba(251,135,112,0.2)" : DS.borderSubtle}` })}>
+            {roundEditMode ? "Done" : "Edit"}
+          </button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: DS.md, marginLeft: "auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: DS.xs }}>
