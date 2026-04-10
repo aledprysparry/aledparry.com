@@ -2020,7 +2020,7 @@ export default function GuessThePrice({ displayMode = false }) {
     ep.logoImage = episode.logoImage || "";
     ep.timerDuration = episode.timerDuration || 3;
     ep.photoDuration = episode.photoDuration || 5;
-    ep.rounds = Array.from({ length: 6 }, (_, i) => emptyRound(i + 1, ep.agents[i < 3 ? 0 : 1], ep.agents[i < 3 ? 1 : 0]));
+    ep.rounds = Array.from({ length: 6 }, (_, i) => emptyRound(i + 1, ep.agents[i % 2 === 0 ? 0 : 1], ep.agents[i % 2 === 0 ? 1 : 0]));
     setEpisodes(prev => [...prev, ep]);
     setDirty(true);
     switchToEpisode(ep);
@@ -3938,7 +3938,7 @@ export default function GuessThePrice({ displayMode = false }) {
             </div>
             <div style={{ ...sectionHead(), marginTop: DS.md, marginBottom: DS.xs }}>Who Goes First?</div>
             <div style={{ display: "flex", gap: DS.sm, alignItems: "center", marginBottom: DS.md }}>
-              <span style={{ fontSize: DS.fsXs, color: DS.textSecondary }}>R1-3:</span>
+              <span style={{ fontSize: DS.fsXs, color: DS.textSecondary }}>R1:</span>
               <span style={{ fontSize: DS.fsXs, fontWeight: 700, color: GAME.gold }}>{episode.rounds[0]?.propertyAgent}</span>
               <span style={{ fontSize: DS.fsXs, color: DS.textMuted }}>picks →</span>
               <span style={{ fontSize: DS.fsXs, fontWeight: 700, color: DS.textPrimary }}>{episode.rounds[0]?.guesser}</span>
@@ -3952,8 +3952,9 @@ export default function GuessThePrice({ displayMode = false }) {
                 setEpisodes(prev => prev.map(ep => {
                   if (ep.id !== activeEpisodeId) return ep;
                   const rounds = ep.rounds.map((r, i) => {
-                    const pa = i < 3 ? newFirst : newSecond;
-                    const gu = i < 3 ? newSecond : newFirst;
+                    // Alternate every round: R1 newFirst, R2 newSecond, R3 newFirst...
+                    const pa = i % 2 === 0 ? newFirst : newSecond;
+                    const gu = i % 2 === 0 ? newSecond : newFirst;
                     return { ...r, propertyAgent: pa, guesser: gu };
                   });
                   return { ...ep, rounds };
