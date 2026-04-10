@@ -4012,17 +4012,17 @@ export default function GuessThePrice({ displayMode = false }) {
                 </div>
               );
             }
-            // ── Compact mode: just R1-R6 ──
+            // ── Compact mode: R1 + agent initial ──
             return (
               <button key={i} onClick={() => loadRound(i + 1)}
-                style={btn({ padding: "6px 14px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: empty ? 0.4 : 1, letterSpacing: "0.05em" })}>
-                R{i + 1}
+                style={btn({ padding: "6px 12px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: empty ? 0.4 : 1, letterSpacing: "0.05em" })}>
+                R{i + 1}{!empty && <span style={{ marginLeft: 3, opacity: 0.5, fontSize: 9 }}>{rd.propertyAgent?.charAt(0)}</span>}
               </button>
             );
           })}
           <button onClick={() => setRoundEditMode(!roundEditMode)}
-            style={btn({ padding: "4px 8px", fontSize: 9, color: roundEditMode ? GAME.gold : DS.textMuted, background: roundEditMode ? "rgba(251,135,112,0.1)" : "transparent", border: `1px solid ${roundEditMode ? "rgba(251,135,112,0.2)" : DS.borderSubtle}` })}>
-            {roundEditMode ? "Done" : "Edit"}
+            style={btn({ padding: "5px 12px", fontSize: DS.fsXs, fontWeight: 700, color: roundEditMode ? GAME.navy : GAME.gold, background: roundEditMode ? GAME.gold : "rgba(251,135,112,0.15)", border: `1px solid rgba(251,135,112,0.3)` })}>
+            {roundEditMode ? "✓ Done" : "✎ Edit"}
           </button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: DS.md, marginLeft: "auto" }}>
