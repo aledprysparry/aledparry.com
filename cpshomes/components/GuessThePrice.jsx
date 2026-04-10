@@ -3894,7 +3894,7 @@ export default function GuessThePrice({ displayMode = false }) {
 
       {/* EPISODE PANEL */}
       <div style={{
-        maxHeight: showEpisodePanel ? 300 : 0, overflow: "hidden", opacity: showEpisodePanel ? 1 : 0,
+        maxHeight: showEpisodePanel ? 500 : 0, overflow: "hidden", opacity: showEpisodePanel ? 1 : 0,
         transition: "max-height 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease",
         borderBottom: showEpisodePanel ? `1px solid ${DS.borderSubtle}` : "none",
       }}>
