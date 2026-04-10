@@ -3985,19 +3985,26 @@ export default function GuessThePrice({ displayMode = false }) {
                 onDragEnd={() => setDragRoundIdx(null)}
                 style={btn({ padding: "6px 10px", fontSize: DS.fsXs, fontWeight: 700, background: isActive ? GAME.gold : empty ? "rgba(255,255,255,0.02)" : DS.bgButton, color: isActive ? GAME.navy : empty ? DS.textMuted : DS.textPrimary, opacity: dragRoundIdx === i ? 0.4 : empty ? 0.4 : 1, cursor: "grab", letterSpacing: "0.05em", borderLeft: "2px solid transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, minWidth: 80 })}>
                 <span>R{i + 1}</span>
-                {!empty && <span style={{ fontSize: 8, opacity: 0.6, fontWeight: 400, maxWidth: 70, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rd.address ? rd.address.split(",")[0] : ""}</span>}
-                {!empty && <span onClick={(e) => {
-                  e.stopPropagation();
-                  const ri = i;
-                  setEpisodes(prev => prev.map(ep => {
-                    if (ep.id !== activeEpisodeId) return ep;
-                    const rounds = [...ep.rounds];
-                    const r = rounds[ri];
-                    if (r) rounds[ri] = { ...r, propertyAgent: r.guesser, guesser: r.propertyAgent };
-                    return { ...ep, rounds };
-                  }));
-                  setDirty(true);
-                }} style={{ fontSize: DS.fsXs - 2, opacity: 0.7, marginLeft: 4, cursor: "pointer", padding: "2px 4px", borderRadius: 3, background: "rgba(255,255,255,0.1)" }}>{rd.propertyAgent?.charAt(0)}</span>}
+                {!empty && <span style={{ fontSize: 8, opacity: 0.6, fontWeight: 400, maxWidth: 75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rd.address ? rd.address.split(",")[0] : ""}</span>}
+                {!empty && <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", gap: 2, marginTop: 2 }}>
+                  {episode.agents.map((agent, ai) => (
+                    <span key={ai} onClick={(e) => {
+                      e.stopPropagation();
+                      const ri = i;
+                      setEpisodes(prev => prev.map(ep => {
+                        if (ep.id !== activeEpisodeId) return ep;
+                        const rounds = [...ep.rounds];
+                        if (rounds[ri]) rounds[ri] = { ...rounds[ri], propertyAgent: agent, guesser: episode.agents[1 - ai] };
+                        return { ...ep, rounds };
+                      }));
+                      setDirty(true);
+                    }} style={{ fontSize: 8, cursor: "pointer", padding: "2px 5px", borderRadius: 3,
+                      background: rd.propertyAgent === agent ? GAME.gold : "rgba(255,255,255,0.08)",
+                      color: rd.propertyAgent === agent ? GAME.navy : "rgba(255,255,255,0.5)",
+                      fontWeight: rd.propertyAgent === agent ? 700 : 400,
+                    }}>{agent.split(" ")[0]}</span>
+                  ))}
+                </div>}
               </button>
             );
           })}
