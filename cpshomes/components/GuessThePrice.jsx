@@ -587,7 +587,6 @@ function drawIntro(ctx, W, H, S, progress) {
         ctx.fillText(name.charAt(0).toUpperCase(), x, y);
       }
       ctx.restore();
-    }
 
     // Name — BIG and bold
     const nameS = sz(W, H, ar === "portrait" ? 0.05 : 0.042);
