@@ -2229,6 +2229,8 @@ export default function GuessThePrice({ displayMode = false }) {
   useEffect(() => { renderRef.current = render; }, [render]);
 
   useEffect(() => { render(); }, [render]);
+  // Re-render when episode data changes (agent swaps, round reorder, etc.)
+  useEffect(() => { render(); }, [episode]);
 
   // Stop running animation when ratio changes so canvas redraws at new size
   useEffect(() => {
@@ -3960,6 +3962,9 @@ export default function GuessThePrice({ displayMode = false }) {
                   });
                   return { ...ep, rounds };
                 }));
+                // Re-sync S for current round
+                const newGuesser = currentRound % 2 === 0 ? newSecond : newFirst;
+                setS(prev => ({ ...prev, lockAgent: newGuesser }));
                 setDirty(true);
               }} style={btn({ padding: "3px 10px", fontSize: DS.fsXs })}>Swap</button>
             </div>
@@ -3996,6 +4001,10 @@ export default function GuessThePrice({ displayMode = false }) {
                       const rounds = [...ep.rounds];
                       const r = rounds[ri];
                       if (r) rounds[ri] = { ...r, propertyAgent: r.guesser, guesser: r.propertyAgent };
+                      // Re-sync S if this is the current round
+                      if (ri === currentRound && r) {
+                        setS(prev => ({ ...prev, lockAgent: r.propertyAgent })); // old propertyAgent becomes new guesser
+                      }
                       return { ...ep, rounds };
                     }));
                     setDirty(true);
