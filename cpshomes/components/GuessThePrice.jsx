@@ -540,28 +540,12 @@ function drawIntro(ctx, W, H, S, progress) {
     const img = imgUrl ? getCachedImage(imgUrl) : null;
     const imgReady = img && img.complete && img.naturalWidth > 0;
 
-    // Always show ring + shadow — image or placeholder fades in when ready
-    // Dramatic shadow behind circle
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = headR * 0.5;
-    ctx.shadowOffsetY = headR * 0.1;
-    ctx.beginPath();
-    ctx.arc(x, y, headR, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(0,0,0,0.01)";
-    ctx.fill();
-    ctx.restore();
-
-    // Thick outer glow ring
-    ctx.save();
+    // Glow ring — no shadow (Safari renders shadows at globalAlpha=0)
     ctx.beginPath();
     ctx.arc(x, y, headR + headR * 0.08, 0, Math.PI * 2);
     ctx.strokeStyle = GAME.gold;
     ctx.lineWidth = headR * 0.08;
-    ctx.shadowColor = GAME.gold;
-    ctx.shadowBlur = headR * 0.3;
     ctx.stroke();
-    ctx.restore();
 
     // Image or initial letter
     ctx.save();
