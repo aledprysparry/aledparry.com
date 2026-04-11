@@ -1887,7 +1887,14 @@ export default function GuessThePrice({ displayMode = false }) {
         logoImage: (episode.logoImage?.startsWith("/api") || episode.logoImage?.startsWith("http")) ? episode.logoImage : "",
         photos: livePhotos,
         heroPhotoIndex: rd.heroPhotoIndex || 0,
-        roundData: { ...rd, photos: livePhotos },
+        roundData: {
+          number: rd.number, photos: livePhotos, heroPhotoIndex: rd.heroPhotoIndex || 0,
+          floorplanIndex: rd.floorplanIndex, mapIndex: rd.mapIndex,
+          beds: rd.beds, type: rd.type, tenure: rd.tenure, addedDate: rd.addedDate,
+          address: rd.address, location: rd.location,
+          propertyAgent: rd.propertyAgent, guesser: rd.guesser,
+          correctLetter: rd.correctLetter, correctPrice: rd.correctPrice,
+        },
         canvasW: r.W,
         canvasH: r.H,
         ts: Date.now(),
@@ -1896,20 +1903,25 @@ export default function GuessThePrice({ displayMode = false }) {
       // Instant same-browser delivery via BroadcastChannel
       try { const bc = new BroadcastChannel(GTP_CHANNEL_NAME); bc.postMessage(state); bc.close(); } catch {}
 
-      // Persist to server for cross-device
-      fetch("/api/gtp/live", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(state),
-      }).then(() => {
-        setLiveConnected(true);
-        setLastPushOk(true);
-        setLastPushTs(Date.now());
-      }).catch(() => {
-        // Don't disconnect — just show error on status dot, auto-sync keeps trying
-        setLastPushOk(false);
-        setLastPushTs(Date.now());
-      });
+      // Persist to server for cross-device — with retry on failure
+      const pushBody = JSON.stringify(state);
+      const doPush = (attempt) => {
+        fetch("/api/gtp/live", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: pushBody,
+        }).then(() => {
+          setLiveConnected(true);
+          setLastPushOk(true);
+          setLastPushTs(Date.now());
+        }).catch(() => {
+          setLastPushOk(false);
+          setLastPushTs(Date.now());
+          // Auto-retry up to 3 times with increasing delay
+          if (attempt < 3) setTimeout(() => doPush(attempt + 1), 500 * attempt);
+        });
+      };
+      doPush(1);
       if (!liveConnected) setLiveConnected(true);
     } catch {
       // Don't disconnect on error
@@ -3376,21 +3388,32 @@ export default function GuessThePrice({ displayMode = false }) {
       bc.onmessage = (e) => handleDisplayData(e.data);
     } catch {}
 
-    // Polling fallback for cross-device (200ms interval + cache-busting)
+    // Adaptive polling — speeds up on good connection, backs off on slow/failed
+    let pollInterval = 300;
+    let consecutiveFails = 0;
     const poll = async () => {
       try {
+        const start = Date.now();
         const res = await fetch("/api/gtp/live?_=" + Date.now());
         const data = await res.json();
+        const latency = Date.now() - start;
         handleDisplayData(data);
-      } catch {}
+        consecutiveFails = 0;
+        // Fast connection: poll faster. Slow: back off
+        pollInterval = latency < 200 ? 300 : latency < 500 ? 500 : 1000;
+      } catch {
+        consecutiveFails++;
+        // Back off on failures: 1s, 2s, 3s max
+        pollInterval = Math.min(3000, 1000 * consecutiveFails);
+      }
+      displayPollRef.current = setTimeout(poll, pollInterval);
     };
     poll();
-    displayPollRef.current = setInterval(poll, 200);
     // Recalculate CSS letterboxing on resize/orientation change
     const onResize = () => setDispImgTick(t => t + 1);
     window.addEventListener("resize", onResize);
 
-    return () => { clearInterval(displayPollRef.current); try { bc?.close(); } catch {} window.removeEventListener("resize", onResize); };
+    return () => { clearTimeout(displayPollRef.current); try { bc?.close(); } catch {} window.removeEventListener("resize", onResize); };
   }, [displayMode]);
 
   // Keep a ref to the current display state so the animation loop always reads the latest
