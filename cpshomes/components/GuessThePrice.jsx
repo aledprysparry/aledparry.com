@@ -2523,6 +2523,22 @@ export default function GuessThePrice({ displayMode = false }) {
     fileCount++;
     await new Promise(r => setTimeout(r, 50));
 
+    // Intro animated MOV
+    try {
+      tick();
+      setExportStatus("Intro MOV…");
+      const ve = await loadVideoExport();
+      const introWebm = await ve.recordAsset(DRAW_FNS.intro, rat.W, rat.H, S, 6000);
+      setExportStatus("Intro MOV converting…");
+      const introMov = await ve.webmToMov(introWebm, "00_intro.mov");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(introMov);
+      a.download = "00_intro.mov";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      await new Promise(r => setTimeout(r, 500));
+    } catch { setExportStatus("Intro MOV failed — skipping"); await new Promise(r => setTimeout(r, 1000)); }
+
     // Track cumulative scores for scoreboard export
     const cumulativeScores = [0, 0];
 
