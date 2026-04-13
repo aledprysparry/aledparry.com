@@ -2613,8 +2613,9 @@ export default function GuessThePrice({ displayMode = false }) {
       };
 
       // Full show sequence per round — stills + key animated MOVs:
-      // 1. Round title (still only — simple text, no MOV needed)
+      // 1. Round title (still + animated)
       await exportStill("roundtitle", `R${rn}_01_round_title.png`);
+      await exportAnimated("roundtitle", `R${rn}_01_round_title.mov`, 3000);
 
       // 2. Property photos — stills per photo + animated MOV of full sequence
       for (let pi = 0; pi < numPhotos; pi++) {
