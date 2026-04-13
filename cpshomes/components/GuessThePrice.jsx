@@ -2598,18 +2598,23 @@ export default function GuessThePrice({ displayMode = false }) {
         setExportStatus(`R${rn} ${assetId} (recording)…`);
         const fn = DRAW_FNS[assetId];
         if (!fn) return;
-        const ve = await loadVideoExport();
-        const webm = await ve.recordAsset(fn, rat.W, rat.H, overrideS || roundS, durMs);
-        if (exportCancelRef.current) return;
-        setExportStatus(`R${rn} ${assetId} (MOV)…`);
-        const mov = await ve.webmToMov(webm, filename);
-        zip.file(filename, mov);
+        try {
+          const ve = await loadVideoExport();
+          const webm = await ve.recordAsset(fn, rat.W, rat.H, overrideS || roundS, durMs);
+          if (exportCancelRef.current) return;
+          setExportStatus(`R${rn} ${assetId} (MOV)…`);
+          const mov = await ve.webmToMov(webm, filename);
+          zip.file(filename, mov);
+        } catch (err) {
+          // MOV conversion failed (memory/FFmpeg) — skip this MOV, keep going
+          setExportStatus(`R${rn} ${assetId} MOV failed — skipping`);
+          await new Promise(r => setTimeout(r, 1000));
+        }
       };
 
-      // Full show sequence per round — stills + animated MOVs:
-      // 1. Round title (still + animated)
+      // Full show sequence per round — stills + key animated MOVs:
+      // 1. Round title (still only — simple text, no MOV needed)
       await exportStill("roundtitle", `R${rn}_01_round_title.png`);
-      await exportAnimated("roundtitle", `R${rn}_01_round_title.mov`, 3000);
 
       // 2. Property photos — stills per photo + animated MOV of full sequence
       for (let pi = 0; pi < numPhotos; pi++) {
@@ -2630,9 +2635,8 @@ export default function GuessThePrice({ displayMode = false }) {
       const propDurMs = (roundS.photoDuration || 5) * numPhotos * 1000;
       await exportAnimated("property", `R${rn}_02_property.mov`, propDurMs, roundS);
 
-      // 3. Prompt (still + animated)
+      // 3. Prompt (still only)
       await exportStill("prompt", `R${rn}_03_prompt.png`);
-      await exportAnimated("prompt", `R${rn}_03_prompt.mov`, 3000);
 
       // 4. A/B/C Options (still + animated)
       await exportStill("options", `R${rn}_04_options.png`);
