@@ -2661,8 +2661,9 @@ export default function GuessThePrice({ displayMode = false }) {
       const propDurMs = (roundS.photoDuration || 5) * numPhotos * 1000;
       await exportAnimated("property", `R${rn}_02_property.mov`, propDurMs, roundS);
 
-      // 3. Prompt (still only)
+      // 3. Prompt (still + animated)
       await exportStill("prompt", `R${rn}_03_prompt.png`);
+      await exportAnimated("prompt", `R${rn}_03_prompt.mov`, 3000);
 
       // 4. A/B/C Options (still + animated)
       await exportStill("options", `R${rn}_04_options.png`);
