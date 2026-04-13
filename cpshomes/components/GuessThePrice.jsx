@@ -2530,8 +2530,12 @@ export default function GuessThePrice({ displayMode = false }) {
       const round = rounds[ri];
       if (!round.address && !round.optionA) continue;
 
-      // Calculate if guesser got this round right — update cumulative score
-      if (round.correctLetter && round.guesser) {
+      // Use actual game result if saved, otherwise assume correct
+      const actualLock = round.lockedLetter || round.correctLetter;
+      const gotItRight = actualLock === round.correctLetter;
+
+      // Update cumulative score based on actual result
+      if (gotItRight && round.guesser) {
         const guesserIdx = episode.agents.indexOf(round.guesser);
         if (guesserIdx >= 0) cumulativeScores[guesserIdx]++;
       }
@@ -2551,7 +2555,7 @@ export default function GuessThePrice({ displayMode = false }) {
         revealLetter: round.correctLetter,
         revealPrice: round.correctPrice,
         lockAgent: round.guesser,
-        lockLetter: round.correctLetter,
+        lockLetter: actualLock,
         score1: cumulativeScores[0],
         score2: cumulativeScores[1],
       };
@@ -3306,7 +3310,7 @@ export default function GuessThePrice({ displayMode = false }) {
           <div style={{ ...label(), marginTop: DS.lg }}>Locked Letter</div>
           <div style={{ display: "flex", gap: DS.sm }}>
             {["A", "B", "C"].map(l => (
-              <button key={l} onClick={() => updateS("lockLetter", l)}
+              <button key={l} onClick={() => { updateS("lockLetter", l); updateRoundField("lockedLetter", l); }}
                 style={btn({
                   padding: "10px 20px", fontSize: DS.fsLg, fontWeight: 800,
                   background: S.lockLetter === l ? ({ A: GAME.optionA, B: GAME.optionB, C: GAME.optionC }[l]) : DS.bgButton,
@@ -3690,7 +3694,7 @@ export default function GuessThePrice({ displayMode = false }) {
             {currentFlowAsset === "lockin" && (
               <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12 }}>
                 {["A", "B", "C"].map(l => (
-                  <button key={l} onClick={() => { updateS("lockLetter", l); pushToLiveRef.current?.(); }}
+                  <button key={l} onClick={() => { updateS("lockLetter", l); updateRoundField("lockedLetter", l); pushToLiveRef.current?.(); }}
                     style={{ padding: `${DS.sm}px ${DS.xl}px`, fontSize: 18, fontWeight: 800, border: "none", borderRadius: DS.rSm, minWidth: 60, minHeight: 48, cursor: "pointer",
                       background: S.lockLetter === l ? ({ A: GAME.optionA, B: GAME.optionB, C: GAME.optionC }[l]) : "rgba(255,255,255,0.15)",
                       color: "#fff" }}>{l}</button>
