@@ -2591,7 +2591,7 @@ export default function GuessThePrice({ displayMode = false }) {
         await new Promise(r => setTimeout(r, 30));
       };
 
-      // Helper: record an animated asset as MOV and add to ZIP
+      // Helper: record an animated asset as MOV — download individually (too large for ZIP)
       const exportAnimated = async (assetId, filename, durMs, overrideS) => {
         if (exportCancelRef.current) return;
         tick();
@@ -2604,9 +2604,14 @@ export default function GuessThePrice({ displayMode = false }) {
           if (exportCancelRef.current) return;
           setExportStatus(`R${rn} ${assetId} (MOV)…`);
           const mov = await ve.webmToMov(webm, filename);
-          zip.file(filename, mov);
+          // Download MOV individually — don't add to ZIP (too large, causes memory crash)
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(mov);
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          await new Promise(r => setTimeout(r, 500)); // brief pause between downloads
         } catch (err) {
-          // MOV conversion failed (memory/FFmpeg) — skip this MOV, keep going
           setExportStatus(`R${rn} ${assetId} MOV failed — skipping`);
           await new Promise(r => setTimeout(r, 1000));
         }
