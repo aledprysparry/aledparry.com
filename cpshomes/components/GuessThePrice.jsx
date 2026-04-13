@@ -2547,6 +2547,22 @@ export default function GuessThePrice({ displayMode = false }) {
       const photos = round.photos || [];
       const numPhotos = Math.max(1, photos.length);
 
+      // Preload all images for this round before exporting
+      if (photos.length > 0) {
+        setExportStatus(`R${rn} preloading ${photos.length} images…`);
+        const loadPromises = photos.map(src => new Promise(resolve => {
+          const img = getCachedImage(src);
+          if (img && img.complete) { resolve(); return; }
+          const check = setInterval(() => {
+            const cached = getCachedImage(src);
+            if (cached && cached.complete) { clearInterval(check); resolve(); }
+          }, 100);
+          // Max wait 5s per image
+          setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+        }));
+        await Promise.all(loadPromises);
+      }
+
       // Helper: render an asset to PNG still and add to ZIP
       const exportStill = async (assetId, filename, overrideS) => {
         if (exportCancelRef.current) return;
