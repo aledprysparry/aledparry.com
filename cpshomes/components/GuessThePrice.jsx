@@ -2523,9 +2523,19 @@ export default function GuessThePrice({ displayMode = false }) {
     fileCount++;
     await new Promise(r => setTimeout(r, 50));
 
+    // Track cumulative scores for scoreboard export
+    const cumulativeScores = [0, 0];
+
     for (let ri = 0; ri < rounds.length; ri++) {
       const round = rounds[ri];
       if (!round.address && !round.optionA) continue;
+
+      // Calculate if guesser got this round right — update cumulative score
+      if (round.correctLetter && round.guesser) {
+        const guesserIdx = episode.agents.indexOf(round.guesser);
+        if (guesserIdx >= 0) cumulativeScores[guesserIdx]++;
+      }
+
       const roundS = {
         ...S,
         propRound: round.number,
@@ -2542,6 +2552,8 @@ export default function GuessThePrice({ displayMode = false }) {
         revealPrice: round.correctPrice,
         lockAgent: round.guesser,
         lockLetter: round.correctLetter,
+        score1: cumulativeScores[0],
+        score2: cumulativeScores[1],
       };
       const rn = ri + 1;
       const photos = round.photos || [];
@@ -2599,7 +2611,7 @@ export default function GuessThePrice({ displayMode = false }) {
       await exportStill("roundtitle", `R${rn}_01_round_title.png`);
       await exportAnimated("roundtitle", `R${rn}_01_round_title.mov`, 3000);
 
-      // 2. Each property photo as a still slide
+      // 2. Property photos — stills per photo + animated MOV of full sequence
       for (let pi = 0; pi < numPhotos; pi++) {
         if (exportCancelRef.current) break;
         tick();
@@ -2614,6 +2626,9 @@ export default function GuessThePrice({ displayMode = false }) {
         if (blob) zip.file(`R${rn}_02_photo_${pi + 1}.png`, blob);
         await new Promise(r => setTimeout(r, 50));
       }
+      // Animated property MOV — full photo cycle at photoDuration per photo
+      const propDurMs = (roundS.photoDuration || 5) * numPhotos * 1000;
+      await exportAnimated("property", `R${rn}_02_property.mov`, propDurMs, roundS);
 
       // 3. Prompt (still + animated)
       await exportStill("prompt", `R${rn}_03_prompt.png`);
