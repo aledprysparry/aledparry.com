@@ -31,8 +31,11 @@ export async function webmToMov(
   const outputName = filename.replace(/\.[^.]+$/, "") + ".mov";
   await ff.writeFile(inputName, await fetchFile(webmBlob));
   if (onProgress) ff.on("progress", ({ progress }) => onProgress(progress));
+  // Force input framerate — MediaRecorder WebMs have variable frame timing
+  // that FFmpeg misreads as ~1fps, producing a static-looking MOV.
+  // -r 25 on input = interpret source as 25fps
   // -c:v png -pix_fmt rgba = lossless with alpha channel
-  await ff.exec(["-i", inputName, "-c:v", "png", "-pix_fmt", "rgba", "-an", outputName]);
+  await ff.exec(["-r", "25", "-i", inputName, "-c:v", "png", "-pix_fmt", "rgba", "-r", "25", "-an", outputName]);
   const data = await ff.readFile(outputName);
   await ff.deleteFile(inputName);
   await ff.deleteFile(outputName);
@@ -62,7 +65,7 @@ export function recordAsset(
     cvs.width = W;
     cvs.height = H;
     const ctx = cvs.getContext("2d")!;
-    const stream = cvs.captureStream(0);
+    const stream = cvs.captureStream(25); // fixed 25fps — variable rate causes static MOVs
     const chunks: Blob[] = [];
     const rec = new MediaRecorder(stream, {
       mimeType: WEBM_MIME(),

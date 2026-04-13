@@ -1643,14 +1643,19 @@ async function webmToMov(webmBlob, filename="output.mov", onProgress){
   const ff=await getFFmpeg();
   const inputName="input.webm";
   const outputName=filename.replace(/\.[^.]+$/,"")+".mov";
-  // Write WebM to ffmpeg virtual filesystem
-  await ff.writeFile(inputName, await fetchFile(webmBlob));
+  await ff.writeFile(inputName, await _fetchFile(webmBlob));
   if(onProgress) ff.on("progress",({progress})=>onProgress(progress));
-  // Convert: MOV container with PNG codec (preserves alpha channel)
-  // -c:v png = lossless with alpha, Premiere imports natively
-  await ff.exec(["-i",inputName,"-c:v","png","-pix_fmt","rgba","-an",outputName]);
+  // Force input framerate (MediaRecorder WebMs have variable timing that
+  // FFmpeg misreads as ~1fps, producing a static-looking MOV).
+  // -r 25 on input = interpret source as 25fps
+  // -c:v png -pix_fmt rgba = lossless alpha (Premiere/QuickTime native)
+  await ff.exec([
+    "-r","25","-i",inputName,
+    "-c:v","png","-pix_fmt","rgba",
+    "-r","25",
+    "-an",outputName
+  ]);
   const data=await ff.readFile(outputName);
-  // Clean up
   await ff.deleteFile(inputName);
   await ff.deleteFile(outputName);
   return new Blob([data.buffer],{type:"video/quicktime"});
