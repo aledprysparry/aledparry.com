@@ -44,9 +44,17 @@ export async function webmToMov(
 }
 
 // ── Best supported WebM MIME type ──
+// IMPORTANT: VP8 is preferred because Chrome's MediaRecorder only preserves
+// canvas alpha with VP8. VP9 is higher quality but strips alpha to black,
+// which breaks any transparent overlay (Audience Prompt, Play Along, etc).
 export function WEBM_MIME(): string {
-  if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
-    return "video/webm;codecs=vp9";
+  if (typeof MediaRecorder !== "undefined") {
+    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
+      return "video/webm;codecs=vp8";
+    }
+    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+      return "video/webm;codecs=vp9";
+    }
   }
   return "video/webm";
 }
@@ -64,7 +72,17 @@ export function recordAsset(
     const cvs = document.createElement("canvas");
     cvs.width = W;
     cvs.height = H;
-    const ctx = cvs.getContext("2d")!;
+    // Explicit alpha: true — default is true but be explicit so downstream
+    // MediaRecorder/captureStream pipeline preserves the alpha channel.
+    const ctx = cvs.getContext("2d", { alpha: true })!;
+
+    // CRITICAL: draw p=0 frame BEFORE rec.start() so MediaRecorder's first
+    // captured frame is the actual animation start, not a blank canvas.
+    // A blank capture at the head of the stream shows up as "first few frames
+    // solid" in the exported MOV (and bakes to black if alpha is unavailable).
+    ctx.clearRect(0, 0, W, H);
+    drawFn(ctx, W, H, S, 0);
+
     const stream = cvs.captureStream(25); // fixed 25fps — variable rate causes static MOVs
     const chunks: Blob[] = [];
     const rec = new MediaRecorder(stream, {

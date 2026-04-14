@@ -306,6 +306,7 @@ const ASSETS = [
   { id: "timer",     label: "Countdown",       icon: "\u23f1", animated: true },
   { id: "reveal",    label: "Price Reveal",    icon: "\ud83c\udf89", animated: true },
   { id: "scoreboard",label: "Scoreboard",      icon: "\ud83c\udfc6", animated: true },
+  { id: "endboard",  label: "Endboard",        icon: "\ud83c\udfac", animated: true },
 ];
 
 const ALL_ASSETS = [...ASSETS]; // will include SOCIAL_ASSETS after definition
@@ -329,7 +330,7 @@ const ratioSlug = (r) => String(r || "").toLowerCase().replace(/:/g, "x").replac
 // ═══════════════════════════════════════════════════════════════
 //  LIVE MODE — flow + touch detection
 // ═══════════════════════════════════════════════════════════════
-const LIVE_FLOW = ["roundtitle", "property", "prompt", "options", "lockin", "timer", "reveal", "scoreboard"];
+const LIVE_FLOW = ["roundtitle", "property", "prompt", "options", "lockin", "timer", "reveal", "scoreboard", "endboard"];
 
 let _touchStart = null;
 function detectGesture(sx, sy, ex, ey, elapsed) {
@@ -358,7 +359,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawStamp(ctx, W, H) {
+function drawStamp(ctx, W, H, opts = {}) {
   const logo = getCachedImage(BRAND.logoUrlLight);
   if (!logo || !logo.complete || !logo.naturalWidth) return;
   const ar = H > W ? "portrait" : W === H ? "square" : "landscape";
@@ -367,9 +368,11 @@ function drawStamp(ctx, W, H) {
   const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
   const pad = W * 0.05; // 5% from edges — comfortable breathing room
   const bottomPad = ar === "portrait" ? Math.round(420 * (W / 1080)) + pad : H * 0.05;
+  // opts.centered → horizontal-centre at the bottom (used on Intro Title)
+  const x = opts.centered ? (W - logoW) / 2 : W - logoW - pad;
   ctx.save();
   ctx.globalAlpha = BRAND.logoOpacity;
-  ctx.drawImage(logo, W - logoW - pad, H - logoH - bottomPad, logoW, logoH);
+  ctx.drawImage(logo, x, H - logoH - bottomPad, logoW, logoH);
   ctx.restore();
 }
 
@@ -550,10 +553,8 @@ function drawIntro(ctx, W, H, S, progress) {
   // Get current round to determine roles
   const introRound = EPISODE.rounds ? EPISODE.rounds[(S.propRound || 1) - 1] : null;
 
-  // Draw headshot with glow ring, shadow, name, and role icon
+  // Draw headshot with glow ring, name (no role highlighting)
   const drawHeadshot = (x, y, imgUrl, name, idx) => {
-    const isGuesser = introRound && introRound.guesser === name;
-    const isPropertyAgent = introRound && introRound.propertyAgent === name;
     const img = imgUrl ? getCachedImage(imgUrl) : null;
     const imgReady = img && img.complete && img.naturalWidth > 0;
 
@@ -585,11 +586,11 @@ function drawIntro(ctx, W, H, S, progress) {
       ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-        ctx.fillText(name.charAt(0).toUpperCase(), x, y);
-      }
-      ctx.restore();
+      ctx.fillText(name.charAt(0).toUpperCase(), x, y);
+    }
+    ctx.restore();
 
-    // Name — BIG and bold
+    // Name — BIG and bold (no role badge underneath)
     const nameS = sz(W, H, ar === "portrait" ? 0.05 : 0.042);
     const nameY = y + headR + headR * 0.2;
     ctx.font = `800 ${nameS}px 'DM Sans', sans-serif`;
@@ -597,28 +598,6 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(name.toUpperCase(), x, nameY);
-
-    // Role badge — pill with label
-    const badgeY = nameY + nameS * 1.8;
-    const badgeS = sz(W, H, 0.015);
-    const badgeText = isGuesser ? "GUESSING" : isPropertyAgent ? "PROPERTY CHOICE" : "";
-    if (badgeText) {
-      ctx.save();
-      ctx.font = `700 ${badgeS}px 'DM Sans', sans-serif`;
-      const tw = ctx.measureText(badgeText).width;
-      const pillW = tw + badgeS * 2;
-      const pillH = badgeS * 2;
-      // Pill background
-      ctx.fillStyle = isGuesser ? GAME.gold : "rgba(255,255,255,0.15)";
-      roundRect(ctx, x - pillW / 2, badgeY - pillH / 2, pillW, pillH, pillH / 2);
-      ctx.fill();
-      // Text
-      ctx.fillStyle = isGuesser ? "#000" : "rgba(255,255,255,0.7)";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(badgeText, x, badgeY);
-      ctx.restore();
-    }
   };
 
   const eHP = easeOutExpo(headshotP);
@@ -654,7 +633,7 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  drawStamp(ctx, W, H);
+  drawStamp(ctx, W, H, { centered: true });
 }
 
 function drawProperty(ctx, W, H, S, progress) {
@@ -1702,6 +1681,155 @@ function drawScoreboard(ctx, W, H, S, progress) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  ENDBOARD — final closing slate (branded background)
+// ═══════════════════════════════════════════════════════════════
+function drawEndboard(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  drawBg(ctx, W, H);
+  drawAccentBars(ctx, W, H);
+  const ar = aspect(W, H);
+  const safe = safeZone(W, H);
+  const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
+  const safeTop = ar === "portrait" ? safe.contentTop : 0;
+  const a1 = EPISODE.agents[0] || "Agent 1";
+  const a2 = EPISODE.agents[1] || "Agent 2";
+  const s1 = S.score1 ?? 0;
+  const s2 = S.score2 ?? 0;
+  const winnerIdx = s1 > s2 ? 0 : s2 > s1 ? 1 : -1; // -1 = draw
+
+  // Staggered timing
+  const titleP  = easeOutExpo(Math.min(1, p / 0.35));
+  const card1P  = easeOutExpo(Math.min(1, Math.max(0, (p - 0.25) / 0.3)));
+  const card2P  = easeOutExpo(Math.min(1, Math.max(0, (p - 0.35) / 0.3)));
+  const crownP  = easeOutBack(Math.min(1, Math.max(0, (p - 0.55) / 0.25)));
+  const thanksP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.7) / 0.3)));
+
+  // ── Title: "THE END" with glow ──
+  const titleY = ar === "portrait" ? safeTop + safeH * 0.10 : H * 0.14;
+  ctx.save();
+  ctx.globalAlpha = titleP;
+  ctx.shadowColor = GAME.gold;
+  ctx.shadowBlur = sz(W, H, 0.035);
+  ctx.font = `800 ${sz(W, H, ar === "portrait" ? 0.09 : 0.075)}px 'Lora', serif`;
+  ctx.fillStyle = GAME.gold;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("THE END", W / 2, titleY);
+  ctx.restore();
+
+  // Subtitle under title — show name
+  ctx.save();
+  ctx.globalAlpha = titleP;
+  ctx.font = `500 ${sz(W, H, 0.024)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("GUESS THE PRICE", W / 2, titleY + sz(W, H, ar === "portrait" ? 0.075 : 0.065));
+  ctx.restore();
+
+  // ── Final score cards ──
+  const drawFinalCard = (cx, cy, cw, ch, name, score, isWinner, cardAnim) => {
+    const slideY = ch * 0.12 * (1 - cardAnim);
+    ctx.save();
+    ctx.globalAlpha = cardAnim;
+    ctx.translate(0, slideY);
+
+    // Card background — winner gets gold fill, loser gets subtle
+    ctx.fillStyle = isWinner ? "rgba(251, 135, 112, 0.18)" : "rgba(255,255,255,0.05)";
+    roundRect(ctx, cx, cy, cw, ch, BRAND.cornerRadius);
+    ctx.fill();
+    ctx.strokeStyle = isWinner ? GAME.gold : "rgba(255,255,255,0.25)";
+    ctx.lineWidth = isWinner ? 4 : 2;
+    roundRect(ctx, cx, cy, cw, ch, BRAND.cornerRadius);
+    ctx.stroke();
+
+    // Name
+    ctx.font = `700 ${sz(W, H, ar === "portrait" ? 0.035 : 0.032)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = isWinner ? "#fff" : "rgba(255,255,255,0.7)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(name, cx + cw / 2, cy + ch * 0.32);
+
+    // Score number — large, gold for winner, muted for loser
+    const scoreSz = sz(W, H, ar === "portrait" ? 0.095 : 0.105);
+    ctx.font = `800 ${Math.round(scoreSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = isWinner ? GAME.gold : "rgba(255,255,255,0.4)";
+    if (isWinner) {
+      ctx.shadowColor = GAME.gold;
+      ctx.shadowBlur = scoreSz * 0.25;
+    }
+    ctx.fillText(String(score), cx + cw / 2, cy + ch * 0.66);
+    ctx.restore();
+  };
+
+  let card1Rect, card2Rect;
+  if (ar === "portrait") {
+    const cardW2 = W * 0.7, cardH2 = safeH * 0.22, gap = safeH * 0.035;
+    const centerX = W / 2 - cardW2 / 2;
+    const y1 = safeTop + safeH * 0.30;
+    const y2 = y1 + cardH2 + gap;
+    card1Rect = { x: centerX, y: y1, w: cardW2, h: cardH2 };
+    card2Rect = { x: centerX, y: y2, w: cardW2, h: cardH2 };
+  } else {
+    const cw2 = W * 0.28, ch2 = H * 0.38, gap = W * 0.04;
+    const cy2 = H * 0.32;
+    card1Rect = { x: W / 2 - gap / 2 - cw2, y: cy2, w: cw2, h: ch2 };
+    card2Rect = { x: W / 2 + gap / 2,        y: cy2, w: cw2, h: ch2 };
+  }
+
+  drawFinalCard(card1Rect.x, card1Rect.y, card1Rect.w, card1Rect.h, a1, s1, winnerIdx === 0, card1P);
+  drawFinalCard(card2Rect.x, card2Rect.y, card2Rect.w, card2Rect.h, a2, s2, winnerIdx === 1, card2P);
+
+  // ── Crown over the winner (or "DRAW" between cards) ──
+  if (crownP > 0) {
+    if (winnerIdx === -1) {
+      // Draw badge between cards
+      ctx.save();
+      ctx.globalAlpha = crownP;
+      const scale = 0.7 + 0.3 * crownP;
+      const dx = W / 2;
+      const dy = ar === "portrait" ? (card1Rect.y + card1Rect.h + (card2Rect.y - card1Rect.y - card1Rect.h) / 2) : (card1Rect.y + card1Rect.h / 2);
+      ctx.font = `800 ${sz(W, H, 0.04) * scale}px 'Lora', serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("DRAW", dx, dy);
+      ctx.restore();
+    } else {
+      // Crown sits above the winning card
+      const winCard = winnerIdx === 0 ? card1Rect : card2Rect;
+      const crownSz = sz(W, H, 0.07) * (0.7 + 0.3 * crownP);
+      ctx.save();
+      ctx.globalAlpha = crownP;
+      // Slight bounce-in from above
+      const dropY = (1 - crownP) * sz(W, H, 0.03);
+      ctx.font = `${Math.round(crownSz)}px serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("\ud83d\udc51", winCard.x + winCard.w / 2, winCard.y - crownSz * 0.55 - dropY);
+      ctx.restore();
+    }
+  }
+
+  // ── Thanks / Diolch line (bilingual) ──
+  if (thanksP > 0) {
+    const thanksY = ar === "portrait"
+      ? (card2Rect.y + card2Rect.h + safeH * 0.06)
+      : (H * 0.82);
+    ctx.save();
+    ctx.globalAlpha = thanksP;
+    ctx.font = `500 ${sz(W, H, ar === "portrait" ? 0.03 : 0.026)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Diolch am wylio  \u00b7  Thanks for watching", W / 2, thanksY);
+    ctx.restore();
+  }
+
+  drawStamp(ctx, W, H);
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  SOCIAL / EDIT OVERLAYS — transparent background
 // ═══════════════════════════════════════════════════════════════
 
@@ -2086,6 +2214,7 @@ const DRAW_FNS = {
   timer: drawTimer,
   reveal: drawReveal,
   scoreboard: drawScoreboard,
+  endboard: drawEndboard,
   overlay_profile1: drawOverlayProfile1,
   overlay_profile2: drawOverlayProfile2,
   overlay_countdown: drawOverlayCountdown,
@@ -2913,6 +3042,7 @@ export default function GuessThePrice({ displayMode = false }) {
       { asset: "timer",      name: `r${rn}_06_timer_${slug}.png` },
       { asset: "reveal",     name: `r${rn}_07_reveal_${slug}.png` },
       { asset: "scoreboard", name: `r${rn}_08_scoreboard_${slug}.png` },
+      { asset: "endboard",   name: `r${rn}_09_endboard_${slug}.png` },
     ];
     for (let i = 0; i < toExport.length; i++) {
       setExportStatus(`Exporting ${i + 1}/${toExport.length}\u2026`);
@@ -3153,6 +3283,36 @@ export default function GuessThePrice({ displayMode = false }) {
       render();
       setTimeout(() => setExportStatus(""), 2000);
       return;
+    }
+
+    // ── Endboard (final closing slate with final cumulative scores) ──
+    try {
+      setExportStatus("Endboard (still)…");
+      const endS = { ...S, score1: cumulativeScores[0], score2: cumulativeScores[1], propRound: rounds.length };
+      canvas.width = rat.W;
+      canvas.height = rat.H;
+      const endCtx = canvas.getContext("2d");
+      endCtx.clearRect(0, 0, rat.W, rat.H);
+      DRAW_FNS.endboard(endCtx, rat.W, rat.H, endS, 1);
+      const endBlob = await new Promise(res => canvas.toBlob(res, "image/png"));
+      if (endBlob) zip.file(`99_endboard_${slug}.png`, endBlob);
+      await new Promise(r => setTimeout(r, 50));
+
+      setExportStatus("Endboard MOV…");
+      const ve = await loadVideoExport();
+      const endWebm = await ve.recordAsset(DRAW_FNS.endboard, rat.W, rat.H, endS, 5000);
+      setExportStatus("Endboard MOV converting…");
+      const endMovName = `99_endboard_${slug}.mov`;
+      const endMov = await ve.webmToMov(endWebm, endMovName);
+      const endA = document.createElement("a");
+      endA.href = URL.createObjectURL(endMov);
+      endA.download = endMovName;
+      endA.click();
+      URL.revokeObjectURL(endA.href);
+      await new Promise(r => setTimeout(r, 500));
+    } catch (err) {
+      setExportStatus("Endboard failed — skipping");
+      await new Promise(r => setTimeout(r, 1000));
     }
 
     setExportStatus("Building ZIP…");
