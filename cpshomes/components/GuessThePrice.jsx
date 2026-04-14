@@ -311,14 +311,19 @@ const ASSETS = [
 const ALL_ASSETS = [...ASSETS]; // will include SOCIAL_ASSETS after definition
 // Social media / edit overlay assets (transparent background, MOV with alpha)
 const SOCIAL_ASSETS = [
-  { id: "prompt",           label: "Audience Prompt", icon: "\u2753", animated: true },
-  { id: "overlay_profile1", label: "Profile — Agent 1", icon: "\ud83d\udc64", animated: true },
-  { id: "overlay_profile2", label: "Profile — Agent 2", icon: "\ud83d\udc64", animated: true },
-  { id: "overlay_countdown",label: "3s Countdown",    icon: "\u23f3", animated: true },
-  { id: "overlay_playalong",label: "Play Along",      icon: "\ud83c\udfae", animated: true },
+  { id: "prompt",             label: "Audience Prompt",        icon: "\u2753", animated: true },
+  { id: "overlay_profile1",   label: "Profile — Agent 1",      icon: "\ud83d\udc64", animated: true },
+  { id: "overlay_profile2",   label: "Profile — Agent 2",      icon: "\ud83d\udc64", animated: true },
+  { id: "overlay_countdown",  label: "3s Countdown",           icon: "\u23f3", animated: true },
+  { id: "overlay_playalong",  label: "Play Along",             icon: "\ud83c\udfae", animated: true },
+  { id: "overlay_howdidyoudo",label: "How Did You Do?",        icon: "\ud83e\udd14", animated: true },
+  { id: "overlay_csss",       label: "Comment Share Subscribe",icon: "\ud83d\udc4d", animated: true },
 ];
 ALL_ASSETS.push(...SOCIAL_ASSETS);
 const findAsset = (id) => ALL_ASSETS.find(a => a.id === id);
+
+// Ratio slug for export filenames: "16:9" → "16x9", "iPad Pro" → "ipad_pro"
+const ratioSlug = (r) => String(r || "").toLowerCase().replace(/:/g, "x").replace(/\s+/g, "_");
 
 // ═══════════════════════════════════════════════════════════════
 //  LIVE MODE — flow + touch detection
@@ -1791,7 +1796,7 @@ function drawOverlayPlayAlong(ctx, W, H, S, progress) {
   const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
 
   // Phase 1 (0-0.4): "Guess the price time..." fades in
-  // Phase 2 (0.4-0.7): "How much?" scales in with bounce
+  // Phase 2 (0.4-0.7): "How much?" scales in with bounce + radial glow
   // Phase 3 (0.7-1): both hold
 
   const line1P = easeOutExpo(Math.min(1, p / 0.4));
@@ -1809,21 +1814,194 @@ function drawOverlayPlayAlong(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  // "How much?"
+  // "How much?" — glow rendered as radial gradient (shadowBlur doesn't export via MediaRecorder)
   if (line2P > 0) {
     const howSz = sz(W, H, 0.07) * (0.8 + 0.2 * line2P);
+    const howY = centerY + sz(W, H, 0.05);
+
+    // Radial gradient glow behind text — exports correctly with alpha
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, line2P) * 0.85;
+    const glowR = howSz * 2.2;
+    const glow = ctx.createRadialGradient(W / 2, howY, 0, W / 2, howY, glowR);
+    glow.addColorStop(0, "rgba(251, 135, 112, 0.65)");
+    glow.addColorStop(0.35, "rgba(251, 135, 112, 0.28)");
+    glow.addColorStop(0.7, "rgba(251, 135, 112, 0.08)");
+    glow.addColorStop(1, "rgba(251, 135, 112, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(W / 2 - glowR, howY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
+    // Text on top
     ctx.save();
     ctx.globalAlpha = line2P;
-    ctx.shadowColor = GAME.gold;
-    ctx.shadowBlur = 20;
     ctx.font = `800 ${Math.round(howSz)}px 'Lora', serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("How much?", W / 2, centerY + sz(W, H, 0.05));
+    ctx.fillText("How much?", W / 2, howY);
     ctx.restore();
   }
 
+}
+
+// "How did you do?" — transparent social overlay
+// Phase 1 (0-0.4): "How did you do?" fades in (white, Lora)
+// Phase 2 (0.4-0.75): "Did you beat them??" bounces in (gold) with radial glow
+// Phase 3 (0.75-1): both hold
+function drawOverlayHowDidYouDo(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
+
+  const line1P = easeOutExpo(Math.min(1, p / 0.4));
+  const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.4) / 0.35)));
+
+  // "How did you do?"
+  if (line1P > 0) {
+    const topSz = sz(W, H, ar === "portrait" ? 0.085 : 0.07);
+    ctx.save();
+    ctx.globalAlpha = line1P;
+    ctx.font = `700 ${Math.round(topSz)}px 'Lora', serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("How did you do?", W / 2, centerY - sz(W, H, 0.06));
+    ctx.restore();
+  }
+
+  // "Did you beat them??" — gold, bounces in with radial glow
+  if (line2P > 0) {
+    const beatSz = sz(W, H, ar === "portrait" ? 0.095 : 0.08) * (0.75 + 0.25 * line2P);
+    const beatY = centerY + sz(W, H, 0.055);
+
+    // Radial gradient glow
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, line2P) * 0.85;
+    const glowR = beatSz * 2.4;
+    const glow = ctx.createRadialGradient(W / 2, beatY, 0, W / 2, beatY, glowR);
+    glow.addColorStop(0, "rgba(251, 135, 112, 0.7)");
+    glow.addColorStop(0.35, "rgba(251, 135, 112, 0.3)");
+    glow.addColorStop(0.7, "rgba(251, 135, 112, 0.08)");
+    glow.addColorStop(1, "rgba(251, 135, 112, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(W / 2 - glowR, beatY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = line2P;
+    ctx.font = `800 ${Math.round(beatSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Did you beat them??", W / 2, beatY);
+    ctx.restore();
+  }
+}
+
+// "Comment, Share & Subscribe" — transparent social CTA with staggered entrance
+// Phase 1 (0-0.25): "Comment"   fades + slides up
+// Phase 2 (0.15-0.4): "Share"   fades + slides up
+// Phase 3 (0.3-0.55): "&"       fades in
+// Phase 4 (0.45-0.75): "Subscribe" fades + slides up, scales with bounce
+// Phase 5 (0.75-1): all hold
+function drawOverlayCSSS(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar === "portrait" ? H * 0.45 : H * 0.48;
+
+  // Staggered progress per word (ease-out)
+  const commentP = easeOutExpo(Math.min(1, p / 0.25));
+  const shareP   = easeOutExpo(Math.min(1, Math.max(0, (p - 0.15) / 0.25)));
+  const ampP     = easeOutExpo(Math.min(1, Math.max(0, (p - 0.30) / 0.25)));
+  const subP     = easeOutBack(Math.min(1, Math.max(0, (p - 0.45) / 0.30)));
+
+  const topSz  = sz(W, H, ar === "portrait" ? 0.075 : 0.06);
+  const bigSz  = sz(W, H, ar === "portrait" ? 0.11  : 0.09) * (0.8 + 0.2 * Math.max(0, subP));
+
+  // Line 1: "Comment, Share & Subscribe" rendered as one row with per-word alpha + y-offset
+  const lineY = centerY;
+  ctx.font = `700 ${Math.round(topSz)}px 'DM Sans', sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Measure widths so we can lay out words with tight spacing
+  const comma = ", ";
+  const amp = " & ";
+  const wComment = ctx.measureText("Comment" + comma).width;
+  const wShare   = ctx.measureText("Share").width;
+  const wAmp     = ctx.measureText(amp).width;
+  // "Subscribe" uses the big size — measure separately
+  ctx.font = `800 ${Math.round(bigSz)}px 'Lora', serif`;
+  const wSub = ctx.measureText("Subscribe").width;
+
+  const totalW = wComment + wShare + wAmp + wSub;
+  let x = W / 2 - totalW / 2;
+
+  // "Comment,"
+  if (commentP > 0) {
+    const yOff = (1 - commentP) * sz(W, H, 0.025);
+    ctx.save();
+    ctx.globalAlpha = commentP;
+    ctx.font = `700 ${Math.round(topSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "left";
+    ctx.fillText("Comment" + comma, x, lineY + yOff);
+    ctx.restore();
+  }
+  x += wComment;
+
+  // "Share"
+  if (shareP > 0) {
+    const yOff = (1 - shareP) * sz(W, H, 0.025);
+    ctx.save();
+    ctx.globalAlpha = shareP;
+    ctx.font = `700 ${Math.round(topSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "left";
+    ctx.fillText("Share", x, lineY + yOff);
+    ctx.restore();
+  }
+  x += wShare;
+
+  // " & "
+  if (ampP > 0) {
+    ctx.save();
+    ctx.globalAlpha = ampP;
+    ctx.font = `700 ${Math.round(topSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.textAlign = "left";
+    ctx.fillText(amp, x, lineY);
+    ctx.restore();
+  }
+  x += wAmp;
+
+  // "Subscribe" — bigger, bouncy, gold, with radial glow
+  if (subP > 0) {
+    const subCenterX = x + wSub / 2;
+    // Radial glow
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, subP) * 0.85;
+    const glowR = bigSz * 2.0;
+    const glow = ctx.createRadialGradient(subCenterX, lineY, 0, subCenterX, lineY, glowR);
+    glow.addColorStop(0, "rgba(251, 135, 112, 0.65)");
+    glow.addColorStop(0.35, "rgba(251, 135, 112, 0.28)");
+    glow.addColorStop(0.7, "rgba(251, 135, 112, 0.08)");
+    glow.addColorStop(1, "rgba(251, 135, 112, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(subCenterX - glowR, lineY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, subP);
+    ctx.font = `800 ${Math.round(bigSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "left";
+    ctx.fillText("Subscribe", x, lineY);
+    ctx.restore();
+  }
 }
 
 const DRAW_FNS = {
@@ -1840,6 +2018,8 @@ const DRAW_FNS = {
   overlay_profile2: drawOverlayProfile2,
   overlay_countdown: drawOverlayCountdown,
   overlay_playalong: drawOverlayPlayAlong,
+  overlay_howdidyoudo: drawOverlayHowDidYouDo,
+  overlay_csss: drawOverlayCSSS,
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -2612,15 +2792,16 @@ export default function GuessThePrice({ displayMode = false }) {
     if (!canvas) return;
     const asset = findAsset(activeAsset);
     if (asset?.animated) render(1);
+    const slug = ratioSlug(ratio);
     canvas.toBlob(blob => {
       if (!blob) return;
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = filename || `gtp_${activeAsset}_r${S.propRound}.png`;
+      a.download = filename || `gtp_${activeAsset}_r${S.propRound}_${slug}.png`;
       a.click();
       URL.revokeObjectURL(a.href);
     }, "image/png");
-  }, [activeAsset, S, render]);
+  }, [activeAsset, S, ratio, render]);
 
   // ── Export MOV (animated, Premiere-native with alpha) ──
   const exportMOV = useCallback(async () => {
@@ -2630,14 +2811,16 @@ export default function GuessThePrice({ displayMode = false }) {
     const drawFn = DRAW_FNS[activeAsset];
     if (!drawFn) return;
     const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? (S.photoDuration || 5) * Math.max(1, (episode.rounds[currentRound]?.photos?.length || 1)) : activeAsset === "intro" ? 6 : 3) * 1000;
+    const slug = ratioSlug(ratio);
+    const movName = `gtp_${activeAsset}_r${S.propRound}_${slug}.mov`;
     setExportStatus("Recording…");
     const { recordAsset, webmToMov } = await loadVideoExport();
     const webm = await recordAsset(drawFn, r.W, r.H, S, duration);
     setExportStatus("Converting to MOV…");
-    const mov = await webmToMov(webm, `gtp_${activeAsset}_r${S.propRound}.mov`);
+    const mov = await webmToMov(webm, movName);
     const a = document.createElement("a");
     a.href = URL.createObjectURL(mov);
-    a.download = `gtp_${activeAsset}_r${S.propRound}.mov`;
+    a.download = movName;
     a.click();
     URL.revokeObjectURL(a.href);
     setExportStatus("Done \u2713");
@@ -2647,15 +2830,16 @@ export default function GuessThePrice({ displayMode = false }) {
   // ── Batch export round ──
   const exportRound = useCallback(async () => {
     const rn = S.propRound;
+    const slug = ratioSlug(ratio);
     const toExport = [
-      { asset: "roundtitle", name: `r${rn}_01_round_title.png` },
-      { asset: "property",   name: `r${rn}_02_property.png` },
-      { asset: "prompt",     name: `r${rn}_03_prompt.png` },
-      { asset: "options",    name: `r${rn}_04_options.png` },
-      { asset: "lockin",     name: `r${rn}_05_lockin.png` },
-      { asset: "timer",      name: `r${rn}_06_timer.png` },
-      { asset: "reveal",     name: `r${rn}_07_reveal.png` },
-      { asset: "scoreboard", name: `r${rn}_08_scoreboard.png` },
+      { asset: "roundtitle", name: `r${rn}_01_round_title_${slug}.png` },
+      { asset: "property",   name: `r${rn}_02_property_${slug}.png` },
+      { asset: "prompt",     name: `r${rn}_03_prompt_${slug}.png` },
+      { asset: "options",    name: `r${rn}_04_options_${slug}.png` },
+      { asset: "lockin",     name: `r${rn}_05_lockin_${slug}.png` },
+      { asset: "timer",      name: `r${rn}_06_timer_${slug}.png` },
+      { asset: "reveal",     name: `r${rn}_07_reveal_${slug}.png` },
+      { asset: "scoreboard", name: `r${rn}_08_scoreboard_${slug}.png` },
     ];
     for (let i = 0; i < toExport.length; i++) {
       setExportStatus(`Exporting ${i + 1}/${toExport.length}\u2026`);
@@ -2701,6 +2885,7 @@ export default function GuessThePrice({ displayMode = false }) {
     }
     const zip = new window.JSZip();
     const rat = RATIOS[ratio];
+    const slug = ratioSlug(ratio);
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -2722,7 +2907,7 @@ export default function GuessThePrice({ displayMode = false }) {
     introCtx.clearRect(0, 0, rat.W, rat.H);
     DRAW_FNS.intro(introCtx, rat.W, rat.H, S, 1);
     const introBlob = await new Promise(res => canvas.toBlob(res, "image/png"));
-    if (introBlob) zip.file("00_intro.png", introBlob);
+    if (introBlob) zip.file(`00_intro_${slug}.png`, introBlob);
     fileCount++;
     await new Promise(r => setTimeout(r, 50));
 
@@ -2733,10 +2918,11 @@ export default function GuessThePrice({ displayMode = false }) {
       const ve = await loadVideoExport();
       const introWebm = await ve.recordAsset(DRAW_FNS.intro, rat.W, rat.H, S, 6000);
       setExportStatus("Intro MOV converting…");
-      const introMov = await ve.webmToMov(introWebm, "00_intro.mov");
+      const introMovName = `00_intro_${slug}.mov`;
+      const introMov = await ve.webmToMov(introWebm, introMovName);
       const a = document.createElement("a");
       a.href = URL.createObjectURL(introMov);
-      a.download = "00_intro.mov";
+      a.download = introMovName;
       a.click();
       URL.revokeObjectURL(a.href);
       await new Promise(r => setTimeout(r, 500));
@@ -2842,8 +3028,8 @@ export default function GuessThePrice({ displayMode = false }) {
 
       // Full show sequence per round — stills + key animated MOVs:
       // 1. Round title (still + animated)
-      await exportStill("roundtitle", `R${rn}_01_round_title.png`);
-      await exportAnimated("roundtitle", `R${rn}_01_round_title.mov`, 3000);
+      await exportStill("roundtitle", `R${rn}_01_round_title_${slug}.png`);
+      await exportAnimated("roundtitle", `R${rn}_01_round_title_${slug}.mov`, 3000);
 
       // 2. Property photos — stills per photo + animated MOV of full sequence
       for (let pi = 0; pi < numPhotos; pi++) {
@@ -2857,35 +3043,35 @@ export default function GuessThePrice({ displayMode = false }) {
         const progress = numPhotos > 1 ? (pi + 0.5) / numPhotos : 1;
         DRAW_FNS.property(ctx, rat.W, rat.H, roundS, progress);
         const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
-        if (blob) zip.file(`R${rn}_02_photo_${pi + 1}.png`, blob);
+        if (blob) zip.file(`R${rn}_02_photo_${pi + 1}_${slug}.png`, blob);
         await new Promise(r => setTimeout(r, 50));
       }
       // Animated property MOV — full photo cycle at photoDuration per photo
       const propDurMs = (roundS.photoDuration || 5) * numPhotos * 1000;
-      await exportAnimated("property", `R${rn}_02_property.mov`, propDurMs, roundS);
+      await exportAnimated("property", `R${rn}_02_property_${slug}.mov`, propDurMs, roundS);
 
       // 3. Prompt (still + animated)
-      await exportStill("prompt", `R${rn}_03_prompt.png`);
-      await exportAnimated("prompt", `R${rn}_03_prompt.mov`, 3000);
+      await exportStill("prompt", `R${rn}_03_prompt_${slug}.png`);
+      await exportAnimated("prompt", `R${rn}_03_prompt_${slug}.mov`, 3000);
 
       // 4. A/B/C Options (still + animated)
-      await exportStill("options", `R${rn}_04_options.png`);
-      await exportAnimated("options", `R${rn}_04_options.mov`, 3000);
+      await exportStill("options", `R${rn}_04_options_${slug}.png`);
+      await exportAnimated("options", `R${rn}_04_options_${slug}.mov`, 3000);
 
       // 5. Lock-in (still + animated)
-      await exportStill("lockin", `R${rn}_05_lockin.png`);
-      await exportAnimated("lockin", `R${rn}_05_lockin.mov`, 3000);
+      await exportStill("lockin", `R${rn}_05_lockin_${slug}.png`);
+      await exportAnimated("lockin", `R${rn}_05_lockin_${slug}.mov`, 3000);
 
       // 6. Timer (still + animated)
-      await exportStill("timer", `R${rn}_06_timer.png`);
-      await exportAnimated("timer", `R${rn}_06_timer.mov`, (roundS.timerDuration || 3) * 1000);
+      await exportStill("timer", `R${rn}_06_timer_${slug}.png`);
+      await exportAnimated("timer", `R${rn}_06_timer_${slug}.mov`, (roundS.timerDuration || 3) * 1000);
 
       // 7. Price Reveal (still + animated)
-      await exportStill("reveal", `R${rn}_07_reveal.png`);
-      await exportAnimated("reveal", `R${rn}_07_reveal.mov`, 3000);
+      await exportStill("reveal", `R${rn}_07_reveal_${slug}.png`);
+      await exportAnimated("reveal", `R${rn}_07_reveal_${slug}.mov`, 3000);
 
       // 8. Scoreboard (still only — no entrance animation needed)
-      await exportStill("scoreboard", `R${rn}_08_scoreboard.png`);
+      await exportStill("scoreboard", `R${rn}_08_scoreboard_${slug}.png`);
     }
 
     if (exportCancelRef.current) {
@@ -2901,7 +3087,7 @@ export default function GuessThePrice({ displayMode = false }) {
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(zipBlob);
-    a.download = `gtp_ep${episode.episode || 1}_all_rounds.zip`;
+    a.download = `gtp_ep${episode.episode || 1}_all_rounds_${slug}.zip`;
     a.click();
     URL.revokeObjectURL(a.href);
     setExportStatus("Done ✓");
