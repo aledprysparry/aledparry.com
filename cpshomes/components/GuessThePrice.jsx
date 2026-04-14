@@ -363,12 +363,13 @@ function drawStamp(ctx, W, H, opts = {}) {
   const logo = getCachedImage(BRAND.logoUrlLight);
   if (!logo || !logo.complete || !logo.naturalWidth) return;
   const ar = H > W ? "portrait" : W === H ? "square" : "landscape";
-  const logoScale = ar === "portrait" ? 0.20 : ar === "square" ? 0.18 : BRAND.logoSize;
-  const logoW = W * logoScale;
+  const baseScale = ar === "portrait" ? 0.20 : ar === "square" ? 0.18 : BRAND.logoSize;
+  const scale = opts.scale ?? 1;
+  const logoW = W * baseScale * scale;
   const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
   const pad = W * 0.05; // 5% from edges — comfortable breathing room
   const bottomPad = ar === "portrait" ? Math.round(420 * (W / 1080)) + pad : H * 0.05;
-  // opts.centered → horizontal-centre at the bottom (used on Intro Title)
+  // opts.centered → horizontal-centre at the bottom (used on Intro Title + Endboard)
   const x = opts.centered ? (W - logoW) / 2 : W - logoW - pad;
   ctx.save();
   ctx.globalAlpha = BRAND.logoOpacity;
@@ -1693,8 +1694,24 @@ function drawEndboard(ctx, W, H, S, progress) {
   const safeTop = ar === "portrait" ? safe.contentTop : 0;
   const a1 = EPISODE.agents[0] || "Agent 1";
   const a2 = EPISODE.agents[1] || "Agent 2";
-  const s1 = S.score1 ?? 0;
-  const s2 = S.score2 ?? 0;
+
+  // ── Auto-compute final scores from EPISODE.rounds when available ──
+  // Falls back to live S.score1/score2 if no round results are recorded yet.
+  const rounds = EPISODE.rounds || [];
+  const anyPlayed = rounds.some(r => r.lockedLetter);
+  let s1 = S.score1 ?? 0;
+  let s2 = S.score2 ?? 0;
+  if (anyPlayed) {
+    const calc = [0, 0];
+    for (const rd of rounds) {
+      const locked = rd.lockedLetter;
+      if (locked && rd.correctLetter && locked === rd.correctLetter && rd.guesser) {
+        const gi = EPISODE.agents.indexOf(rd.guesser);
+        if (gi >= 0) calc[gi]++;
+      }
+    }
+    s1 = calc[0]; s2 = calc[1];
+  }
   const winnerIdx = s1 > s2 ? 0 : s2 > s1 ? 1 : -1; // -1 = draw
 
   // Staggered timing
@@ -1704,27 +1721,30 @@ function drawEndboard(ctx, W, H, S, progress) {
   const crownP  = easeOutBack(Math.min(1, Math.max(0, (p - 0.55) / 0.25)));
   const thanksP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.7) / 0.3)));
 
-  // ── Title: "THE END" with glow ──
-  const titleY = ar === "portrait" ? safeTop + safeH * 0.10 : H * 0.14;
+  // ── Layout (landscape thirds: title, cards, footer) ──
+  const titleY    = ar === "portrait" ? safeTop + safeH * 0.14 : H * 0.17;
+  const subtitleY = titleY + sz(W, H, ar === "portrait" ? 0.06 : 0.055);
+
+  // ── Title: "GAME OVER" with glow ──
   ctx.save();
   ctx.globalAlpha = titleP;
   ctx.shadowColor = GAME.gold;
   ctx.shadowBlur = sz(W, H, 0.035);
-  ctx.font = `800 ${sz(W, H, ar === "portrait" ? 0.09 : 0.075)}px 'Lora', serif`;
+  ctx.font = `800 ${sz(W, H, ar === "portrait" ? 0.095 : 0.08)}px 'Lora', serif`;
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("THE END", W / 2, titleY);
+  ctx.fillText("GAME OVER", W / 2, titleY);
   ctx.restore();
 
   // Subtitle under title — show name
   ctx.save();
   ctx.globalAlpha = titleP;
-  ctx.font = `500 ${sz(W, H, 0.024)}px 'DM Sans', sans-serif`;
+  ctx.font = `500 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("GUESS THE PRICE", W / 2, titleY + sz(W, H, ar === "portrait" ? 0.075 : 0.065));
+  ctx.fillText("GUESS THE PRICE", W / 2, subtitleY);
   ctx.restore();
 
   // ── Final score cards ──
@@ -1753,7 +1773,7 @@ function drawEndboard(ctx, W, H, S, progress) {
     // Score number — large, gold for winner, muted for loser
     const scoreSz = sz(W, H, ar === "portrait" ? 0.095 : 0.105);
     ctx.font = `800 ${Math.round(scoreSz)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = isWinner ? GAME.gold : "rgba(255,255,255,0.4)";
+    ctx.fillStyle = isWinner ? GAME.gold : "rgba(255,255,255,0.85)";
     if (isWinner) {
       ctx.shadowColor = GAME.gold;
       ctx.shadowBlur = scoreSz * 0.25;
@@ -1762,17 +1782,18 @@ function drawEndboard(ctx, W, H, S, progress) {
     ctx.restore();
   };
 
+  // Cards occupy the middle band, with a generous gap from title + footer
   let card1Rect, card2Rect;
   if (ar === "portrait") {
-    const cardW2 = W * 0.7, cardH2 = safeH * 0.22, gap = safeH * 0.035;
+    const cardW2 = W * 0.68, cardH2 = safeH * 0.20, gap = safeH * 0.03;
     const centerX = W / 2 - cardW2 / 2;
-    const y1 = safeTop + safeH * 0.30;
+    const y1 = safeTop + safeH * 0.32;
     const y2 = y1 + cardH2 + gap;
     card1Rect = { x: centerX, y: y1, w: cardW2, h: cardH2 };
     card2Rect = { x: centerX, y: y2, w: cardW2, h: cardH2 };
   } else {
-    const cw2 = W * 0.28, ch2 = H * 0.38, gap = W * 0.04;
-    const cy2 = H * 0.32;
+    const cw2 = W * 0.26, ch2 = H * 0.32, gap = W * 0.04;
+    const cy2 = H * 0.34;
     card1Rect = { x: W / 2 - gap / 2 - cw2, y: cy2, w: cw2, h: ch2 };
     card2Rect = { x: W / 2 + gap / 2,        y: cy2, w: cw2, h: ch2 };
   }
@@ -1783,14 +1804,16 @@ function drawEndboard(ctx, W, H, S, progress) {
   // ── Crown over the winner (or "DRAW" between cards) ──
   if (crownP > 0) {
     if (winnerIdx === -1) {
-      // Draw badge between cards
+      // Draw badge centered between the two cards
       ctx.save();
       ctx.globalAlpha = crownP;
       const scale = 0.7 + 0.3 * crownP;
       const dx = W / 2;
-      const dy = ar === "portrait" ? (card1Rect.y + card1Rect.h + (card2Rect.y - card1Rect.y - card1Rect.h) / 2) : (card1Rect.y + card1Rect.h / 2);
-      ctx.font = `800 ${sz(W, H, 0.04) * scale}px 'Lora', serif`;
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      const dy = ar === "portrait"
+        ? (card1Rect.y + card1Rect.h + (card2Rect.y - card1Rect.y - card1Rect.h) / 2)
+        : (card1Rect.y + card1Rect.h / 2);
+      ctx.font = `800 ${sz(W, H, 0.038) * scale}px 'Lora', serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("DRAW", dx, dy);
@@ -1801,7 +1824,6 @@ function drawEndboard(ctx, W, H, S, progress) {
       const crownSz = sz(W, H, 0.07) * (0.7 + 0.3 * crownP);
       ctx.save();
       ctx.globalAlpha = crownP;
-      // Slight bounce-in from above
       const dropY = (1 - crownP) * sz(W, H, 0.03);
       ctx.font = `${Math.round(crownSz)}px serif`;
       ctx.textAlign = "center";
@@ -1811,22 +1833,24 @@ function drawEndboard(ctx, W, H, S, progress) {
     }
   }
 
-  // ── Thanks / Diolch line (bilingual) ──
+  // ── "Thanks for watching" (English only) ──
+  // Positioned clear of cards, above the centered logo
   if (thanksP > 0) {
     const thanksY = ar === "portrait"
-      ? (card2Rect.y + card2Rect.h + safeH * 0.06)
-      : (H * 0.82);
+      ? (card2Rect.y + card2Rect.h + safeH * 0.065)
+      : (H * 0.76);
     ctx.save();
     ctx.globalAlpha = thanksP;
-    ctx.font = `500 ${sz(W, H, ar === "portrait" ? 0.03 : 0.026)}px 'DM Sans', sans-serif`;
+    ctx.font = `500 ${sz(W, H, ar === "portrait" ? 0.028 : 0.024)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.75)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("Diolch am wylio  \u00b7  Thanks for watching", W / 2, thanksY);
+    ctx.fillText("Thanks for watching", W / 2, thanksY);
     ctx.restore();
   }
 
-  drawStamp(ctx, W, H);
+  // Centered + larger CPS Homes logo at the bottom
+  drawStamp(ctx, W, H, { centered: true, scale: 1.5 });
 }
 
 // ═══════════════════════════════════════════════════════════════
