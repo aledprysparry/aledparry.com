@@ -2235,7 +2235,7 @@ export default function GuessThePrice({ displayMode = false }) {
   // Counts previous rounds + current round only when on scoreboard (after reveal)
   useEffect(() => {
     const calcScores = [0, 0];
-    const includeCurrentRound = activeAsset === "scoreboard";
+    const includeCurrentRound = activeAsset === "scoreboard" || activeAsset === "reveal";
     const countUpTo = includeCurrentRound ? currentRound : currentRound - 1;
     for (let i = 0; i <= countUpTo; i++) {
       const rd = episode.rounds[i];
