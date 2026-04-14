@@ -723,16 +723,16 @@ function drawProperty(ctx, W, H, S, progress) {
   const specText = specParts.join("  \u00b7  ");
 
   if (ar === "portrait") {
-    const cardH = H * 0.10;
-    const pad = Math.max(W * 0.05, safe.left);
-    const cardY = safe.contentBottom - cardH - W * 0.03;
+    const cardH = H * 0.12;
+    const pad = Math.max(W * 0.06, safe.left);
+    const cardY = safe.contentBottom - cardH - W * 0.04;
 
     ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
     roundRect(ctx, pad, cardY, W - pad * 2, cardH, BRAND.cornerRadius);
     ctx.fill();
 
     // Round badge
-    const bSize = W * 0.09;
+    const bSize = W * 0.10;
     const bx = W / 2;
     const by = cardY - bSize * 0.6;
     ctx.fillStyle = GAME.gold;
@@ -745,22 +745,24 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.textBaseline = "middle";
     ctx.fillText(`R${S.propRound || 1}`, bx, by);
 
-    // Address
-    ctx.font = `700 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
+    // Address — larger for readability
+    ctx.font = `700 ${sz(W, H, 0.035)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "center";
-    ctx.fillText(S.propAddress.split(",")[0], W / 2, cardY + cardH * 0.30);
+    ctx.textBaseline = "middle";
+    const maxAddrW = W - pad * 4;
+    ctx.fillText(S.propAddress ? S.propAddress.split(",")[0] : "", W / 2, cardY + cardH * 0.28, maxAddrW);
 
     // Location
-    ctx.font = `500 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
+    ctx.font = `500 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.goldLight;
-    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.55);
+    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.52);
 
     // Specs
     if (specText) {
-      ctx.font = `500 ${sz(W, H, 0.016)}px 'DM Sans', sans-serif`;
+      ctx.font = `500 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
       ctx.fillStyle = "rgba(255,255,255,0.5)";
-      ctx.fillText(specText, W / 2, cardY + cardH * 0.78);
+      ctx.fillText(specText, W / 2, cardY + cardH * 0.75, maxAddrW);
     }
   } else if (ar === "square") {
     // Square: taller bar with address on top line, specs below
