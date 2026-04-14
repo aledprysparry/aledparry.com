@@ -794,7 +794,8 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.textBaseline = "middle";
     const addrShort = S.propAddress ? S.propAddress.split(",")[0] : "";
     const fullInfo = [addrShort, S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
-    ctx.fillText(fullInfo, ax, by);
+    const maxTextW = W - ax - pad * 2 - (EPISODE.logoImage ? W * 0.15 : 0);
+    ctx.fillText(fullInfo, ax, by, maxTextW);
 
     // Show logo on right side (if uploaded)
     const showLogoSrc = EPISODE.logoImage;
@@ -916,7 +917,8 @@ function drawPropertyGallery(ctx, W, H, S, photoSrc, animT, photoIdx, totalPhoto
     ctx.textBaseline = "middle";
     const addrShort = S.propAddress ? S.propAddress.split(",")[0] : "";
     const fullInfo = [addrShort, S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
-    ctx.fillText(fullInfo, ax, by);
+    const maxTextW = W - ax - pad * 2 - (EPISODE.logoImage ? W * 0.15 : 0);
+    ctx.fillText(fullInfo, ax, by, maxTextW);
 
     // Show logo on right side
     const showLogoImg = EPISODE.logoImage ? getCachedImage(EPISODE.logoImage) : null;
@@ -1709,7 +1711,7 @@ export default function GuessThePrice({ displayMode = false }) {
     revealLetter: EPISODE.rounds[0].correctLetter,
     revealPrice: EPISODE.rounds[0].correctPrice,
     lockAgent: EPISODE.rounds[0].guesser,
-    lockLetter: "",
+    lockLetter: EPISODE.rounds[0].lockedLetter || "",
     score1: 0,
     score2: 0,
     timerDuration: 3,
@@ -1967,7 +1969,7 @@ export default function GuessThePrice({ displayMode = false }) {
       revealLetter: round.correctLetter,
       revealPrice: round.correctPrice,
       lockAgent: round.guesser,
-      lockLetter: "",
+      lockLetter: round.lockedLetter || "",
       score1: sc ? sc[0] : 0,
       score2: sc ? sc[1] : 0,
       timerDuration: ep.timerDuration ?? prev.timerDuration ?? 3,
@@ -1992,6 +1994,7 @@ export default function GuessThePrice({ displayMode = false }) {
           optionC: newS.optionC,
           correctLetter: newS.revealLetter,
           correctPrice: newS.revealPrice,
+          lockedLetter: newS.lockLetter || rounds[idx].lockedLetter,
         };
       }
       return { ...ep, show: newS.showTitle, episode: newS.introEpisode, rounds, scores, timerDuration: newS.timerDuration, photoDuration: newS.photoDuration };
@@ -2183,7 +2186,7 @@ export default function GuessThePrice({ displayMode = false }) {
       revealLetter: round.correctLetter,
       revealPrice: round.correctPrice,
       lockAgent: round.guesser,
-      lockLetter: "",
+      lockLetter: round.lockedLetter || "",
       score1: scores[0],
       score2: scores[1],
     }));
@@ -4168,9 +4171,7 @@ export default function GuessThePrice({ displayMode = false }) {
       <footer style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: `${DS.md}px ${DS.xl}px`, borderTop: `1px solid ${DS.borderSubtle}`, background: DS.bgSurface }}>
         <div style={{ display: "flex", gap: DS.sm }}>
           <button onClick={() => exportPNG()} style={btnCta({ padding: "8px 20px", fontSize: DS.fsSm })}>Export PNG</button>
-          {ASSETS.find(a => a.id === activeAsset)?.animated && (
-            <button onClick={exportMOV} style={btnPositive({ padding: "8px 20px", fontSize: DS.fsSm })}>Export MOV</button>
-          )}
+          <button onClick={exportMOV} style={btnPositive({ padding: "8px 20px", fontSize: DS.fsSm })}>Export MOV</button>
           <button onClick={exportRound} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export Round</button>
           <button onClick={exportAllZIP} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>Export All (ZIP)</button>
           <button onClick={exportPDF} style={btn({ padding: "8px 20px", fontSize: DS.fsSm, borderColor: "rgba(251,135,112,0.25)", color: GAME.gold })}>iPad PDF</button>
