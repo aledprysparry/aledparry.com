@@ -762,8 +762,49 @@ function drawProperty(ctx, W, H, S, progress) {
       ctx.fillStyle = "rgba(255,255,255,0.5)";
       ctx.fillText(specText, W / 2, cardY + cardH * 0.78);
     }
+  } else if (ar === "square") {
+    // Square: taller bar with address on top line, specs below
+    const barH = H * 0.12;
+    const pad = W * 0.04;
+    const barY = H - barH - pad;
+
+    ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
+    roundRect(ctx, pad, barY, W - pad * 2, barH, BRAND.cornerRadius);
+    ctx.fill();
+
+    // Round badge
+    const bSize = W * 0.05;
+    const bx = pad + bSize + pad * 0.3;
+    const by = barY + barH * 0.38;
+    ctx.fillStyle = GAME.gold;
+    ctx.beginPath();
+    ctx.arc(bx, by, bSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = `700 ${Math.round(bSize * 0.5)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`R${S.propRound || 1}`, bx, by);
+
+    // Address — larger, top line
+    const ax = bx + bSize;
+    const maxTextW = W - ax - pad * 2 - (EPISODE.logoImage ? W * 0.15 : 0);
+    ctx.font = `700 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = BRAND.colorText;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    const addrShort = S.propAddress ? S.propAddress.split(",")[0] : "";
+    ctx.fillText(addrShort, ax, barY + barH * 0.35, maxTextW);
+
+    // Specs — smaller, bottom line
+    const specLine = [S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
+    if (specLine) {
+      ctx.font = `500 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = GAME.goldLight;
+      ctx.fillText(specLine, ax, barY + barH * 0.68, maxTextW);
+    }
   } else {
-    // Landscape/square: compact bottom bar with show logo
+    // Landscape: compact single-line bar
     const barH = H * 0.08;
     const pad = W * 0.03;
     const barY = H - barH - pad;
