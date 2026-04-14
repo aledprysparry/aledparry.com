@@ -301,13 +301,23 @@ const ASSETS = [
   { id: "intro",      label: "Intro Title",    icon: "\u25b6", animated: true },
   { id: "roundtitle", label: "Round Title",     icon: "#", animated: true },
   { id: "property",   label: "Property Frame",  icon: "\ud83c\udfe0", animated: true },
-  { id: "prompt",    label: "Audience Prompt", icon: "\u2753", animated: true },
   { id: "options",   label: "A/B/C Options",   icon: "\ud83c\udfaf", animated: true },
   { id: "lockin",    label: "Lock-In",         icon: "\ud83d\udd12", animated: true },
   { id: "timer",     label: "Countdown",       icon: "\u23f1", animated: true },
   { id: "reveal",    label: "Price Reveal",    icon: "\ud83c\udf89", animated: true },
   { id: "scoreboard",label: "Scoreboard",      icon: "\ud83c\udfc6", animated: true },
 ];
+
+const ALL_ASSETS = [...ASSETS]; // will include SOCIAL_ASSETS after definition
+// Social media / edit overlay assets (transparent background, MOV with alpha)
+const SOCIAL_ASSETS = [
+  { id: "prompt",           label: "Audience Prompt", icon: "\u2753", animated: true },
+  { id: "overlay_profile",  label: "Profile Name",    icon: "\ud83d\udc64", animated: true },
+  { id: "overlay_countdown",label: "3s Countdown",    icon: "\u23f3", animated: true },
+  { id: "overlay_playalong",label: "Play Along",      icon: "\ud83c\udfae", animated: true },
+];
+ALL_ASSETS.push(...SOCIAL_ASSETS);
+const findAsset = (id) => ALL_ASSETS.find(a => a.id === id);
 
 // ═══════════════════════════════════════════════════════════════
 //  LIVE MODE — flow + touch detection
@@ -1689,6 +1699,134 @@ function drawScoreboard(ctx, W, H, S, progress) {
   drawStamp(ctx, W, H);
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  SOCIAL / EDIT OVERLAYS — transparent background
+// ═══════════════════════════════════════════════════════════════
+
+// Profile lower third — name + job title
+function drawOverlayProfile(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const name = S.lockAgent || EPISODE.agents[0] || "Agent";
+  const rd = EPISODE.rounds ? EPISODE.rounds[(S.propRound || 1) - 1] : null;
+  const role = rd?.propertyAgent === name ? "Property Choice" : "Guessing";
+
+  // Position: bottom-left
+  const padL = W * 0.05;
+  const padB = ar === "portrait" ? H * 0.25 : H * 0.12;
+  const barH = H * (ar === "portrait" ? 0.06 : 0.08);
+  const barY = H - padB - barH;
+
+  // Slide in from left
+  const slideP = easeOutExpo(Math.min(1, p / 0.5));
+  const slideX = -W * 0.3 * (1 - slideP);
+
+  ctx.save();
+  ctx.globalAlpha = slideP;
+  ctx.translate(slideX, 0);
+
+  // Background pill
+  const nameFs = sz(W, H, 0.032);
+  ctx.font = `800 ${nameFs}px 'DM Sans', sans-serif`;
+  const nameW = ctx.measureText(name.toUpperCase()).width;
+  const pillW = nameW + W * 0.06;
+
+  ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
+  roundRect(ctx, padL, barY, pillW, barH, BRAND.cornerRadius);
+  ctx.fill();
+
+  // Gold accent bar on left
+  ctx.fillStyle = GAME.gold;
+  roundRect(ctx, padL, barY, 6, barH, 3);
+  ctx.fill();
+
+  // Name
+  ctx.font = `800 ${nameFs}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(name.toUpperCase(), padL + W * 0.02, barY + barH * 0.5);
+
+  // Role — below the pill
+  const roleP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.3) / 0.4)));
+  if (roleP > 0) {
+    ctx.globalAlpha = roleP * slideP;
+    ctx.font = `600 ${sz(W, H, 0.018)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = GAME.goldLight;
+    ctx.fillText(role, padL + W * 0.02, barY + barH + sz(W, H, 0.02));
+  }
+
+  ctx.restore();
+}
+
+// 3-second countdown — big numbers
+function drawOverlayCountdown(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const centerX = W / 2, centerY = H / 2;
+
+  // 3 → 2 → 1
+  const num = Math.max(1, 4 - Math.ceil(p * 3));
+  const localP = (p * 3) % 1; // 0-1 within each second
+  const scale = easeOutBack(Math.min(1, localP / 0.3));
+  const fadeOut = localP > 0.7 ? 1 - (localP - 0.7) / 0.3 : 1;
+
+  const numSz = sz(W, H, 0.30) * scale;
+  ctx.save();
+  ctx.globalAlpha = fadeOut;
+  ctx.shadowColor = GAME.gold;
+  ctx.shadowBlur = sz(W, H, 0.05);
+  ctx.font = `800 ${Math.round(numSz)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = GAME.gold;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(num), centerX, centerY);
+  ctx.restore();
+}
+
+// Play Along — "Guess The Price" banner
+function drawOverlayPlayAlong(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar === "portrait" ? H * 0.15 : H * 0.12;
+
+  // Slide down from top
+  const slideP = easeOutExpo(Math.min(1, p / 0.4));
+  const slideY = -H * 0.1 * (1 - slideP);
+
+  ctx.save();
+  ctx.globalAlpha = slideP;
+  ctx.translate(0, slideY);
+
+  // Background bar across full width
+  const barH = H * (ar === "portrait" ? 0.06 : 0.08);
+  ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
+  ctx.fillRect(0, centerY - barH / 2, W, barH);
+
+  // Gold accent lines
+  ctx.fillStyle = GAME.gold;
+  ctx.fillRect(0, centerY - barH / 2, W, 3);
+  ctx.fillRect(0, centerY + barH / 2 - 3, W, 3);
+
+  // "PLAY ALONG" text
+  ctx.font = `700 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = GAME.goldLight;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("PLAY ALONG", W / 2, centerY - sz(W, H, 0.012));
+
+  // "GUESS THE PRICE" — bigger
+  const gtpP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.2) / 0.4)));
+  ctx.globalAlpha = gtpP * slideP;
+  ctx.font = `800 ${sz(W, H, 0.035)}px 'Lora', serif`;
+  ctx.fillStyle = "#fff";
+  ctx.fillText("Guess the Price", W / 2, centerY + sz(W, H, 0.015));
+
+  ctx.restore();
+}
+
 const DRAW_FNS = {
   intro: drawIntro,
   roundtitle: drawRoundTitle,
@@ -1699,6 +1837,9 @@ const DRAW_FNS = {
   timer: drawTimer,
   reveal: drawReveal,
   scoreboard: drawScoreboard,
+  overlay_profile: drawOverlayProfile,
+  overlay_countdown: drawOverlayCountdown,
+  overlay_playalong: drawOverlayPlayAlong,
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -2262,7 +2403,7 @@ export default function GuessThePrice({ displayMode = false }) {
     ctx.clearRect(0, 0, r.W, r.H);
     const drawFn = DRAW_FNS[activeAsset];
     if (!drawFn) return;
-    const asset = ASSETS.find(a => a.id === activeAsset);
+    const asset = findAsset(activeAsset);
     if (asset?.animated) {
       drawFn(ctx, r.W, r.H, S, progress ?? animProgressRef.current);
     } else {
@@ -2310,7 +2451,7 @@ export default function GuessThePrice({ displayMode = false }) {
   const sequenceRef = useRef(null);
   useEffect(() => {
     if (displayMode || liveMode) return;
-    const asset = ASSETS.find(a => a.id === activeAsset);
+    const asset = findAsset(activeAsset);
     if (asset?.animated && !isPlaying) {
       animProgressRef.current = 0;
       const t = setTimeout(() => playAnimation(), 100);
@@ -2469,7 +2610,7 @@ export default function GuessThePrice({ displayMode = false }) {
   const exportPNG = useCallback((filename) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const asset = ASSETS.find(a => a.id === activeAsset);
+    const asset = findAsset(activeAsset);
     if (asset?.animated) render(1);
     canvas.toBlob(blob => {
       if (!blob) return;
@@ -2483,7 +2624,7 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // ── Export MOV (animated, Premiere-native with alpha) ──
   const exportMOV = useCallback(async () => {
-    const asset = ASSETS.find(a => a.id === activeAsset);
+    const asset = findAsset(activeAsset);
     if (!asset?.animated) { exportPNG(); return; }
     const r = RATIOS[ratio];
     const drawFn = DRAW_FNS[activeAsset];
@@ -4187,7 +4328,14 @@ export default function GuessThePrice({ displayMode = false }) {
               style={{ ...btn({ padding: "8px 12px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textPrimary }) }}>
               <span style={{ fontSize: 14 }}>{a.icon}</span>
               <span style={{ fontSize: DS.fsSm }}>{a.label}</span>
-              {a.animated && <span style={{ fontSize: DS.fsXs - 2, color: DS.textMuted, marginLeft: "auto" }}>ANIM</span>}
+            </button>
+          ))}
+          <div style={{ ...sectionHead({ marginTop: DS.lg, marginBottom: DS.sm }), fontSize: 9, color: DS.textMuted }}>SOCIAL / EDIT</div>
+          {SOCIAL_ASSETS.map(a => (
+            <button key={a.id} onClick={() => { cancelAnimationFrame(animRef.current); clearTimeout(sequenceRef.current); setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
+              style={{ ...btn({ padding: "6px 10px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textSecondary, fontSize: DS.fsXs }) }}>
+              <span style={{ fontSize: 12 }}>{a.icon}</span>
+              <span>{a.label}</span>
             </button>
           ))}
         </nav>
@@ -4200,9 +4348,9 @@ export default function GuessThePrice({ displayMode = false }) {
 
         {/* Controls */}
         <aside style={{ width: 280, flexShrink: 0, padding: DS.lg, borderLeft: `1px solid ${DS.borderSubtle}`, overflowY: "auto" }}>
-          <div style={sectionHead()}>{ASSETS.find(a => a.id === activeAsset)?.label || "Controls"}</div>
+          <div style={sectionHead()}>{findAsset(activeAsset)?.label || "Controls"}</div>
           <div style={card()}>{renderControls()}</div>
-          {ASSETS.find(a => a.id === activeAsset)?.animated && (
+          {findAsset(activeAsset)?.animated && (
             <div style={card()}>
               <div style={{ display: "flex", gap: DS.sm, marginBottom: DS.sm }}>
                 <button onClick={() => { setAnimProgress(0); setIsPlaying(false); render(0); }} style={btn({ padding: "6px 12px", fontSize: DS.fsXs })}>Reset</button>
