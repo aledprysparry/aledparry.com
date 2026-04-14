@@ -371,9 +371,11 @@ function drawStamp(ctx, W, H, opts = {}) {
   const bottomPad = ar === "portrait" ? Math.round(420 * (W / 1080)) + pad : H * 0.05;
   // opts.centered → horizontal-centre at the bottom (used on Intro Title + Endboard)
   const x = opts.centered ? (W - logoW) / 2 : W - logoW - pad;
+  // opts.liftPx → lift the logo up by N pixels (used on Intro to nudge above other content)
+  const lift = opts.liftPx ?? 0;
   ctx.save();
   ctx.globalAlpha = BRAND.logoOpacity;
-  ctx.drawImage(logo, x, H - logoH - bottomPad, logoW, logoH);
+  ctx.drawImage(logo, x, H - logoH - bottomPad - lift, logoW, logoH);
   ctx.restore();
 }
 
@@ -634,7 +636,7 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  drawStamp(ctx, W, H, { centered: true });
+  drawStamp(ctx, W, H, { centered: true, scale: 1.5, liftPx: 100 });
 }
 
 function drawProperty(ctx, W, H, S, progress) {
