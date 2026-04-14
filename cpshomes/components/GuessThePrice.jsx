@@ -311,13 +311,14 @@ const ASSETS = [
 const ALL_ASSETS = [...ASSETS]; // will include SOCIAL_ASSETS after definition
 // Social media / edit overlay assets (transparent background, MOV with alpha)
 const SOCIAL_ASSETS = [
-  { id: "prompt",             label: "Audience Prompt",        icon: "\u2753", animated: true },
-  { id: "overlay_profile1",   label: "Profile — Agent 1",      icon: "\ud83d\udc64", animated: true },
-  { id: "overlay_profile2",   label: "Profile — Agent 2",      icon: "\ud83d\udc64", animated: true },
-  { id: "overlay_countdown",  label: "3s Countdown",           icon: "\u23f3", animated: true },
-  { id: "overlay_playalong",  label: "Play Along",             icon: "\ud83c\udfae", animated: true },
-  { id: "overlay_howdidyoudo",label: "How Did You Do?",        icon: "\ud83e\udd14", animated: true },
-  { id: "overlay_csss",       label: "Comment Share Subscribe",icon: "\ud83d\udc4d", animated: true },
+  { id: "prompt",              label: "Audience Prompt",        icon: "\u2753", animated: true },
+  { id: "overlay_profile1",    label: "Profile — Agent 1",      icon: "\ud83d\udc64", animated: true },
+  { id: "overlay_profile2",    label: "Profile — Agent 2",      icon: "\ud83d\udc64", animated: true },
+  { id: "overlay_countdown",   label: "3s Countdown",           icon: "\u23f3", animated: true },
+  { id: "overlay_playalong",   label: "Play Along",             icon: "\ud83c\udfae", animated: true },
+  { id: "overlay_readytoplay", label: "Ready to Play?",         icon: "\u2728", animated: true },
+  { id: "overlay_howdidyoudo", label: "How Did You Do?",        icon: "\ud83e\udd14", animated: true },
+  { id: "overlay_csss",        label: "Comment Share Subscribe",icon: "\ud83d\udc4d", animated: true },
 ];
 ALL_ASSETS.push(...SOCIAL_ASSETS);
 const findAsset = (id) => ALL_ASSETS.find(a => a.id === id);
@@ -1845,6 +1846,61 @@ function drawOverlayPlayAlong(ctx, W, H, S, progress) {
 
 }
 
+// "Ready to Play?" — transparent social CTA
+// Phase 1 (0-0.4): "Ready to play?" fades in (white, Lora)
+// Phase 2 (0.4-0.75): "Play along" bounces in (gold) with radial glow
+// Phase 3 (0.75-1): both hold
+function drawOverlayReadyToPlay(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
+
+  const line1P = easeOutExpo(Math.min(1, p / 0.4));
+  const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.4) / 0.35)));
+
+  // "Ready to play?" — white serif
+  if (line1P > 0) {
+    const topSz = sz(W, H, ar === "portrait" ? 0.082 : 0.068);
+    ctx.save();
+    ctx.globalAlpha = line1P;
+    ctx.font = `700 ${Math.round(topSz)}px 'Lora', serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Ready to play?", W / 2, centerY - sz(W, H, 0.06));
+    ctx.restore();
+  }
+
+  // "Play along" — gold, bounces in with radial gradient glow
+  if (line2P > 0) {
+    const bigSz = sz(W, H, ar === "portrait" ? 0.115 : 0.095) * (0.75 + 0.25 * line2P);
+    const bigY = centerY + sz(W, H, 0.065);
+
+    // Radial gradient glow behind text
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, line2P) * 0.85;
+    const glowR = bigSz * 2.4;
+    const glow = ctx.createRadialGradient(W / 2, bigY, 0, W / 2, bigY, glowR);
+    glow.addColorStop(0, "rgba(251, 135, 112, 0.7)");
+    glow.addColorStop(0.35, "rgba(251, 135, 112, 0.3)");
+    glow.addColorStop(0.7, "rgba(251, 135, 112, 0.08)");
+    glow.addColorStop(1, "rgba(251, 135, 112, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(W / 2 - glowR, bigY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = line2P;
+    ctx.font = `800 ${Math.round(bigSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Play along", W / 2, bigY);
+    ctx.restore();
+  }
+}
+
 // "How did you do?" — transparent social overlay
 // Phase 1 (0-0.4): "How did you do?" fades in (white, Lora)
 // Phase 2 (0.4-0.75): "Did you beat them??" bounces in (gold) with radial glow
@@ -1918,26 +1974,42 @@ function drawOverlayCSSS(ctx, W, H, S, progress) {
   const ampP     = easeOutExpo(Math.min(1, Math.max(0, (p - 0.30) / 0.25)));
   const subP     = easeOutBack(Math.min(1, Math.max(0, (p - 0.45) / 0.30)));
 
-  const topSz  = sz(W, H, ar === "portrait" ? 0.075 : 0.06);
-  const bigSz  = sz(W, H, ar === "portrait" ? 0.11  : 0.09) * (0.8 + 0.2 * Math.max(0, subP));
+  // Base sizes — slightly reduced from v1
+  let topSz = sz(W, H, ar === "portrait" ? 0.062 : 0.05);
+  const subBounce = 0.8 + 0.2 * Math.max(0, subP);
+  let bigSz = sz(W, H, ar === "portrait" ? 0.088 : 0.072) * subBounce;
+
+  const comma = ", ";
+  const amp = " & ";
+
+  // Measure total width with base sizes
+  const measure = () => {
+    ctx.font = `700 ${Math.round(topSz)}px 'DM Sans', sans-serif`;
+    const wc = ctx.measureText("Comment" + comma).width;
+    const ws = ctx.measureText("Share").width;
+    const wa = ctx.measureText(amp).width;
+    ctx.font = `800 ${Math.round(bigSz)}px 'Lora', serif`;
+    const wsub = ctx.measureText("Subscribe").width;
+    return { wComment: wc, wShare: ws, wAmp: wa, wSub: wsub, total: wc + ws + wa + wsub };
+  };
+
+  let m = measure();
+  // Auto-fit: keep line inside 85% of canvas width
+  const maxW = W * 0.85;
+  if (m.total > maxW) {
+    const fit = maxW / m.total;
+    topSz *= fit;
+    bigSz *= fit;
+    m = measure();
+  }
+
+  const { wComment, wShare, wAmp, wSub, total: totalW } = m;
 
   // Line 1: "Comment, Share & Subscribe" rendered as one row with per-word alpha + y-offset
   const lineY = centerY;
-  ctx.font = `700 ${Math.round(topSz)}px 'DM Sans', sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // Measure widths so we can lay out words with tight spacing
-  const comma = ", ";
-  const amp = " & ";
-  const wComment = ctx.measureText("Comment" + comma).width;
-  const wShare   = ctx.measureText("Share").width;
-  const wAmp     = ctx.measureText(amp).width;
-  // "Subscribe" uses the big size — measure separately
-  ctx.font = `800 ${Math.round(bigSz)}px 'Lora', serif`;
-  const wSub = ctx.measureText("Subscribe").width;
-
-  const totalW = wComment + wShare + wAmp + wSub;
   let x = W / 2 - totalW / 2;
 
   // "Comment,"
@@ -2018,6 +2090,7 @@ const DRAW_FNS = {
   overlay_profile2: drawOverlayProfile2,
   overlay_countdown: drawOverlayCountdown,
   overlay_playalong: drawOverlayPlayAlong,
+  overlay_readytoplay: drawOverlayReadyToPlay,
   overlay_howdidyoudo: drawOverlayHowDidYouDo,
   overlay_csss: drawOverlayCSSS,
 };
@@ -4529,7 +4602,17 @@ export default function GuessThePrice({ displayMode = false }) {
         {/* Canvas */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: DS.xl, overflow: "auto", background: "rgba(0,0,0,0.2)" }}>
           <canvas ref={canvasRef} width={r.W} height={r.H}
-            style={{ maxWidth: "100%", maxHeight: "100%", borderRadius: DS.rSm, boxShadow: "0 4px 30px rgba(0,0,0,0.5)", background: activeAsset === "property" ? "repeating-conic-gradient(#222 0% 25%, #333 0% 50%) 0 0/20px 20px" : "#000" }} />
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              borderRadius: DS.rSm,
+              boxShadow: "0 4px 30px rgba(0,0,0,0.5)",
+              // Social overlays + property have transparent backgrounds — show a checker pattern
+              // so users can visually confirm transparency (was showing on solid black before)
+              background: (activeAsset === "property" || SOCIAL_ASSETS.some(a => a.id === activeAsset))
+                ? "repeating-conic-gradient(#222 0% 25%, #333 0% 50%) 0 0/20px 20px"
+                : "#000"
+            }} />
         </div>
 
         {/* Controls */}
