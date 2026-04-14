@@ -1022,12 +1022,7 @@ function drawPrompt(ctx, W, H, _S, progress) {
   const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
   const safeTop = ar === "portrait" ? safe.contentTop : 0;
 
-  // Subtle dark vignette for readability over footage
-  const vig = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7);
-  vig.addColorStop(0, "rgba(0,0,0,0.2)");
-  vig.addColorStop(1, "rgba(0,0,0,0.6)");
-  ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, W, H);
+  // No background fill — transparent overlay for compositing
 
   // Animated "?" — scales up and fades, with glow
   const qMarkP = easeOutExpo(Math.min(1, p / 0.6));
