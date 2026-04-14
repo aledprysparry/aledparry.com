@@ -312,7 +312,8 @@ const ALL_ASSETS = [...ASSETS]; // will include SOCIAL_ASSETS after definition
 // Social media / edit overlay assets (transparent background, MOV with alpha)
 const SOCIAL_ASSETS = [
   { id: "prompt",           label: "Audience Prompt", icon: "\u2753", animated: true },
-  { id: "overlay_profile",  label: "Profile Name",    icon: "\ud83d\udc64", animated: true },
+  { id: "overlay_profile1", label: "Profile — Agent 1", icon: "\ud83d\udc64", animated: true },
+  { id: "overlay_profile2", label: "Profile — Agent 2", icon: "\ud83d\udc64", animated: true },
   { id: "overlay_countdown",label: "3s Countdown",    icon: "\u23f3", animated: true },
   { id: "overlay_playalong",label: "Play Along",      icon: "\ud83c\udfae", animated: true },
 ];
@@ -1105,7 +1106,7 @@ function drawPrompt(ctx, W, H, _S, progress) {
       ctx.fillText(letters[i], px + pw / 2, py + ph / 2);
     }
   }
-  drawStamp(ctx, W, H);
+  // No brand logo on prompt — it's a transparent overlay for compositing
 }
 
 function drawOptions(ctx, W, H, S, progress) {
@@ -1703,12 +1704,12 @@ function drawScoreboard(ctx, W, H, S, progress) {
 //  SOCIAL / EDIT OVERLAYS — transparent background
 // ═══════════════════════════════════════════════════════════════
 
-// Profile lower third — name + job title
-function drawOverlayProfile(ctx, W, H, S, progress) {
+// Profile lower third — name + role (agentIdx 0 or 1)
+function drawProfileLowerThird(ctx, W, H, S, progress, agentIdx) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const name = S.lockAgent || EPISODE.agents[0] || "Agent";
+  const name = EPISODE.agents[agentIdx] || "Agent";
   const rd = EPISODE.rounds ? EPISODE.rounds[(S.propRound || 1) - 1] : null;
   const role = rd?.propertyAgent === name ? "Property Choice" : "Guessing";
 
@@ -1759,6 +1760,8 @@ function drawOverlayProfile(ctx, W, H, S, progress) {
 
   ctx.restore();
 }
+function drawOverlayProfile1(ctx, W, H, S, p) { drawProfileLowerThird(ctx, W, H, S, p, 0); }
+function drawOverlayProfile2(ctx, W, H, S, p) { drawProfileLowerThird(ctx, W, H, S, p, 1); }
 
 // 3-second countdown — big numbers
 function drawOverlayCountdown(ctx, W, H, S, progress) {
@@ -1790,41 +1793,42 @@ function drawOverlayPlayAlong(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const centerY = ar === "portrait" ? H * 0.15 : H * 0.12;
+  const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
 
-  // Slide down from top
-  const slideP = easeOutExpo(Math.min(1, p / 0.4));
-  const slideY = -H * 0.1 * (1 - slideP);
+  // Phase 1 (0-0.4): "Guess the price time..." fades in
+  // Phase 2 (0.4-0.7): "How much?" scales in with bounce
+  // Phase 3 (0.7-1): both hold
 
-  ctx.save();
-  ctx.globalAlpha = slideP;
-  ctx.translate(0, slideY);
+  const line1P = easeOutExpo(Math.min(1, p / 0.4));
+  const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.4) / 0.3)));
 
-  // Background bar across full width
-  const barH = H * (ar === "portrait" ? 0.06 : 0.08);
-  ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
-  ctx.fillRect(0, centerY - barH / 2, W, barH);
+  // "Guess the price time..."
+  if (line1P > 0) {
+    ctx.save();
+    ctx.globalAlpha = line1P;
+    ctx.font = `600 ${sz(W, H, 0.035)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Guess the price time...", W / 2, centerY - sz(W, H, 0.05));
+    ctx.restore();
+  }
 
-  // Gold accent lines
-  ctx.fillStyle = GAME.gold;
-  ctx.fillRect(0, centerY - barH / 2, W, 3);
-  ctx.fillRect(0, centerY + barH / 2 - 3, W, 3);
+  // "How much?"
+  if (line2P > 0) {
+    const howSz = sz(W, H, 0.07) * (0.8 + 0.2 * line2P);
+    ctx.save();
+    ctx.globalAlpha = line2P;
+    ctx.shadowColor = GAME.gold;
+    ctx.shadowBlur = 20;
+    ctx.font = `800 ${Math.round(howSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("How much?", W / 2, centerY + sz(W, H, 0.05));
+    ctx.restore();
+  }
 
-  // "PLAY ALONG" text
-  ctx.font = `700 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = GAME.goldLight;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("PLAY ALONG", W / 2, centerY - sz(W, H, 0.012));
-
-  // "GUESS THE PRICE" — bigger
-  const gtpP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.2) / 0.4)));
-  ctx.globalAlpha = gtpP * slideP;
-  ctx.font = `800 ${sz(W, H, 0.035)}px 'Lora', serif`;
-  ctx.fillStyle = "#fff";
-  ctx.fillText("Guess the Price", W / 2, centerY + sz(W, H, 0.015));
-
-  ctx.restore();
 }
 
 const DRAW_FNS = {
@@ -1837,7 +1841,8 @@ const DRAW_FNS = {
   timer: drawTimer,
   reveal: drawReveal,
   scoreboard: drawScoreboard,
-  overlay_profile: drawOverlayProfile,
+  overlay_profile1: drawOverlayProfile1,
+  overlay_profile2: drawOverlayProfile2,
   overlay_countdown: drawOverlayCountdown,
   overlay_playalong: drawOverlayPlayAlong,
 };
