@@ -772,10 +772,10 @@ function drawProperty(ctx, W, H, S, progress) {
     roundRect(ctx, pad, barY, W - pad * 2, barH, BRAND.cornerRadius);
     ctx.fill();
 
-    // Round badge
+    // Round badge — centred vertically in bar
     const bSize = W * 0.05;
     const bx = pad + bSize + pad * 0.3;
-    const by = barY + barH * 0.38;
+    const by = barY + barH * 0.5;
     ctx.fillStyle = GAME.gold;
     ctx.beginPath();
     ctx.arc(bx, by, bSize / 2, 0, Math.PI * 2);
@@ -802,6 +802,17 @@ function drawProperty(ctx, W, H, S, progress) {
       ctx.font = `500 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
       ctx.fillStyle = GAME.goldLight;
       ctx.fillText(specLine, ax, barY + barH * 0.68, maxTextW);
+    }
+
+    // Show logo on right side
+    const showLogoSrc = EPISODE.logoImage;
+    const showLogoImg = showLogoSrc ? getCachedImage(showLogoSrc) : null;
+    if (showLogoImg && showLogoImg.complete && showLogoImg.naturalWidth > 0) {
+      const maxLH = barH * 0.6;
+      const lScale = maxLH / showLogoImg.naturalHeight;
+      const lw = showLogoImg.naturalWidth * lScale;
+      const lh = showLogoImg.naturalHeight * lScale;
+      ctx.drawImage(showLogoImg, W - pad - lw - pad * 0.5, barY + (barH - lh) / 2, lw, lh);
     }
   } else {
     // Landscape: compact single-line bar
