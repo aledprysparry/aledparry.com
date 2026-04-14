@@ -2231,20 +2231,22 @@ export default function GuessThePrice({ displayMode = false }) {
     }
   }, [ratio]);
 
-  // Auto-score when scoreboard is shown (any mode — editor, live, or sequence)
-  const lastScoredRoundRef = useRef(-1);
+  // Auto-calculate scores from all round results — always accurate
   useEffect(() => {
-    if (activeAsset !== "scoreboard") return;
-    // Only score once per round (prevent double-scoring on re-renders)
-    if (lastScoredRoundRef.current === currentRound) return;
-    const rd = episode.rounds[currentRound];
-    if (rd && S.lockLetter && rd.correctLetter && S.lockLetter === rd.correctLetter) {
-      const guesserIdx = episode.agents.indexOf(rd.guesser);
-      if (guesserIdx >= 0) { addScore(guesserIdx); lastScoredRoundRef.current = currentRound; }
-    } else if (rd && S.lockLetter) {
-      lastScoredRoundRef.current = currentRound; // wrong answer — mark as scored so we don't retry
+    const calcScores = [0, 0];
+    for (let i = 0; i <= currentRound; i++) {
+      const rd = episode.rounds[i];
+      if (!rd || !rd.lockedLetter || !rd.correctLetter) continue;
+      if (rd.lockedLetter === rd.correctLetter) {
+        const guesserIdx = episode.agents.indexOf(rd.guesser);
+        if (guesserIdx >= 0) calcScores[guesserIdx]++;
+      }
     }
-  }, [activeAsset, currentRound]);
+    if (calcScores[0] !== scores[0] || calcScores[1] !== scores[1]) {
+      setScores(calcScores);
+      setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, scores: calcScores } : ep));
+    }
+  }, [activeAsset, currentRound, episode]);
 
   // Auto-play entrance animations for ALL assets — matches /live behaviour
   const [sequenceMode, setSequenceMode] = useState(true);
