@@ -378,6 +378,29 @@ function preloadBrandLogos(brand){
   if(brand?.logoDataUrlLight)getCachedImage(brand.logoDataUrlLight);
 }
 
+// Wait until the given image URLs are fully loaded in the cache.
+// Resolves immediately if all already loaded. Times out after 3s.
+function waitForImages(srcs, timeoutMs=3000){
+  const list=(srcs||[]).filter(Boolean);
+  if(list.length===0) return Promise.resolve();
+  return new Promise(resolve=>{
+    const start=Date.now();
+    const check=()=>{
+      const allReady=list.every(src=>{
+        const img=IMG_CACHE[src];
+        if(!img) {getCachedImage(src); return false;}
+        return img.complete && img.naturalWidth>0;
+      });
+      if(allReady) {resolve(); return true;}
+      if(Date.now()-start>timeoutMs) {resolve(); return true;}
+      return false;
+    };
+    if(check()) return;
+    const poll=()=>{if(!check()) requestAnimationFrame(poll);};
+    requestAnimationFrame(poll);
+  });
+}
+
 const BS = "infostudio_brands_v1";
 const PS = "infostudio_projects_v1";
 const TMPL_STORE = "infostudio_templates_v1";
@@ -813,8 +836,9 @@ function stamp(ctx,brand,W,H,darkBg=true,ratio){
   const is916=ratio==="9:16"||(isPortrait&&Math.abs(H/W-16/9)<0.1);
   const is11=ratio==="1:1"||Math.abs(W-H)<10;
   // For 9:16 the logo must stay inside the bottom safe zone (320px buffer at bottom)
+  // For 1:1 a tighter bottom margin keeps the logo visually grounded near the edge
   const marginX=is916?120:is11?60:Math.round(W*0.05);
-  const marginY=is916?350:is11?90:Math.round(W*0.05);
+  const marginY=is916?350:is11?55:Math.round(W*0.05);
   const opacity=Math.min(1,Math.max(0,brand.logoOpacity??0.75));
   const logoSrc=darkBg?(brand.logoDataUrlLight||brand.logoDataUrl):brand.logoDataUrl;
   if(logoSrc){
@@ -2483,10 +2507,15 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   };
 
   const doPreview=useCallback(async(g,i)=>{
-    await waitForFonts([brand.fontFamily||"DM Sans",brand.fontSerif||"Lora"].filter(Boolean));
+    // Wait for BOTH fonts AND brand logo images before rendering.
+    // Without this, first preview uses fallback font + no logo, and
+    // users have to click Preview again for assets to appear.
+    await Promise.all([
+      waitForFonts([brand.fontFamily||"DM Sans",brand.fontSerif||"Lora"].filter(Boolean)),
+      waitForImages([brand.logoDataUrl,brand.logoDataUrlLight]),
+    ]);
     const canvas=document.createElement("canvas");
     drawGraphic(canvas,g,brand,previewRatio,1);
-    // Downscale for storage efficiency while keeping sharpness
     const AR=RATIOS[previewRatio]||RATIOS["16:9"];
     const thumbW=Math.min(AR.W,1200),thumbH=Math.round(thumbW*(AR.H/AR.W));
     const thumb=document.createElement("canvas");thumb.width=thumbW;thumb.height=thumbH;
@@ -2496,7 +2525,11 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
   },[brand,previewRatio]);
 
   const previewAll=useCallback(async()=>{
-    await waitForFonts([brand.fontFamily||"DM Sans",brand.fontSerif||"Lora"].filter(Boolean));
+    // Same fix — wait for fonts + images before rendering all graphics.
+    await Promise.all([
+      waitForFonts([brand.fontFamily||"DM Sans",brand.fontSerif||"Lora"].filter(Boolean)),
+      waitForImages([brand.logoDataUrl,brand.logoDataUrlLight]),
+    ]);
     const batch={};const AR=RATIOS[previewRatio]||RATIOS["16:9"];
     const thumbW=Math.min(AR.W,1200),thumbH=Math.round(thumbW*(AR.H/AR.W));
     graphics.forEach((g,i)=>{
@@ -3990,28 +4023,88 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     }
   }
   else if(style==="split"){
-    // Bottom half teal block slides up
-    const splitY=H*(0.5+(1-ENT)*0.5);
+    // Per-ratio spatial rhythm — each ratio has its own proportions
+    const isSquare=Math.abs(W-H)<10;
+    const isPortrait=H>W;
+    // Split line position + content anchors
+    const splitFrac=isSquare?0.48:isPortrait?0.50:0.50;
+    const splitY=H*(splitFrac+(1-ENT)*0.5);
     ctx.fillStyle=B.colorPrimary; ctx.fillRect(0,splitY,W,H-splitY);
-    // Series name top half — teal on cream
-    ctx.save(); ctx.globalAlpha=TXT;
-    ctx.font=`500 ${Math.round(34*sc)}px "${FF}",Arial,sans-serif`;
-    ctx.fillStyle=B.colorPrimary+"88"; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    ctx.fillText((B.titleCardSeriesName||"").toUpperCase(),PAD,H*0.40);
+
+    // Font sizes tuned per ratio (1:1 needs smaller headline than 16:9)
+    const seriesSz=isSquare?Math.round(30*sc):isPortrait?Math.round(32*sc):Math.round(34*sc);
+    const titleSz=isSquare?Math.round(92*sc):isPortrait?Math.round(104*sc):Math.round(112*sc);
+    const subSz=isSquare?Math.round(38*sc):isPortrait?Math.round(42*sc):Math.round(44*sc);
+
+    // Y anchors — spatially rhythmic, based on split + type block heights
+    // Title block ≈ 2 lines × titleSz × 1.05 leading
+    const titleBlockH=titleSz*2*1.05;
+    const seriesY=H*(splitFrac)-Math.round(36*sc);  // series above split line
+    const titleY=H*(splitFrac)+Math.round(60*sc);    // title starts below split with air
+    // Subtitle sits BELOW title block with its own breathing room
+    const subY=titleY+titleBlockH+Math.round(40*sc);
+
+    // Series name — eyebrow above split
+    ctx.save(); ctx.globalAlpha=TXT*0.6;
+    ctx.font=`600 ${seriesSz}px "${FF}",Arial,sans-serif`;
+    ctx.letterSpacing=`${Math.round(2*sc)}px`;
+    ctx.fillStyle=B.colorPrimary; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+    ctx.fillText((B.titleCardSeriesName||"").toUpperCase(),PAD,seriesY);
+    ctx.letterSpacing="0px";
     ctx.restore();
-    // Title on teal half — serif, white
+
+    // Title on teal half — serif, white, TIGHT display leading
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,B.titleCardTitle||"EPISODE TITLE",PAD,H*0.56,W-PAD*2,H*0.26,Math.round(108*sc),"700","left","#fff",2,FFS);
+    drawText(ctx,B.titleCardTitle||"EPISODE TITLE",PAD,titleY,W-PAD*2,H*0.26,titleSz,"700","left","#fff",2,FFS,1.05);
     ctx.restore();
+
+    // ── Footer row: subtitle LEFT, logo RIGHT, same baseline ──
+    // This solves the vertical cramping on 1:1 — they share a horizontal lane
+    // with their own spatial territories.
+    const logoImg=(B.logoDataUrlLight||B.logoDataUrl)?getCachedImage(B.logoDataUrlLight||B.logoDataUrl):null;
+    const logoWidthFrac=isSquare?0.18:isPortrait?0.22:0.16;
+    const logoW=Math.round(W*logoWidthFrac);
+    const logoH=logoImg?Math.round(logoW*(logoImg.naturalHeight/logoImg.naturalWidth)):Math.round(logoW*0.6);
+    // Footer baseline — logo anchored near the bottom safe edge
+    const footerBottom=H-PAD*0.9;
+    const footerY=footerBottom-logoH; // logo top-left y
+    // Subtitle gets the left portion (up to logo's left edge minus breathing room)
+    const subtitleMaxW=W-PAD*2-logoW-Math.round(60*sc);
+
+    // Subtitle — vertically centred with logo
     if(B.titleCardSubtitle){
-      ctx.save(); ctx.globalAlpha=TXT*0.8;
-      drawText(ctx,B.titleCardSubtitle,PAD,H*0.82,W-PAD*2,H*0.10,Math.round(40*sc),"400","left","rgba(255,255,255,0.8)",1,FF);
+      ctx.save(); ctx.globalAlpha=TXT*0.78;
+      ctx.font=`400 ${subSz}px "${FF}",Arial,sans-serif`;
+      ctx.fillStyle="rgba(255,255,255,0.80)"; ctx.textAlign="left"; ctx.textBaseline="middle";
+      // Wrap manually to keep it on 1-2 lines
+      const words=(B.titleCardSubtitle||"").split(" ");
+      const lines=[]; let line="";
+      for(const w of words){
+        const test=line?line+" "+w:w;
+        if(ctx.measureText(test).width>subtitleMaxW&&line){lines.push(line);line=w;}
+        else line=test;
+      }
+      if(line) lines.push(line);
+      const lineH=subSz*1.30;
+      const textCY=footerY+logoH/2;
+      const startY=textCY-((lines.length-1)*lineH)/2;
+      lines.slice(0,2).forEach((ln,i)=>ctx.fillText(ln,PAD,startY+i*lineH));
       ctx.restore();
     }
+
+    // Logo — right-aligned in footer row
+    if(logoImg){
+      const logoX=W-PAD-logoW;
+      ctx.save(); ctx.globalAlpha=ENT;
+      ctx.drawImage(logoImg,logoX,footerY,logoW,logoH);
+      ctx.restore();
+    }
+    return; // split style draws its own logo — skip stamp()
   }
 
-  // Logo — white on dark bg (split), teal on cream bg (bar/centred)
-  stamp(ctx,B,W,H,style==="split");
+  // Logo for bar/centred styles — use stamp() with title-card sizing
+  const bigLogoBrand={...B,logoSize:B.logoSize??0.14};
+  stamp(ctx,bigLogoBrand,W,H,style==="split",ratio);
 }
 
 // ═══════════════════════════════════════════════════════════════
