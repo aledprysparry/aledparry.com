@@ -598,7 +598,12 @@ main();
 `;
 }
 
-function generateGraphicsXML(graphics, ratio, prefix, projectName) {
+// clipSource: "pngseq" (default, Premiere Ready zip — references
+//             `${fn}/frame_0001.png`)
+//           | "mov"   (animated MOV export — references `${fn}_animated.mov`)
+//           | "still" (PNG stills only   — references `${fn}.png`)
+// Keeps the XML in sync with whatever actually landed on disk.
+function generateGraphicsXML(graphics, ratio, prefix, projectName, clipSource="pngseq") {
   const { W, H } = RATIOS[ratio] || RATIOS["16:9"];
   const FPS = 25;
   const pn = (projectName||"Project").replace(/\s+/g,"_");
@@ -631,8 +636,14 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
     const idx = (g._origIdx != null ? g._origIdx : i);
     const fn = `${pn}_${prefix}${String(idx+1).padStart(2,"0")}_${(g.label||g.template).replace(/[^a-z0-9_-]/gi,"_")}`;
     const fileId = `${trackId}_file_${i+1}`;
-    // Reference first frame of PNG sequence — Premiere imports as image sequence
-    const seqPath = `${fn}/frame_0001.png`;
+    // pngseq → Premiere imports PNG sequence folder via frame_0001.png
+    // mov    → Premiere imports alpha MOV clip directly
+    // still  → Premiere imports single PNG still (held for the clip duration)
+    const clipPath = clipSource==="mov"
+      ? `${fn}_animated.mov`
+      : clipSource==="still"
+        ? `${fn}.png`
+        : `${fn}/frame_0001.png`;
     return `          <clipitem id="${trackId}_clip_${i+1}">
             <name>${fn}</name>
             <duration>${dur}</duration>
@@ -643,7 +654,7 @@ function generateGraphicsXML(graphics, ratio, prefix, projectName) {
             <out>${dur}</out>
             <file id="${fileId}">
               <name>${fn}</name>
-              <pathurl>${seqPath}</pathurl>
+              <pathurl>${clipPath}</pathurl>
               <duration>${dur}</duration>
               <rate><timebase>${FPS}</timebase><ntsc>FALSE</ntsc></rate>
               <media>
@@ -3314,8 +3325,9 @@ function ExportTab({project,brand,updateProject}){
           tick(done+1);
           await new Promise(r=>setTimeout(r,500)); // 500ms gap so Chrome doesn't throttle
         }
-        // Also download the XML + Premiere script
-        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
+        // Also download the XML + Premiere script.
+        // PNG-stills export → XML references `${fn}.png` (still frames).
+        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name,"still");
         dlText(gfxXml,`${pn}_${prefix}graphics_sequence.xml`);
         await new Promise(r=>setTimeout(r,500));
         const script=generatePremiereScript(selectedGfx,ratio,prefix,project.name);
@@ -3403,8 +3415,10 @@ function ExportTab({project,brand,updateProject}){
         tick(done+1);
       }
       // Premiere XML — only download separately for non-premiere modes (premiere mode has it in the zip)
+      // For animated MOV / composite modes, point the XML at the .mov files so
+      // Premiere links clips to the real downloads, not PNG-sequence folders.
       if(gfxMode!=="premiere"&&gfxMode!=="pngseq"&&(gfxMode==="composite"||gfxMode==="webm"||gfxMode==="both")){
-        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name);
+        const gfxXml=generateGraphicsXML(selectedGfx,ratio,prefix,project.name,"mov");
         dlText(gfxXml,`${pn}_${prefix}graphics_sequence.xml`);
       }
       // Captions (only if opted in)
