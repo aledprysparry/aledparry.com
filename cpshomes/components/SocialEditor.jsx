@@ -4038,10 +4038,11 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     // Split line position.
     //   9:16 → 0.22 — a compact cream HEADER band. 50/50 left the top half
     //                 as dead space with a tiny eyebrow floating alone.
-    //   1:1  → 0.40 — moved up from 0.48 so the teal half isn't bottom-heavy
-    //                 and there's reserved space at the bottom for captions.
+    //   1:1  → 0.354 — (0.40 - 50/1080) splitY lifted another 50px per client,
+    //                  so splitY sits at ≈382 on a 1080 canvas. Keeps the
+    //                  composition from reading bottom-heavy.
     //   16:9 → 0.50 — classic half/half (landscape has no caption overlay concern)
-    const splitFrac=isSquare?0.40:isPortrait?0.22:0.50;
+    const splitFrac=isSquare?0.354:isPortrait?0.22:0.50;
     const splitY=H*(splitFrac+(1-ENT)*0.5);
     ctx.fillStyle=B.colorPrimary; ctx.fillRect(0,splitY,W,H-splitY);
 
