@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, HeadingLevel, AlignmentType, BorderStyle, WidthType, ShadingType } from "docx";
 import JSZip from "jszip";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile } from "@ffmpeg/util";
+import { recordAsset, webmToMov } from "@/cpshomes/lib/video-export";
 
 // ═══════════════════════════════════════════════════════════════
 //  GLOBAL STYLES — CSS hover/active/reduced-motion (injected once)
@@ -242,7 +241,9 @@ const SAFE_ZONES = {
     reels:     { top:250, bottom:320, left:120, right:120 },
   },
   "1:1": {
-    universal: { top:60, bottom:60, left:60, right:60 },
+    // Bottom buffer reserved for burned-in captions / subtitles on social feed.
+    // ~18% keeps body copy + logo clear of a typical Instagram/TikTok caption block.
+    universal: { top:60, bottom:200, left:60, right:60 },
   },
   "16:9": {
     universal: { top:60, bottom:60, left:80, right:80 },
@@ -448,7 +449,7 @@ function generatePremiereXML(subtitles, ratio, prefix) {
   const totalFrames = lastSub ? toF(lastSub.endSec) + FPS : FPS * 60;
   const clips = subtitles.map((s,i) => {
     const sf=toF(s.startSec), ef=toF(s.endSec), dur=ef-sf;
-    const fn=`${prefix}caption_${String(s.index).padStart(3,"0")}.webm`;
+    const fn=`${prefix}caption_${String(s.index).padStart(3,"0")}.mov`;
     return `      <clipitem id="clip${i+1}">
         <name>${fn}</name><start>${sf}</start><end>${ef}</end>
         <in>0</in><out>${dur}</out>
@@ -704,44 +705,33 @@ ${ovClips}
 
 // ═══════════════════════════════════════════════════════════════
 //  COMPOSITE VIDEO GENERATOR
+//  Renders all graphics on one timeline as a single alpha-preserving MOV.
+//  Uses the PNG-sequence pipeline from cpshomes/lib/video-export — no
+//  MediaRecorder (which never wrote reliable alpha to WebM for canvas).
 // ═══════════════════════════════════════════════════════════════
-function recordCompositeVideo(graphics, brand, ratio, onProgress) {
-  return new Promise((resolve, reject) => {
-    const AR = RATIOS[ratio||"16:9"]||RATIOS["16:9"];
-    const cvs = document.createElement("canvas"); cvs.width=AR.W; cvs.height=AR.H;
-    const ctx = cvs.getContext("2d");
-    const FPS = 25;
-    const tsToSec = ts => { const p=ts.split(":").map(Number); return p[0]*3600+p[1]*60+(p[2]||0); };
-    // Sort graphics by timestamp
-    const sorted = [...graphics].sort((a,b) => tsToSec(a.timestamp||"00:00:00") - tsToSec(b.timestamp||"00:00:00"));
-    // Total duration = last graphic end + 1s buffer
-    const lastEnd = sorted.reduce((max,g) => Math.max(max, tsToSec(g.timestamp||"00:00:00")+(g.duration||4)), 0);
-    const totalDurMs = (lastEnd + 1) * 1000;
-    const rec = new MediaRecorder(cvs.captureStream(0), {mimeType:MIME(), videoBitsPerSecond:8000000});
-    const ch = []; rec.ondataavailable = e => { if(e.data.size>0) ch.push(e.data); };
-    rec.onstop = () => resolve(new Blob(ch, {type:"video/webm"}));
-    rec.onerror = reject;
-    rec.start();
-    const startT = performance.now();
-    const tick = () => {
-      const elapsed = performance.now() - startT;
-      const currentSec = elapsed / 1000;
-      ctx.clearRect(0, 0, AR.W, AR.H);
-      // Find all active graphics at this timestamp
-      sorted.forEach(g => {
-        const gStart = tsToSec(g.timestamp||"00:00:00");
-        const gEnd = gStart + (g.duration||4);
-        if(currentSec >= gStart && currentSec < gEnd) {
-          const localP = (currentSec - gStart); // seconds since graphic started
-          drawGraphic(cvs, g, brand, ratio, localP);
-        }
-      });
-      if(onProgress) onProgress(elapsed / totalDurMs);
-      if(elapsed < totalDurMs) requestAnimationFrame(tick);
-      else rec.stop();
-    };
-    requestAnimationFrame(tick);
-  });
+async function recordCompositeVideo(graphics, brand, ratio, onProgress) {
+  await document.fonts.ready;
+  const AR = RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+  const tsToSec = ts => { const p=ts.split(":").map(Number); return p[0]*3600+p[1]*60+(p[2]||0); };
+  // Sort graphics by timestamp
+  const sorted = [...graphics].sort((a,b) => tsToSec(a.timestamp||"00:00:00") - tsToSec(b.timestamp||"00:00:00"));
+  // Total duration = last graphic end + 1s buffer
+  const lastEnd = sorted.reduce((max,g) => Math.max(max, tsToSec(g.timestamp||"00:00:00")+(g.duration||4)), 0);
+  const totalDurMs = (lastEnd + 1) * 1000;
+  const totalDurSec = totalDurMs/1000;
+  const seq = await recordAsset((ctx, W, H, _S, p) => {
+    const currentSec = p * totalDurSec;
+    // Clear happens in recordAsset; just draw active graphics on top.
+    for (const g of sorted) {
+      const gStart = tsToSec(g.timestamp||"00:00:00");
+      const gEnd = gStart + (g.duration||4);
+      if (currentSec >= gStart && currentSec < gEnd) {
+        const localP = (currentSec - gStart); // seconds since graphic started
+        drawGraphic(ctx.canvas, g, brand, ratio, localP);
+      }
+    }
+  }, AR.W, AR.H, null, totalDurMs);
+  return webmToMov(seq, "composite.mov", onProgress);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -831,14 +821,18 @@ function drawText(ctx,text,x,y,maxW,maxH,baseSz,weight,align,color,maxLines=3,ff
   return cy;
 }
 function stamp(ctx,brand,W,H,darkBg=true,ratio){
-  // Use safe-zone-aware margins for vertical social formats
+  // Logo margins driven by the single SAFE_ZONES source of truth plus a
+  // per-ratio clearance so the logo sits VISIBLY inside the safe area
+  // rather than right on the boundary. 9:16 needs the largest clearance
+  // because TikTok/Reels UI chrome encroaches from the bottom.
   const isPortrait=H>W;
   const is916=ratio==="9:16"||(isPortrait&&Math.abs(H/W-16/9)<0.1);
   const is11=ratio==="1:1"||Math.abs(W-H)<10;
-  // For 9:16 the logo must stay inside the bottom safe zone (320px buffer at bottom)
-  // For 1:1 a tighter bottom margin keeps the logo visually grounded near the edge
-  const marginX=is916?120:is11?60:Math.round(W*0.05);
-  const marginY=is916?350:is11?55:Math.round(W*0.05);
+  const sz=(SAFE_ZONES[ratio]||SAFE_ZONES[is916?"9:16":is11?"1:1":"16:9"]).universal;
+  const CLEAR_X=is916?40:is11?20:Math.round(W*0.015);
+  const CLEAR_Y=is916?90:is11?20:Math.round(W*0.015);
+  const marginX=sz.right+CLEAR_X;
+  const marginY=sz.bottom+CLEAR_Y;
   const opacity=Math.min(1,Math.max(0,brand.logoOpacity??0.75));
   const logoSrc=darkBg?(brand.logoDataUrlLight||brand.logoDataUrl):brand.logoDataUrl;
   if(logoSrc){
@@ -973,10 +967,12 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const isCompact=isPortrait||isSquare; // not wide — use centred layouts
   const isOverlay=(g.typeOverride||(TMPL[t]||{}).type||"fullscreen")==="overlay";
 
-  // ── Safe area for 9:16 (client-approved) ──
-  // Content must stay inside these bounds or it's hidden by IG/TikTok UI
+  // ── Safe area per ratio (client-approved) ──
+  // Content must stay inside these bounds or it's hidden by IG/TikTok UI or
+  // burned-in captions. 1:1 bottom is 200 to keep body copy above the
+  // typical Instagram/TikTok caption block (matches SAFE_ZONES global).
   const SAFE=(ratio||"16:9")==="9:16"?{top:250,bottom:320,left:120,right:120}
-    :(ratio||"16:9")==="1:1"?{top:60,bottom:60,left:60,right:60}
+    :(ratio||"16:9")==="1:1"?{top:60,bottom:200,left:60,right:60}
     :{top:60,bottom:60,left:80,right:80};
   const safeX=SAFE.left, safeY=SAFE.top;
   const safeW=W-SAFE.left-SAFE.right, safeH=H-SAFE.top-SAFE.bottom;
@@ -1776,153 +1772,65 @@ async function recordPNGSequence(g,brand,ratio,onProgress){
 // ═══════════════════════════════════════════════════════════════
 const FPS=25;
 
-// ── FFmpeg.wasm — WebM → MOV conversion (single-threaded, no special headers needed) ──
-let _ffmpeg=null;
-async function getFFmpeg(){
-  if(_ffmpeg&&_ffmpeg.loaded) return _ffmpeg;
-  _ffmpeg=new FFmpeg();
-  // Load single-threaded core from CDN (cached after first load, ~31MB)
-  await _ffmpeg.load({
-    coreURL:"https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
-    wasmURL:"https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
-  });
-  return _ffmpeg;
-}
-
-async function webmToMov(webmBlob, filename="output.mov", onProgress){
-  const ff=await getFFmpeg();
-  const inputName="input.webm";
-  const outputName=filename.replace(/\.[^.]+$/,"")+".mov";
-  await ff.writeFile(inputName, await _fetchFile(webmBlob));
-  if(onProgress) ff.on("progress",({progress})=>onProgress(progress));
-  // Force input framerate (MediaRecorder WebMs have variable timing that
-  // FFmpeg misreads as ~1fps, producing a static-looking MOV).
-  // -r 25 on input = interpret source as 25fps
-  // -c:v png -pix_fmt rgba = lossless alpha (Premiere/QuickTime native)
-  await ff.exec([
-    "-r","25","-i",inputName,
-    "-c:v","png","-pix_fmt","rgba",
-    "-r","25",
-    "-an",outputName
-  ]);
-  const data=await ff.readFile(outputName);
-  await ff.deleteFile(inputName);
-  await ff.deleteFile(outputName);
-  return new Blob([data.buffer],{type:"video/quicktime"});
-}
-// Convert array of PNG frame blobs to MOV with alpha (PNG codec)
-async function pngSeqToMov(frames, fps=25, onProgress){
-  const ff=await getFFmpeg();
-  // Write all frames to ffmpeg virtual filesystem
-  for(let i=0;i<frames.length;i++){
-    const name=`frame_${String(i+1).padStart(4,"0")}.png`;
-    await ff.writeFile(name, await fetchFile(frames[i].blob||frames[i]));
-  }
-  if(onProgress) ff.on("progress",({progress})=>onProgress(progress));
-  // Convert: PNG sequence → MOV with PNG codec (preserves alpha)
-  await ff.exec([
-    "-framerate",String(fps),
-    "-i","frame_%04d.png",
-    "-c:v","png",
-    "-pix_fmt","rgba",
-    "-an",
-    "output.mov"
-  ]);
-  const data=await ff.readFile("output.mov");
-  // Clean up frames
-  for(let i=0;i<frames.length;i++){
-    await ff.deleteFile(`frame_${String(i+1).padStart(4,"0")}.png`);
-  }
-  await ff.deleteFile("output.mov");
-  return new Blob([data.buffer],{type:"video/quicktime"});
-}
-
-const MIME=()=>MediaRecorder.isTypeSupported("video/webm;codecs=vp9")?"video/webm;codecs=vp9":"video/webm";
-
-function recordGraphic(g,brand,ratio){
-  return new Promise(async(res,rej)=>{
-    await document.fonts.ready; // ensure fonts loaded before recording
-    const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
-    const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-    const durMs=Math.max(4000,(g.duration||4)*1000);  // minimum 4 seconds
-    // captureStream(0) = capture on every canvas change (no frame rate limit)
-    const rec=new MediaRecorder(cvs.captureStream(0),{mimeType:MIME(),videoBitsPerSecond:8000000});
-    const ch=[];rec.ondataavailable=e=>{if(e.data.size>0)ch.push(e.data);};
-    rec.onstop=()=>res(new Blob(ch,{type:"video/webm"}));rec.onerror=rej;
-    rec.start();
-    const startT=performance.now();
-    const tick=()=>{
-      const elapsed=performance.now()-startT;
-      const p=elapsed/1000; // seconds elapsed = progress (entrance at 0-1, waves drift after)
-      drawGraphic(cvs,g,brand,ratio,p);
-      if(elapsed<durMs) requestAnimationFrame(tick);
-      else rec.stop();
-    };
-    tick();
-  });
-}
-
-function recordTitleCard(brand,ratio){
-  return new Promise((res,rej)=>{
-    const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
-    const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-    const frames=Math.round(2*FPS);
-    const rec=new MediaRecorder(cvs.captureStream(FPS),{mimeType:MIME(),videoBitsPerSecond:8000000});
-    const ch=[];rec.ondataavailable=e=>{if(e.data.size>0)ch.push(e.data);};
-    rec.onstop=()=>res(new Blob(ch,{type:"video/webm"}));rec.onerror=rej;
-    rec.start();let f=0;
-    const tick=()=>{drawTitleCard(cvs,brand,ratio,clamp(f/(frames*0.35),0,1));f++;if(f<frames)requestAnimationFrame(tick);else rec.stop();};
-    requestAnimationFrame(tick);
-  });
-}
-
-function recordCaption(subtitle,brand,captionStyle,ratio){
-  return new Promise((res,rej)=>{
-    const AR=RATIOS[ratio||brand.aspectRatio||"9:16"]||RATIOS["9:16"];
-    const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-    const dur=(subtitle.endSec-subtitle.startSec)+0.15,frames=Math.ceil(dur*FPS);
-    const rec=new MediaRecorder(cvs.captureStream(FPS),{mimeType:MIME(),videoBitsPerSecond:6000000});
-    const ch=[];rec.ondataavailable=e=>{if(e.data.size>0)ch.push(e.data);};
-    rec.onstop=()=>res(new Blob(ch,{type:"video/webm"}));rec.onerror=rej;
-    rec.start();let f=0;
-    const tick=()=>{drawCaption(cvs,subtitle,brand,captionStyle,f/FPS,ratio);f++;if(f<frames)requestAnimationFrame(tick);else rec.stop();};
-    requestAnimationFrame(tick);
-  });
-}
-
-
 // ═══════════════════════════════════════════════════════════════
-//  COMPOSITE CAPTION RECORDER  — one full-length transparent WebM
+//  RECORDING — PNG sequence pipeline (alpha-preserving MOV)
+//
+//  All record* functions capture canvas frames as PNGs via recordAsset
+//  (cpshomes/lib/video-export) and assemble them into an alpha MOV via
+//  FFmpeg's image2 demuxer. Chrome's MediaRecorder never wrote reliable
+//  alpha to WebM for canvas streams (VP8 or VP9), which is why the old
+//  WebM→MOV path produced static-looking exports. PNG-per-frame is the
+//  only bulletproof path to Premiere-native alpha clips.
 // ═══════════════════════════════════════════════════════════════
-function recordCompositeCaption(subtitles, brand, captionStyle, ratio, onProgress){
-  return new Promise((resolve,reject)=>{
-    if(!subtitles.length){ resolve(new Blob([])); return; }
-    const AR=RATIOS[ratio||"9:16"]||RATIOS["9:16"];
-    const cvs=document.createElement("canvas");cvs.width=AR.W;cvs.height=AR.H;
-    const ctx=cvs.getContext("2d",{alpha:true});
-    const totalDur=(subtitles[subtitles.length-1]?.endSec||10)+0.3;
-    const totalFrames=Math.ceil(totalDur*FPS);
-    const mime=MIME();
-    const rec=new MediaRecorder(cvs.captureStream(FPS),{mimeType:mime,videoBitsPerSecond:8000000});
-    const chunks=[];
-    rec.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
-    rec.onstop=()=>resolve(new Blob(chunks,{type:"video/webm"}));
-    rec.onerror=reject;
-    rec.start();
-    let frame=0;
-    const tick=()=>{
-      const t=frame/FPS;
-      ctx.clearRect(0,0,AR.W,AR.H);
-      // find active subtitle at this timestamp
-      const active=subtitles.find(s=>t>=s.startSec&&t<s.endSec);
-      if(active) drawCaption(cvs,active,brand,captionStyle,t-active.startSec,ratio);
-      if(onProgress) onProgress(frame/totalFrames);
-      frame++;
-      if(frame<totalFrames) requestAnimationFrame(tick);
-      else rec.stop();
-    };
-    requestAnimationFrame(tick);
-  });
+
+async function recordGraphic(g, brand, ratio){
+  await document.fonts.ready;
+  const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+  const durMs=Math.max(4000,(g.duration||4)*1000);  // minimum 4 seconds
+  const durSec=durMs/1000;
+  // drawGraphic expects `progress` in SECONDS (entrance at 0-1s, drift after),
+  // so map recordAsset's normalised p (0→1) back to seconds.
+  const seq=await recordAsset((ctx,W,H,_S,p)=>{
+    drawGraphic(ctx.canvas,g,brand,ratio,p*durSec);
+  },AR.W,AR.H,null,durMs);
+  return webmToMov(seq,"graphic.mov");
+}
+
+async function recordTitleCard(brand, ratio){
+  const AR=RATIOS[ratio||"16:9"]||RATIOS["16:9"];
+  const durMs=2000; // 2s hold, same as old behaviour
+  // Old code clamped progress to frames*0.35 of the total window, so the
+  // entrance landed inside the first ~35% and the remainder was a hold.
+  // Replicated here so the exported MOV matches the old on-screen feel.
+  const seq=await recordAsset((ctx,W,H,_S,p)=>{
+    drawTitleCard(ctx.canvas,brand,ratio,clamp(p/0.35,0,1));
+  },AR.W,AR.H,null,durMs);
+  return webmToMov(seq,"title_card.mov");
+}
+
+async function recordCaption(subtitle, brand, captionStyle, ratio){
+  const AR=RATIOS[ratio||brand.aspectRatio||"9:16"]||RATIOS["9:16"];
+  const durSec=(subtitle.endSec-subtitle.startSec)+0.15;
+  const durMs=Math.max(200,durSec*1000);
+  const seq=await recordAsset((ctx,W,H,_S,p)=>{
+    drawCaption(ctx.canvas,subtitle,brand,captionStyle,p*durSec,ratio);
+  },AR.W,AR.H,null,durMs);
+  return webmToMov(seq,"caption.mov");
+}
+
+// ── COMPOSITE CAPTION — one full-length alpha MOV covering all subtitles ──
+async function recordCompositeCaption(subtitles, brand, captionStyle, ratio, onProgress){
+  if(!subtitles.length) return new Blob([]);
+  const AR=RATIOS[ratio||"9:16"]||RATIOS["9:16"];
+  const totalDurSec=(subtitles[subtitles.length-1]?.endSec||10)+0.3;
+  const totalDurMs=totalDurSec*1000;
+  const seq=await recordAsset((ctx,W,H,_S,p)=>{
+    const t=p*totalDurSec;
+    // recordAsset clears each frame; only draw the active caption (if any).
+    const active=subtitles.find(s=>t>=s.startSec&&t<s.endSec);
+    if(active) drawCaption(ctx.canvas,active,brand,captionStyle,t-active.startSec,ratio);
+  },AR.W,AR.H,null,totalDurMs);
+  return webmToMov(seq,"captions.mov",onProgress);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2253,7 +2161,19 @@ function SegmentEditPanel({g,index,brand,onRegenerate,onUpdateContent,onUpdateMe
     setPrompt(initPrompt);
     setTplHint(g.templateHint||g.template||"any");
     setLocalContent({...g.content});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[index]);
+  // Auto-save content edits live (debounced) so the preview + exported MOV
+  // stay in sync with what's in the panel. Previously users had to click
+  // "💾 Save edits" and would forget — clips exported with stale copy.
+  // Template/prompt changes still go through the Save button because they
+  // trigger AI regeneration or template swaps you don't want on every keystroke.
+  useEffect(()=>{
+    if(JSON.stringify(localContent)===JSON.stringify(g.content)) return;
+    const t=setTimeout(()=>onUpdateContent(localContent,{}),250);
+    return()=>clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[localContent]);
   const fields=TMPL_FIELDS[tplHint]||TMPL_FIELDS[g.template]||[];
   const sm=btn();
   const inp=inputS({resize:"vertical"});
@@ -2583,7 +2503,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
 
   const exportWebM=async(g,i)=>{
     setExporting(s=>{const n=new Set(s);n.add(i);return n;});
-    try{const blob=await recordGraphic(g,brand,previewRatio);const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${String(i+1).padStart(2,"0")}_${g.label||g.template}_animated.webm`;a.click();}
+    try{const blob=await recordGraphic(g,brand,previewRatio);const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${String(i+1).padStart(2,"0")}_${g.label||g.template}_animated.mov`;a.click();}
     catch(e){alert("Export failed: "+e.message);}
     setExporting(s=>{const n=new Set(s);n.delete(i);return n;});
   };
@@ -2606,7 +2526,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
       try{
         const blob=await recordGraphic(g,brand,previewRatio);
         const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-        a.download=`${String(i+1).padStart(2,"0")}_${g.label||g.template}_animated.webm`;a.click();
+        a.download=`${String(i+1).padStart(2,"0")}_${g.label||g.template}_animated.mov`;a.click();
       }catch{}
       setExporting(s=>{const n=new Set(s);n.delete(i);return n;});
     }
@@ -3287,11 +3207,9 @@ function ExportTab({project,brand,updateProject}){
   const [captionMode,setCaptionMode]=useState("composite"); // composite | individual
   const [includeCaptions,setIncludeCaptions]=useState(false);
   const [showAdvanced,setShowAdvanced]=useState(false);
-  // Default to MOV conversion — Premiere-native format with alpha is the
-  // expected workflow for the "Animated" export. Users can still untick it
-  // to get raw WebM if they want a smaller file for web.
-  const [convertMov,setConvertMov]=useState(true);
-  const [ffmpegLoading,setFfmpegLoading]=useState(false);
+  // Animated exports are always alpha-preserving MOV now (PNG sequence
+  // pipeline in cpshomes/lib/video-export). No WebM fallback — the old
+  // MediaRecorder path never produced reliable alpha.
   const [gfxMode,setGfxMode]=useState("premiere"); // premiere | png | webm | pngseq | composite | both
   const cvs=useRef(document.createElement("canvas"));
 
@@ -3351,20 +3269,10 @@ function ExportTab({project,brand,updateProject}){
     dl(buf,`${(project.name||"cue-sheet").replace(/\s+/g,"_")}_cue_sheet.docx`);
   };
 
-  // Helper: download blob, optionally converting WebM→MOV first
-  const dlBlob=async(blob,name)=>{
-    if(convertMov&&name.endsWith(".webm")){
-      const movName=name.replace(/\.webm$/,".mov");
-      setPhase(p=>`Converting to MOV: ${movName.split("/").pop()}…`);
-      try{
-        if(!_ffmpeg||!_ffmpeg.loaded){setFfmpegLoading(true);await getFFmpeg();setFfmpegLoading(false);}
-        const movBlob=await webmToMov(blob,movName);
-        dl(movBlob,movName);
-        return;
-      }catch(e){console.warn("MOV conversion failed, falling back to WebM:",e);}
-    }
-    dl(blob,name);
-  };
+  // Blobs from record* are now already alpha-preserving MOVs (PNG-sequence
+  // pipeline), so dlBlob is a straight passthrough. Kept as a named helper
+  // so the runExport call sites don't need to change.
+  const dlBlob=async(blob,name)=>dl(blob,name);
 
   const runExport=async()=>{
     setMode("running");
@@ -3479,7 +3387,7 @@ function ExportTab({project,brand,updateProject}){
         for(let i=0;i<selectedGfx.length;i++){
           try{
             const blob=await recordGraphic(selectedGfx[i],brand,ratio);
-            await dlBlob(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}_animated.webm`);
+            await dlBlob(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}_animated.mov`);
           }catch(e){console.error("WebM export failed for graphic",i,e);}
           tick(done+1);
           await new Promise(r=>setTimeout(r,200));
@@ -3491,7 +3399,7 @@ function ExportTab({project,brand,updateProject}){
         const compositeBlob=await recordCompositeVideo(selectedGfx,exportBrand,ratio,pct=>{
           setProg(p=>({...p,pct:(done/totalSteps)+(pct/totalSteps)}));
         });
-        await dlBlob(compositeBlob,`${pn}_${prefix}all_graphics_composite.webm`);
+        await dlBlob(compositeBlob,`${pn}_${prefix}all_graphics_composite.mov`);
         tick(done+1);
       }
       // Premiere XML — only download separately for non-premiere modes (premiere mode has it in the zip)
@@ -3505,7 +3413,7 @@ function ExportTab({project,brand,updateProject}){
         const blob=await recordCompositeCaption(subtitles,brand,captionStyle,ratio,pct=>{
           setProg(p=>({...p,pct:(done/totalSteps)+(pct/totalSteps)}));
         });
-        await dlBlob(blob,`${prefix}${pn}_captions_composite.webm`);
+        await dlBlob(blob,`${prefix}${pn}_captions_composite.mov`);
         tick(done+1);
         // Also export Premiere XML so editor knows clip is one file starting at 00:00
         const xml=generatePremiereXML(subtitles,ratio,prefix);
@@ -3514,7 +3422,7 @@ function ExportTab({project,brand,updateProject}){
         setPhase(`${ratio} — rendering individual caption WebMs…`);
         for(let i=0;i<subtitles.length;i++){
           const blob=await recordCaption(subtitles[i],brand,captionStyle,ratio);
-          await dlBlob(blob,`${prefix}caption_${String(subtitles[i].index).padStart(3,"0")}.webm`);
+          await dlBlob(blob,`${prefix}caption_${String(subtitles[i].index).padStart(3,"0")}.mov`);
           tick(done+1);
           await new Promise(r=>setTimeout(r,150));
         }
@@ -3574,7 +3482,7 @@ function ExportTab({project,brand,updateProject}){
           </button>
           <div style={{background:DS.bgCard,border:`1px solid ${DS.borderSubtle}`,borderRadius:DS.rLg,padding:`${DS.md}px ${DS.lg}px`,display:"flex",flexDirection:"column",justifyContent:"center",minWidth:140}}>
             <div style={{fontSize:10,textTransform:"uppercase",fontWeight:700,color:DS.textMuted,marginBottom:4}}>Format</div>
-            <div style={{fontSize:13,fontWeight:700}}>{gfxMode==="premiere"?"Premiere Ready":gfxMode==="png"?"PNG Stills":gfxMode==="webm"?(convertMov?"MOV":"WebM"):gfxMode==="pngseq"?"PNG Seq":gfxMode==="composite"?"Composite":"Everything"}</div>
+            <div style={{fontSize:13,fontWeight:700}}>{gfxMode==="premiere"?"Premiere Ready":gfxMode==="png"?"PNG Stills":gfxMode==="webm"?"Animated MOV":gfxMode==="pngseq"?"PNG Seq":gfxMode==="composite"?"Composite":"Everything"}</div>
           </div>
         </div>
       )}
@@ -3609,12 +3517,11 @@ function ExportTab({project,brand,updateProject}){
               </div>}
             </>);
           })()}
-          {/* MOV / WebM toggle — MOV is the default for Premiere workflows */}
+          {/* Animated exports are always alpha-preserving MOV (PNG sequence + FFmpeg).
+              First render downloads the ~31MB FFmpeg engine, then it's cached. */}
           {(gfxMode==="webm"||gfxMode==="both"||gfxMode==="composite")&&(
-            <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 0",marginTop:DS.xs}} onClick={()=>setConvertMov(v=>!v)}>
-              <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${convertMov?"#FB8770":"rgba(255,255,255,0.18)"}`,background:convertMov?"#FB8770":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{convertMov&&"✓"}</div>
-              <span style={{fontWeight:700,fontSize:13}}>Export as MOV (default)</span>
-              <span style={{fontSize:11,opacity:0.45}}>Premiere-native with alpha. Untick for raw WebM (smaller file, web-friendly). First MOV render downloads ~31MB engine.</span>
+            <div style={{padding:"10px 0",marginTop:DS.xs,fontSize:11,opacity:0.55,lineHeight:1.5}}>
+              Animated graphics export as alpha-preserving <strong>MOV</strong> — Premiere-native. First render downloads a ~31MB FFmpeg engine, then it's cached for subsequent exports.
             </div>
           )}
         </div>
@@ -3670,7 +3577,7 @@ function ExportTab({project,brand,updateProject}){
               <div style={{fontWeight:700,fontSize:13,marginBottom:3,color:"#2A9D8F"}}>{r} — {RATIOS[r].W}×{RATIOS[r].H}</div>
               <div style={{fontSize:12,opacity:0.6,display:"flex",gap:16,flexWrap:"wrap"}}>
                 <span>1 title card</span>
-                <span>{selectedGfx.length} graphic{selectedGfx.length!==1?"s":""}{gfxMode==="premiere"?" (Premiere Ready)":gfxMode==="png"?" (PNG)":gfxMode==="webm"?(convertMov?" (MOV)":" (WebM)"):gfxMode==="pngseq"?" (PNG sequence)":gfxMode==="composite"?" (Composite)":gfxMode==="both"?" (Everything)":""}</span>
+                <span>{selectedGfx.length} graphic{selectedGfx.length!==1?"s":""}{gfxMode==="premiere"?" (Premiere Ready)":gfxMode==="png"?" (PNG)":gfxMode==="webm"?" (MOV)":gfxMode==="pngseq"?" (PNG sequence)":gfxMode==="composite"?" (Composite)":gfxMode==="both"?" (Everything)":""}</span>
                 <span>1 endboard</span>
                 {includeCaptions&&<span>{captionMode==="composite"?"1 caption WebM":`${subtitles.length} caption WebMs`}</span>}
                 <span>1 Premiere XML sequence</span>
@@ -3757,7 +3664,7 @@ function TitleCardPanel({project, brand, updateProject}){
     try{
       const blob=await recordTitleCard(effectiveBrand,previewRatio);
       const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-      a.download=`title_card_${project.name.replace(/\s+/g,"_")}_${previewRatio.replace(":","x")}_animated.webm`;a.click();
+      a.download=`title_card_${project.name.replace(/\s+/g,"_")}_${previewRatio.replace(":","x")}_animated.mov`;a.click();
     }catch(e){alert("Export failed: "+e.message);}
     setExporting(false);
   };
@@ -4067,36 +3974,58 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     // Per-ratio spatial rhythm — each ratio has its own proportions
     const isSquare=Math.abs(W-H)<10;
     const isPortrait=H>W;
-    // Split line position + content anchors
-    const splitFrac=isSquare?0.48:isPortrait?0.50:0.50;
+    // Split line position.
+    //   9:16 → 0.22 — a compact cream HEADER band. 50/50 left the top half
+    //                 as dead space with a tiny eyebrow floating alone.
+    //   1:1  → 0.48 — near half/half, landscape rhythm
+    //   16:9 → 0.50 — classic half/half
+    const splitFrac=isSquare?0.48:isPortrait?0.22:0.50;
     const splitY=H*(splitFrac+(1-ENT)*0.5);
     ctx.fillStyle=B.colorPrimary; ctx.fillRect(0,splitY,W,H-splitY);
 
     // Font sizes tuned per ratio (1:1 needs smaller headline than 16:9)
-    const seriesSz=isSquare?Math.round(30*sc):isPortrait?Math.round(32*sc):Math.round(34*sc);
-    const titleSz=isSquare?Math.round(92*sc):isPortrait?Math.round(104*sc):Math.round(112*sc);
-    const subSz=isSquare?Math.round(38*sc):isPortrait?Math.round(42*sc):Math.round(44*sc);
+    const seriesSz=isSquare?Math.round(30*sc):isPortrait?Math.round(36*sc):Math.round(34*sc);
+    const titleSz=isSquare?Math.round(92*sc):isPortrait?Math.round(112*sc):Math.round(112*sc);
+    const subSz=isSquare?Math.round(38*sc):isPortrait?Math.round(44*sc):Math.round(44*sc);
 
     // Y anchors — spatially rhythmic, based on split + type block heights
     // Title block ≈ 2 lines × titleSz × 1.05 leading
     const titleBlockH=titleSz*2*1.05;
-    const seriesY=H*(splitFrac)-Math.round(36*sc);  // series above split line
-    const titleY=H*(splitFrac)+Math.round(60*sc);    // title starts below split with air
+    // 9:16: series sits VERTICALLY CENTRED in the compact cream header band.
+    //       Title starts with real breathing room below the split line.
+    // 1:1/16:9: series hangs above the split line as an eyebrow.
+    const seriesY=isPortrait
+      ? H*(splitFrac)*0.5                                 // centred in header band
+      : H*(splitFrac)-Math.round(36*sc);                  // above split line
+    const titleY=isPortrait
+      ? H*(splitFrac)+Math.round(120*sc)                  // generous air below split
+      : H*(splitFrac)+Math.round(60*sc);
     // Subtitle sits BELOW title block with its own breathing room
     const subY=titleY+titleBlockH+Math.round(40*sc);
 
-    // Series name — eyebrow above split
+    // Series name — eyebrow
     ctx.save(); ctx.globalAlpha=TXT*0.6;
     ctx.font=`600 ${seriesSz}px "${FF}",Arial,sans-serif`;
     ctx.letterSpacing=`${Math.round(2*sc)}px`;
-    ctx.fillStyle=B.colorPrimary; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
-    ctx.fillText((B.titleCardSeriesName||"").toUpperCase(),PAD,seriesY);
+    ctx.fillStyle=B.colorPrimary;
+    if(isPortrait){
+      // Centred horizontally + vertically inside the cream header band
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText((B.titleCardSeriesName||"").toUpperCase(),W/2,seriesY);
+    } else {
+      ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+      ctx.fillText((B.titleCardSeriesName||"").toUpperCase(),PAD,seriesY);
+    }
     ctx.letterSpacing="0px";
     ctx.restore();
 
-    // Title on teal half — serif, white, TIGHT display leading
+    // Title on teal half — serif, white, TIGHT display leading.
+    // 9:16 centres the title horizontally for symmetry with the centred
+    // eyebrow + centred subtitle below. 1:1 and 16:9 stay left-aligned.
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,B.titleCardTitle||"EPISODE TITLE",PAD,titleY,W-PAD*2,H*0.26,titleSz,"700","left","#fff",2,FFS,1.05);
+    drawText(ctx,B.titleCardTitle||"EPISODE TITLE",
+      isPortrait?W/2:PAD,titleY,W-PAD*2,H*0.34,titleSz,"700",
+      isPortrait?"center":"left","#fff",3,FFS,1.05);
     ctx.restore();
 
     // ── Footer: layout differs by ratio ──
@@ -4192,10 +4121,24 @@ function drawEndboard(canvas, brand, ratio, progress=1){
   const TXT=easeOut(clamp((p-0.12)*2,0,1));
   const PAD=Math.round(90*sc);
   const style=B.endboardStyle||"logo";
-  // 1:1 = minimal endboard (client request): just CTA, no small text
+  // Endboard variants:
+  //   1:1  → "Watch the full video now" — single-line CTA, nothing else
+  //   9:16 → "Watch now" + website URL   — minimal CTA plus brand URL inside safe zone
+  //   16:9 → full branded endboard       — CTA + handles + website
   const isSquare=Math.abs(W-H)<10;
-  const ctaText=isSquare?"Watch the full video now":(B.endboardCTA||"Thanks for watching");
-  const showSmallText=!isSquare;
+  const isPortrait=H>W*1.2;
+  const isMinimal=isSquare||isPortrait;
+  const ctaText=isSquare
+    ? "Watch the full video now"
+    : isPortrait
+      ? "Watch now"
+      : (B.endboardCTA||"Thanks for watching");
+  // Handles are 16:9-only (too much clutter for 1:1 or 9:16).
+  // Website URL shows on ALL ratios now — it's the brand anchor.
+  const showHandles=!isMinimal;
+  const showWebsite=true;
+  // Legacy flag retained to keep the existing grid/minimal-style conditionals readable.
+  const showSmallText=!isMinimal;
 
   // Warm cream background
   ctx.fillStyle=CW; ctx.fillRect(0,0,W,H);
@@ -4222,22 +4165,33 @@ function drawEndboard(canvas, brand, ratio, progress=1){
     // Divider
     const rW=Math.round(W*0.3*ENT);
     ctx.fillStyle=B.colorAccent; ctx.fillRect(W/2-rW/2,H*0.46,rW,Math.round(3*sc));
-    // CTA — serif, teal (larger on 1:1 since it's the only text)
-    // Display leading 1.12 — tight for big headlines
+    // CTA — serif, teal.
+    //   1:1   → 92px / 0.55 (minimal — CTA is the hero, no handles/URL crowding it)
+    //   9:16  → 72px / 0.50 (classic proportions, sits above URL like the original)
+    //   16:9  → 72px / 0.50 (landscape default)
+    // Display leading 1.12 — tight for big headlines.
     ctx.save(); ctx.globalAlpha=TXT;
     const ctaSz=isSquare?Math.round(92*sc):Math.round(72*sc);
     drawText(ctx,ctaText,W/2,isSquare?H*0.55:H*0.50,W-PAD*2,H*0.18,ctaSz,"700","center",B.colorPrimary,2,FFS,1.12);
     ctx.restore();
-    // Handles — hidden on 1:1
-    if(showSmallText&&B.endboardHandles){
+    // Handles — 16:9 only
+    if(showHandles&&B.endboardHandles){
       ctx.save(); ctx.globalAlpha=TXT*0.6;
       drawText(ctx,B.endboardHandles,W/2,H*0.68,W-PAD*2,H*0.08,Math.round(38*sc),"500","center",B.colorAccent,1,FF);
       ctx.restore();
     }
-    // Website — hidden on 1:1
-    if(showSmallText&&B.endboardWebsite){
-      ctx.save(); ctx.globalAlpha=TXT*0.45;
-      drawText(ctx,B.endboardWebsite,W/2,H*0.76,W-PAD*2,H*0.07,Math.round(34*sc),"400","center",B.colorPrimary+"88",1,FF);
+    // Website URL — all ratios. Positioned so it sits below the CTA AND
+    // inside the safe zone bottom buffer (9:16 safe bottom is 320, well above H*0.76).
+    //   1:1   → H*0.72 — breathing room below the hero CTA
+    //   9:16  → H*0.76 — classic footer position, matches original layout
+    //   16:9  → H*0.76 — same classic footer position
+    // On 1:1 the CTA is the hero so the URL gets higher opacity to read as
+    // a standalone brand mark; on 9:16/16:9 it stays as a muted footer line.
+    if(showWebsite&&B.endboardWebsite){
+      const urlY=isSquare?H*0.72:H*0.76;
+      const urlSz=isSquare?Math.round(42*sc):Math.round(34*sc);
+      ctx.save(); ctx.globalAlpha=TXT*(isSquare?0.75:0.5);
+      drawText(ctx,B.endboardWebsite,W/2,urlY,W-PAD*2,H*0.08,urlSz,isSquare?"600":"400","center",B.colorPrimary+(isSquare?"cc":"aa"),1,FF);
       ctx.restore();
     }
   }
@@ -4254,10 +4208,10 @@ function drawEndboard(canvas, brand, ratio, progress=1){
     }
     // Big CTA — serif, teal (tight display leading 1.08)
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,ctaText,W/2,isSquare?H*0.45:H*0.22,W-PAD*2,H*0.24,Math.round(isSquare?110*sc:90*sc),"700","center",B.colorPrimary,2,FFS,1.08);
+    drawText(ctx,ctaText,W/2,isMinimal?H*0.45:H*0.22,W-PAD*2,H*0.24,Math.round(isMinimal?110*sc:90*sc),"700","center",B.colorPrimary,2,FFS,1.08);
     ctx.restore();
-    // Action boxes — hidden on 1:1
-    if(!isSquare){
+    // Action boxes — hidden on minimal endboards (1:1, 9:16)
+    if(!isMinimal){
       const boxW=Math.round(260*sc),boxH=Math.round(80*sc),gap=Math.round(24*sc);
       const totalW=boxW*2+gap; const bx=(W-totalW)/2; const by=H*0.52;
       ["▶  Subscribe","🔔  Notify me"].forEach((lbl,i)=>{
@@ -4291,7 +4245,7 @@ function drawEndboard(canvas, brand, ratio, progress=1){
       ctx.save(); ctx.globalAlpha=ENT; ctx.drawImage(logoImg,(W-lw)/2,H*0.30,lw,lh); ctx.restore();
     }
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,ctaText,W/2,isSquare?H*0.60:H*0.56,W-PAD*2,H*0.16,Math.round(isSquare?88*sc:64*sc),"700","center",B.colorPrimary,2,FFS,1.10);
+    drawText(ctx,ctaText,W/2,isMinimal?H*0.60:H*0.56,W-PAD*2,H*0.16,Math.round(isMinimal?88*sc:64*sc),"700","center",B.colorPrimary,2,FFS,1.10);
     ctx.restore();
     if(showSmallText&&(B.endboardHandles||B.endboardWebsite)){
       ctx.save(); ctx.globalAlpha=TXT*0.45;
