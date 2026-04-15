@@ -4038,9 +4038,10 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     // Split line position.
     //   9:16 → 0.22 — a compact cream HEADER band. 50/50 left the top half
     //                 as dead space with a tiny eyebrow floating alone.
-    //   1:1  → 0.48 — near half/half, landscape rhythm
-    //   16:9 → 0.50 — classic half/half
-    const splitFrac=isSquare?0.48:isPortrait?0.22:0.50;
+    //   1:1  → 0.40 — moved up from 0.48 so the teal half isn't bottom-heavy
+    //                 and there's reserved space at the bottom for captions.
+    //   16:9 → 0.50 — classic half/half (landscape has no caption overlay concern)
+    const splitFrac=isSquare?0.40:isPortrait?0.22:0.50;
     const splitY=H*(splitFrac+(1-ENT)*0.5);
     ctx.fillStyle=B.colorPrimary; ctx.fillRect(0,splitY,W,H-splitY);
 
@@ -4148,7 +4149,11 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     const logoWidthFrac=isSquare?0.18:0.16;
     const logoW=Math.round(W*logoWidthFrac);
     const logoH=logoImg?Math.round(logoW*(logoImg.naturalHeight/logoImg.naturalWidth)):Math.round(logoW*0.6);
-    const footerBottom=H-PAD*0.9;
+    // Footer bottom lifted above the 1:1 caption reserve so the logo
+    // stays inside the safe area and captions don't cover it.
+    // 1:1 → 120px bottom reserve (caption band + safe clearance)
+    // 16:9 → 80px bottom reserve (landscape has no burned-in captions)
+    const footerBottom=isSquare?H-Math.round(120*sc):H-Math.round(80*sc);
     const footerY=footerBottom-logoH;
 
     if(B.titleCardSubtitle){
