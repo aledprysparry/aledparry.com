@@ -38,12 +38,26 @@ export interface PngSequence {
 //
 // Captures exact discrete frames at a fixed framerate — every frame is
 // a PNG with preserved alpha. No MediaRecorder, no WebM, no codec fuss.
+//
+// Progress distribution has two modes:
+//   loop=false (default) → p = i / (numFrames - 1)
+//     Frame 0 is at p=0, the LAST frame is at p=1. Use for entrance
+//     animations where the final state should "hold" at p=1 (graphic
+//     templates, title cards, captions).
+//
+//   loop=true            → p = i / numFrames
+//     Frame 0 is at p=0, the last frame is at p=(N-1)/N (just below 1).
+//     Use with PERIODIC drawFns (sin/cos over 2π*p) so the last frame
+//     is one cycle-step BEFORE the first frame — when the MOV loops,
+//     motion continues smoothly with no visible freeze. Required for
+//     seamless looping MOV exports (posters, idents, decorative loops).
 export async function recordAsset(
   drawFn: (ctx: CanvasRenderingContext2D, W: number, H: number, S: any, p: number) => void,
   W: number,
   H: number,
   S: any,
-  durMs: number
+  durMs: number,
+  loop: boolean = false
 ): Promise<PngSequence> {
   const fps = 25;
   const numFrames = Math.max(1, Math.round((durMs / 1000) * fps));
@@ -55,7 +69,13 @@ export async function recordAsset(
 
   const frames: Uint8Array[] = [];
   for (let i = 0; i < numFrames; i++) {
-    const p = numFrames <= 1 ? 1 : i / (numFrames - 1);
+    // Seamless-loop mode uses i/N so the final frame is one step BEFORE
+    // the first. Non-loop mode uses i/(N-1) so the final frame hits p=1.
+    const p = numFrames <= 1
+      ? (loop ? 0 : 1)
+      : loop
+        ? i / numFrames
+        : i / (numFrames - 1);
     ctx.clearRect(0, 0, W, H);
     drawFn(ctx, W, H, S, p);
 

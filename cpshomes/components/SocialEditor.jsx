@@ -3241,13 +3241,14 @@ function PosterTab({project,brand,updateProject}){
           },"image/png");});
           await new Promise(r=>setTimeout(r,120));
         }
-        // 2. Animated looping MOV — recordAsset captures durSec worth of
-        //    frames, each drawn at progress = i/(N-1) so the sine motion
-        //    completes one full cycle and loops seamlessly.
+        // 2. Animated looping MOV — recordAsset with loop:true distributes
+        //    frames as p = i/N (not i/(N-1)), so the final frame sits one
+        //    cycle-step BEFORE p=0. When the MOV loops, the sine motion
+        //    continues smoothly with no one-frame freeze at the boundary.
         try{
           const seq=await recordAsset((ctx,W,H,_S,p)=>{
             drawPoster(ctx.canvas,poster,brand,ratio,p);
-          },AR.W,AR.H,null,durSec*1000);
+          },AR.W,AR.H,null,durSec*1000,true);
           const mov=await webmToMov(seq,`${pn}_poster_${tone}_${rp}.mov`);
           dl(mov,`${pn}_poster_${tone}_${rp}_${durSec}s.mov`);
         }catch(movErr){
