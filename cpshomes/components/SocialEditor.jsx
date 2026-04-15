@@ -842,6 +842,7 @@ function stamp(ctx,brand,W,H,darkBg=true,ratio){
   const is916=ratio==="9:16"||(isPortrait&&Math.abs(H/W-16/9)<0.1);
   const is11=ratio==="1:1"||Math.abs(W-H)<10;
   const sz=(SAFE_ZONES[ratio]||SAFE_ZONES[is916?"9:16":is11?"1:1":"16:9"]).universal;
+  const sc=Math.min(W,H)/1080;
   const CLEAR_X=is916?40:is11?20:Math.round(W*0.015);
   const CLEAR_Y=is916?90:is11?20:Math.round(W*0.015);
   const marginX=sz.right+CLEAR_X;
@@ -851,20 +852,41 @@ function stamp(ctx,brand,W,H,darkBg=true,ratio){
   if(logoSrc){
     const img=getCachedImage(logoSrc);
     if(img){
-      const logoW=Math.round(W*Math.min(0.25,Math.max(0.04,brand.logoSize??0.10)));
-      const logoH=Math.round(logoW*(img.naturalHeight/img.naturalWidth));
-      const pos=brand.logoPosition||"br";
-      const x=pos.includes("r")?W-marginX-logoW:marginX;
-      const y=pos.includes("b")?H-marginY-logoH:marginY;
-      ctx.save();ctx.globalAlpha=opacity;ctx.drawImage(img,x,y,logoW,logoH);ctx.restore();
+      // 9:16 → logo ALWAYS centred horizontally + sized 20% of W to match
+      //        the title card spec. Overrides brand.logoPosition and
+      //        brand.logoSize so every 9:16 graphic has a consistent
+      //        watermark rhythm. safeBottom - 30 keeps it just above the
+      //        9:16 bottom safe edge.
+      // 1:1 / 16:9 → honour brand.logoSize + brand.logoPosition (br/bl/tr/tl).
+      if(is916){
+        const logoW=Math.round(W*0.20);
+        const logoH=Math.round(logoW*(img.naturalHeight/img.naturalWidth));
+        const x=Math.round((W-logoW)/2);
+        const safeBottom=H-Math.round(320*sc);
+        const y=safeBottom-logoH-Math.round(30*sc);
+        ctx.save();ctx.globalAlpha=opacity;ctx.drawImage(img,x,y,logoW,logoH);ctx.restore();
+      } else {
+        const logoW=Math.round(W*Math.min(0.25,Math.max(0.04,brand.logoSize??0.10)));
+        const logoH=Math.round(logoW*(img.naturalHeight/img.naturalWidth));
+        const pos=brand.logoPosition||"br";
+        const x=pos.includes("r")?W-marginX-logoW:marginX;
+        const y=pos.includes("b")?H-marginY-logoH:marginY;
+        ctx.save();ctx.globalAlpha=opacity;ctx.drawImage(img,x,y,logoW,logoH);ctx.restore();
+      }
     }
     return;
   }
   if(!brand.channelName)return;
   ctx.save();ctx.globalAlpha=0.22;
   ctx.font=`600 ${Math.round(W*0.014)}px "${brand.fontFamily}","Arial",sans-serif`;
-  ctx.fillStyle="#fff";ctx.textAlign="right";ctx.textBaseline="alphabetic";
-  ctx.fillText(brand.channelName.toUpperCase(),W-marginX,H-marginY+Math.round(20));ctx.restore();
+  if(is916){
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="alphabetic";
+    ctx.fillText(brand.channelName.toUpperCase(),W/2,H-Math.round(320*sc)-Math.round(20));
+  } else {
+    ctx.fillStyle="#fff";ctx.textAlign="right";ctx.textBaseline="alphabetic";
+    ctx.fillText(brand.channelName.toUpperCase(),W-marginX,H-marginY+Math.round(20));
+  }
+  ctx.restore();
 }
 
 // ═══════════════════════════════════════════════════════════════
