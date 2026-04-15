@@ -232,18 +232,20 @@ const RATIOS = {
 
 // Social media safe zones (pixels at 1080x1920 for 9:16)
 // Universal safe area works across TikTok + Instagram Reels
+// Safe zones match client spec — content must stay inside these bounds
+// 9:16 (1080x1920): top 250, bottom 320, sides 120
 const SAFE_ZONES = {
   "9:16": {
-    universal: { top:220, bottom:420, left:60, right:120 }, // works on both platforms (paid)
-    organic:   { top:150, bottom:150, left:60, right:120 }, // organic only
-    tiktok:    { top:108, bottom:420, left:60, right:120 }, // TikTok-specific
-    reels:     { top:150, bottom:150, left:0,  right:0   }, // Reels-specific
+    universal: { top:250, bottom:320, left:120, right:120 }, // client-approved safe area
+    organic:   { top:250, bottom:250, left:120, right:120 }, // smaller bottom for organic
+    tiktok:    { top:250, bottom:380, left:120, right:120 }, // TikTok right-side icons
+    reels:     { top:250, bottom:320, left:120, right:120 },
   },
   "1:1": {
-    universal: { top:40, bottom:40, left:40, right:40 },
+    universal: { top:60, bottom:60, left:60, right:60 },
   },
   "16:9": {
-    universal: { top:40, bottom:40, left:60, right:60 },
+    universal: { top:60, bottom:60, left:80, right:80 },
   },
 };
 
@@ -805,10 +807,15 @@ function drawText(ctx,text,x,y,maxW,maxH,baseSz,weight,align,color,maxLines=3,ff
   }
   return cy;
 }
-function stamp(ctx,brand,W,H,darkBg=true){
-  const MARGIN=W*0.05;  // 5% safe zone margin
+function stamp(ctx,brand,W,H,darkBg=true,ratio){
+  // Use safe-zone-aware margins for vertical social formats
+  const isPortrait=H>W;
+  const is916=ratio==="9:16"||(isPortrait&&Math.abs(H/W-16/9)<0.1);
+  const is11=ratio==="1:1"||Math.abs(W-H)<10;
+  // For 9:16 the logo must stay inside the bottom safe zone (320px buffer at bottom)
+  const marginX=is916?120:is11?60:Math.round(W*0.05);
+  const marginY=is916?350:is11?90:Math.round(W*0.05);
   const opacity=Math.min(1,Math.max(0,brand.logoOpacity??0.75));
-  // Pick logo: white for dark backgrounds, teal for light backgrounds
   const logoSrc=darkBg?(brand.logoDataUrlLight||brand.logoDataUrl):brand.logoDataUrl;
   if(logoSrc){
     const img=getCachedImage(logoSrc);
@@ -816,18 +823,17 @@ function stamp(ctx,brand,W,H,darkBg=true){
       const logoW=Math.round(W*Math.min(0.25,Math.max(0.04,brand.logoSize??0.10)));
       const logoH=Math.round(logoW*(img.naturalHeight/img.naturalWidth));
       const pos=brand.logoPosition||"br";
-      const x=pos.includes("r")?W-MARGIN-logoW:MARGIN;
-      const y=pos.includes("b")?H-MARGIN-logoH:MARGIN;
+      const x=pos.includes("r")?W-marginX-logoW:marginX;
+      const y=pos.includes("b")?H-marginY-logoH:marginY;
       ctx.save();ctx.globalAlpha=opacity;ctx.drawImage(img,x,y,logoW,logoH);ctx.restore();
     }
     return;
   }
-  // Text fallback
   if(!brand.channelName)return;
   ctx.save();ctx.globalAlpha=0.22;
   ctx.font=`600 ${Math.round(W*0.014)}px "${brand.fontFamily}","Arial",sans-serif`;
   ctx.fillStyle="#fff";ctx.textAlign="right";ctx.textBaseline="alphabetic";
-  ctx.fillText(brand.channelName.toUpperCase(),W-MARGIN,H-H*0.035);ctx.restore();
+  ctx.fillText(brand.channelName.toUpperCase(),W-marginX,H-marginY+Math.round(20));ctx.restore();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -937,34 +943,74 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const isCompact=isPortrait||isSquare; // not wide — use centred layouts
   const isOverlay=(g.typeOverride||(TMPL[t]||{}).type||"fullscreen")==="overlay";
 
+  // ── Safe area for 9:16 (client-approved) ──
+  // Content must stay inside these bounds or it's hidden by IG/TikTok UI
+  const SAFE=(ratio||"16:9")==="9:16"?{top:250,bottom:320,left:120,right:120}
+    :(ratio||"16:9")==="1:1"?{top:60,bottom:60,left:60,right:60}
+    :{top:60,bottom:60,left:80,right:80};
+  const safeX=SAFE.left, safeY=SAFE.top;
+  const safeW=W-SAFE.left-SAFE.right, safeH=H-SAFE.top-SAFE.bottom;
+  const safeCX=safeX+safeW/2, safeCY=safeY+safeH/2;
+
   if(t==="myth"||t==="reality"){
     // Solid brand colour — myth=salmon, reality=green
     const bg=t==="myth"?B.colorAccent:B.colorPositive;
     ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-    // Subtle wavy texture (like CPS posts)
+    // Subtle wavy texture
     ctx.save();ctx.globalAlpha=0.06*Math.min(1,p*2);ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
     const waveShift=pRaw*W*0.04;
     for(let i=0;i<5;i++){const off=i*W*0.22+waveShift*(i%2?1:-0.6);ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
     ctx.restore();
-    // Icon — bounces in first (cascade 0)
-    const icR=Math.round(70*sc),icSc=cascadeBack(0);
-    ctx.save();ctx.translate(W/2,H*0.24);ctx.scale(icSc,icSc);ctx.globalAlpha=cascade(0);
-    ctx.save();ctx.globalAlpha=0.15;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();ctx.restore();
-    drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR,"#fff",IC);ctx.restore();
-    // Badge — slides up after icon (cascade 0.12)
-    const badgeP=cascade(0.12);
-    ctx.save();ctx.translate(0,(1-badgeP)*H*0.06);ctx.globalAlpha=badgeP;
-    ctx.font=`700 ${Math.round(52*sc)}px "${FF}","Arial",sans-serif`;
-    const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
-    ctx.fillStyle="rgba(255,255,255,0.20)";rrPath(ctx,W/2-bw/2-24*sc,H*0.335,bw+48*sc,68*sc,34*sc);ctx.fill();
-    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,W/2,H*0.335+34*sc);ctx.restore();
-    // Body — fades up after badge (cascade 0.25)
-    const bodyP=cascade(0.25);
-    const mythFontSz=isCompact?Math.round(56*sc):Math.round(72*sc);
-    const mythBodyY=isCompact?H*0.45:H*0.50;
-    const mythBodyH=isCompact?H*0.42:H*0.38;
-    ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.04);DT(c.body||"",W/2,mythBodyY,W-PAD*2,mythBodyH,mythFontSz,"700","center","#fff",4,FFS);ctx.restore();
-    stamp(ctx,B,W,H,true);  // dark bg → white logo
+
+    if(isCompact){
+      // ═══ 9:16 / 1:1 SOCIAL LAYOUT ═══
+      // Vertical stack inside safe area: icon → badge → body
+      // Full weight to text — it's the message.
+      const icR=Math.round(Math.min(safeW*0.14,120*sc));
+      // Icon y = top of safe area + icon radius + breathing room
+      const icY=safeY+icR+Math.round(40*sc);
+      const icSc=cascadeBack(0);
+      ctx.save();ctx.translate(safeCX,icY);ctx.scale(icSc,icSc);ctx.globalAlpha=cascade(0);
+      ctx.save();ctx.globalAlpha=0.15;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();ctx.restore();
+      drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR,"#fff",IC);ctx.restore();
+
+      // Badge pill — directly below icon
+      const badgeP=cascade(0.12);
+      const badgeSz=Math.round(64*sc);
+      const badgeY=icY+icR+Math.round(50*sc);
+      ctx.save();ctx.translate(0,(1-badgeP)*Math.round(30*sc));ctx.globalAlpha=badgeP;
+      ctx.font=`800 ${badgeSz}px "${FF}","Arial",sans-serif`;
+      const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
+      const badgeH=Math.round(88*sc);
+      ctx.fillStyle="rgba(255,255,255,0.22)";rrPath(ctx,safeCX-bw/2-32*sc,badgeY,bw+64*sc,badgeH,Math.round(44*sc));ctx.fill();
+      ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,safeCX,badgeY+badgeH/2);ctx.restore();
+
+      // Body — BIG serif, fills the rest of safe area for impact
+      const bodyP=cascade(0.25);
+      const bodyY=badgeY+badgeH+Math.round(80*sc);
+      const bodyMaxH=safeY+safeH-bodyY-Math.round(40*sc);
+      const bodyFontSz=Math.round(110*sc); // massive for social impact
+      ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
+      DT(c.body||"",safeCX,bodyY,safeW,bodyMaxH,bodyFontSz,"800","center","#fff",5,FFS);
+      ctx.restore();
+    } else {
+      // ═══ 16:9 LANDSCAPE LAYOUT ═══ (unchanged)
+      const icR=Math.round(70*sc),icSc=cascadeBack(0);
+      ctx.save();ctx.translate(W/2,H*0.24);ctx.scale(icSc,icSc);ctx.globalAlpha=cascade(0);
+      ctx.save();ctx.globalAlpha=0.15;ctx.fillStyle="#000";ctx.beginPath();ctx.arc(0,0,icR,0,Math.PI*2);ctx.fill();ctx.restore();
+      drawIcon(ctx,t==="myth"?"cross":"check",0,0,icR,"#fff",IC);ctx.restore();
+      const badgeP=cascade(0.12);
+      ctx.save();ctx.translate(0,(1-badgeP)*H*0.06);ctx.globalAlpha=badgeP;
+      ctx.font=`700 ${Math.round(52*sc)}px "${FF}","Arial",sans-serif`;
+      const badge=t==="myth"?"MYTH":"REALITY",bw=ctx.measureText(badge).width;
+      ctx.fillStyle="rgba(255,255,255,0.20)";rrPath(ctx,W/2-bw/2-24*sc,H*0.335,bw+48*sc,68*sc,34*sc);ctx.fill();
+      ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,W/2,H*0.335+34*sc);ctx.restore();
+      const bodyP=cascade(0.25);
+      ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.04);
+      DT(c.body||"",W/2,H*0.50,W-PAD*2,H*0.38,Math.round(72*sc),"700","center","#fff",4,FFS);
+      ctx.restore();
+    }
+    stamp(ctx,B,W,H,true,ratio);
   }
   else if(t==="title"){
     // Warm cream background with teal text
@@ -972,19 +1018,23 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Ghost number — large, behind everything
     if(c.number){ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;ctx.font=`700 ${Math.round(Math.min(W,H)*0.7)}px "${FF}","Arial",sans-serif`;ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(c.number,W-PAD*0.5,H*0.50);ctx.restore();}
     if(isCompact){
-      // Portrait/square: centred layout
+      // ═══ 9:16 / 1:1 SOCIAL LAYOUT ═══
+      // Vertical stack within safe area, massive serif headline
       ctx.save();ctx.globalAlpha=TXT;ctx.translate(0,(1-TXT)*50*sc);
-      let y=H*0.22;
-      // Small label
-      if(c.subheadline){y=DT(c.subheadline.toUpperCase(),W/2,y,W-PAD*2,H*0.06,Math.round(32*sc),"500","center",B.colorPrimary+"88",1)+H*0.02;}
-      // Main headline — big serif
-      y=DT(c.headline||"",W/2,y,W-PAD*2,H*0.35,Math.round(100*sc),"HW","center",B.colorPrimary,3,FFS)+H*0.03;
+      // Start from top of safe area
+      let y=safeY+Math.round(60*sc);
+      // Small eyebrow label
+      if(c.subheadline){
+        y=DT(c.subheadline.toUpperCase(),safeCX,y,safeW,Math.round(60*sc),Math.round(38*sc),"700","center",B.colorPrimary+"99",1)+Math.round(40*sc);
+      }
+      // HUGE serif headline — dominant, fills most of the safe area
+      y=DT(c.headline||"",safeCX,y,safeW,safeH*0.45,Math.round(130*sc),"HW","center",B.colorPrimary,3,FFS)+Math.round(50*sc);
       // Accent rule
-      const ruleW=Math.round(W*0.15*ENT);
-      ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-ruleW/2,y,ruleW,Math.round(3*sc));
-      y+=H*0.04;
+      const ruleW=Math.round(safeW*0.22*ENT);
+      ctx.fillStyle=B.colorAccent;ctx.fillRect(safeCX-ruleW/2,y,ruleW,Math.round(6*sc));
+      y+=Math.round(60*sc);
       // Body text
-      if(c.body)DT(c.body,W/2,y,W-PAD*2,H*0.20,Math.round(40*sc),"400","center",B.colorPrimary+"88",3);
+      if(c.body)DT(c.body,safeCX,y,safeW,safeY+safeH-y-Math.round(40*sc),Math.round(48*sc),"500","center",B.colorPrimary+"aa",4);
       ctx.restore();
     } else {
       // Landscape: left-aligned with accent bar
@@ -1005,30 +1055,54 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       if(c.body)DT(c.body,tx,y,W*0.6-tx,H*0.15,Math.round(34*sc),"400","left",B.colorPrimary+"77",3);
       ctx.restore();
     }
-    stamp(ctx,B,W,H,false);  // cream bg → teal logo
+    stamp(ctx,B,W,H,false,ratio);  // cream bg → teal logo
   }
   else if(t==="rule_number"){
     // Warm cream background, centred layout
     ctx.fillStyle=CW;ctx.fillRect(0,0,W,H);
-    // Ghost number — large, centred behind main content
+    // Ghost number — scaled to safe area, centred in it
+    const ghostY=isCompact?safeCY-safeH*0.05:H*0.40;
     ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;const gs=easeOut(clamp(p*1.5,0,1));
     ctx.font=`700 ${Math.round(Math.min(W,H)*0.65)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.translate(W/2,H*0.40);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
-    // "RULE" label — cascades first (0)
-    const ruleLabel=cascade(0);
-    ctx.save();ctx.globalAlpha=ruleLabel;ctx.translate(0,(1-ruleLabel)*H*0.03);
-    ctx.fillStyle=B.colorPrimary+"66";ctx.font=`600 ${Math.round(44*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";
-    ctx.fillText("— RULE —",W/2,H*0.26);
-    ctx.restore();
-    // Big number — punchy bounce in (cascade 0.12), vertically centred
-    const numP=cascadeBack(0.12);
-    ctx.save();ctx.globalAlpha=cascade(0.12);ctx.translate(W/2,H*0.44);ctx.scale(numP,numP);
-    ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(200*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.fillText("#"+(c.number||"1"),0,0);
-    ctx.restore();
-    // Body text — slides up last (cascade 0.28)
-    if(c.body){const bodyP=cascade(0.28);ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.04);DT(c.body,W/2,H*0.58,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
-    stamp(ctx,B,W,H,false);  // cream bg → teal logo
+    ctx.translate(isCompact?safeCX:W/2,ghostY);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
+
+    if(isCompact){
+      // ═══ 9:16 / 1:1 SOCIAL LAYOUT ═══
+      const ruleLabel=cascade(0);
+      // "RULE" eyebrow label at top of safe area
+      ctx.save();ctx.globalAlpha=ruleLabel;ctx.translate(0,(1-ruleLabel)*Math.round(30*sc));
+      ctx.fillStyle=B.colorPrimary+"88";ctx.font=`700 ${Math.round(52*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText("— RULE —",safeCX,safeY+Math.round(70*sc));
+      ctx.restore();
+      // Big number — massive bounce-in, centred in safe area
+      const numP=cascadeBack(0.12);
+      const numY=safeY+Math.round(210*sc);
+      ctx.save();ctx.globalAlpha=cascade(0.12);ctx.translate(safeCX,numY);ctx.scale(numP,numP);
+      ctx.fillStyle=B.colorPrimary;ctx.font=`900 ${Math.round(320*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText("#"+(c.number||"1"),0,0);
+      ctx.restore();
+      // Body text below number
+      if(c.body){
+        const bodyP=cascade(0.28);
+        ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
+        DT(c.body,safeCX,numY+Math.round(280*sc),safeW,safeY+safeH-numY-Math.round(280*sc)-Math.round(40*sc),Math.round(72*sc),"600","center",B.colorPrimary,4,FFS);
+        ctx.restore();
+      }
+    } else {
+      // ═══ 16:9 LANDSCAPE ═══
+      const ruleLabel=cascade(0);
+      ctx.save();ctx.globalAlpha=ruleLabel;ctx.translate(0,(1-ruleLabel)*H*0.03);
+      ctx.fillStyle=B.colorPrimary+"66";ctx.font=`600 ${Math.round(44*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="alphabetic";
+      ctx.fillText("— RULE —",W/2,H*0.26);
+      ctx.restore();
+      const numP=cascadeBack(0.12);
+      ctx.save();ctx.globalAlpha=cascade(0.12);ctx.translate(W/2,H*0.44);ctx.scale(numP,numP);
+      ctx.fillStyle=B.colorPrimary;ctx.font=`700 ${Math.round(200*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText("#"+(c.number||"1"),0,0);
+      ctx.restore();
+      if(c.body){const bodyP=cascade(0.28);ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.04);DT(c.body,W/2,H*0.58,W-PAD*2,H*0.18,Math.round(48*sc),"400","center",B.colorPrimary+"88",2);ctx.restore();}
+    }
+    stamp(ctx,B,W,H,false,ratio);
   }
   else if(t==="key_point"){
     // Forest green background
@@ -1071,31 +1145,34 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
         ctx.fillText(c.number,gx,gy);ctx.restore();
       }
     }
-    const lx=PAD;
-    const icSz=Math.round(isCompact?44*sc:40*sc);
     const icSc=cascadeBack(0.15);
     const headP=cascade(0);
     const ruleP=cascade(0.18);
     const bodyP=cascade(0.30);
     if(isCompact){
-      let y=H*0.15;
-      // Headline — cascades first
-      ctx.save();ctx.globalAlpha=headP;ctx.translate((1-headP)*-30*sc,0);
-      y=DT(c.headline||"KEY POINT",lx,y,W-PAD*2,H*0.14,Math.round(64*sc),"HW","left","#fff",2,FFS);
+      // ═══ 9:16 / 1:1 SOCIAL LAYOUT ═══
+      // Left-aligned stack within safe area, big bold headline
+      const lx=safeX, icSz=Math.round(70*sc);
+      let y=safeY+Math.round(40*sc);
+      // Headline — BIG sans, left aligned
+      ctx.save();ctx.globalAlpha=headP;ctx.translate((1-headP)*-40*sc,0);
+      y=DT(c.headline||"KEY POINT",lx,y,safeW,safeH*0.22,Math.round(88*sc),"HW","left","#fff",2,FFS);
       ctx.restore();
-      y+=H*0.02;
-      // Icon + rule — bounces in
+      y+=Math.round(40*sc);
+      // Icon + rule
       ctx.save();ctx.globalAlpha=ruleP;
       ctx.save();ctx.translate(lx+icSz/2,y+icSz/2);ctx.scale(icSc,icSc);drawIcon(ctx,"info",0,0,icSz,CW,IC);ctx.restore();
-      const ruleX=lx+icSz+Math.round(14*sc);const ruleW=Math.round((W*0.25)*ruleP);
-      ctx.strokeStyle=CW+"55";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ruleX,y+icSz/2);ctx.lineTo(ruleX+ruleW,y+icSz/2);ctx.stroke();
+      const ruleX=lx+icSz+Math.round(20*sc);const ruleW=Math.round((safeW*0.35)*ruleP);
+      ctx.strokeStyle=CW+"66";ctx.lineWidth=Math.round(3*sc);ctx.beginPath();ctx.moveTo(ruleX,y+icSz/2);ctx.lineTo(ruleX+ruleW,y+icSz/2);ctx.stroke();
       ctx.restore();
-      y+=icSz+H*0.04;
-      // Body — slides up last
-      ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*H*0.05);
-      DT(c.body||"",lx,y,W-PAD*2,H*0.45,Math.round(50*sc),"500","left","rgba(255,255,255,0.85)",5);
+      y+=icSz+Math.round(50*sc);
+      // Body — generous line height, big size for impact
+      ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
+      DT(c.body||"",lx,y,safeW,safeY+safeH-y-Math.round(40*sc),Math.round(64*sc),"500","left","rgba(255,255,255,0.92)",6);
       ctx.restore();
     } else {
+      const lx=PAD;
+      const icSz=Math.round(40*sc);
       let y=H*0.12;
       // Headline — slides in from left
       ctx.save();ctx.globalAlpha=headP;ctx.translate((1-headP)*-40*sc,0);
@@ -1114,7 +1191,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       DT(c.body||"",lx,y,W*0.65,H*0.40,Math.round(52*sc),"500","left","rgba(255,255,255,0.85)",4);
       ctx.restore();
     }
-    stamp(ctx,B,W,H,true);
+    stamp(ctx,B,W,H,true,ratio);
   }
   else if(t==="fact_box"){
     // Overlay card — clean label + body, no icon clutter
@@ -1404,11 +1481,16 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.restore();
     // CTA headline — use brand endboard fields first, then content fields, then defaults
     const ctaY=H*ctaFrac;
-    const ctaText=c.headline||B.endboardCTA||"Thanks for watching";
-    const handleText=c.handle||B.endboardHandles||"";
-    const websiteText=B.endboardWebsite||"";
-    const bodyText=c.body||"";
-    DT(ctaText,W/2,ctaY,W*0.7,H*0.12,headSz,"700","center","#fff",2,FFS);
+    // Client wants minimal endboard on 1:1: just "Watch the full video now"
+    const ctaText=isSquare?"Watch the full video now":(c.headline||B.endboardCTA||"Thanks for watching");
+    // On 1:1: hide all small text (body, handles, website) per client feedback
+    const showSubtext=!isSquare;
+    const handleText=showSubtext?(c.handle||B.endboardHandles||""):"";
+    const websiteText=showSubtext?(B.endboardWebsite||""):"";
+    const bodyText=showSubtext?(c.body||""):"";
+    // Larger CTA on 1:1 since it's the only text
+    const ctaHeadSz=isSquare?Math.round(72*sc):headSz;
+    DT(ctaText,W/2,ctaY,W*0.8,H*0.15,ctaHeadSz,"700","center","#fff",2,FFS);
     // Body text — with subtle pulse
     if(bodyText){
       const bodyY=ctaY+H*bodyFrac;
@@ -1416,7 +1498,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       DT(bodyText,W/2,bodyY,W*0.6,H*0.10,bodySz,"400","center","rgba(255,255,255,0.7)",2);
       ctx.restore();
     }
-    // Social handles + website
+    // Social handles + website (hidden on 1:1)
     const bottomLine=[handleText,websiteText].filter(Boolean).join("  ·  ");
     if(bottomLine){
       ctx.font=`500 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
@@ -1464,7 +1546,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const allText=Object.values(c).filter(v=>typeof v==="string"&&v.length>0);
     if(allText[0]){ctx.save();ctx.globalAlpha=TXT;DT(allText[0],W/2,H*0.36,W-PAD*2,H*0.28,Math.round(72*sc),"HW","center","#fff",3);ctx.restore();}
     if(allText[1]){ctx.save();ctx.globalAlpha=TXT*0.65;DT(allText.slice(1).join(" — "),W/2,H*0.68,W-PAD*2,H*0.15,Math.round(36*sc),"500","center","rgba(255,255,255,0.8)",2);ctx.restore();}
-    stamp(ctx,B,W,H);
+    stamp(ctx,B,W,H,true,ratio);
   }
 }
 
@@ -3945,6 +4027,10 @@ function drawEndboard(canvas, brand, ratio, progress=1){
   const TXT=easeOut(clamp((p-0.12)*2,0,1));
   const PAD=Math.round(90*sc);
   const style=B.endboardStyle||"logo";
+  // 1:1 = minimal endboard (client request): just CTA, no small text
+  const isSquare=Math.abs(W-H)<10;
+  const ctaText=isSquare?"Watch the full video now":(B.endboardCTA||"Thanks for watching");
+  const showSmallText=!isSquare;
 
   // Warm cream background
   ctx.fillStyle=CW; ctx.fillRect(0,0,W,H);
@@ -3971,18 +4057,19 @@ function drawEndboard(canvas, brand, ratio, progress=1){
     // Divider
     const rW=Math.round(W*0.3*ENT);
     ctx.fillStyle=B.colorAccent; ctx.fillRect(W/2-rW/2,H*0.46,rW,Math.round(3*sc));
-    // CTA — serif, teal
+    // CTA — serif, teal (larger on 1:1 since it's the only text)
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,B.endboardCTA||"Thanks for watching",W/2,H*0.50,W-PAD*2,H*0.14,Math.round(72*sc),"700","center",B.colorPrimary,2,FFS);
+    const ctaSz=isSquare?Math.round(92*sc):Math.round(72*sc);
+    drawText(ctx,ctaText,W/2,isSquare?H*0.55:H*0.50,W-PAD*2,H*0.18,ctaSz,"700","center",B.colorPrimary,2,FFS);
     ctx.restore();
-    // Handles
-    if(B.endboardHandles){
+    // Handles — hidden on 1:1
+    if(showSmallText&&B.endboardHandles){
       ctx.save(); ctx.globalAlpha=TXT*0.6;
       drawText(ctx,B.endboardHandles,W/2,H*0.68,W-PAD*2,H*0.08,Math.round(38*sc),"500","center",B.colorAccent,1,FF);
       ctx.restore();
     }
-    // Website
-    if(B.endboardWebsite){
+    // Website — hidden on 1:1
+    if(showSmallText&&B.endboardWebsite){
       ctx.save(); ctx.globalAlpha=TXT*0.45;
       drawText(ctx,B.endboardWebsite,W/2,H*0.76,W-PAD*2,H*0.07,Math.round(34*sc),"400","center",B.colorPrimary+"88",1,FF);
       ctx.restore();
@@ -4001,27 +4088,29 @@ function drawEndboard(canvas, brand, ratio, progress=1){
     }
     // Big CTA — serif, teal
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,B.endboardCTA||"Thanks for watching",W/2,H*0.22,W-PAD*2,H*0.20,Math.round(90*sc),"700","center",B.colorPrimary,2,FFS);
+    drawText(ctx,ctaText,W/2,isSquare?H*0.45:H*0.22,W-PAD*2,H*0.24,Math.round(isSquare?110*sc:90*sc),"700","center",B.colorPrimary,2,FFS);
     ctx.restore();
-    // Action boxes
-    const boxW=Math.round(260*sc),boxH=Math.round(80*sc),gap=Math.round(24*sc);
-    const totalW=boxW*2+gap; const bx=(W-totalW)/2; const by=H*0.52;
-    ["▶  Subscribe","🔔  Notify me"].forEach((lbl,i)=>{
-      const x=bx+i*(boxW+gap);
-      ctx.save(); ctx.globalAlpha=TXT;
-      ctx.shadowColor="rgba(0,0,0,0.15)"; ctx.shadowBlur=20;
-      rrPath(ctx,x,by,boxW,boxH,Math.round(14*sc));
-      ctx.fillStyle=i===0?B.colorAccent:B.colorPrimary+"22"; ctx.fill(); ctx.shadowBlur=0;
-      ctx.font=`600 ${Math.round(28*sc)}px "${FF}",Arial,sans-serif`;
-      ctx.fillStyle=i===0?"#fff":B.colorPrimary; ctx.textAlign="center"; ctx.textBaseline="middle";
-      ctx.fillText(lbl,x+boxW/2,by+boxH/2); ctx.restore();
-    });
-    if(B.endboardHandles){
+    // Action boxes — hidden on 1:1
+    if(!isSquare){
+      const boxW=Math.round(260*sc),boxH=Math.round(80*sc),gap=Math.round(24*sc);
+      const totalW=boxW*2+gap; const bx=(W-totalW)/2; const by=H*0.52;
+      ["▶  Subscribe","🔔  Notify me"].forEach((lbl,i)=>{
+        const x=bx+i*(boxW+gap);
+        ctx.save(); ctx.globalAlpha=TXT;
+        ctx.shadowColor="rgba(0,0,0,0.15)"; ctx.shadowBlur=20;
+        rrPath(ctx,x,by,boxW,boxH,Math.round(14*sc));
+        ctx.fillStyle=i===0?B.colorAccent:B.colorPrimary+"22"; ctx.fill(); ctx.shadowBlur=0;
+        ctx.font=`600 ${Math.round(28*sc)}px "${FF}",Arial,sans-serif`;
+        ctx.fillStyle=i===0?"#fff":B.colorPrimary; ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(lbl,x+boxW/2,by+boxH/2); ctx.restore();
+      });
+    }
+    if(showSmallText&&B.endboardHandles){
       ctx.save(); ctx.globalAlpha=TXT*0.55;
       drawText(ctx,B.endboardHandles,W/2,H*0.75,W-PAD*2,H*0.07,Math.round(34*sc),"500","center",B.colorPrimary,1,FF);
       ctx.restore();
     }
-    if(B.endboardWebsite){
+    if(showSmallText&&B.endboardWebsite){
       ctx.save(); ctx.globalAlpha=TXT*0.4;
       drawText(ctx,B.endboardWebsite,W/2,H*0.82,W-PAD*2,H*0.06,Math.round(30*sc),"400","center",B.colorPrimary+"88",1,FF);
       ctx.restore();
@@ -4036,9 +4125,9 @@ function drawEndboard(canvas, brand, ratio, progress=1){
       ctx.save(); ctx.globalAlpha=ENT; ctx.drawImage(logoImg,(W-lw)/2,H*0.30,lw,lh); ctx.restore();
     }
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,B.endboardCTA||"Thanks for watching",W/2,H*0.56,W-PAD*2,H*0.14,Math.round(64*sc),"700","center",B.colorPrimary,1,FFS);
+    drawText(ctx,ctaText,W/2,isSquare?H*0.60:H*0.56,W-PAD*2,H*0.16,Math.round(isSquare?88*sc:64*sc),"700","center",B.colorPrimary,2,FFS);
     ctx.restore();
-    if(B.endboardHandles||B.endboardWebsite){
+    if(showSmallText&&(B.endboardHandles||B.endboardWebsite)){
       ctx.save(); ctx.globalAlpha=TXT*0.45;
       drawText(ctx,(B.endboardHandles||"")+(B.endboardHandles&&B.endboardWebsite?"  ·  ":"")+(B.endboardWebsite||""),W/2,H*0.66,W-PAD*2,H*0.07,Math.round(32*sc),"400","center",B.colorPrimary+"99",1,FF);
       ctx.restore();
