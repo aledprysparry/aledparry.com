@@ -300,6 +300,7 @@ const GTP_CHANNEL_NAME = "gtp-live-sync";
 const ASSETS = [
   { id: "intro",      label: "Intro Title",    icon: "\u25b6", animated: true },
   { id: "roundtitle", label: "Round Title",     icon: "#", animated: true },
+  { id: "roundcard",  label: "Round Card",      icon: "\ud83d\udccb", animated: true },
   { id: "property",   label: "Property Frame",  icon: "\ud83c\udfe0", animated: true },
   { id: "options",   label: "A/B/C Options",   icon: "\ud83c\udfaf", animated: true },
   { id: "lockin",    label: "Lock-In",         icon: "\ud83d\udd12", animated: true },
@@ -312,6 +313,7 @@ const ASSETS = [
 const ALL_ASSETS = [...ASSETS]; // will include SOCIAL_ASSETS after definition
 // Social media / edit overlay assets (transparent background, MOV with alpha)
 const SOCIAL_ASSETS = [
+  { id: "overlay_opener",      label: "Opener Hook",            icon: "\ud83c\udfaa", animated: true },
   { id: "prompt",              label: "Audience Prompt",        icon: "\u2753", animated: true },
   { id: "overlay_profile1",    label: "Profile — Agent 1",      icon: "\ud83d\udc64", animated: true },
   { id: "overlay_profile2",    label: "Profile — Agent 2",      icon: "\ud83d\udc64", animated: true },
@@ -1560,6 +1562,236 @@ function drawRoundTitle(ctx, W, H, S, progress) {
   drawStamp(ctx, W, H);
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  ROUND CARD — property-portal-style listing mockup
+//  Each round opens with a Rightmove-inspired listing card so
+//  viewers immediately see the property they're guessing.
+// ═══════════════════════════════════════════════════════════════
+function drawRoundCard(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  drawBg(ctx, W, H);
+  drawAccentBars(ctx, W, H);
+  const ar = aspect(W, H);
+  const safe = safeZone(W, H);
+  const safeTop = ar === "portrait" ? safe.contentTop : 0;
+  const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
+  const safeLeft = ar === "portrait" ? safe.left : W * 0.05;
+  const safeW = ar === "portrait" ? W - safe.left - safe.right : W * 0.9;
+
+  // Staggered entrance
+  const cardP = easeOutExpo(Math.min(1, p / 0.45));
+  const badgeP = easeOutBack(Math.min(1, Math.max(0, (p - 0.35) / 0.3)));
+  const priceP = easeOutBack(Math.min(1, Math.max(0, (p - 0.55) / 0.35)));
+
+  // ── Card dimensions ──
+  const cardW = safeW;
+  const cardH = ar === "portrait" ? safeH * 0.80 : H * 0.76;
+  const cardX = ar === "portrait" ? safe.left : (W - cardW) / 2;
+  const cardY = ar === "portrait" ? safeTop + safeH * 0.06 : H * 0.10;
+  const radius = BRAND.cornerRadius;
+
+  // Drop shadow behind card (baked fillRect since shadowBlur doesn't export)
+  ctx.save();
+  ctx.globalAlpha = cardP * 0.4;
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  roundRect(ctx, cardX + 6, cardY + 10, cardW, cardH, radius);
+  ctx.fill();
+  ctx.restore();
+
+  // Slide-up entrance offset
+  const slideY = (1 - cardP) * H * 0.04;
+  ctx.save();
+  ctx.globalAlpha = cardP;
+  ctx.translate(0, slideY);
+
+  // ── Card body (white) ──
+  ctx.fillStyle = "#ffffff";
+  roundRect(ctx, cardX, cardY, cardW, cardH, radius);
+  ctx.fill();
+
+  // ── Green "FOR SALE" header strip ──
+  const headerH = Math.max(50, cardH * 0.09);
+  ctx.save();
+  // Clip to rounded corners of the card, then fill only the header region
+  roundRect(ctx, cardX, cardY, cardW, cardH, radius);
+  ctx.clip();
+  ctx.fillStyle = "#00DEB6"; // Rightmove-inspired green
+  ctx.fillRect(cardX, cardY, cardW, headerH);
+  ctx.restore();
+
+  // "FOR SALE" label in the header
+  ctx.save();
+  ctx.font = `800 ${Math.round(headerH * 0.42)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "#0a1628";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("FOR SALE", cardX + headerH * 0.5, cardY + headerH / 2);
+  // "PROPERTY LISTING" subtle right-aligned
+  ctx.font = `700 ${Math.round(headerH * 0.32)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(10,22,40,0.65)";
+  ctx.textAlign = "right";
+  ctx.fillText("PROPERTY LISTING", cardX + cardW - headerH * 0.5, cardY + headerH / 2);
+  ctx.restore();
+
+  // ── Content area below header ──
+  const contentY = cardY + headerH;
+  const contentH = cardH - headerH;
+  const contentPad = cardW * 0.03;
+
+  // Layout: landscape = split (photo left 58%, details right 42%)
+  //         portrait  = stacked (photo top 55%, details bottom 45%)
+  const isSplit = ar !== "portrait";
+  const photoW = isSplit ? (cardW - contentPad * 3) * 0.58 : cardW - contentPad * 2;
+  const photoH = isSplit ? contentH - contentPad * 2 : contentH * 0.55;
+  const photoX = cardX + contentPad;
+  const photoY = contentY + contentPad;
+  const detailsX = isSplit ? photoX + photoW + contentPad : cardX + contentPad;
+  const detailsY = isSplit ? photoY : photoY + photoH + contentPad;
+  const detailsW = isSplit ? (cardW - contentPad * 3) * 0.42 : cardW - contentPad * 2;
+  const detailsH = isSplit ? photoH : contentH - photoH - contentPad * 2;
+
+  // ── Hero photo ──
+  const photos = (S.propPhotos && S.propPhotos.length)
+    ? S.propPhotos
+    : (EPISODE.rounds?.[(S.propRound || 1) - 1]?.photos || []);
+  const heroSrc = photos[0];
+  const heroImg = heroSrc ? getCachedImage(heroSrc) : null;
+  ctx.save();
+  // Rounded clip for hero photo
+  roundRect(ctx, photoX, photoY, photoW, photoH, radius * 0.6);
+  ctx.clip();
+  if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
+    const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
+    const scale = Math.max(photoW / iw, photoH / ih);
+    const dw = iw * scale, dh = ih * scale;
+    ctx.drawImage(heroImg, photoX + (photoW - dw) / 2, photoY + (photoH - dh) / 2, dw, dh);
+  } else {
+    // Placeholder: dark grey with house icon fallback
+    ctx.fillStyle = "#d5dde3";
+    ctx.fillRect(photoX, photoY, photoW, photoH);
+    ctx.font = `${Math.round(photoH * 0.35)}px serif`;
+    ctx.fillStyle = "rgba(10,22,40,0.25)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("\ud83c\udfe0", photoX + photoW / 2, photoY + photoH / 2);
+  }
+  ctx.restore();
+
+  // Photo border
+  ctx.strokeStyle = "rgba(10,22,40,0.12)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, photoX, photoY, photoW, photoH, radius * 0.6);
+  ctx.stroke();
+
+  // ── Details column ──
+  let dy = detailsY + (isSplit ? detailsH * 0.08 : detailsH * 0.10);
+
+  // Address (title of the listing)
+  const addrFs = sz(W, H, ar === "portrait" ? 0.03 : 0.026);
+  ctx.font = `700 ${addrFs}px 'Lora', serif`;
+  ctx.fillStyle = "#0a1628";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  const address = S.propAddress || "Cardiff property";
+  // Word-wrap the address within detailsW
+  const addressLines = wrapText(ctx, address, detailsW);
+  for (const line of addressLines.slice(0, 2)) {
+    ctx.fillText(line, detailsX, dy);
+    dy += addrFs * 1.15;
+  }
+  dy += addrFs * 0.3;
+
+  // Location pill
+  const location = S.optionLocation || "";
+  if (location) {
+    ctx.font = `500 ${Math.round(addrFs * 0.65)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(10,22,40,0.55)";
+    ctx.fillText(`\ud83d\udccd ${location}`, detailsX, dy);
+    dy += addrFs * 0.9;
+  }
+
+  // Beds / type / tenure row
+  const beds = S.propBeds || 0;
+  const type = S.propType || "Property";
+  const tenure = S.propTenure || "";
+  dy += addrFs * 0.2;
+  const chipFs = Math.round(addrFs * 0.65);
+  ctx.font = `600 ${chipFs}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "#1E3A40";
+  const parts = [];
+  if (beds > 0) parts.push(`${beds} bed${beds === 1 ? "" : "s"}`);
+  if (type) parts.push(type);
+  if (tenure) parts.push(tenure);
+  ctx.fillText(parts.join("  \u00b7  "), detailsX, dy);
+  dy += chipFs * 2.2;
+
+  // "GUESS THE PRICE" label + "£???" (bounces in)
+  if (priceP > 0) {
+    ctx.save();
+    ctx.globalAlpha = priceP;
+    ctx.translate(0, (1 - priceP) * 10);
+    ctx.font = `700 ${Math.round(addrFs * 0.6)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(10,22,40,0.55)";
+    ctx.fillText("GUESS THE PRICE", detailsX, dy);
+    const priceSz = sz(W, H, ar === "portrait" ? 0.085 : 0.07) * (0.85 + 0.15 * priceP);
+    ctx.font = `800 ${Math.round(priceSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.fillText("\u00a3???", detailsX, dy + addrFs * 0.8);
+    ctx.restore();
+  }
+
+  ctx.restore(); // end card slide-up
+
+  // ── Round badge: top-right of the card, bouncy gold pill ──
+  if (badgeP > 0) {
+    const roundNum = S.propRound || 1;
+    const totalRounds = EPISODE.rounds?.length || 6;
+    const badgeText = `ROUND ${roundNum} / ${totalRounds}`;
+    const badgeFs = sz(W, H, 0.025);
+    const badgeScale = 0.6 + 0.4 * badgeP;
+    ctx.save();
+    ctx.globalAlpha = badgeP;
+    ctx.font = `800 ${Math.round(badgeFs)}px 'DM Sans', sans-serif`;
+    const tw = ctx.measureText(badgeText).width;
+    const pillW = (tw + badgeFs * 1.5) * badgeScale;
+    const pillH = badgeFs * 2.2 * badgeScale;
+    const pillX = cardX + cardW - pillW - badgeFs * 0.8;
+    const pillY = cardY - pillH * 0.4 + slideY;
+    // Pill bg
+    ctx.fillStyle = GAME.gold;
+    roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+    ctx.fill();
+    // Pill text
+    ctx.font = `800 ${Math.round(badgeFs * badgeScale)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#1E3A40";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(badgeText, pillX + pillW / 2, pillY + pillH / 2);
+    ctx.restore();
+  }
+
+  // Centered CPS Homes logo
+  drawStamp(ctx, W, H, { centered: true });
+}
+
+// Simple text wrapper — breaks a string into lines that fit within maxW
+function wrapText(ctx, text, maxW) {
+  const words = String(text).split(/\s+/);
+  const lines = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxW && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 function drawScoreboard(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   drawBg(ctx, W, H);
@@ -1953,6 +2185,70 @@ function drawOverlayCountdown(ctx, W, H, S, progress) {
   ctx.restore();
 }
 
+// Opener Hook — transparent overlay with show tagline
+// Used to drop over opening b-roll so viewers instantly know what the show is.
+// Two-line headline: "GUESS THE PRICE" (big gold, bounces in with white halo)
+// + "of this week's Cardiff Rightmove listings" (warm cream, fades in below).
+function drawOverlayOpener(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
+
+  // Staggered phases
+  const topP    = easeOutBack(Math.min(1, p / 0.45));         // "GUESS THE PRICE" bounces in
+  const subP    = easeOutExpo(Math.min(1, Math.max(0, (p - 0.35) / 0.45))); // sub-line fades up
+
+  // ── "GUESS THE PRICE" — huge, gold, Lora, with white halo ──
+  if (topP > 0) {
+    const titleSz = sz(W, H, ar === "portrait" ? 0.115 : 0.095) * (0.75 + 0.25 * topP);
+    const titleY = centerY - sz(W, H, ar === "portrait" ? 0.04 : 0.035);
+
+    // White radial glow halo
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, topP) * 0.9;
+    const glowR = titleSz * 2.8;
+    const glow = ctx.createRadialGradient(W / 2, titleY, 0, W / 2, titleY, glowR);
+    glow.addColorStop(0,    "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3,  "rgba(255, 255, 255, 0.45)");
+    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
+    glow.addColorStop(1,    "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(W / 2 - glowR, titleY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
+    // Title text
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, topP);
+    ctx.font = `900 ${Math.round(titleSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("GUESS THE PRICE", W / 2, titleY);
+    ctx.restore();
+  }
+
+  // ── "of this week's Cardiff Rightmove listings" — fades + slides up ──
+  if (subP > 0) {
+    const subSz = sz(W, H, ar === "portrait" ? 0.04 : 0.032);
+    const subY = centerY + sz(W, H, ar === "portrait" ? 0.06 : 0.055);
+    const yOff = (1 - subP) * sz(W, H, 0.02);
+
+    ctx.save();
+    ctx.globalAlpha = subP;
+    ctx.font = `600 ${Math.round(subSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // Subtle dark stroke for readability over bright footage
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowBlur = subSz * 0.15;
+    ctx.fillText("of this week's Cardiff", W / 2, subY + yOff);
+    ctx.fillText("Rightmove listings", W / 2, subY + yOff + subSz * 1.25);
+    ctx.restore();
+  }
+}
+
 // Play Along — "Guess The Price" banner
 function drawOverlayPlayAlong(ctx, W, H, S, progress) {
   const p = progress ?? 1;
@@ -2243,6 +2539,7 @@ function drawOverlayCSSS(ctx, W, H, S, progress) {
 const DRAW_FNS = {
   intro: drawIntro,
   roundtitle: drawRoundTitle,
+  roundcard: drawRoundCard,
   property: drawProperty,
   prompt: drawPrompt,
   options: drawOptions,
@@ -2251,6 +2548,7 @@ const DRAW_FNS = {
   reveal: drawReveal,
   scoreboard: drawScoreboard,
   endboard: drawEndboard,
+  overlay_opener: drawOverlayOpener,
   overlay_profile1: drawOverlayProfile1,
   overlay_profile2: drawOverlayProfile2,
   overlay_countdown: drawOverlayCountdown,
@@ -3071,6 +3369,7 @@ export default function GuessThePrice({ displayMode = false }) {
     const slug = ratioSlug(ratio);
     const toExport = [
       { asset: "roundtitle", name: `r${rn}_01_round_title_${slug}.png` },
+      { asset: "roundcard",  name: `r${rn}_01b_round_card_${slug}.png` },
       { asset: "property",   name: `r${rn}_02_property_${slug}.png` },
       { asset: "prompt",     name: `r${rn}_03_prompt_${slug}.png` },
       { asset: "options",    name: `r${rn}_04_options_${slug}.png` },
@@ -3166,6 +3465,32 @@ export default function GuessThePrice({ displayMode = false }) {
       URL.revokeObjectURL(a.href);
       await new Promise(r => setTimeout(r, 500));
     } catch { setExportStatus("Intro MOV failed — skipping"); await new Promise(r => setTimeout(r, 1000)); }
+
+    // Opener hook PNG + MOV (transparent overlay for edit)
+    try {
+      setExportStatus("Opener (still)…");
+      canvas.width = rat.W;
+      canvas.height = rat.H;
+      const openerCtx = canvas.getContext("2d");
+      openerCtx.clearRect(0, 0, rat.W, rat.H);
+      DRAW_FNS.overlay_opener(openerCtx, rat.W, rat.H, S, 1);
+      const openerBlob = await new Promise(res => canvas.toBlob(res, "image/png"));
+      if (openerBlob) zip.file(`00b_opener_${slug}.png`, openerBlob);
+      await new Promise(r => setTimeout(r, 50));
+
+      setExportStatus("Opener MOV…");
+      const ve = await loadVideoExport();
+      const openerWebm = await ve.recordAsset(DRAW_FNS.overlay_opener, rat.W, rat.H, S, 3000);
+      setExportStatus("Opener MOV converting…");
+      const openerMovName = `00b_opener_${slug}.mov`;
+      const openerMov = await ve.webmToMov(openerWebm, openerMovName);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(openerMov);
+      a.download = openerMovName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      await new Promise(r => setTimeout(r, 500));
+    } catch { setExportStatus("Opener MOV failed — skipping"); await new Promise(r => setTimeout(r, 1000)); }
 
     // Track cumulative scores for scoreboard export
     const cumulativeScores = [0, 0];
@@ -3269,6 +3594,10 @@ export default function GuessThePrice({ displayMode = false }) {
       // 1. Round title (still + animated)
       await exportStill("roundtitle", `R${rn}_01_round_title_${slug}.png`);
       await exportAnimated("roundtitle", `R${rn}_01_round_title_${slug}.mov`, 3000);
+
+      // 1b. Round card (Rightmove-style listing mockup — new grabby opener)
+      await exportStill("roundcard", `R${rn}_01b_round_card_${slug}.png`);
+      await exportAnimated("roundcard", `R${rn}_01b_round_card_${slug}.mov`, 3500);
 
       // 2. Property photos — stills per photo + animated MOV of full sequence
       for (let pi = 0; pi < numPhotos; pi++) {
