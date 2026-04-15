@@ -2732,7 +2732,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
         <button style={sm} onClick={previewAll} title="Preview all graphics">👁 Preview</button>
         <button style={{...sm,background:reviewing?"rgba(255,200,50,0.15)":"rgba(255,200,50,0.1)",border:"1px solid rgba(255,200,50,0.35)",opacity:reviewing?0.6:1,cursor:reviewing?"wait":"pointer"}} onClick={()=>!reviewing&&runReview()} title="AI Social Media Expert reviews all slides">{reviewing?"⏳ Reviewing...":"🧠 AI Review"}</button>
-        <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Export selected as WebM">⬇ Export</button>
+        <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Download selected graphics as still PNGs + animated MOVs">⬇ Export</button>
         <div style={{width:1,height:20,background:DS.borderSubtle,margin:"0 2px"}}/>
         <button style={btn({fontSize:10,padding:"5px 9px"})} onClick={()=>setSelected(()=>new Set(graphics.map((_,i)=>i)))} title="Select all">All</button>
         <button style={btn({fontSize:10,padding:"5px 9px"})} onClick={()=>setSelected(()=>new Set())} title="Deselect all">None</button>
@@ -2848,7 +2848,7 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
                     <button style={btn({fontSize:10,padding:"4px 10px",background:editingIdx===i?DS.positive:DS.bgInput})} onClick={()=>setEditingIdx(editingIdx===i?null:i)} title="Edit prompt & content">✏ Edit</button>
                     <button style={btn({fontSize:10,padding:"4px 8px"})} onClick={()=>doPreview(g,i)} title="Preview graphic">{previews[i]?"🔄":"👁"}</button>
                     <button style={btn({fontSize:10,padding:"4px 8px",background:showAnim?DS.positive:undefined})} onClick={()=>{if(showAnim){setAnimIdx(null);setTimeout(()=>setAnimIdx(i),50);}else{setAnimIdx(i);}}} title={showAnim?"Replay":"Play"}>▶</button>
-                    <button style={btn({fontSize:10,padding:"4px 8px",opacity:isExp?0.6:1})} onClick={()=>!isExp&&exportWebM(g,i)} title="Export WebM">🎞</button>
+                    <button style={btn({fontSize:10,padding:"4px 8px",opacity:isExp?0.6:1})} onClick={()=>!isExp&&exportWebM(g,i)} title="Download animated MOV (alpha, Premiere-native)">🎞 MOV</button>
                     <button style={btn({fontSize:10,padding:"4px 8px"})} onClick={()=>{const dup={...JSON.parse(JSON.stringify(g)),id:Date.now(),label:(g.label||"graphic")+"-copy"};const ng=[...graphics.slice(0,i+1),dup,...graphics.slice(i+1)];setGraphics(ng);setTimeout(()=>previewAll(),200);}} title="Duplicate">⧉</button>
                     <button style={btn({fontSize:10,padding:"4px 8px",opacity:0.35})} onClick={()=>{if(graphics.length<=1)return;const ng=graphics.filter((_,j)=>j!==i);setGraphics(ng);if(editingIdx===i)setEditingIdx(null);}} title="Delete">🗑</button>
                   </div>
@@ -2937,7 +2937,7 @@ function CaptionsTab({project,brand,updateProject,previewRatio}){
         </div>
       )}
       <div style={{background:"rgba(42,157,143,0.08)",border:"1px solid rgba(42,157,143,0.22)",borderRadius:9,padding:"11px 14px",fontSize:12,lineHeight:1.6}}>
-        <strong>Export captions from the Export tab →</strong> Choose your ratios there and get PNGs, WebMs, and a Premiere XML sequence all in one go.
+        <strong>Export captions from the Export tab →</strong> Choose your ratios there and get PNGs, MOVs, and a Premiere XML sequence all in one go.
       </div>
     </div>
   );
@@ -3415,19 +3415,19 @@ function ExportTab({project,brand,updateProject}){
         });
         dl(zipBlob,`${pn}_${prefix}premiere_ready.zip`);
       }
-      // Graphics WebMs
+      // Graphics animated MOVs
       if(gfxMode==="webm"||gfxMode==="both"){
-        setPhase(`${ratio} — exporting graphic WebMs…`);
+        setPhase(`${ratio} — exporting graphic MOVs…`);
         for(let i=0;i<selectedGfx.length;i++){
           try{
             const blob=await recordGraphic(selectedGfx[i],brand,ratio);
             await dlBlob(blob,`${pn}_${prefix}${String(i+1).padStart(2,"0")}_${selectedGfx[i].label||selectedGfx[i].template}_animated.mov`);
-          }catch(e){console.error("WebM export failed for graphic",i,e);}
+          }catch(e){console.error("MOV export failed for graphic",i,e);}
           tick(done+1);
           await new Promise(r=>setTimeout(r,200));
         }
       }
-      // Composite video — one transparent WebM with all graphics timed
+      // Composite video — one alpha-preserving MOV with all graphics timed
       if(gfxMode==="composite"){
         setPhase(`${ratio} — rendering composite video (all graphics)…`);
         const compositeBlob=await recordCompositeVideo(selectedGfx,exportBrand,ratio,pct=>{
@@ -3455,7 +3455,7 @@ function ExportTab({project,brand,updateProject}){
         const xml=generatePremiereXML(subtitles,ratio,prefix);
         dlText(xml,`${prefix}${pn}_captions_sequence.xml`);
       } else if(includeCaptions){
-        setPhase(`${ratio} — rendering individual caption WebMs…`);
+        setPhase(`${ratio} — rendering individual caption MOVs…`);
         for(let i=0;i<subtitles.length;i++){
           const blob=await recordCaption(subtitles[i],brand,captionStyle,ratio);
           await dlBlob(blob,`${prefix}caption_${String(subtitles[i].index).padStart(3,"0")}.mov`);
@@ -3483,11 +3483,11 @@ function ExportTab({project,brand,updateProject}){
       <div style={{fontSize:52,marginBottom:14}}>🎬</div>
       <div style={{fontSize:22,fontWeight:900,marginBottom:8}}>Export complete!</div>
       <div style={{opacity:0.55,fontSize:13,maxWidth:460,margin:"0 auto 24px",lineHeight:1.6}}>
-        For each ratio: graphic PNGs, {captionMode==="composite"?"a composite caption WebM (drop on V4 — done!)":"individual caption WebMs + Premiere XML"}, and a graphics cue sheet.
+        For each ratio: graphic PNGs, {captionMode==="composite"?"a composite caption MOV (drop on V4 — done!)":"individual caption MOVs + Premiere XML"}, and a graphics cue sheet.
       </div>
       <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,padding:"18px 22px",textAlign:"left",marginBottom:22,maxWidth:520,margin:"0 auto 22px"}}>
         <div style={{fontWeight:800,fontSize:12,marginBottom:12}}>📋 PREMIERE WORKFLOW</div>
-        {["Create a sequence per ratio (e.g. 1920×1080 for 16:9)","Import the XML for that ratio — it places all caption clips automatically","Import graphic PNGs and use the cue sheet for timecodes","Fullscreen graphics → V2   Overlays → V3   Captions → V4","Transparency is preserved in all WebMs — no matte needed"].map((t,i)=>(
+        {["Create a sequence per ratio (e.g. 1920×1080 for 16:9)","Import the XML for that ratio — it places all caption clips automatically","Import graphic PNGs and use the cue sheet for timecodes","Fullscreen graphics → V2   Overlays → V3   Captions → V4","Alpha channel is preserved in all MOVs — no matte needed"].map((t,i)=>(
           <div key={i} style={{display:"flex",gap:10,marginBottom:8,fontSize:13,opacity:0.82}}><span style={{color:"#2A9D8F",fontWeight:800,flexShrink:0}}>{i+1}.</span>{t}</div>
         ))}
       </div>
@@ -3574,11 +3574,11 @@ function ExportTab({project,brand,updateProject}){
           {includeCaptions&&(
             <div style={{display:"flex",gap:8,marginTop:4}}>
               <button style={{flex:1,background:captionMode==="composite"?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.05)",border:`1px solid ${captionMode==="composite"?"#2A9D8F":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"12px",cursor:"pointer",color:"#fff",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setCaptionMode("composite")}>
-                <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>⬛ Composite WebM</div>
-                <div style={{fontSize:11,opacity:0.55,lineHeight:1.4}}>One transparent video. Drop on V4, done.</div>
+                <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>⬛ Composite MOV</div>
+                <div style={{fontSize:11,opacity:0.55,lineHeight:1.4}}>One alpha video. Drop on V4, done.</div>
               </button>
               <button style={{flex:1,background:captionMode==="individual"?"rgba(42,157,143,0.2)":"rgba(255,255,255,0.05)",border:`1px solid ${captionMode==="individual"?"#2A9D8F":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"12px",cursor:"pointer",color:"#fff",fontFamily:"inherit",transition:"all 0.15s",textAlign:"center"}} onClick={()=>setCaptionMode("individual")}>
-                <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>📄 Individual WebMs</div>
+                <div style={{fontWeight:800,fontSize:13,marginBottom:3}}>📄 Individual MOVs</div>
                 <div style={{fontSize:11,opacity:0.55,lineHeight:1.4}}>{subtitles.length} separate files + Premiere XML.</div>
               </button>
             </div>
@@ -3615,7 +3615,7 @@ function ExportTab({project,brand,updateProject}){
                 <span>1 title card</span>
                 <span>{selectedGfx.length} graphic{selectedGfx.length!==1?"s":""}{gfxMode==="premiere"?" (Premiere Ready)":gfxMode==="png"?" (PNG)":gfxMode==="webm"?" (MOV)":gfxMode==="pngseq"?" (PNG sequence)":gfxMode==="composite"?" (Composite)":gfxMode==="both"?" (Everything)":""}</span>
                 <span>1 endboard</span>
-                {includeCaptions&&<span>{captionMode==="composite"?"1 caption WebM":`${subtitles.length} caption WebMs`}</span>}
+                {includeCaptions&&<span>{captionMode==="composite"?"1 caption MOV":`${subtitles.length} caption MOVs`}</span>}
                 <span>1 Premiere XML sequence</span>
                 <span>1 graphics cue sheet</span>
               </div>
@@ -3739,7 +3739,7 @@ function TitleCardPanel({project, brand, updateProject}){
             </div>
             <div style={{flex:1}}/>
             <button style={btn({fontSize:11})} onClick={()=>setShowAnim(a=>!a)} title={showAnim?"Stop animation":"Play animation"}>{showAnim?"⏹ Stop":"▶ Play"}</button>
-            <button style={btn({fontSize:11,opacity:exporting?0.6:1})} onClick={()=>!exporting&&exportWebM()} title="Export animated WebM">{exporting?"⏳":"🎞"} WebM</button>
+            <button style={btn({fontSize:11,opacity:exporting?0.6:1})} onClick={()=>!exporting&&exportWebM()} title="Download animated MOV (alpha, Premiere-native)">{exporting?"⏳":"🎞"} MOV</button>
             <button style={btnPositive({fontSize:11})} onClick={exportPNGs} title="Export still PNGs for all ratios">⬇ PNGs</button>
           </div>
 
