@@ -2972,6 +2972,12 @@ function CaptionsTab({project,brand,updateProject,previewRatio}){
 //  POSTER TAB — AI-generated social media posters
 // ═══════════════════════════════════════════════════════════════
 const POSTER_RATIOS={"16:9":{W:1920,H:1080,label:"YouTube / LinkedIn"},"1:1":{W:1080,H:1080,label:"Instagram Feed"},"4:5":{W:1080,H:1350,label:"Instagram Feed (tall)"},"9:16":{W:1080,H:1920,label:"Stories / Reels"}};
+
+// Module-scope download helpers — used by ExportTab AND PosterTab.
+// Previously dl/dlText were defined inside ExportTab, so PosterTab's
+// exportPoster() threw a silent ReferenceError and exports never fired.
+const dl=(blob,name)=>{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();};
+const dlText=(text,name)=>dl(new Blob([text],{type:"text/plain"}),name);
 const POSTER_TONES=[{id:"shocking",label:"Shocking",icon:"⚡",desc:"Bold stat or surprising claim"},{id:"relatable",label:"Relatable",icon:"💬",desc:"Speaks to everyday experience"},{id:"informative",label:"Informative",icon:"📊",desc:"Clear, authoritative, data-driven"}];
 
 const POSTER_PROMPT=`You are a social media copywriter creating poster text variations. Given a topic, audience, and goal, generate exactly 3 copy variations.
@@ -3086,8 +3092,12 @@ function drawPoster(canvas,poster,brand,ratio){
     ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ctaText,PAD+ctaW/2,y+ctaH/2);
   }
 
-  // Brand logo stamp
-  stamp(ctx,B,W,H,H>W*1.2);
+  // Brand logo stamp. Posters ALWAYS have a dark teal background
+  // (B.colorPrimary), so darkBg=true → use the white logo variant.
+  // Previously this was `H>W*1.2` which only triggered for 9:16, so
+  // 1:1 and 16:9 posters rendered the dark logo on the dark teal
+  // background and it was effectively invisible.
+  stamp(ctx,B,W,H,true,ratio);
 }
 
 // Simple word wrap helper for poster text
@@ -3241,49 +3251,18 @@ function PosterTab({project,brand,updateProject}){
             const isRegen=regenIdx===i;
             return(
               <div key={i} style={card({padding:0,overflow:"hidden",border:isEditing?`1px solid ${DS.positiveBorder}`:undefined})}>
-                {/* Preview image — click to toggle edit mode */}
-                {previews[i]&&<img src={previews[i]} alt={v.hook} onClick={()=>setEditingIdx(isEditing?null:i)} style={{width:"100%",display:"block",borderRadius:`${DS.rMd}px ${DS.rMd}px 0 0`,cursor:"pointer",opacity:isRegen?0.4:1,transition:"opacity 180ms"}}/>}
-                {/* Content */}
+                {previews[i]&&<img src={previews[i]} alt={v.hook} onClick={()=>setEditingIdx(i)} style={{width:"100%",display:"block",borderRadius:`${DS.rMd}px ${DS.rMd}px 0 0`,cursor:"pointer",opacity:isRegen?0.4:1,transition:"opacity 180ms"}}/>}
                 <div style={{padding:DS.md}}>
-                  {/* Tone row — click to cycle through tones in edit mode */}
                   <div style={{display:"flex",alignItems:"center",gap:DS.sm,marginBottom:DS.sm}}>
-                    {isEditing
-                      ?<select value={v.tone||"informative"} onChange={e=>updatePoster(i,{tone:e.target.value})} style={{background:DS.bgInput,border:`1px solid ${DS.borderMedium}`,borderRadius:DS.xs,padding:"4px 8px",color:DS.textPrimary,fontSize:DS.fsSm,fontFamily:"inherit",outline:"none"}}>
-                          {POSTER_TONES.map(t=><option key={t.id} value={t.id} style={{background:"#1a2332"}}>{t.icon} {t.label}</option>)}
-                        </select>
-                      :<>
-                          <span style={{fontSize:18}}>{toneInfo.icon}</span>
-                          <span style={{fontWeight:700,fontSize:DS.fsSm,textTransform:"uppercase",letterSpacing:"0.05em"}}>{toneInfo.label}</span>
-                        </>
-                    }
+                    <span style={{fontSize:18}}>{toneInfo.icon}</span>
+                    <span style={{fontWeight:700,fontSize:DS.fsSm,textTransform:"uppercase",letterSpacing:"0.05em"}}>{toneInfo.label}</span>
                   </div>
-                  {/* Fields — editable inline when isEditing, otherwise display-only */}
-                  {isEditing?(
-                    <div style={{display:"flex",flexDirection:"column",gap:DS.sm,marginBottom:DS.sm}}>
-                      <div>
-                        <div style={label()}>HOOK</div>
-                        <textarea value={v.hook||""} onChange={e=>updatePoster(i,{hook:e.target.value})} rows={2} style={{...inputS({width:"100%"}),fontFamily:`"${brand.fontSerif||"Lora"}",serif`,fontWeight:700,resize:"vertical",minHeight:52}} placeholder="Bold headline (all caps)"/>
-                      </div>
-                      <div>
-                        <div style={label()}>SUBTEXT</div>
-                        <textarea value={v.subtext||""} onChange={e=>updatePoster(i,{subtext:e.target.value})} rows={2} style={{...inputS({width:"100%"}),resize:"vertical",minHeight:52}} placeholder="Supporting line"/>
-                      </div>
-                      <div>
-                        <div style={label()}>CALL TO ACTION</div>
-                        <input value={v.cta||""} onChange={e=>updatePoster(i,{cta:e.target.value})} style={inputS({width:"100%"})} placeholder="e.g. Watch now"/>
-                      </div>
-                    </div>
-                  ):(
-                    <>
-                      <div style={{fontWeight:700,fontSize:DS.fsMd,marginBottom:DS.xs,fontFamily:`"${brand.fontSerif||"Lora"}",serif`}}>{v.hook}</div>
-                      <div style={{fontSize:DS.fsSm,color:DS.textSecondary,marginBottom:2}}>{v.subtext}</div>
-                      {v.cta&&<div style={{fontSize:11,color:DS.textMuted,fontStyle:"italic",marginBottom:DS.sm}}>↳ {v.cta}</div>}
-                    </>
-                  )}
-                  {/* Action row */}
+                  <div style={{fontWeight:700,fontSize:DS.fsMd,marginBottom:DS.xs,fontFamily:`"${brand.fontSerif||"Lora"}",serif`}}>{v.hook}</div>
+                  <div style={{fontSize:DS.fsSm,color:DS.textSecondary,marginBottom:2}}>{v.subtext}</div>
+                  {v.cta&&<div style={{fontSize:11,color:DS.textMuted,fontStyle:"italic",marginBottom:DS.sm}}>↳ {v.cta}</div>}
                   <div style={{display:"flex",gap:DS.sm,flexWrap:"wrap"}}>
                     <button style={btnPositive({padding:"6px 14px",fontSize:11})} onClick={()=>exportPoster(v,i)}>⬇ Export 4 sizes</button>
-                    <button style={btn({padding:"6px 14px",fontSize:11,background:isEditing?DS.positive:undefined})} onClick={()=>setEditingIdx(isEditing?null:i)} title={isEditing?"Close editor":"Edit hook, subtext, CTA, tone"}>{isEditing?"✓ Done":"✏ Edit"}</button>
+                    <button style={btn({padding:"6px 14px",fontSize:11,background:isEditing?DS.positive:undefined})} onClick={()=>setEditingIdx(i)} title="Edit hook, subtext, CTA, tone">✏ Edit</button>
                     <button style={btn({padding:"6px 14px",fontSize:11,opacity:isRegen?0.6:1})} disabled={isRegen} onClick={()=>regenerateOne(i)} title="Regenerate this variation with AI (keeps the same tone)">{isRegen?"⏳":"🔄"} AI</button>
                   </div>
                 </div>
@@ -3292,6 +3271,83 @@ function PosterTab({project,brand,updateProject}){
           })}
         </div>
       )}
+
+      {/* Edit drawer — slides in from right, matches SegmentEditPanel pattern */}
+      {editingIdx!==null&&variations[editingIdx]&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.3)",zIndex:99,transition:`opacity 200ms ${DS.easeOut}`}} onClick={()=>setEditingIdx(null)}/>
+      )}
+      <div style={{
+        position:"fixed",top:0,right:0,bottom:0,width:460,maxWidth:"90vw",
+        background:DS.bgSurface,borderLeft:`1px solid ${DS.borderMedium}`,
+        boxShadow:editingIdx!==null?"-8px 0 40px rgba(0,0,0,0.5)":"none",
+        zIndex:100,overflowY:"auto",padding:`${DS.xl}px`,
+        transform:editingIdx!==null?"translateX(0)":"translateX(100%)",
+        transition:`transform 350ms ${DS.easeOut}`,
+      }}>
+        {editingIdx!==null&&variations[editingIdx]&&(()=>{
+          const v=variations[editingIdx];
+          const i=editingIdx;
+          const isRegen=regenIdx===i;
+          return(
+            <>
+              {/* Prev / Next navigation + close */}
+              <div style={{display:"flex",alignItems:"center",gap:DS.sm,marginBottom:DS.lg}}>
+                <button style={btn({padding:"6px 10px",opacity:i>0?1:0.3})} disabled={i<=0} onClick={()=>setEditingIdx(Math.max(0,i-1))}>← Prev</button>
+                <span style={{flex:1,textAlign:"center",fontSize:DS.fsSm,color:DS.textMuted}}>{i+1} of {variations.length}</span>
+                <button style={btn({padding:"6px 10px",opacity:i<variations.length-1?1:0.3})} disabled={i>=variations.length-1} onClick={()=>setEditingIdx(Math.min(variations.length-1,i+1))}>Next →</button>
+                <button style={btn({padding:"6px 10px"})} onClick={()=>setEditingIdx(null)} title="Close (Escape)">✕</button>
+              </div>
+              <div style={card({padding:`${DS.lg}px`,marginBottom:0})}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:DS.md}}>
+                  <div style={sectionHead({marginBottom:0})}>EDIT POSTER #{i+1}</div>
+                </div>
+                {/* Preview reference */}
+                <div style={{position:"relative",marginBottom:DS.md}}>
+                  {previews[i]
+                    ?<img src={previews[i]} alt="Current preview" style={{width:"100%",borderRadius:DS.rSm,border:`1px solid ${DS.borderSubtle}`,opacity:isRegen?0.4:1,transition:"opacity 180ms"}}/>
+                    :<div style={{...emptyState({padding:`${DS.xl}px 0`,fontSize:DS.fsSm}),background:DS.bgCard,borderRadius:DS.rSm,border:`1px solid ${DS.borderSubtle}`}}>No preview yet</div>}
+                </div>
+                {/* Tone picker */}
+                <div style={{marginBottom:DS.md}}>
+                  <div style={label()}>TONE</div>
+                  <div style={{display:"flex",gap:DS.xs,flexWrap:"wrap"}}>
+                    {POSTER_TONES.map(t=>{
+                      const active=(v.tone||"informative")===t.id;
+                      return(
+                        <button key={t.id} style={btn({background:active?DS.positive:DS.bgInput,border:`1px solid ${active?DS.positiveBorder:DS.borderSubtle}`,fontSize:11,padding:"8px 14px"})} onClick={()=>updatePoster(i,{tone:t.id})} title={t.desc}>
+                          {t.icon} {t.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* Content fields */}
+                <div style={{marginBottom:DS.md}}>
+                  <div style={label()}>HOOK</div>
+                  <textarea value={v.hook||""} onChange={e=>updatePoster(i,{hook:e.target.value})} rows={3} style={{...inputS({width:"100%"}),fontFamily:`"${brand.fontSerif||"Lora"}",serif`,fontWeight:700,resize:"vertical",minHeight:72}} placeholder="Bold headline (max 8 words, all caps)"/>
+                </div>
+                <div style={{marginBottom:DS.md}}>
+                  <div style={label()}>SUBTEXT</div>
+                  <textarea value={v.subtext||""} onChange={e=>updatePoster(i,{subtext:e.target.value})} rows={3} style={{...inputS({width:"100%"}),resize:"vertical",minHeight:72}} placeholder="Supporting line (max 15 words)"/>
+                </div>
+                <div style={{marginBottom:DS.md}}>
+                  <div style={label()}>CALL TO ACTION</div>
+                  <input value={v.cta||""} onChange={e=>updatePoster(i,{cta:e.target.value})} style={inputS({width:"100%"})} placeholder="e.g. Watch now"/>
+                </div>
+                {/* Action buttons */}
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <button disabled={isRegen} onClick={()=>regenerateOne(i)}
+                    style={{...btn(),background:isRegen?"rgba(255,255,255,0.05)":"rgba(42,157,143,0.2)",border:"1px solid rgba(42,157,143,0.4)",cursor:isRegen?"wait":"pointer"}}>
+                    {isRegen?"⏳ Generating…":"🔄 Regenerate with AI"}
+                  </button>
+                  <button onClick={()=>exportPoster(v,i)} style={btnPositive({padding:"8px 16px",fontSize:DS.fsSm})}>⬇ Export 4 sizes</button>
+                  <button onClick={()=>setEditingIdx(null)} style={btn()}>Done</button>
+                </div>
+              </div>
+            </>
+          );
+        })()}
+      </div>
 
       {/* Empty state with example */}
       {!variations.length&&!generating&&(
@@ -3343,9 +3399,6 @@ function ExportTab({project,brand,updateProject}){
   const selectedGfx=(project.selected||[]).map(i=>graphics[i]).filter(Boolean);
   const subtitles=project.subtitles;
   const captionStyle=project.captionStyle||"tiktok";
-
-  const dl=(blob,name)=>{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();};
-  const dlText=(text,name)=>dl(new Blob([text],{type:"text/plain"}),name);
 
   // ── Cue Sheet (.docx) ──
   const exportCueSheet=async()=>{
