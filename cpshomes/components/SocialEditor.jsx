@@ -936,8 +936,14 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const CW=B.colorWarm||"#f5f0eb";                                    // warm cream
   // DT: helper that applies TS to font size and LH to line height
   // wt==="HW" is a sentinel meaning "use brand heading weight"
-  // optional last arg: font override (pass FFS for serif headlines)
-  const DT=(text,x,y,mW,mH,sz,wt,al,col,ml,font)=>drawText(ctx,text,x,y,mW,mH,Math.round(sz*TS),wt==="HW"?HW:wt,al,col,ml,font||FF,LH);
+  // optional font (11th arg): pass FFS for serif headlines
+  // optional lhOverride (12th arg): per-call line height, bypasses brand LH
+  //   Senior-designer defaults:
+  //     Display (80px+):    1.05–1.15 — tight leading for big headlines
+  //     Subhead (48–72px):  1.18–1.25
+  //     Body    (28–48px):  1.35–1.50 — breathing room for reading
+  //     Labels  (18–36px):  1.25–1.30 — uppercase, tracked
+  const DT=(text,x,y,mW,mH,sz,wt,al,col,ml,font,lhOverride)=>drawText(ctx,text,x,y,mW,mH,Math.round(sz*TS),wt==="HW"?HW:wt,al,col,ml,font||FF,lhOverride||LH);
   const isPortrait=H>W;
   const isSquare=Math.abs(W-H)<10;  // 1:1 ratio
   const isCompact=isPortrait||isSquare; // not wide — use centred layouts
@@ -986,12 +992,13 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,safeCX,badgeY+badgeH/2);ctx.restore();
 
       // Body — BIG serif, fills the rest of safe area for impact
+      // Display text needs TIGHT leading (1.08) — big serifs look disjointed with loose line height
       const bodyP=cascade(0.25);
       const bodyY=badgeY+badgeH+Math.round(80*sc);
       const bodyMaxH=safeY+safeH-bodyY-Math.round(40*sc);
-      const bodyFontSz=Math.round(110*sc); // massive for social impact
+      const bodyFontSz=Math.round(110*sc);
       ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
-      DT(c.body||"",safeCX,bodyY,safeW,bodyMaxH,bodyFontSz,"800","center","#fff",5,FFS);
+      DT(c.body||"",safeCX,bodyY,safeW,bodyMaxH,bodyFontSz,"800","center","#fff",5,FFS,1.08);
       ctx.restore();
     } else {
       // ═══ 16:9 LANDSCAPE LAYOUT ═══ (unchanged)
@@ -1021,20 +1028,19 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       // ═══ 9:16 / 1:1 SOCIAL LAYOUT ═══
       // Vertical stack within safe area, massive serif headline
       ctx.save();ctx.globalAlpha=TXT;ctx.translate(0,(1-TXT)*50*sc);
-      // Start from top of safe area
       let y=safeY+Math.round(60*sc);
-      // Small eyebrow label
+      // Eyebrow label — uppercase, tracked, standard leading 1.28
       if(c.subheadline){
-        y=DT(c.subheadline.toUpperCase(),safeCX,y,safeW,Math.round(60*sc),Math.round(38*sc),"700","center",B.colorPrimary+"99",1)+Math.round(40*sc);
+        y=DT(c.subheadline.toUpperCase(),safeCX,y,safeW,Math.round(60*sc),Math.round(38*sc),"700","center",B.colorPrimary+"99",1,null,1.28)+Math.round(40*sc);
       }
-      // HUGE serif headline — dominant, fills most of the safe area
-      y=DT(c.headline||"",safeCX,y,safeW,safeH*0.45,Math.round(130*sc),"HW","center",B.colorPrimary,3,FFS)+Math.round(50*sc);
+      // HUGE serif headline — display leading 1.08 (tight for impact)
+      y=DT(c.headline||"",safeCX,y,safeW,safeH*0.45,Math.round(130*sc),"HW","center",B.colorPrimary,3,FFS,1.08)+Math.round(50*sc);
       // Accent rule
       const ruleW=Math.round(safeW*0.22*ENT);
       ctx.fillStyle=B.colorAccent;ctx.fillRect(safeCX-ruleW/2,y,ruleW,Math.round(6*sc));
       y+=Math.round(60*sc);
-      // Body text
-      if(c.body)DT(c.body,safeCX,y,safeW,safeY+safeH-y-Math.round(40*sc),Math.round(48*sc),"500","center",B.colorPrimary+"aa",4);
+      // Body text — readable leading 1.40 for breathing room
+      if(c.body)DT(c.body,safeCX,y,safeW,safeY+safeH-y-Math.round(40*sc),Math.round(48*sc),"500","center",B.colorPrimary+"aa",4,null,1.40);
       ctx.restore();
     } else {
       // Landscape: left-aligned with accent bar
@@ -1081,11 +1087,11 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       ctx.fillStyle=B.colorPrimary;ctx.font=`900 ${Math.round(320*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
       ctx.fillText("#"+(c.number||"1"),0,0);
       ctx.restore();
-      // Body text below number
+      // Body text below number — subhead leading 1.22
       if(c.body){
         const bodyP=cascade(0.28);
         ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
-        DT(c.body,safeCX,numY+Math.round(280*sc),safeW,safeY+safeH-numY-Math.round(280*sc)-Math.round(40*sc),Math.round(72*sc),"600","center",B.colorPrimary,4,FFS);
+        DT(c.body,safeCX,numY+Math.round(280*sc),safeW,safeY+safeH-numY-Math.round(280*sc)-Math.round(40*sc),Math.round(72*sc),"600","center",B.colorPrimary,4,FFS,1.22);
         ctx.restore();
       }
     } else {
@@ -1154,9 +1160,9 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       // Left-aligned stack within safe area, big bold headline
       const lx=safeX, icSz=Math.round(70*sc);
       let y=safeY+Math.round(40*sc);
-      // Headline — BIG sans, left aligned
+      // Headline — BIG serif, tight display leading 1.10
       ctx.save();ctx.globalAlpha=headP;ctx.translate((1-headP)*-40*sc,0);
-      y=DT(c.headline||"KEY POINT",lx,y,safeW,safeH*0.22,Math.round(88*sc),"HW","left","#fff",2,FFS);
+      y=DT(c.headline||"KEY POINT",lx,y,safeW,safeH*0.22,Math.round(88*sc),"HW","left","#fff",2,FFS,1.10);
       ctx.restore();
       y+=Math.round(40*sc);
       // Icon + rule
@@ -1166,9 +1172,9 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       ctx.strokeStyle=CW+"66";ctx.lineWidth=Math.round(3*sc);ctx.beginPath();ctx.moveTo(ruleX,y+icSz/2);ctx.lineTo(ruleX+ruleW,y+icSz/2);ctx.stroke();
       ctx.restore();
       y+=icSz+Math.round(50*sc);
-      // Body — generous line height, big size for impact
+      // Body — readable leading 1.42 for breathing room
       ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
-      DT(c.body||"",lx,y,safeW,safeY+safeH-y-Math.round(40*sc),Math.round(64*sc),"500","left","rgba(255,255,255,0.92)",6);
+      DT(c.body||"",lx,y,safeW,safeY+safeH-y-Math.round(40*sc),Math.round(64*sc),"500","left","rgba(255,255,255,0.92)",6,null,1.42);
       ctx.restore();
     } else {
       const lx=PAD;
@@ -4058,9 +4064,10 @@ function drawEndboard(canvas, brand, ratio, progress=1){
     const rW=Math.round(W*0.3*ENT);
     ctx.fillStyle=B.colorAccent; ctx.fillRect(W/2-rW/2,H*0.46,rW,Math.round(3*sc));
     // CTA — serif, teal (larger on 1:1 since it's the only text)
+    // Display leading 1.12 — tight for big headlines
     ctx.save(); ctx.globalAlpha=TXT;
     const ctaSz=isSquare?Math.round(92*sc):Math.round(72*sc);
-    drawText(ctx,ctaText,W/2,isSquare?H*0.55:H*0.50,W-PAD*2,H*0.18,ctaSz,"700","center",B.colorPrimary,2,FFS);
+    drawText(ctx,ctaText,W/2,isSquare?H*0.55:H*0.50,W-PAD*2,H*0.18,ctaSz,"700","center",B.colorPrimary,2,FFS,1.12);
     ctx.restore();
     // Handles — hidden on 1:1
     if(showSmallText&&B.endboardHandles){
@@ -4086,9 +4093,9 @@ function drawEndboard(canvas, brand, ratio, progress=1){
       ctx.save(); ctx.globalAlpha=Math.max(0,(ENT-0.3)/0.7);
       ctx.drawImage(logoImg,PAD,(barH-lh)/2,lw,lh); ctx.restore();
     }
-    // Big CTA — serif, teal
+    // Big CTA — serif, teal (tight display leading 1.08)
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,ctaText,W/2,isSquare?H*0.45:H*0.22,W-PAD*2,H*0.24,Math.round(isSquare?110*sc:90*sc),"700","center",B.colorPrimary,2,FFS);
+    drawText(ctx,ctaText,W/2,isSquare?H*0.45:H*0.22,W-PAD*2,H*0.24,Math.round(isSquare?110*sc:90*sc),"700","center",B.colorPrimary,2,FFS,1.08);
     ctx.restore();
     // Action boxes — hidden on 1:1
     if(!isSquare){
@@ -4125,7 +4132,7 @@ function drawEndboard(canvas, brand, ratio, progress=1){
       ctx.save(); ctx.globalAlpha=ENT; ctx.drawImage(logoImg,(W-lw)/2,H*0.30,lw,lh); ctx.restore();
     }
     ctx.save(); ctx.globalAlpha=TXT;
-    drawText(ctx,ctaText,W/2,isSquare?H*0.60:H*0.56,W-PAD*2,H*0.16,Math.round(isSquare?88*sc:64*sc),"700","center",B.colorPrimary,2,FFS);
+    drawText(ctx,ctaText,W/2,isSquare?H*0.60:H*0.56,W-PAD*2,H*0.16,Math.round(isSquare?88*sc:64*sc),"700","center",B.colorPrimary,2,FFS,1.10);
     ctx.restore();
     if(showSmallText&&(B.endboardHandles||B.endboardWebsite)){
       ctx.save(); ctx.globalAlpha=TXT*0.45;
