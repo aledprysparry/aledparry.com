@@ -4033,12 +4033,16 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     const titleText=B.titleCardTitle||"EPISODE TITLE";
     const titleMeasure=measureTextHeight(ctx,titleText,W-PAD*2,titleSz,"700",3,FFS,1.05);
     const titleBlockH=titleMeasure.height;
-    // 9:16: series sits VERTICALLY CENTRED in the compact cream header band.
-    //       Title starts with real breathing room below the split line.
-    // 1:1/16:9: series hangs above the split line as an eyebrow.
+    // Series eyebrow position:
+    //   9:16 — centred vertically inside the SAFE portion of the cream band.
+    //          9:16 has a 250px top safe zone; centring across the whole
+    //          0 → splitY range put the eyebrow at y=211, ABOVE the safe
+    //          top. Centre between safeTop (250) and splitY (≈422) instead,
+    //          so it lands around y≈336 — well inside the safe area.
+    //   1:1 / 16:9 — hangs above the split line as an eyebrow.
     const seriesY=isPortrait
-      ? H*(splitFrac)*0.5                                 // centred in header band
-      : H*(splitFrac)-Math.round(36*sc);                  // above split line
+      ? Math.round((250*sc + H*splitFrac)/2)
+      : H*(splitFrac)-Math.round(36*sc);
     const titleY=isPortrait
       ? H*(splitFrac)+Math.round(120*sc)                  // generous air below split
       : H*(splitFrac)+Math.round(60*sc);
