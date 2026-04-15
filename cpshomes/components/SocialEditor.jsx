@@ -4077,20 +4077,17 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     const logoImg=(B.logoDataUrlLight||B.logoDataUrl)?getCachedImage(B.logoDataUrlLight||B.logoDataUrl):null;
 
     if(isPortrait){
-      // 9:16 — mid-sized logo at bottom-right inside safe zone, subtitle
-      // anchored to the TITLE BLOCK (editorial / magazine rhythm) not the logo.
-      //
-      // CRITICAL: use the 9:16 SAFE RIGHT margin (120), NOT the general PAD (80).
-      // PAD is 80px on every ratio, but 9:16 needs a 120px right margin to
-      // clear the TikTok/Reels side UI chrome. Using PAD put the logo 40px
-      // past the safe-area edge.
-      const safeRight=W-Math.round(120*sc);
+      // 9:16 — mid-sized logo CENTRED at the bottom inside the safe zone,
+      // subtitle anchored to the TITLE BLOCK above.
+      // Everything on this card is centred (eyebrow, title, subtitle), so
+      // centring the logo completes the vertical axis of symmetry and
+      // reads as an editorial / magazine layout instead of a lopsided L.
       const safeBottom=H-Math.round(320*sc);
       // Logo ~20% width — in between the small stamp() marks on regular
       // graphics (~0.10) and the oversized hero (0.34 was too big).
       const logoW=Math.round(W*0.20);
       const logoH=logoImg?Math.round(logoW*(logoImg.naturalHeight/logoImg.naturalWidth)):Math.round(logoW*0.6);
-      const logoX=safeRight-logoW;  // right-aligned against the safe right edge
+      const logoX=Math.round((W-logoW)/2);  // centred horizontally
       const logoY=safeBottom-logoH-Math.round(30*sc);  // sit just above bottom safe edge
 
       // Subtitle — sits directly below the title block with a fixed 80px
