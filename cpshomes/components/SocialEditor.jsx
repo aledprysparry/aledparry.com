@@ -3814,7 +3814,26 @@ function TitleCardPanel({project, brand, updateProject}){
 //  PROJECT VIEW
 // ═══════════════════════════════════════════════════════════════
 function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand,onSyncStatus}){
-  const [tab,setTab]=useState("graphics");
+  // Tab is deep-linkable: `#/project/{slug}/graphics|posters|export`.
+  // Init from hash on mount so a shared URL lands on the right tab,
+  // and replaceState on change so bookmarking the current tab works.
+  const VALID_TABS=["graphics","posters","export"];
+  const [tab,setTab]=useState(()=>{
+    if(typeof window==="undefined") return "graphics";
+    const m=window.location.hash.match(/^#\/project\/[^/]+\/([^/]+)/);
+    return m&&VALID_TABS.includes(m[1]) ? m[1] : "graphics";
+  });
+  useEffect(()=>{
+    if(typeof window==="undefined") return;
+    const h=window.location.hash;
+    const m=h.match(/^#\/project\/([^/]+)/);
+    if(!m) return;
+    const slug=m[1].split("/")[0];
+    const target=`#/project/${slug}/${tab}`;
+    if(window.location.hash!==target){
+      window.history.replaceState(null,"",target);
+    }
+  },[tab]);
   const [previewRatio,setPreviewRatio]=useState("16:9");
   const [saveIndicator,setSaveIndicator]=useState("");
   const fileRef=useRef();
@@ -5433,12 +5452,14 @@ function App(){
       :"#/";
     window.history.pushState(null,null,hash);
   };
-  // Restore view from hash on mount
+  // Restore view from hash on mount.
+  // Accepts `#/project/{slug}` OR `#/project/{slug}/{tab}` — ProjectView reads
+  // the optional tab segment itself, App just needs the slug.
   useEffect(()=>{
     const restore=()=>{
       const h=window.location.hash;
       if(h.startsWith("#/project/")){
-        const slug=h.replace("#/project/","");
+        const slug=h.replace("#/project/","").split("/")[0];
         const allProjects=[...load(PS)];
         const match=allProjects.find(p=>p.name?.replace(/[^a-zA-Z0-9]+/g,"-").toLowerCase()===slug);
         if(match){setActiveProjectId(match.id);setView("project");}
