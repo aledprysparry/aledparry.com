@@ -3103,14 +3103,49 @@ function wrapText(ctx,text,maxW){
 }
 
 function PosterTab({project,brand,updateProject}){
-  const [topic,setTopic]=useState("");
-  const [audience,setAudience]=useState("");
-  const [goal,setGoal]=useState("");
+  const [topic,setTopic]=useState(project.posterTopic||"");
+  const [audience,setAudience]=useState(project.posterAudience||"");
+  const [goal,setGoal]=useState(project.posterGoal||"");
   const [variations,setVariations]=useState(project.posters||[]);
   const [generating,setGenerating]=useState(false);
+  const [regenIdx,setRegenIdx]=useState(null);
   const [error,setError]=useState("");
   const [previews,setPreviews]=useState({});
   const [selectedRatio,setSelectedRatio]=useState("1:1");
+  const [editingIdx,setEditingIdx]=useState(null);
+
+  // Live-update a single variation's field. Debounced persistence to
+  // project state so typing feels instant but we don't thrash JSON writes.
+  const updatePoster=(i,changes)=>{
+    setVariations(vs=>{
+      const nv=[...vs];
+      nv[i]={...nv[i],...changes};
+      return nv;
+    });
+  };
+  // Persist to project whenever variations change (debounced).
+  useEffect(()=>{
+    if(!variations.length) return;
+    const t=setTimeout(()=>updateProject({posters:variations}),300);
+    return()=>clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[variations]);
+
+  const regenerateOne=async(i)=>{
+    if(!topic.trim()){setError("Enter a topic first");return;}
+    setRegenIdx(i);setError("");
+    try{
+      const existing=variations[i];
+      const prompt=`Topic: ${topic}\nAudience: ${audience||"general"}\nGoal: ${goal||"engagement"}\nBrand: ${brand.name||"CPS Homes"}\n\nRegenerate ONE variation with tone="${existing?.tone||"informative"}". The other variations are:\n${variations.filter((_,j)=>j!==i).map(v=>`- ${v.hook}`).join("\n")}\n\nReturn a single JSON OBJECT (not an array): {"tone":"${existing?.tone||"informative"}","hook":"...","subtext":"...","cta":"..."}`;
+      const raw=await callAI({system:POSTER_PROMPT,messages:[{role:"user",content:prompt}],max_tokens:400});
+      const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
+      const obj=Array.isArray(parsed)?parsed[0]:parsed;
+      if(obj&&obj.hook){
+        updatePoster(i,obj);
+      }
+    }catch(e){setError("Regeneration failed: "+e.message);}
+    setRegenIdx(null);
+  };
 
   // Generate previews when variations or ratio change
   useEffect(()=>{
@@ -3131,7 +3166,9 @@ function PosterTab({project,brand,updateProject}){
       const raw=await callAI({system:POSTER_PROMPT,messages:[{role:"user",content:`Topic: ${topic}\nAudience: ${audience||"general"}\nGoal: ${goal||"engagement"}\nBrand: ${brand.name||"CPS Homes"}`}],max_tokens:1500});
       const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
       setVariations(parsed);
-      updateProject({posters:parsed});
+      // Persist topic/audience/goal alongside the posters so they survive
+      // a reload and re-generations use the same inputs.
+      updateProject({posters:parsed,posterTopic:topic,posterAudience:audience,posterGoal:goal});
     }catch(e){setError("Generation failed: "+e.message);}
     setGenerating(false);
   };
@@ -3200,24 +3237,54 @@ function PosterTab({project,brand,updateProject}){
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:DS.lg}}>
           {variations.map((v,i)=>{
             const toneInfo=POSTER_TONES.find(t=>t.id===v.tone)||{icon:"📄",label:v.tone};
+            const isEditing=editingIdx===i;
+            const isRegen=regenIdx===i;
             return(
-              <div key={i} style={card({padding:0,overflow:"hidden"})}>
-                {/* Preview image */}
-                {previews[i]&&<img src={previews[i]} alt={v.hook} style={{width:"100%",display:"block",borderRadius:`${DS.rMd}px ${DS.rMd}px 0 0`}}/>}
+              <div key={i} style={card({padding:0,overflow:"hidden",border:isEditing?`1px solid ${DS.positiveBorder}`:undefined})}>
+                {/* Preview image — click to toggle edit mode */}
+                {previews[i]&&<img src={previews[i]} alt={v.hook} onClick={()=>setEditingIdx(isEditing?null:i)} style={{width:"100%",display:"block",borderRadius:`${DS.rMd}px ${DS.rMd}px 0 0`,cursor:"pointer",opacity:isRegen?0.4:1,transition:"opacity 180ms"}}/>}
                 {/* Content */}
                 <div style={{padding:DS.md}}>
+                  {/* Tone row — click to cycle through tones in edit mode */}
                   <div style={{display:"flex",alignItems:"center",gap:DS.sm,marginBottom:DS.sm}}>
-                    <span style={{fontSize:18}}>{toneInfo.icon}</span>
-                    <span style={{fontWeight:700,fontSize:DS.fsSm,textTransform:"uppercase",letterSpacing:"0.05em"}}>{toneInfo.label}</span>
+                    {isEditing
+                      ?<select value={v.tone||"informative"} onChange={e=>updatePoster(i,{tone:e.target.value})} style={{background:DS.bgInput,border:`1px solid ${DS.borderMedium}`,borderRadius:DS.xs,padding:"4px 8px",color:DS.textPrimary,fontSize:DS.fsSm,fontFamily:"inherit",outline:"none"}}>
+                          {POSTER_TONES.map(t=><option key={t.id} value={t.id} style={{background:"#1a2332"}}>{t.icon} {t.label}</option>)}
+                        </select>
+                      :<>
+                          <span style={{fontSize:18}}>{toneInfo.icon}</span>
+                          <span style={{fontWeight:700,fontSize:DS.fsSm,textTransform:"uppercase",letterSpacing:"0.05em"}}>{toneInfo.label}</span>
+                        </>
+                    }
                   </div>
-                  <div style={{fontWeight:700,fontSize:DS.fsMd,marginBottom:DS.xs,fontFamily:`"${brand.fontSerif||"Lora"}",serif`}}>{v.hook}</div>
-                  <div style={{fontSize:DS.fsSm,color:DS.textSecondary,marginBottom:DS.sm}}>{v.subtext}</div>
-                  <div style={{display:"flex",gap:DS.sm}}>
+                  {/* Fields — editable inline when isEditing, otherwise display-only */}
+                  {isEditing?(
+                    <div style={{display:"flex",flexDirection:"column",gap:DS.sm,marginBottom:DS.sm}}>
+                      <div>
+                        <div style={label()}>HOOK</div>
+                        <textarea value={v.hook||""} onChange={e=>updatePoster(i,{hook:e.target.value})} rows={2} style={{...inputS({width:"100%"}),fontFamily:`"${brand.fontSerif||"Lora"}",serif`,fontWeight:700,resize:"vertical",minHeight:52}} placeholder="Bold headline (all caps)"/>
+                      </div>
+                      <div>
+                        <div style={label()}>SUBTEXT</div>
+                        <textarea value={v.subtext||""} onChange={e=>updatePoster(i,{subtext:e.target.value})} rows={2} style={{...inputS({width:"100%"}),resize:"vertical",minHeight:52}} placeholder="Supporting line"/>
+                      </div>
+                      <div>
+                        <div style={label()}>CALL TO ACTION</div>
+                        <input value={v.cta||""} onChange={e=>updatePoster(i,{cta:e.target.value})} style={inputS({width:"100%"})} placeholder="e.g. Watch now"/>
+                      </div>
+                    </div>
+                  ):(
+                    <>
+                      <div style={{fontWeight:700,fontSize:DS.fsMd,marginBottom:DS.xs,fontFamily:`"${brand.fontSerif||"Lora"}",serif`}}>{v.hook}</div>
+                      <div style={{fontSize:DS.fsSm,color:DS.textSecondary,marginBottom:2}}>{v.subtext}</div>
+                      {v.cta&&<div style={{fontSize:11,color:DS.textMuted,fontStyle:"italic",marginBottom:DS.sm}}>↳ {v.cta}</div>}
+                    </>
+                  )}
+                  {/* Action row */}
+                  <div style={{display:"flex",gap:DS.sm,flexWrap:"wrap"}}>
                     <button style={btnPositive({padding:"6px 14px",fontSize:11})} onClick={()=>exportPoster(v,i)}>⬇ Export 4 sizes</button>
-                    <button style={btn({padding:"6px 14px",fontSize:11})} onClick={()=>{
-                      const edited=prompt("Edit hook:",v.hook);
-                      if(edited!==null){const nv=[...variations];nv[i]={...v,hook:edited};setVariations(nv);updateProject({posters:nv});}
-                    }}>✏ Edit</button>
+                    <button style={btn({padding:"6px 14px",fontSize:11,background:isEditing?DS.positive:undefined})} onClick={()=>setEditingIdx(isEditing?null:i)} title={isEditing?"Close editor":"Edit hook, subtext, CTA, tone"}>{isEditing?"✓ Done":"✏ Edit"}</button>
+                    <button style={btn({padding:"6px 14px",fontSize:11,opacity:isRegen?0.6:1})} disabled={isRegen} onClick={()=>regenerateOne(i)} title="Regenerate this variation with AI (keeps the same tone)">{isRegen?"⏳":"🔄"} AI</button>
                   </div>
                 </div>
               </div>
