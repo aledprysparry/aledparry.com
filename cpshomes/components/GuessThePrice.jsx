@@ -2185,29 +2185,33 @@ function drawOverlayCountdown(ctx, W, H, S, progress) {
   ctx.restore();
 }
 
-// Opener Hook — transparent overlay with show tagline
-// Used to drop over opening b-roll so viewers instantly know what the show is.
-// Two-line headline: "GUESS THE PRICE" (big gold, bounces in with white halo)
-// + "of this week's Cardiff Rightmove listings" (warm cream, fades in below).
+// Opener Hook — transparent overlay with show tagline + listing mockup
+// Drop over opening b-roll so viewers instantly know what the show is.
+// Layout:
+//   1. "GUESS THE PRICE" — big gold, Lora, bounces in with white halo
+//   2. "of the latest properties for sale in Cardiff" — single line, warm cream
+//   3. Compact Rightmove-style listing card below, showing the upcoming
+//      round's property (pulled from S.propRound → EPISODE.rounds[i])
 function drawOverlayOpener(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
 
   // Staggered phases
-  const topP    = easeOutBack(Math.min(1, p / 0.45));         // "GUESS THE PRICE" bounces in
-  const subP    = easeOutExpo(Math.min(1, Math.max(0, (p - 0.35) / 0.45))); // sub-line fades up
+  const topP  = easeOutBack(Math.min(1, p / 0.35));                          // title bounces in
+  const subP  = easeOutExpo(Math.min(1, Math.max(0, (p - 0.25) / 0.35)));    // sub-line fades up
+  const cardP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.45) / 0.45)));    // listing slides up
 
-  // ── "GUESS THE PRICE" — huge, gold, Lora, with white halo ──
+  // ── Title position (pushed higher to make room for the listing card below) ──
+  const titleY  = ar === "portrait" ? H * 0.13 : H * 0.17;
+  const titleSz = sz(W, H, ar === "portrait" ? 0.085 : 0.068) * (0.8 + 0.2 * Math.max(0, topP));
+
+  // ── "GUESS THE PRICE" — gold, Lora, white halo ──
   if (topP > 0) {
-    const titleSz = sz(W, H, ar === "portrait" ? 0.115 : 0.095) * (0.75 + 0.25 * topP);
-    const titleY = centerY - sz(W, H, ar === "portrait" ? 0.04 : 0.035);
-
     // White radial glow halo
     ctx.save();
     ctx.globalAlpha = Math.min(1, topP) * 0.9;
-    const glowR = titleSz * 2.8;
+    const glowR = titleSz * 2.6;
     const glow = ctx.createRadialGradient(W / 2, titleY, 0, W / 2, titleY, glowR);
     glow.addColorStop(0,    "rgba(255, 255, 255, 0.9)");
     glow.addColorStop(0.3,  "rgba(255, 255, 255, 0.45)");
@@ -2228,25 +2232,176 @@ function drawOverlayOpener(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  // ── "of this week's Cardiff Rightmove listings" — fades + slides up ──
+  // ── "of the latest properties for sale in Cardiff" — single line ──
+  const subSz = sz(W, H, ar === "portrait" ? 0.03 : 0.024);
+  const subY = titleY + titleSz * 0.70 + subSz * 0.6;
   if (subP > 0) {
-    const subSz = sz(W, H, ar === "portrait" ? 0.04 : 0.032);
-    const subY = centerY + sz(W, H, ar === "portrait" ? 0.06 : 0.055);
-    const yOff = (1 - subP) * sz(W, H, 0.02);
-
+    const yOff = (1 - subP) * sz(W, H, 0.015);
     ctx.save();
     ctx.globalAlpha = subP;
     ctx.font = `600 ${Math.round(subSz)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    // Subtle dark stroke for readability over bright footage
-    ctx.shadowColor = "rgba(0,0,0,0.55)";
-    ctx.shadowBlur = subSz * 0.15;
-    ctx.fillText("of this week's Cardiff", W / 2, subY + yOff);
-    ctx.fillText("Rightmove listings", W / 2, subY + yOff + subSz * 1.25);
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = subSz * 0.25;
+    ctx.fillText("of the latest properties for sale in Cardiff", W / 2, subY + yOff);
     ctx.restore();
   }
+
+  // ── Compact listing card below the title ──
+  if (cardP > 0) {
+    const cardTop = subY + subSz * 1.3 + sz(W, H, 0.015);
+    drawOpenerListingCard(ctx, W, H, S, cardP, cardTop, ar);
+  }
+}
+
+// Compact Rightmove-style listing card drawn on a transparent canvas.
+// Used only inside drawOverlayOpener. Similar to drawRoundCard but smaller,
+// no "ROUND N/6" badge, sits in a rect below the title.
+function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
+  const isSplit = ar !== "portrait";
+  const cardW = isSplit ? W * 0.60 : W * 0.82;
+  const cardBottomMargin = H * 0.08;
+  const cardH = Math.max(H * 0.35, H - topY - cardBottomMargin);
+  const cardX = (W - cardW) / 2;
+  const cardY = topY;
+  const radius = BRAND.cornerRadius;
+
+  ctx.save();
+  ctx.globalAlpha = anim;
+  ctx.translate(0, (1 - anim) * H * 0.035);
+
+  // Drop shadow (baked fill — shadowBlur doesn't export)
+  ctx.save();
+  ctx.globalAlpha = anim * 0.5;
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  roundRect(ctx, cardX + 6, cardY + 12, cardW, cardH, radius);
+  ctx.fill();
+  ctx.restore();
+
+  // White card body
+  ctx.fillStyle = "#ffffff";
+  roundRect(ctx, cardX, cardY, cardW, cardH, radius);
+  ctx.fill();
+
+  // Green "FOR SALE" header strip (clipped to rounded corners)
+  const headerH = Math.max(44, cardH * 0.12);
+  ctx.save();
+  roundRect(ctx, cardX, cardY, cardW, cardH, radius);
+  ctx.clip();
+  ctx.fillStyle = "#00DEB6"; // Rightmove-inspired green
+  ctx.fillRect(cardX, cardY, cardW, headerH);
+  ctx.restore();
+
+  // Header labels
+  ctx.save();
+  ctx.font = `800 ${Math.round(headerH * 0.42)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "#0a1628";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("FOR SALE", cardX + headerH * 0.5, cardY + headerH / 2);
+  ctx.font = `700 ${Math.round(headerH * 0.32)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(10,22,40,0.65)";
+  ctx.textAlign = "right";
+  ctx.fillText("PROPERTY LISTING", cardX + cardW - headerH * 0.5, cardY + headerH / 2);
+  ctx.restore();
+
+  // Content area under header
+  const contentY = cardY + headerH;
+  const contentH = cardH - headerH;
+  const pad = cardW * 0.035;
+
+  const photoW = isSplit ? (cardW - pad * 3) * 0.55 : cardW - pad * 2;
+  const photoH = isSplit ? contentH - pad * 2 : contentH * 0.50;
+  const photoX = cardX + pad;
+  const photoY = contentY + pad;
+  const detailsX = isSplit ? photoX + photoW + pad : cardX + pad;
+  const detailsY = isSplit ? photoY : photoY + photoH + pad;
+  const detailsW = isSplit ? (cardW - pad * 3) * 0.45 : cardW - pad * 2;
+
+  // Hero photo — from S.propPhotos or EPISODE.rounds[propRound-1].photos
+  const photos = (S.propPhotos && S.propPhotos.length)
+    ? S.propPhotos
+    : (EPISODE.rounds?.[(S.propRound || 1) - 1]?.photos || []);
+  const heroSrc = photos[0];
+  const heroImg = heroSrc ? getCachedImage(heroSrc) : null;
+  ctx.save();
+  roundRect(ctx, photoX, photoY, photoW, photoH, radius * 0.5);
+  ctx.clip();
+  if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
+    const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
+    const scale = Math.max(photoW / iw, photoH / ih);
+    const dw = iw * scale, dh = ih * scale;
+    ctx.drawImage(heroImg, photoX + (photoW - dw) / 2, photoY + (photoH - dh) / 2, dw, dh);
+  } else {
+    ctx.fillStyle = "#d5dde3";
+    ctx.fillRect(photoX, photoY, photoW, photoH);
+    ctx.font = `${Math.round(photoH * 0.4)}px serif`;
+    ctx.fillStyle = "rgba(10,22,40,0.28)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("\ud83c\udfe0", photoX + photoW / 2, photoY + photoH / 2);
+  }
+  ctx.restore();
+  ctx.strokeStyle = "rgba(10,22,40,0.12)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, photoX, photoY, photoW, photoH, radius * 0.5);
+  ctx.stroke();
+
+  // ── Details column ──
+  const addrFs = sz(W, H, isSplit ? 0.024 : 0.028);
+  let dy = detailsY + (isSplit ? contentH * 0.05 : pad * 0.4);
+
+  // Address (word-wrapped, max 2 lines)
+  ctx.font = `700 ${addrFs}px 'Lora', serif`;
+  ctx.fillStyle = "#0a1628";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  const address = S.propAddress || "Cardiff property";
+  const addrLines = wrapText(ctx, address, detailsW);
+  for (const line of addrLines.slice(0, 2)) {
+    ctx.fillText(line, detailsX, dy);
+    dy += addrFs * 1.15;
+  }
+  dy += addrFs * 0.4;
+
+  // Location chip
+  const location = S.optionLocation || "";
+  if (location) {
+    ctx.font = `500 ${Math.round(addrFs * 0.7)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(10,22,40,0.6)";
+    ctx.fillText(`\ud83d\udccd ${location}`, detailsX, dy);
+    dy += addrFs * 1.0;
+  }
+
+  // Beds / type / tenure
+  const beds = S.propBeds || 0;
+  const type = S.propType || "";
+  const tenure = S.propTenure || "";
+  const parts = [];
+  if (beds > 0) parts.push(`${beds} bed${beds === 1 ? "" : "s"}`);
+  if (type) parts.push(type);
+  if (tenure) parts.push(tenure);
+  if (parts.length) {
+    ctx.font = `600 ${Math.round(addrFs * 0.7)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#1E3A40";
+    ctx.fillText(parts.join("  \u00b7  "), detailsX, dy);
+    dy += addrFs * 1.3;
+  }
+
+  // "GUESS THE PRICE / £???"
+  dy += addrFs * 0.25;
+  ctx.font = `700 ${Math.round(addrFs * 0.58)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(10,22,40,0.55)";
+  ctx.fillText("GUESS THE PRICE", detailsX, dy);
+  dy += addrFs * 0.85;
+  const priceSz = sz(W, H, isSplit ? 0.055 : 0.07);
+  ctx.font = `800 ${Math.round(priceSz)}px 'Lora', serif`;
+  ctx.fillStyle = GAME.gold;
+  ctx.fillText("\u00a3???", detailsX, dy);
+
+  ctx.restore(); // end slide-up
 }
 
 // Play Along — "Guess The Price" banner
