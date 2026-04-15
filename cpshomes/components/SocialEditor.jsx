@@ -1016,13 +1016,16 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(badge,safeCX,badgeY+badgeH/2);ctx.restore();
 
       // Body — BIG serif, fills the rest of safe area for impact
-      // Display text needs TIGHT leading (1.08) — big serifs look disjointed with loose line height
+      // Display text needs TIGHT leading (1.05) — big serifs as a block
       const bodyP=cascade(0.25);
       const bodyY=badgeY+badgeH+Math.round(80*sc);
-      const bodyMaxH=safeY+safeH-bodyY-Math.round(40*sc);
-      const bodyFontSz=Math.round(110*sc);
+      // Leave room for logo at bottom: 1:1 needs ~120px, 9:16 needs ~180px
+      const bottomReserve=isSquare?Math.round(140*sc):Math.round(100*sc);
+      const bodyMaxH=safeY+safeH-bodyY-bottomReserve;
+      // 1:1 cramped → smaller headline, 9:16 can go big
+      const bodyFontSz=isSquare?Math.round(92*sc):Math.round(112*sc);
       ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
-      DT(c.body||"",safeCX,bodyY,safeW,bodyMaxH,bodyFontSz,"800","center","#fff",5,FFS,1.08);
+      DT(c.body||"",safeCX,bodyY,safeW,bodyMaxH,bodyFontSz,"800","center","#fff",5,FFS,1.05);
       ctx.restore();
     } else {
       // ═══ 16:9 LANDSCAPE LAYOUT ═══ (unchanged)
@@ -1050,21 +1053,30 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     if(c.number){ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;ctx.font=`700 ${Math.round(Math.min(W,H)*0.7)}px "${FF}","Arial",sans-serif`;ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(c.number,W-PAD*0.5,H*0.50);ctx.restore();}
     if(isCompact){
       // ═══ 9:16 / 1:1 SOCIAL LAYOUT ═══
-      // Vertical stack within safe area, massive serif headline
+      // Per-ratio sizing — 1:1 gets smaller headline, more bottom breathing room
+      const headSz=isSquare?Math.round(108*sc):Math.round(124*sc);
+      const bodySz=isSquare?Math.round(44*sc):Math.round(48*sc);
+
       ctx.save();ctx.globalAlpha=TXT;ctx.translate(0,(1-TXT)*50*sc);
-      let y=safeY+Math.round(60*sc);
-      // Eyebrow label — uppercase, tracked, standard leading 1.28
+      let y=safeY+Math.round(50*sc);
+
+      // Eyebrow label — uppercase, tracked
       if(c.subheadline){
-        y=DT(c.subheadline.toUpperCase(),safeCX,y,safeW,Math.round(60*sc),Math.round(38*sc),"700","center",B.colorPrimary+"99",1,null,1.28)+Math.round(40*sc);
+        y=DT(c.subheadline.toUpperCase(),safeCX,y,safeW,Math.round(60*sc),Math.round(36*sc),"700","center",B.colorPrimary+"99",1,null,1.20)+Math.round(50*sc);
       }
-      // HUGE serif headline — display leading 1.08 (tight for impact)
-      y=DT(c.headline||"",safeCX,y,safeW,safeH*0.45,Math.round(130*sc),"HW","center",B.colorPrimary,3,FFS,1.08)+Math.round(50*sc);
-      // Accent rule
-      const ruleW=Math.round(safeW*0.22*ENT);
+
+      // HUGE serif headline — VERY tight display leading (0.98) so the
+      // 3-line block "RENT / INCREASES / EXPLAINED" reads as one unit.
+      // Lines almost touch — standard for display serif poster typography.
+      y=DT(c.headline||"",safeCX,y,safeW,safeH*0.50,headSz,"HW","center",B.colorPrimary,3,FFS,0.98)+Math.round(70*sc);
+
+      // Accent rule — narrower, more breathing room above + below
+      const ruleW=Math.round(safeW*0.18*ENT);
       ctx.fillStyle=B.colorAccent;ctx.fillRect(safeCX-ruleW/2,y,ruleW,Math.round(6*sc));
-      y+=Math.round(60*sc);
-      // Body text — readable leading 1.40 for breathing room
-      if(c.body)DT(c.body,safeCX,y,safeW,safeY+safeH-y-Math.round(40*sc),Math.round(48*sc),"500","center",B.colorPrimary+"aa",4,null,1.40);
+      y+=Math.round(70*sc);
+
+      // Body subtitle — readable leading, clearly separated from rule + logo
+      if(c.body)DT(c.body,safeCX,y,safeW*0.85,safeY+safeH-y-Math.round(120*sc),bodySz,"500","center",B.colorPrimary+"aa",3,null,1.40);
       ctx.restore();
     } else {
       // Landscape: left-aligned with accent bar
@@ -1088,34 +1100,54 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     stamp(ctx,B,W,H,false,ratio);  // cream bg → teal logo
   }
   else if(t==="rule_number"){
-    // Warm cream background, centred layout
+    // Warm cream background
     ctx.fillStyle=CW;ctx.fillRect(0,0,W,H);
-    // Ghost number — scaled to safe area, centred in it
-    const ghostY=isCompact?safeCY-safeH*0.05:H*0.40;
-    ctx.save();ctx.globalAlpha=0.06;ctx.fillStyle=B.colorPositive;const gs=easeOut(clamp(p*1.5,0,1));
-    ctx.font=`700 ${Math.round(Math.min(W,H)*0.65)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.translate(isCompact?safeCX:W/2,ghostY);ctx.scale(gs,gs);ctx.fillText(c.number||"1",0,0);ctx.restore();
+    // NOTE: removed ghost number — it was the SAME digit as the main #1
+    // at a different position and opacity, which created an ugly vertical
+    // band bleeding through behind the hero number. The main #1 is already
+    // the visual focus — ghost was redundant noise.
 
     if(isCompact){
       // ═══ 9:16 / 1:1 SOCIAL LAYOUT ═══
+      // Per-ratio sizing — 1:1 is cramped, 9:16 can breathe
+      const eyebrowSz=isSquare?Math.round(44*sc):Math.round(50*sc);
+      const numSz=isSquare?Math.round(260*sc):Math.round(340*sc);
+      const bodySz=isSquare?Math.round(60*sc):Math.round(72*sc);
+
+      // Vertical rhythm — compute positions from actual glyph heights
+      // to avoid overlap between eyebrow and hero number
+      const numGlyphH=numSz*0.72; // serif digits ~72% of font em
+      const eyebrowY=safeY+Math.round(80*sc);
+      const eyebrowBottom=eyebrowY+eyebrowSz*0.5;
+      // Number centred with clear gap below eyebrow
+      const numCenterY=eyebrowBottom+Math.round(60*sc)+numGlyphH/2;
+      // Body positioned clear of number glyph bottom
+      const bodyY=numCenterY+numGlyphH/2+Math.round(90*sc);
+
+      // "— RULE —" eyebrow
       const ruleLabel=cascade(0);
-      // "RULE" eyebrow label at top of safe area
       ctx.save();ctx.globalAlpha=ruleLabel;ctx.translate(0,(1-ruleLabel)*Math.round(30*sc));
-      ctx.fillStyle=B.colorPrimary+"88";ctx.font=`700 ${Math.round(52*sc)}px "${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-      ctx.fillText("— RULE —",safeCX,safeY+Math.round(70*sc));
+      ctx.fillStyle=B.colorPrimary+"88";
+      ctx.font=`700 ${eyebrowSz}px "${FF}","Arial",sans-serif`;
+      ctx.letterSpacing=`${Math.round(3*sc)}px`;
+      ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText("— RULE —",safeCX,eyebrowY);
+      ctx.letterSpacing="0px";
       ctx.restore();
-      // Big number — massive bounce-in, centred in safe area
+
+      // Big number — bounce in, centred
       const numP=cascadeBack(0.12);
-      const numY=safeY+Math.round(210*sc);
-      ctx.save();ctx.globalAlpha=cascade(0.12);ctx.translate(safeCX,numY);ctx.scale(numP,numP);
-      ctx.fillStyle=B.colorPrimary;ctx.font=`900 ${Math.round(320*sc)}px "${FFS}","${FF}","Arial",sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.save();ctx.globalAlpha=cascade(0.12);ctx.translate(safeCX,numCenterY);ctx.scale(numP,numP);
+      ctx.fillStyle=B.colorPrimary;ctx.font=`900 ${numSz}px "${FFS}","${FF}","Arial",sans-serif`;
+      ctx.textAlign="center";ctx.textBaseline="middle";
       ctx.fillText("#"+(c.number||"1"),0,0);
       ctx.restore();
-      // Body text below number — subhead leading 1.22
+
+      // Body text — clear of number
       if(c.body){
         const bodyP=cascade(0.28);
         ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
-        DT(c.body,safeCX,numY+Math.round(280*sc),safeW,safeY+safeH-numY-Math.round(280*sc)-Math.round(40*sc),Math.round(72*sc),"600","center",B.colorPrimary,4,FFS,1.22);
+        DT(c.body,safeCX,bodyY,safeW,safeY+safeH-bodyY-Math.round(60*sc),bodySz,"600","center",B.colorPrimary,3,FFS,1.22);
         ctx.restore();
       }
     } else {
@@ -1181,12 +1213,18 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const bodyP=cascade(0.30);
     if(isCompact){
       // ═══ 9:16 / 1:1 SOCIAL LAYOUT ═══
-      // Left-aligned stack within safe area, big bold headline
-      const lx=safeX, icSz=Math.round(70*sc);
+      // Per-ratio sizing — 1:1 cramped, 9:16 bigger
+      const headSz=isSquare?Math.round(76*sc):Math.round(92*sc);
+      const bodySz=isSquare?Math.round(56*sc):Math.round(64*sc);
+      const icSz=isSquare?Math.round(60*sc):Math.round(72*sc);
+      // Reserve space for logo at bottom
+      const bottomReserve=isSquare?Math.round(120*sc):Math.round(100*sc);
+
+      const lx=safeX;
       let y=safeY+Math.round(40*sc);
-      // Headline — BIG serif, tight display leading 1.10
+      // Headline — BIG serif, tight display leading 1.08
       ctx.save();ctx.globalAlpha=headP;ctx.translate((1-headP)*-40*sc,0);
-      y=DT(c.headline||"KEY POINT",lx,y,safeW,safeH*0.22,Math.round(88*sc),"HW","left","#fff",2,FFS,1.10);
+      y=DT(c.headline||"KEY POINT",lx,y,safeW,safeH*0.24,headSz,"HW","left","#fff",2,FFS,1.08);
       ctx.restore();
       y+=Math.round(40*sc);
       // Icon + rule
@@ -1198,7 +1236,7 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       y+=icSz+Math.round(50*sc);
       // Body — readable leading 1.42 for breathing room
       ctx.save();ctx.globalAlpha=bodyP;ctx.translate(0,(1-bodyP)*Math.round(40*sc));
-      DT(c.body||"",lx,y,safeW,safeY+safeH-y-Math.round(40*sc),Math.round(64*sc),"500","left","rgba(255,255,255,0.92)",6,null,1.42);
+      DT(c.body||"",lx,y,safeW,safeY+safeH-y-bottomReserve,bodySz,"500","left","rgba(255,255,255,0.92)",6,null,1.42);
       ctx.restore();
     } else {
       const lx=PAD;
@@ -3249,7 +3287,10 @@ function ExportTab({project,brand,updateProject}){
   const [captionMode,setCaptionMode]=useState("composite"); // composite | individual
   const [includeCaptions,setIncludeCaptions]=useState(false);
   const [showAdvanced,setShowAdvanced]=useState(false);
-  const [convertMov,setConvertMov]=useState(false);
+  // Default to MOV conversion — Premiere-native format with alpha is the
+  // expected workflow for the "Animated" export. Users can still untick it
+  // to get raw WebM if they want a smaller file for web.
+  const [convertMov,setConvertMov]=useState(true);
   const [ffmpegLoading,setFfmpegLoading]=useState(false);
   const [gfxMode,setGfxMode]=useState("premiere"); // premiere | png | webm | pngseq | composite | both
   const cvs=useRef(document.createElement("canvas"));
@@ -3533,7 +3574,7 @@ function ExportTab({project,brand,updateProject}){
           </button>
           <div style={{background:DS.bgCard,border:`1px solid ${DS.borderSubtle}`,borderRadius:DS.rLg,padding:`${DS.md}px ${DS.lg}px`,display:"flex",flexDirection:"column",justifyContent:"center",minWidth:140}}>
             <div style={{fontSize:10,textTransform:"uppercase",fontWeight:700,color:DS.textMuted,marginBottom:4}}>Format</div>
-            <div style={{fontSize:13,fontWeight:700}}>{gfxMode==="premiere"?"Premiere Ready":gfxMode==="png"?"PNG Stills":gfxMode==="webm"?"WebM":gfxMode==="pngseq"?"PNG Seq":gfxMode==="composite"?"Composite":"Everything"}</div>
+            <div style={{fontSize:13,fontWeight:700}}>{gfxMode==="premiere"?"Premiere Ready":gfxMode==="png"?"PNG Stills":gfxMode==="webm"?(convertMov?"MOV":"WebM"):gfxMode==="pngseq"?"PNG Seq":gfxMode==="composite"?"Composite":"Everything"}</div>
           </div>
         </div>
       )}
@@ -3543,7 +3584,7 @@ function ExportTab({project,brand,updateProject}){
         <div style={{marginBottom:DS.lg+2}}>
           <div style={sectionHead()}>GRAPHICS EXPORT FORMAT</div>
           {(()=>{
-            const allFormats=[["premiere","🎬 Premiere Ready","PNG sequences + XML timecodes"],["png","🖼 Stills (PNG)","Static images for review"],["webm","🎞 Animated (WebM)","Transparent videos"],["pngseq","🎬 PNG Sequence","Numbered frames in zip"],["composite","🎥 Composite Video","One video, all graphics timed"],["both","📦 Everything","Stills + WebMs + sequences"]];
+            const allFormats=[["premiere","🎬 Premiere Ready","PNG sequences + XML timecodes"],["png","🖼 Stills (PNG)","Static images for review"],["webm","🎞 Animated (MOV)","Premiere-native video with alpha"],["pngseq","🎬 PNG Sequence","Numbered frames in zip"],["composite","🎥 Composite Video","One video, all graphics timed"],["both","📦 Everything","Stills + MOVs + sequences"]];
             const primary=allFormats.slice(0,2);
             const advanced=allFormats.slice(2);
             const isAdvancedSelected=advanced.some(([m])=>m===gfxMode);
@@ -3568,12 +3609,12 @@ function ExportTab({project,brand,updateProject}){
               </div>}
             </>);
           })()}
-          {/* MOV conversion toggle — only show for webm/both/composite modes */}
+          {/* MOV / WebM toggle — MOV is the default for Premiere workflows */}
           {(gfxMode==="webm"||gfxMode==="both"||gfxMode==="composite")&&(
             <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"10px 0",marginTop:DS.xs}} onClick={()=>setConvertMov(v=>!v)}>
               <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${convertMov?"#FB8770":"rgba(255,255,255,0.18)"}`,background:convertMov?"#FB8770":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{convertMov&&"✓"}</div>
-              <span style={{fontWeight:700,fontSize:13}}>Convert to MOV</span>
-              <span style={{fontSize:11,opacity:0.45}}>Premiere-native format with transparency (PNG codec). First use downloads ~31MB engine.</span>
+              <span style={{fontWeight:700,fontSize:13}}>Export as MOV (default)</span>
+              <span style={{fontSize:11,opacity:0.45}}>Premiere-native with alpha. Untick for raw WebM (smaller file, web-friendly). First MOV render downloads ~31MB engine.</span>
             </div>
           )}
         </div>
@@ -3629,7 +3670,7 @@ function ExportTab({project,brand,updateProject}){
               <div style={{fontWeight:700,fontSize:13,marginBottom:3,color:"#2A9D8F"}}>{r} — {RATIOS[r].W}×{RATIOS[r].H}</div>
               <div style={{fontSize:12,opacity:0.6,display:"flex",gap:16,flexWrap:"wrap"}}>
                 <span>1 title card</span>
-                <span>{selectedGfx.length} graphic{selectedGfx.length!==1?"s":""}{gfxMode==="premiere"?" (Premiere Ready)":gfxMode==="png"?" (PNG)":gfxMode==="webm"?" (WebM)":gfxMode==="pngseq"?" (PNG sequence)":gfxMode==="composite"?" (Composite)":gfxMode==="both"?" (Everything)":""}</span>
+                <span>{selectedGfx.length} graphic{selectedGfx.length!==1?"s":""}{gfxMode==="premiere"?" (Premiere Ready)":gfxMode==="png"?" (PNG)":gfxMode==="webm"?(convertMov?" (MOV)":" (WebM)"):gfxMode==="pngseq"?" (PNG sequence)":gfxMode==="composite"?" (Composite)":gfxMode==="both"?" (Everything)":""}</span>
                 <span>1 endboard</span>
                 {includeCaptions&&<span>{captionMode==="composite"?"1 caption WebM":`${subtitles.length} caption WebMs`}</span>}
                 <span>1 Premiere XML sequence</span>
@@ -4058,25 +4099,51 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     drawText(ctx,B.titleCardTitle||"EPISODE TITLE",PAD,titleY,W-PAD*2,H*0.26,titleSz,"700","left","#fff",2,FFS,1.05);
     ctx.restore();
 
-    // ── Footer row: subtitle LEFT, logo RIGHT, same baseline ──
-    // This solves the vertical cramping on 1:1 — they share a horizontal lane
-    // with their own spatial territories.
+    // ── Footer: layout differs by ratio ──
+    // 9:16 — vertical abundance: stack subtitle ABOVE a bigger hero logo (safe-zone aware)
+    // 1:1 — vertical cramped: horizontal footer row sharing a baseline
+    // 16:9 — landscape: horizontal footer row, smaller logo
     const logoImg=(B.logoDataUrlLight||B.logoDataUrl)?getCachedImage(B.logoDataUrlLight||B.logoDataUrl):null;
-    const logoWidthFrac=isSquare?0.18:isPortrait?0.22:0.16;
+
+    if(isPortrait){
+      // 9:16 — big logo at bottom-right inside safe zone; subtitle centred above it
+      // Safe zone for 9:16: bottom 320 unsafe → logo anchor above that
+      const safeBottom=H-Math.round(320*sc);
+      const logoW=Math.round(W*0.34);  // 34% width — hero-scale, not lost
+      const logoH=logoImg?Math.round(logoW*(logoImg.naturalHeight/logoImg.naturalWidth)):Math.round(logoW*0.6);
+      const logoX=W-PAD-logoW;  // right-aligned
+      const logoY=safeBottom-logoH-Math.round(30*sc);  // sit just above bottom safe edge
+
+      // Subtitle — centred, full-width, ABOVE the logo with real breathing room
+      if(B.titleCardSubtitle){
+        const subMaxW=W-PAD*2;
+        const subtitleY=logoY-Math.round(120*sc);  // 120px gap above logo top
+        ctx.save(); ctx.globalAlpha=TXT*0.82;
+        drawText(ctx,B.titleCardSubtitle,W/2,subtitleY,subMaxW,H*0.10,subSz,"400","center","rgba(255,255,255,0.82)",2,FF,1.35);
+        ctx.restore();
+      }
+
+      // Logo — hero size, right-aligned
+      if(logoImg){
+        ctx.save(); ctx.globalAlpha=ENT;
+        ctx.drawImage(logoImg,logoX,logoY,logoW,logoH);
+        ctx.restore();
+      }
+      return;
+    }
+
+    // 1:1 and 16:9 — horizontal footer row (subtitle left, logo right, same baseline)
+    const logoWidthFrac=isSquare?0.18:0.16;
     const logoW=Math.round(W*logoWidthFrac);
     const logoH=logoImg?Math.round(logoW*(logoImg.naturalHeight/logoImg.naturalWidth)):Math.round(logoW*0.6);
-    // Footer baseline — logo anchored near the bottom safe edge
     const footerBottom=H-PAD*0.9;
-    const footerY=footerBottom-logoH; // logo top-left y
-    // Subtitle gets the left portion (up to logo's left edge minus breathing room)
+    const footerY=footerBottom-logoH;
     const subtitleMaxW=W-PAD*2-logoW-Math.round(60*sc);
 
-    // Subtitle — vertically centred with logo
     if(B.titleCardSubtitle){
       ctx.save(); ctx.globalAlpha=TXT*0.78;
       ctx.font=`400 ${subSz}px "${FF}",Arial,sans-serif`;
       ctx.fillStyle="rgba(255,255,255,0.80)"; ctx.textAlign="left"; ctx.textBaseline="middle";
-      // Wrap manually to keep it on 1-2 lines
       const words=(B.titleCardSubtitle||"").split(" ");
       const lines=[]; let line="";
       for(const w of words){
@@ -4092,7 +4159,6 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
       ctx.restore();
     }
 
-    // Logo — right-aligned in footer row
     if(logoImg){
       const logoX=W-PAD-logoW;
       ctx.save(); ctx.globalAlpha=ENT;
