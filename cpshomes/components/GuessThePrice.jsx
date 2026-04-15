@@ -2342,7 +2342,7 @@ function drawOpenerBody(ctx, W, H, S, progress, withBg) {
   const subY = titleY + titleSz * 0.72 + subSz * 0.8;
   if (subP > 0) {
     const yOff = (1 - subP) * sz(W, H, 0.015);
-    const subText = "Of the Latest Listed Property In Cardiff";
+    const subText = "Cardiff\u2019s Latest Listing";
 
     ctx.save();
     ctx.font = `800 ${Math.round(subSz)}px 'DM Sans', sans-serif`;
