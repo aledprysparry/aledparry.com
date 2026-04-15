@@ -367,15 +367,18 @@ function drawStamp(ctx, W, H, opts = {}) {
   if (!logo || !logo.complete || !logo.naturalWidth) return;
   const ar = H > W ? "portrait" : W === H ? "square" : "landscape";
   const baseScale = ar === "portrait" ? 0.20 : ar === "square" ? 0.18 : BRAND.logoSize;
-  const scale = opts.scale ?? 1;
+  // NEW DEFAULTS: centered + scale 1.3 across every show asset so the brand
+  // logo is consistently positioned regardless of which slide is rendered.
+  // Individual slides can still override with opts.centered/scale/liftPx.
+  const centered = opts.centered ?? true;
+  const scale = opts.scale ?? 1.3;
   const logoW = W * baseScale * scale;
   const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
   // Side pad must clear the 120px side safe zone in portrait (CPS Homes 9:16 spec)
   const pad = ar === "portrait" ? Math.round(120 * (W / 1080)) : W * 0.05;
   // Portrait bottomPad must clear the 320px bottom safe zone (CPS Homes spec)
   const bottomPad = ar === "portrait" ? Math.round(320 * (W / 1080)) + W * 0.03 : H * 0.05;
-  // opts.centered → horizontal-centre at the bottom (used on Intro Title + Endboard)
-  const x = opts.centered ? (W - logoW) / 2 : W - logoW - pad;
+  const x = centered ? (W - logoW) / 2 : W - logoW - pad;
   // opts.liftPx → lift the logo up by N pixels (used on Intro to nudge above other content)
   const lift = opts.liftPx ?? 0;
   ctx.save();
@@ -648,7 +651,7 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  drawStamp(ctx, W, H, { centered: true, scale: 1.5, liftPx: 100 });
+  drawStamp(ctx, W, H, { liftPx: 100 });
 }
 
 function drawProperty(ctx, W, H, S, progress) {
@@ -1505,12 +1508,19 @@ function drawReveal(ctx, W, H, S, progress) {
     }
   }
 
-  // Disclaimer
-  ctx.font = `400 ${sz(W, H, 0.014)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.25)";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText("* Price subject to change. April 2026", W / 2, H - sz(W, H, 0.025));
+  // Disclaimer — bumped bigger + bolder for social, positioned inside the
+  // 9:16 safe zone (above the bottom 320px strip) and clear of the centered logo.
+  {
+    const safeR = safeZone(W, H);
+    const disclaimY = ar === "portrait"
+      ? safeR.contentBottom - sz(W, H, 0.015)   // just above the 320px bottom safe area
+      : H - sz(W, H, 0.03);
+    ctx.font = `600 ${sz(W, H, ar === "portrait" ? 0.022 : 0.016)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillText("* Price subject to change. April 2026", W / 2, disclaimY);
+  }
 
   drawAccentBars(ctx, W, H);
   drawStamp(ctx, W, H);
@@ -1579,37 +1589,52 @@ function drawPortalBanner(ctx, bx, by, bw, bh, cornerRadius = 0) {
   ctx.fillRect(bx, by, bw, bh);
   ctx.restore();
 
-  // Three portal pills, evenly spaced across the banner
+  // Three portal pills
   const portals = [
     { name: "rightmove",   bg: "#00DEB6", fg: "#0a1628" }, // Rightmove green
     { name: "Zoopla",      bg: "#7A3E90", fg: "#ffffff" }, // Zoopla purple-ish
     { name: "OnTheMarket", bg: "#F39200", fg: "#ffffff" }, // OnTheMarket orange
   ];
 
-  // Measure each pill at a font size proportional to the banner height
-  const fs = Math.max(12, Math.round(bh * 0.36));
-  ctx.font = `800 ${fs}px 'DM Sans', sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  // Compute pill layout at a base font size proportional to banner height.
+  // Then auto-fit: if the total width exceeds the banner width (e.g. 9:16
+  // where the card is narrow), scale everything down uniformly so the pills
+  // stay inside the banner with a comfortable margin.
+  let fs = Math.max(12, Math.round(bh * 0.36));
+  let pillH = bh * 0.62;
+  let padX = fs * 0.8;
+  let gap = Math.max(8, bh * 0.14);
 
-  // Calculate pill widths from text
-  const padX = fs * 0.8;
-  const pillH = bh * 0.62;
-  const pillWidths = portals.map(p => ctx.measureText(p.name).width + padX * 2);
-  const gap = Math.max(8, bh * 0.14);
-  const totalW = pillWidths.reduce((a, b) => a + b, 0) + gap * (portals.length - 1);
+  const measure = () => {
+    ctx.font = `800 ${fs}px 'DM Sans', sans-serif`;
+    const widths = portals.map(p => ctx.measureText(p.name).width + padX * 2);
+    const tot = widths.reduce((a, b) => a + b, 0) + gap * (portals.length - 1);
+    return { widths, tot };
+  };
+
+  let { widths: pillWidths, tot: totalW } = measure();
+  // Leave 8% horizontal margin inside the banner
+  const maxAllowed = bw * 0.92;
+  if (totalW > maxAllowed) {
+    const scale = maxAllowed / totalW;
+    fs = Math.max(10, Math.round(fs * scale));
+    pillH = Math.max(16, pillH * scale);
+    padX = fs * 0.7;
+    gap = Math.max(4, gap * scale);
+    ({ widths: pillWidths, tot: totalW } = measure());
+  }
 
   // Center the group horizontally in the banner
   let px = bx + (bw - totalW) / 2;
   const py = by + (bh - pillH) / 2;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   for (let i = 0; i < portals.length; i++) {
     const p = portals[i];
     const pw = pillWidths[i];
-    // Pill background
     ctx.fillStyle = p.bg;
     roundRect(ctx, px, py, pw, pillH, pillH / 2);
     ctx.fill();
-    // Label
     ctx.fillStyle = p.fg;
     ctx.font = `800 ${fs}px 'DM Sans', sans-serif`;
     ctx.fillText(p.name, px + pw / 2, py + pillH / 2);
@@ -1728,7 +1753,7 @@ function drawRoundCard(ctx, W, H, S, progress) {
   let dy = detailsY + (isSplit ? detailsH * 0.08 : detailsH * 0.10);
 
   // Address (title of the listing)
-  const addrFs = sz(W, H, ar === "portrait" ? 0.03 : 0.026);
+  const addrFs = sz(W, H, ar === "portrait" ? 0.042 : 0.028);
   ctx.font = `700 ${addrFs}px 'Lora', serif`;
   ctx.fillStyle = "#0a1628";
   ctx.textAlign = "left";
@@ -1811,8 +1836,8 @@ function drawRoundCard(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  // Centered CPS Homes logo
-  drawStamp(ctx, W, H, { centered: true });
+  // CPS Homes logo — uses the global centered default
+  drawStamp(ctx, W, H);
 }
 
 // Simple text wrapper — breaks a string into lines that fit within maxW
@@ -1880,7 +1905,7 @@ function drawScoreboard(ctx, W, H, S, progress) {
     roundRect(ctx, cx, cy, cw, ch, BRAND.cornerRadius);
     ctx.stroke();
     // Agent name
-    ctx.font = `700 ${sz(W, H, ar === "portrait" ? 0.035 : 0.032)}px 'DM Sans', sans-serif`;
+    ctx.font = `800 ${sz(W, H, ar === "portrait" ? 0.048 : 0.034)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -2134,7 +2159,7 @@ function drawEndboard(ctx, W, H, S, progress) {
   }
 
   // Centered + larger CPS Homes logo at the bottom
-  drawStamp(ctx, W, H, { centered: true, scale: 1.5 });
+  drawStamp(ctx, W, H);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2278,6 +2303,12 @@ function drawOpenerBody(ctx, W, H, S, progress, withBg) {
   const titleY  = ar === "portrait" ? H * 0.13 : H * 0.17;
   const titleSz = sz(W, H, ar === "portrait" ? 0.085 : 0.068) * (0.8 + 0.2 * Math.max(0, topP));
 
+  // Measure the title width now (needed later for the sub-title pill to match)
+  ctx.save();
+  ctx.font = `900 ${Math.round(titleSz)}px 'Lora', serif`;
+  const titleTextW = ctx.measureText("GUESS THE PRICE").width;
+  ctx.restore();
+
   // ── "GUESS THE PRICE" — gold, Lora, white halo ──
   if (topP > 0) {
     // White radial glow halo
@@ -2305,19 +2336,21 @@ function drawOpenerBody(ctx, W, H, S, progress, withBg) {
   }
 
   // ── Sub-line: bold white text on a solid navy pill ──
+  // Pill width MATCHES the title width for visual balance. If the sub-text
+  // is wider than the title, the pill grows to contain it (with min padding).
   const subSz = sz(W, H, ar === "portrait" ? 0.032 : 0.026);
   const subY = titleY + titleSz * 0.72 + subSz * 0.8;
   if (subP > 0) {
     const yOff = (1 - subP) * sz(W, H, 0.015);
-    const subText = "of the latest properties for sale in Cardiff";
+    const subText = "Of the Latest Listed Property In Cardiff";
 
-    // Measure pill dimensions
     ctx.save();
     ctx.font = `800 ${Math.round(subSz)}px 'DM Sans', sans-serif`;
-    const tw = ctx.measureText(subText).width;
-    const pillPadX = subSz * 0.9;
+    const subTextW = ctx.measureText(subText).width;
     const pillPadY = subSz * 0.55;
-    const pillW = tw + pillPadX * 2;
+    const minPadX = subSz * 0.8;
+    // Prefer title width; if sub-text is longer, grow to fit it
+    const pillW = Math.max(titleTextW, subTextW + minPadX * 2);
     const pillH = subSz + pillPadY * 2;
     const pillX = W / 2 - pillW / 2;
     const pillY = subY + yOff - pillH / 2;
@@ -2327,7 +2360,7 @@ function drawOpenerBody(ctx, W, H, S, progress, withBg) {
     ctx.fillStyle = "#0a1628";
     roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
     ctx.fill();
-    // Thin gold inner stroke for a bit of brand pop
+    // Thin gold inner stroke for brand pop
     ctx.strokeStyle = "rgba(251, 135, 112, 0.55)";
     ctx.lineWidth = 2;
     roundRect(ctx, pillX + 1, pillY + 1, pillW - 2, pillH - 2, (pillH - 2) / 2);
@@ -2391,8 +2424,9 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   const contentH = cardH - headerH;
   const pad = cardW * 0.04;
 
-  // Reserve ~22% of content height for the "How Much ???" text block at the bottom
-  const priceBlockH = Math.max(110, contentH * 0.22);
+  // Reserve ~30% of content height for the "How Much ???" block (was 22%)
+  // so the text can fill the space below the photo.
+  const priceBlockH = Math.max(140, contentH * 0.30);
 
   // Photo fills the remaining area (full card width minus padding)
   const photoX = cardX + pad;
@@ -2429,15 +2463,25 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   roundRect(ctx, photoX, photoY, photoW, photoH, radius * 0.5);
   ctx.stroke();
 
-  // ── "How Much ???" centered under the photo ──
+  // ── "How Much ???" centered under the photo, sized to fill the block ──
+  const priceText = "How Much ???";
   const priceCY = photoY + photoH + priceBlockH / 2 + pad * 0.2;
-  const priceFs = sz(W, H, ar === "portrait" ? 0.075 : 0.06);
+  // Target: use the whole price block height (with a small margin) for text
+  // size. Cap against ~85% of card width so it can't overflow horizontally.
+  const maxTextH = priceBlockH * 0.95;
+  const maxTextW = cardW * 0.85;
+  let priceFs = Math.round(maxTextH);
   ctx.save();
-  ctx.font = `800 ${Math.round(priceFs)}px 'Lora', serif`;
+  ctx.font = `800 ${priceFs}px 'Lora', serif`;
+  let ptw = ctx.measureText(priceText).width;
+  if (ptw > maxTextW) {
+    priceFs = Math.round(priceFs * (maxTextW / ptw));
+    ctx.font = `800 ${priceFs}px 'Lora', serif`;
+  }
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("How Much ???", cardX + cardW / 2, priceCY);
+  ctx.fillText(priceText, cardX + cardW / 2, priceCY);
   ctx.restore();
 
   ctx.restore(); // end slide-up
