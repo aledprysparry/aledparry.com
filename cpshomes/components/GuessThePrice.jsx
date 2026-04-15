@@ -299,6 +299,7 @@ const GTP_CHANNEL_NAME = "gtp-live-sync";
 // ═══════════════════════════════════════════════════════════════
 const ASSETS = [
   { id: "intro",      label: "Intro Title",    icon: "\u25b6", animated: true },
+  { id: "opener",     label: "Opener (Filled)", icon: "\ud83c\udfaa", animated: true },
   { id: "roundtitle", label: "Round Title",     icon: "#", animated: true },
   { id: "roundcard",  label: "Round Card",      icon: "\ud83d\udccb", animated: true },
   { id: "property",   label: "Property Frame",  icon: "\ud83c\udfe0", animated: true },
@@ -1563,9 +1564,64 @@ function drawRoundTitle(ctx, W, H, S, progress) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  PORTAL BANNER — reusable header strip for listing cards
+//  Dark navy background + three portal pills (rightmove / Zoopla /
+//  OnTheMarket). Used by both Round Card and Opener Hook listing card.
+// ═══════════════════════════════════════════════════════════════
+function drawPortalBanner(ctx, bx, by, bw, bh, cornerRadius = 0) {
+  // Navy background — clipped to rounded corners if cornerRadius > 0
+  ctx.save();
+  if (cornerRadius > 0) {
+    roundRect(ctx, bx, by, bw, bh, cornerRadius);
+    ctx.clip();
+  }
+  ctx.fillStyle = "#0a1628"; // deep navy
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.restore();
+
+  // Three portal pills, evenly spaced across the banner
+  const portals = [
+    { name: "rightmove",   bg: "#00DEB6", fg: "#0a1628" }, // Rightmove green
+    { name: "Zoopla",      bg: "#7A3E90", fg: "#ffffff" }, // Zoopla purple-ish
+    { name: "OnTheMarket", bg: "#F39200", fg: "#ffffff" }, // OnTheMarket orange
+  ];
+
+  // Measure each pill at a font size proportional to the banner height
+  const fs = Math.max(12, Math.round(bh * 0.36));
+  ctx.font = `800 ${fs}px 'DM Sans', sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Calculate pill widths from text
+  const padX = fs * 0.8;
+  const pillH = bh * 0.62;
+  const pillWidths = portals.map(p => ctx.measureText(p.name).width + padX * 2);
+  const gap = Math.max(8, bh * 0.14);
+  const totalW = pillWidths.reduce((a, b) => a + b, 0) + gap * (portals.length - 1);
+
+  // Center the group horizontally in the banner
+  let px = bx + (bw - totalW) / 2;
+  const py = by + (bh - pillH) / 2;
+  for (let i = 0; i < portals.length; i++) {
+    const p = portals[i];
+    const pw = pillWidths[i];
+    // Pill background
+    ctx.fillStyle = p.bg;
+    roundRect(ctx, px, py, pw, pillH, pillH / 2);
+    ctx.fill();
+    // Label
+    ctx.fillStyle = p.fg;
+    ctx.font = `800 ${fs}px 'DM Sans', sans-serif`;
+    ctx.fillText(p.name, px + pw / 2, py + pillH / 2);
+    px += pw + gap;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  ROUND CARD — property-portal-style listing mockup
-//  Each round opens with a Rightmove-inspired listing card so
-//  viewers immediately see the property they're guessing.
+//  Each round opens with a listing card so viewers immediately see
+//  the property they're guessing. Header shows the three major UK
+//  property portals (Rightmove / Zoopla / OnTheMarket).
 // ═══════════════════════════════════════════════════════════════
 function drawRoundCard(ctx, W, H, S, progress) {
   const p = progress ?? 1;
@@ -1609,28 +1665,13 @@ function drawRoundCard(ctx, W, H, S, progress) {
   roundRect(ctx, cardX, cardY, cardW, cardH, radius);
   ctx.fill();
 
-  // ── Green "FOR SALE" header strip ──
-  const headerH = Math.max(50, cardH * 0.09);
+  // ── Portal banner (navy bg + rightmove/Zoopla/OnTheMarket pills) ──
+  const headerH = Math.max(56, cardH * 0.10);
   ctx.save();
-  // Clip to rounded corners of the card, then fill only the header region
+  // Clip to the card's rounded top corners so the banner inherits the radius
   roundRect(ctx, cardX, cardY, cardW, cardH, radius);
   ctx.clip();
-  ctx.fillStyle = "#00DEB6"; // Rightmove-inspired green
-  ctx.fillRect(cardX, cardY, cardW, headerH);
-  ctx.restore();
-
-  // "FOR SALE" label in the header
-  ctx.save();
-  ctx.font = `800 ${Math.round(headerH * 0.42)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "#0a1628";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText("FOR SALE", cardX + headerH * 0.5, cardY + headerH / 2);
-  // "PROPERTY LISTING" subtle right-aligned
-  ctx.font = `700 ${Math.round(headerH * 0.32)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(10,22,40,0.65)";
-  ctx.textAlign = "right";
-  ctx.fillText("PROPERTY LISTING", cardX + cardW - headerH * 0.5, cardY + headerH / 2);
+  drawPortalBanner(ctx, cardX, cardY, cardW, headerH);
   ctx.restore();
 
   // ── Content area below header ──
@@ -2185,22 +2226,53 @@ function drawOverlayCountdown(ctx, W, H, S, progress) {
   ctx.restore();
 }
 
-// Opener Hook — transparent overlay with show tagline + listing mockup
-// Drop over opening b-roll so viewers instantly know what the show is.
-// Layout:
-//   1. "GUESS THE PRICE" — big gold, Lora, bounces in with white halo
-//   2. "of the latest properties for sale in Cardiff" — single line, warm cream
-//   3. Compact Rightmove-style listing card below, showing the upcoming
-//      round's property (pulled from S.propRound → EPISODE.rounds[i])
+// ═══════════════════════════════════════════════════════════════
+//  OPENER HOOK — two variants:
+//    overlay_opener → transparent (SOCIAL_ASSETS, drops over b-roll)
+//    opener         → filled (ASSETS, standalone branded title card)
+//  Both share drawOpenerBody: title + sub-line pill + listing card + "?" decoration.
+// ═══════════════════════════════════════════════════════════════
+
+// Transparent variant — drops over footage in the edit
 function drawOverlayOpener(ctx, W, H, S, progress) {
-  const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
+  drawOpenerBody(ctx, W, H, S, progress, /* withBg */ false);
+}
+
+// Filled variant — uses the branded navy background, usable as a standalone
+// title card without needing underlying footage
+function drawOpener(ctx, W, H, S, progress) {
+  drawBg(ctx, W, H);
+  drawAccentBars(ctx, W, H);
+  drawOpenerBody(ctx, W, H, S, progress, /* withBg */ true);
+}
+
+function drawOpenerBody(ctx, W, H, S, progress, withBg) {
+  const p = progress ?? 1;
   const ar = aspect(W, H);
 
   // Staggered phases
-  const topP  = easeOutBack(Math.min(1, p / 0.35));                          // title bounces in
-  const subP  = easeOutExpo(Math.min(1, Math.max(0, (p - 0.25) / 0.35)));    // sub-line fades up
-  const cardP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.45) / 0.45)));    // listing slides up
+  const qMarkP = easeOutExpo(Math.min(1, p / 0.5));                          // decorative "?" fades in
+  const topP   = easeOutBack(Math.min(1, p / 0.35));                         // title bounces in
+  const subP   = easeOutExpo(Math.min(1, Math.max(0, (p - 0.25) / 0.35)));   // sub-line fades up
+  const cardP  = easeOutExpo(Math.min(1, Math.max(0, (p - 0.45) / 0.45)));   // listing slides up
+
+  // ── Big faded "?" decoration in the background (matches Audience Prompt) ──
+  // Drawn FIRST so everything else overlays it. Alpha is lower on transparent
+  // variant (so it doesn't fight the underlying footage) and higher on filled.
+  if (qMarkP > 0) {
+    ctx.save();
+    ctx.globalAlpha = (withBg ? 0.14 : 0.10) * qMarkP;
+    ctx.translate(W / 2, H * 0.48);
+    ctx.rotate((1 - qMarkP) * -0.18);
+    const qSz = sz(W, H, 0.85) * (0.7 + 0.3 * qMarkP);
+    ctx.font = `900 ${Math.round(qSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("?", 0, 0);
+    ctx.restore();
+  }
 
   // ── Title position (pushed higher to make room for the listing card below) ──
   const titleY  = ar === "portrait" ? H * 0.13 : H * 0.17;
@@ -2232,20 +2304,40 @@ function drawOverlayOpener(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  // ── "of the latest properties for sale in Cardiff" — single line ──
-  const subSz = sz(W, H, ar === "portrait" ? 0.03 : 0.024);
-  const subY = titleY + titleSz * 0.70 + subSz * 0.6;
+  // ── Sub-line: bold white text on a solid navy pill ──
+  const subSz = sz(W, H, ar === "portrait" ? 0.032 : 0.026);
+  const subY = titleY + titleSz * 0.72 + subSz * 0.8;
   if (subP > 0) {
     const yOff = (1 - subP) * sz(W, H, 0.015);
+    const subText = "of the latest properties for sale in Cardiff";
+
+    // Measure pill dimensions
     ctx.save();
+    ctx.font = `800 ${Math.round(subSz)}px 'DM Sans', sans-serif`;
+    const tw = ctx.measureText(subText).width;
+    const pillPadX = subSz * 0.9;
+    const pillPadY = subSz * 0.55;
+    const pillW = tw + pillPadX * 2;
+    const pillH = subSz + pillPadY * 2;
+    const pillX = W / 2 - pillW / 2;
+    const pillY = subY + yOff - pillH / 2;
+
+    // Pill background — solid navy for guaranteed legibility over any footage
     ctx.globalAlpha = subP;
-    ctx.font = `600 ${Math.round(subSz)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "#0a1628";
+    roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+    ctx.fill();
+    // Thin gold inner stroke for a bit of brand pop
+    ctx.strokeStyle = "rgba(251, 135, 112, 0.55)";
+    ctx.lineWidth = 2;
+    roundRect(ctx, pillX + 1, pillY + 1, pillW - 2, pillH - 2, (pillH - 2) / 2);
+    ctx.stroke();
+
+    // Bold white text on top
+    ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = "rgba(0,0,0,0.6)";
-    ctx.shadowBlur = subSz * 0.25;
-    ctx.fillText("of the latest properties for sale in Cardiff", W / 2, subY + yOff);
+    ctx.fillText(subText, W / 2, subY + yOff);
     ctx.restore();
   }
 
@@ -2260,8 +2352,9 @@ function drawOverlayOpener(ctx, W, H, S, progress) {
 // Used only inside drawOverlayOpener. Similar to drawRoundCard but smaller,
 // no "ROUND N/6" badge, sits in a rect below the title.
 function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
-  const isSplit = ar !== "portrait";
-  const cardW = isSplit ? W * 0.60 : W * 0.82;
+  // Minimal layout: portal banner → full-width hero photo → "How Much ???"
+  // No address/details — that lives on the Round Card. This card is a teaser.
+  const cardW = ar === "portrait" ? W * 0.82 : W * 0.58;
   const cardBottomMargin = H * 0.08;
   const cardH = Math.max(H * 0.35, H - topY - cardBottomMargin);
   const cardX = (W - cardW) / 2;
@@ -2285,40 +2378,27 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   roundRect(ctx, cardX, cardY, cardW, cardH, radius);
   ctx.fill();
 
-  // Green "FOR SALE" header strip (clipped to rounded corners)
-  const headerH = Math.max(44, cardH * 0.12);
+  // ── Portal banner (navy bg + rightmove/Zoopla/OnTheMarket pills) ──
+  const headerH = Math.max(52, cardH * 0.12);
   ctx.save();
   roundRect(ctx, cardX, cardY, cardW, cardH, radius);
   ctx.clip();
-  ctx.fillStyle = "#00DEB6"; // Rightmove-inspired green
-  ctx.fillRect(cardX, cardY, cardW, headerH);
+  drawPortalBanner(ctx, cardX, cardY, cardW, headerH);
   ctx.restore();
 
-  // Header labels
-  ctx.save();
-  ctx.font = `800 ${Math.round(headerH * 0.42)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "#0a1628";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText("FOR SALE", cardX + headerH * 0.5, cardY + headerH / 2);
-  ctx.font = `700 ${Math.round(headerH * 0.32)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(10,22,40,0.65)";
-  ctx.textAlign = "right";
-  ctx.fillText("PROPERTY LISTING", cardX + cardW - headerH * 0.5, cardY + headerH / 2);
-  ctx.restore();
-
-  // Content area under header
+  // ── Content layout: photo takes most of the card, "How Much ???" sits below ──
   const contentY = cardY + headerH;
   const contentH = cardH - headerH;
-  const pad = cardW * 0.035;
+  const pad = cardW * 0.04;
 
-  const photoW = isSplit ? (cardW - pad * 3) * 0.55 : cardW - pad * 2;
-  const photoH = isSplit ? contentH - pad * 2 : contentH * 0.50;
+  // Reserve ~22% of content height for the "How Much ???" text block at the bottom
+  const priceBlockH = Math.max(110, contentH * 0.22);
+
+  // Photo fills the remaining area (full card width minus padding)
   const photoX = cardX + pad;
   const photoY = contentY + pad;
-  const detailsX = isSplit ? photoX + photoW + pad : cardX + pad;
-  const detailsY = isSplit ? photoY : photoY + photoH + pad;
-  const detailsW = isSplit ? (cardW - pad * 3) * 0.45 : cardW - pad * 2;
+  const photoW = cardW - pad * 2;
+  const photoH = contentH - priceBlockH - pad * 1.5;
 
   // Hero photo — from S.propPhotos or EPISODE.rounds[propRound-1].photos
   const photos = (S.propPhotos && S.propPhotos.length)
@@ -2337,7 +2417,7 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   } else {
     ctx.fillStyle = "#d5dde3";
     ctx.fillRect(photoX, photoY, photoW, photoH);
-    ctx.font = `${Math.round(photoH * 0.4)}px serif`;
+    ctx.font = `${Math.round(photoH * 0.35)}px serif`;
     ctx.fillStyle = "rgba(10,22,40,0.28)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -2349,57 +2429,16 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   roundRect(ctx, photoX, photoY, photoW, photoH, radius * 0.5);
   ctx.stroke();
 
-  // ── Details column ──
-  const addrFs = sz(W, H, isSplit ? 0.024 : 0.028);
-  let dy = detailsY + (isSplit ? contentH * 0.05 : pad * 0.4);
-
-  // Address (word-wrapped, max 2 lines)
-  ctx.font = `700 ${addrFs}px 'Lora', serif`;
-  ctx.fillStyle = "#0a1628";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  const address = S.propAddress || "Cardiff property";
-  const addrLines = wrapText(ctx, address, detailsW);
-  for (const line of addrLines.slice(0, 2)) {
-    ctx.fillText(line, detailsX, dy);
-    dy += addrFs * 1.15;
-  }
-  dy += addrFs * 0.4;
-
-  // Location chip
-  const location = S.optionLocation || "";
-  if (location) {
-    ctx.font = `500 ${Math.round(addrFs * 0.7)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = "rgba(10,22,40,0.6)";
-    ctx.fillText(`\ud83d\udccd ${location}`, detailsX, dy);
-    dy += addrFs * 1.0;
-  }
-
-  // Beds / type / tenure
-  const beds = S.propBeds || 0;
-  const type = S.propType || "";
-  const tenure = S.propTenure || "";
-  const parts = [];
-  if (beds > 0) parts.push(`${beds} bed${beds === 1 ? "" : "s"}`);
-  if (type) parts.push(type);
-  if (tenure) parts.push(tenure);
-  if (parts.length) {
-    ctx.font = `600 ${Math.round(addrFs * 0.7)}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = "#1E3A40";
-    ctx.fillText(parts.join("  \u00b7  "), detailsX, dy);
-    dy += addrFs * 1.3;
-  }
-
-  // "GUESS THE PRICE / £???"
-  dy += addrFs * 0.25;
-  ctx.font = `700 ${Math.round(addrFs * 0.58)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(10,22,40,0.55)";
-  ctx.fillText("GUESS THE PRICE", detailsX, dy);
-  dy += addrFs * 0.85;
-  const priceSz = sz(W, H, isSplit ? 0.055 : 0.07);
-  ctx.font = `800 ${Math.round(priceSz)}px 'Lora', serif`;
+  // ── "How Much ???" centered under the photo ──
+  const priceCY = photoY + photoH + priceBlockH / 2 + pad * 0.2;
+  const priceFs = sz(W, H, ar === "portrait" ? 0.075 : 0.06);
+  ctx.save();
+  ctx.font = `800 ${Math.round(priceFs)}px 'Lora', serif`;
   ctx.fillStyle = GAME.gold;
-  ctx.fillText("\u00a3???", detailsX, dy);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("How Much ???", cardX + cardW / 2, priceCY);
+  ctx.restore();
 
   ctx.restore(); // end slide-up
 }
@@ -2693,6 +2732,7 @@ function drawOverlayCSSS(ctx, W, H, S, progress) {
 
 const DRAW_FNS = {
   intro: drawIntro,
+  opener: drawOpener,
   roundtitle: drawRoundTitle,
   roundcard: drawRoundCard,
   property: drawProperty,
@@ -3621,31 +3661,41 @@ export default function GuessThePrice({ displayMode = false }) {
       await new Promise(r => setTimeout(r, 500));
     } catch { setExportStatus("Intro MOV failed — skipping"); await new Promise(r => setTimeout(r, 1000)); }
 
-    // Opener hook PNG + MOV (transparent overlay for edit)
-    try {
-      setExportStatus("Opener (still)…");
-      canvas.width = rat.W;
-      canvas.height = rat.H;
-      const openerCtx = canvas.getContext("2d");
-      openerCtx.clearRect(0, 0, rat.W, rat.H);
-      DRAW_FNS.overlay_opener(openerCtx, rat.W, rat.H, S, 1);
-      const openerBlob = await new Promise(res => canvas.toBlob(res, "image/png"));
-      if (openerBlob) zip.file(`00b_opener_${slug}.png`, openerBlob);
-      await new Promise(r => setTimeout(r, 50));
+    // Opener — two variants:
+    //   00b_opener_transparent_{slug} → transparent (overlay for edit)
+    //   00c_opener_filled_{slug}      → branded navy background (standalone)
+    for (const variant of [
+      { id: "overlay_opener", prefix: "00b_opener_transparent", label: "Opener (transparent)" },
+      { id: "opener",         prefix: "00c_opener_filled",      label: "Opener (filled)" },
+    ]) {
+      try {
+        setExportStatus(`${variant.label} still…`);
+        canvas.width = rat.W;
+        canvas.height = rat.H;
+        const vCtx = canvas.getContext("2d");
+        vCtx.clearRect(0, 0, rat.W, rat.H);
+        DRAW_FNS[variant.id](vCtx, rat.W, rat.H, S, 1);
+        const vBlob = await new Promise(res => canvas.toBlob(res, "image/png"));
+        if (vBlob) zip.file(`${variant.prefix}_${slug}.png`, vBlob);
+        await new Promise(r => setTimeout(r, 50));
 
-      setExportStatus("Opener MOV…");
-      const ve = await loadVideoExport();
-      const openerWebm = await ve.recordAsset(DRAW_FNS.overlay_opener, rat.W, rat.H, S, 3000);
-      setExportStatus("Opener MOV converting…");
-      const openerMovName = `00b_opener_${slug}.mov`;
-      const openerMov = await ve.webmToMov(openerWebm, openerMovName);
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(openerMov);
-      a.download = openerMovName;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      await new Promise(r => setTimeout(r, 500));
-    } catch { setExportStatus("Opener MOV failed — skipping"); await new Promise(r => setTimeout(r, 1000)); }
+        setExportStatus(`${variant.label} MOV…`);
+        const ve = await loadVideoExport();
+        const vWebm = await ve.recordAsset(DRAW_FNS[variant.id], rat.W, rat.H, S, 3500);
+        setExportStatus(`${variant.label} MOV converting…`);
+        const vMovName = `${variant.prefix}_${slug}.mov`;
+        const vMov = await ve.webmToMov(vWebm, vMovName);
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(vMov);
+        a.download = vMovName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        await new Promise(r => setTimeout(r, 500));
+      } catch {
+        setExportStatus(`${variant.label} failed — skipping`);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
 
     // Track cumulative scores for scoreboard export
     const cumulativeScores = [0, 0];
