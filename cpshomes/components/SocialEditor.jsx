@@ -2442,7 +2442,11 @@ function LiveVideoPreview({videoUrl,graphics,brand,ratio,onSeek}){
 // ═══════════════════════════════════════════════════════════════
 //  GRAPHICS TAB
 // ═══════════════════════════════════════════════════════════════
-function GraphicsTab({project,brand,updateProject,previewRatio}){
+function GraphicsTab({project,brand,updateProject}){
+  // Preview ratio lives here now (was passed down from the header).
+  // Each tab owns its own preview ratio so the picker can sit next to
+  // the content it controls and match the Posters tab rhythm.
+  const [previewRatio,setPreviewRatio]=useState("16:9");
   const [gStep,setGStep]=useState(project.graphics.length>0?"review":"idle");
   const [animIdx,setAnimIdx]=useState(null);
   const [exporting,setExporting]=useState(new Set());
@@ -2750,6 +2754,17 @@ function GraphicsTab({project,brand,updateProject,previewRatio}){
               );
             })}
           </div>
+        </div>
+      )}
+      {/* Preview ratio row — matches PosterTab + ExportTab layout */}
+      {graphics.length>0&&(
+        <div style={{display:"flex",gap:DS.sm,marginBottom:DS.md,alignItems:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:10,fontWeight:700,color:DS.textMuted,letterSpacing:1,textTransform:"uppercase"}}>Preview ratio</span>
+          {Object.entries(RATIOS).map(([k,v])=>(
+            <button key={k} style={btn({background:previewRatio===k?DS.borderActive:DS.bgButton,fontSize:12,padding:"5px 12px",fontWeight:previewRatio===k?700:500})} onClick={()=>setPreviewRatio(k)}>
+              {k} <span style={{fontSize:10,opacity:0.6}}>{v.hint}</span>
+            </button>
+          ))}
         </div>
       )}
       {/* PRIMARY TOOLBAR */}
@@ -4012,7 +4027,6 @@ function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand
       window.history.replaceState(null,"",target);
     }
   },[tab]);
-  const [previewRatio,setPreviewRatio]=useState("16:9");
   const [saveIndicator,setSaveIndicator]=useState("");
   const fileRef=useRef();
 
@@ -4094,10 +4108,9 @@ function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand
         </div>
         <div style={{display:"flex",gap:DS.xs,alignItems:"center",flexShrink:0}}>
           {saveIndicator&&<span style={{fontSize:10,fontWeight:600,color:saveIndicator==="saved"?DS.green:saveIndicator==="error"?DS.accent:DS.textMuted,marginRight:DS.xs,transition:"opacity 0.3s"}}>{saveIndicator==="saving"?"Saving…":saveIndicator==="saved"?"✓ Saved":saveIndicator==="error"?"Save failed":""}</span>}
-          <span style={{fontSize:DS.fsXs,color:DS.textMuted,marginRight:DS.xs}}>Preview</span>
-          {Object.keys(RATIOS).map(k=>(
-            <button key={k} style={btn({background:previewRatio===k?DS.borderActive:DS.bgButton,fontSize:11,padding:"4px 8px",fontWeight:previewRatio===k?700:500})} onClick={()=>setPreviewRatio(k)}>{k}</button>
-          ))}
+          {/* Preview ratio switcher moved INTO each tab (Graphics, Posters,
+              Export) so it lives next to the content it actually controls
+              and doesn't duplicate per-tab pickers. */}
         </div>
       </div>
 
@@ -4144,7 +4157,7 @@ function ProjectView({project,brand,updateProject,onBack,allBrands,onChangeBrand
                 :<><div style={{fontSize:42,marginBottom:DS.md}}>🎬</div><div style={{fontSize:DS.fsLg,fontWeight:700}}>Drop video, audio, or SRT file here</div><div style={{fontSize:DS.fsSm,color:DS.textMuted,marginTop:DS.xs}}>Supports .mp4 .mov .mp3 .wav .srt — or click to browse</div></>
               }
             </div>
-          :tab==="graphics"?<GraphicsTab project={project} brand={brand} updateProject={updateProject} previewRatio={previewRatio}/>
+          :tab==="graphics"?<GraphicsTab project={project} brand={brand} updateProject={updateProject}/>
           :<ExportTab project={project} brand={brand} updateProject={updateProject}/>
         }
       </div>
