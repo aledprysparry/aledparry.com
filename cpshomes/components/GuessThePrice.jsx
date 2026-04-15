@@ -551,7 +551,8 @@ function drawIntro(ctx, W, H, S, progress) {
   }
 
   // ── VS section — DRAMATIC, big headshots, tight layout ──
-  const vsY = ar === "portrait" ? safeTop + safeH * 0.55 : H * 0.62;
+  // Landscape: lifted from 0.62 → 0.53 so agents sit closer to the title
+  const vsY = ar === "portrait" ? safeTop + safeH * 0.55 : H * 0.53;
   const headR = sz(W, H, ar === "portrait" ? 0.13 : 0.10); // MUCH bigger headshots
   const spread = ar === "portrait" ? W * 0.24 : W * 0.18;
 
@@ -1983,12 +1984,13 @@ function drawOverlayPlayAlong(ctx, W, H, S, progress) {
     // Radial gradient glow behind text — exports correctly with alpha
     ctx.save();
     ctx.globalAlpha = Math.min(1, line2P) * 0.85;
-    const glowR = howSz * 2.2;
+    const glowR = howSz * 2.4;
     const glow = ctx.createRadialGradient(W / 2, howY, 0, W / 2, howY, glowR);
-    glow.addColorStop(0, "rgba(251, 135, 112, 0.65)");
-    glow.addColorStop(0.35, "rgba(251, 135, 112, 0.28)");
-    glow.addColorStop(0.7, "rgba(251, 135, 112, 0.08)");
-    glow.addColorStop(1, "rgba(251, 135, 112, 0)");
+    // White halo — readable against any background (salmon-on-salmon was invisible)
+    glow.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3, "rgba(255, 255, 255, 0.45)");
+    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
+    glow.addColorStop(1, "rgba(255, 255, 255, 0)");
     ctx.fillStyle = glow;
     ctx.fillRect(W / 2 - glowR, howY - glowR, glowR * 2, glowR * 2);
     ctx.restore();
@@ -2037,15 +2039,15 @@ function drawOverlayReadyToPlay(ctx, W, H, S, progress) {
     const bigSz = sz(W, H, ar === "portrait" ? 0.115 : 0.095) * (0.75 + 0.25 * line2P);
     const bigY = centerY + sz(W, H, 0.065);
 
-    // Radial gradient glow behind text
+    // Radial gradient glow behind text — WHITE halo for readability
     ctx.save();
-    ctx.globalAlpha = Math.min(1, line2P) * 0.85;
-    const glowR = bigSz * 2.4;
+    ctx.globalAlpha = Math.min(1, line2P) * 0.9;
+    const glowR = bigSz * 2.6;
     const glow = ctx.createRadialGradient(W / 2, bigY, 0, W / 2, bigY, glowR);
-    glow.addColorStop(0, "rgba(251, 135, 112, 0.7)");
-    glow.addColorStop(0.35, "rgba(251, 135, 112, 0.3)");
-    glow.addColorStop(0.7, "rgba(251, 135, 112, 0.08)");
-    glow.addColorStop(1, "rgba(251, 135, 112, 0)");
+    glow.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3, "rgba(255, 255, 255, 0.45)");
+    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
+    glow.addColorStop(1, "rgba(255, 255, 255, 0)");
     ctx.fillStyle = glow;
     ctx.fillRect(W / 2 - glowR, bigY - glowR, glowR * 2, glowR * 2);
     ctx.restore();
@@ -2092,15 +2094,15 @@ function drawOverlayHowDidYouDo(ctx, W, H, S, progress) {
     const beatSz = sz(W, H, ar === "portrait" ? 0.095 : 0.08) * (0.75 + 0.25 * line2P);
     const beatY = centerY + sz(W, H, 0.055);
 
-    // Radial gradient glow
+    // Radial gradient glow — WHITE halo for readability
     ctx.save();
-    ctx.globalAlpha = Math.min(1, line2P) * 0.85;
-    const glowR = beatSz * 2.4;
+    ctx.globalAlpha = Math.min(1, line2P) * 0.9;
+    const glowR = beatSz * 2.6;
     const glow = ctx.createRadialGradient(W / 2, beatY, 0, W / 2, beatY, glowR);
-    glow.addColorStop(0, "rgba(251, 135, 112, 0.7)");
-    glow.addColorStop(0.35, "rgba(251, 135, 112, 0.3)");
-    glow.addColorStop(0.7, "rgba(251, 135, 112, 0.08)");
-    glow.addColorStop(1, "rgba(251, 135, 112, 0)");
+    glow.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3, "rgba(255, 255, 255, 0.45)");
+    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
+    glow.addColorStop(1, "rgba(255, 255, 255, 0)");
     ctx.fillStyle = glow;
     ctx.fillRect(W / 2 - glowR, beatY - glowR, glowR * 2, glowR * 2);
     ctx.restore();
@@ -2210,18 +2212,17 @@ function drawOverlayCSSS(ctx, W, H, S, progress) {
   }
   x += wAmp;
 
-  // "Subscribe" — bigger, bouncy, gold, with radial glow
+  // "Subscribe" — bigger, bouncy, gold, with WHITE halo for readability
   if (subP > 0) {
     const subCenterX = x + wSub / 2;
-    // Radial glow
     ctx.save();
-    ctx.globalAlpha = Math.min(1, subP) * 0.85;
-    const glowR = bigSz * 2.0;
+    ctx.globalAlpha = Math.min(1, subP) * 0.9;
+    const glowR = bigSz * 2.2;
     const glow = ctx.createRadialGradient(subCenterX, lineY, 0, subCenterX, lineY, glowR);
-    glow.addColorStop(0, "rgba(251, 135, 112, 0.65)");
-    glow.addColorStop(0.35, "rgba(251, 135, 112, 0.28)");
-    glow.addColorStop(0.7, "rgba(251, 135, 112, 0.08)");
-    glow.addColorStop(1, "rgba(251, 135, 112, 0)");
+    glow.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3, "rgba(255, 255, 255, 0.45)");
+    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
+    glow.addColorStop(1, "rgba(255, 255, 255, 0)");
     ctx.fillStyle = glow;
     ctx.fillRect(subCenterX - glowR, lineY - glowR, glowR * 2, glowR * 2);
     ctx.restore();
