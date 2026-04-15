@@ -4152,17 +4152,14 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     const footerY=footerBottom-logoH;
 
     if(B.titleCardSubtitle){
-      // Subtitle sits directly below the title block. drawText already
-      // respects \n in the source text (splits on newlines first, then
-      // wraps each paragraph), so line breaks from the editor come
-      // through to the rendered card — the old manual wrap ate them.
+      // Subtitle sits directly below the title block, LEFT-aligned with
+      // the same PAD gutter as the title above it (both read from the
+      // same left edge). drawText respects \n in the source text so
+      // line breaks from the editor come through to the rendered card.
       const subMaxW=W-PAD*2;
       const subtitleY=titleY+titleBlockH+Math.round(40*sc);
       ctx.save(); ctx.globalAlpha=TXT*0.82;
-      drawText(ctx,B.titleCardSubtitle,
-        isSquare?W/2:PAD,subtitleY,
-        subMaxW,H*0.18,subSz,"400",
-        isSquare?"center":"left","rgba(255,255,255,0.82)",3,FF,1.35);
+      drawText(ctx,B.titleCardSubtitle,PAD,subtitleY,subMaxW,H*0.18,subSz,"400","left","rgba(255,255,255,0.82)",3,FF,1.35);
       ctx.restore();
     }
 
