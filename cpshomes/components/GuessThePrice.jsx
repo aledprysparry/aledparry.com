@@ -494,8 +494,10 @@ function drawIntro(ctx, W, H, S, progress) {
   // ── Logo / Title ──
   const logoSrc = EPISODE.logoImage;
   const logoImg = logoSrc ? getCachedImage(logoSrc) : null;
-  const titleAreaTop = ar === "portrait" ? safeTop + safeH * 0.02 : H * 0.06;
-  const titleAreaH = ar === "portrait" ? safeH * 0.35 : H * 0.38;
+  // Landscape: tightened title area (was 0.06 → 0.44, now 0.03 → 0.33)
+  // so the Sian/Nathan headshots sit noticeably higher without clipping the logo.
+  const titleAreaTop = ar === "portrait" ? safeTop + safeH * 0.02 : H * 0.03;
+  const titleAreaH = ar === "portrait" ? safeH * 0.35 : H * 0.30;
 
   // Entrance timing: logo 0-0.4, headshots 0.3-0.7, VS 0.5-0.8
   const logoP = Math.min(1, p / 0.4);
@@ -551,8 +553,9 @@ function drawIntro(ctx, W, H, S, progress) {
   }
 
   // ── VS section — DRAMATIC, big headshots, tight layout ──
-  // Landscape: lifted from 0.62 → 0.53 so agents sit closer to the title
-  const vsY = ar === "portrait" ? safeTop + safeH * 0.55 : H * 0.53;
+  // Landscape: lifted from 0.62 → 0.48 (with shrunk title area above)
+  // so agents sit firmly in the upper-mid of the frame.
+  const vsY = ar === "portrait" ? safeTop + safeH * 0.55 : H * 0.48;
   const headR = sz(W, H, ar === "portrait" ? 0.13 : 0.10); // MUCH bigger headshots
   const spread = ar === "portrait" ? W * 0.24 : W * 0.18;
 
