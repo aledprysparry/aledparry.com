@@ -4049,24 +4049,29 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     const logoImg=(B.logoDataUrlLight||B.logoDataUrl)?getCachedImage(B.logoDataUrlLight||B.logoDataUrl):null;
 
     if(isPortrait){
-      // 9:16 — big logo at bottom-right inside safe zone; subtitle centred above it
-      // Safe zone for 9:16: bottom 320 unsafe → logo anchor above that
+      // 9:16 — mid-sized logo at bottom-right inside safe zone, subtitle
+      // anchored to the TITLE BLOCK (editorial / magazine rhythm) not the logo.
       const safeBottom=H-Math.round(320*sc);
-      const logoW=Math.round(W*0.34);  // 34% width — hero-scale, not lost
+      // Logo ~20% width — in between the small stamp() marks on regular
+      // graphics (~0.10) and the oversized hero (0.34 was too big).
+      const logoW=Math.round(W*0.20);
       const logoH=logoImg?Math.round(logoW*(logoImg.naturalHeight/logoImg.naturalWidth)):Math.round(logoW*0.6);
       const logoX=W-PAD-logoW;  // right-aligned
       const logoY=safeBottom-logoH-Math.round(30*sc);  // sit just above bottom safe edge
 
-      // Subtitle — centred, full-width, ABOVE the logo with real breathing room
+      // Subtitle — sits directly below the title block with a fixed 80px
+      // breathing gap. Previously it was anchored to `logoY - 120`, which
+      // dragged it way down the frame. Anchoring to the title keeps it
+      // visually grouped with the headline, not floating near the logo.
       if(B.titleCardSubtitle){
         const subMaxW=W-PAD*2;
-        const subtitleY=logoY-Math.round(120*sc);  // 120px gap above logo top
+        const subtitleY=titleY+titleBlockH+Math.round(80*sc);
         ctx.save(); ctx.globalAlpha=TXT*0.82;
-        drawText(ctx,B.titleCardSubtitle,W/2,subtitleY,subMaxW,H*0.10,subSz,"400","center","rgba(255,255,255,0.82)",2,FF,1.35);
+        drawText(ctx,B.titleCardSubtitle,W/2,subtitleY,subMaxW,H*0.14,subSz,"400","center","rgba(255,255,255,0.82)",2,FF,1.35);
         ctx.restore();
       }
 
-      // Logo — hero size, right-aligned
+      // Logo — mid-sized, right-aligned inside safe zone
       if(logoImg){
         ctx.save(); ctx.globalAlpha=ENT;
         ctx.drawImage(logoImg,logoX,logoY,logoW,logoH);
