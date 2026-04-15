@@ -366,18 +366,30 @@ function drawStamp(ctx, W, H, opts = {}) {
   const logo = getCachedImage(BRAND.logoUrlLight);
   if (!logo || !logo.complete || !logo.naturalWidth) return;
   const ar = H > W ? "portrait" : W === H ? "square" : "landscape";
-  const baseScale = ar === "portrait" ? 0.20 : ar === "square" ? 0.18 : BRAND.logoSize;
-  // NEW DEFAULTS: centered + scale 1.3 across every show asset so the brand
+  // Social-format ratios (portrait + square) use 0.20; landscape uses BRAND.logoSize (0.14)
+  const baseScale = ar !== "landscape" ? 0.20 : BRAND.logoSize;
+  // Defaults: centered + scale 1.3 across every show asset so the brand
   // logo is consistently positioned regardless of which slide is rendered.
-  // Individual slides can still override with opts.centered/scale/liftPx.
   const centered = opts.centered ?? true;
   const scale = opts.scale ?? 1.3;
   const logoW = W * baseScale * scale;
   const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
-  // Side pad must clear the 120px side safe zone in portrait (CPS Homes 9:16 spec)
-  const pad = ar === "portrait" ? Math.round(120 * (W / 1080)) : W * 0.05;
-  // Portrait bottomPad must clear the 320px bottom safe zone (CPS Homes spec)
-  const bottomPad = ar === "portrait" ? Math.round(320 * (W / 1080)) + W * 0.03 : H * 0.05;
+
+  // Per-aspect padding:
+  //   portrait  → 120px side + 320px bottom (9:16 TikTok/Reels caption strip)
+  //   square    → modest side + bottom (Instagram feed has no caption area)
+  //   landscape → tight bottom, small side
+  let pad, bottomPad;
+  if (ar === "portrait") {
+    pad = Math.round(120 * (W / 1080));
+    bottomPad = Math.round(320 * (W / 1080)) + W * 0.03;
+  } else if (ar === "square") {
+    pad = W * 0.05;
+    bottomPad = H * 0.06;
+  } else {
+    pad = W * 0.05;
+    bottomPad = H * 0.05;
+  }
   const x = centered ? (W - logoW) / 2 : W - logoW - pad;
   // opts.liftPx → lift the logo up by N pixels (used on Intro to nudge above other content)
   const lift = opts.liftPx ?? 0;
@@ -494,16 +506,16 @@ function drawIntro(ctx, W, H, S, progress) {
   ctx.fill();
   ctx.restore();
 
-  const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
-  const safeTop = ar === "portrait" ? safe.contentTop : 0;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
 
   // ── Logo / Title ──
   const logoSrc = EPISODE.logoImage;
   const logoImg = logoSrc ? getCachedImage(logoSrc) : null;
   // Landscape: tightened title area (was 0.06 → 0.44, now 0.03 → 0.33)
   // so the Sian/Nathan headshots sit noticeably higher without clipping the logo.
-  const titleAreaTop = ar === "portrait" ? safeTop + safeH * 0.02 : H * 0.03;
-  const titleAreaH = ar === "portrait" ? safeH * 0.35 : H * 0.30;
+  const titleAreaTop = ar !== "landscape" ? safeTop + safeH * 0.02 : H * 0.03;
+  const titleAreaH = ar !== "landscape" ? safeH * 0.35 : H * 0.30;
 
   // Entrance timing: logo 0-0.4, headshots 0.3-0.7, VS 0.5-0.8
   const logoP = Math.min(1, p / 0.4);
@@ -525,8 +537,8 @@ function drawIntro(ctx, W, H, S, progress) {
   } else {
     // ── Fallback: canvas-drawn title ──
     const eLogoP = easeOutExpo(logoP);
-    const guessY = ar === "portrait" ? safeTop + safeH * 0.08 : H * 0.18;
-    const guessS = sz(W, H, ar === "portrait" ? 0.045 : 0.038);
+    const guessY = ar !== "landscape" ? safeTop + safeH * 0.08 : H * 0.18;
+    const guessS = sz(W, H, ar !== "landscape" ? 0.045 : 0.038);
     ctx.save();
     ctx.globalAlpha = eLogoP;
     ctx.font = `800 ${guessS}px 'DM Sans', sans-serif`;
@@ -537,8 +549,8 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.fillText("GUESS THE", W / 2, guessY);
     ctx.restore();
 
-    const priceY = ar === "portrait" ? safeTop + safeH * 0.20 : H * 0.34;
-    const priceS = sz(W, H, ar === "portrait" ? 0.16 : 0.14);
+    const priceY = ar !== "landscape" ? safeTop + safeH * 0.20 : H * 0.34;
+    const priceS = sz(W, H, ar !== "landscape" ? 0.16 : 0.14);
     ctx.save();
     ctx.font = `900 ${priceS}px 'Lora', serif`;
     ctx.textAlign = "center";
@@ -561,9 +573,9 @@ function drawIntro(ctx, W, H, S, progress) {
   // ── VS section — DRAMATIC, big headshots, tight layout ──
   // Landscape: lifted from 0.62 → 0.48 (with shrunk title area above)
   // so agents sit firmly in the upper-mid of the frame.
-  const vsY = ar === "portrait" ? safeTop + safeH * 0.55 : H * 0.48;
-  const headR = sz(W, H, ar === "portrait" ? 0.13 : 0.10); // MUCH bigger headshots
-  const spread = ar === "portrait" ? W * 0.24 : W * 0.18;
+  const vsY = ar !== "landscape" ? safeTop + safeH * 0.55 : H * 0.48;
+  const headR = sz(W, H, ar !== "landscape" ? 0.13 : 0.10); // MUCH bigger headshots
+  const spread = ar !== "landscape" ? W * 0.24 : W * 0.18;
 
   const leftX = W / 2 - spread;
   const rightX = W / 2 + spread;
@@ -609,7 +621,7 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.restore();
 
     // Name — BIG and bold (no role badge underneath)
-    const nameS = sz(W, H, ar === "portrait" ? 0.05 : 0.042);
+    const nameS = sz(W, H, ar !== "landscape" ? 0.05 : 0.042);
     const nameY = y + headR + headR * 0.2;
     ctx.font = `800 ${nameS}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
@@ -628,7 +640,7 @@ function drawIntro(ctx, W, H, S, progress) {
 
   // ── "VS" badge — BIGGER, more dramatic ──
   const eVP = easeOutBack(vsP);
-  const vsR = sz(W, H, ar === "portrait" ? 0.06 : 0.05) * eVP;
+  const vsR = sz(W, H, ar !== "landscape" ? 0.06 : 0.05) * eVP;
   if (vsP > 0) {
     ctx.save();
     ctx.globalAlpha = Math.min(1, vsP * 2);
@@ -1022,8 +1034,8 @@ function drawPrompt(ctx, W, H, _S, progress) {
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
-  const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
-  const safeTop = ar === "portrait" ? safe.contentTop : 0;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
 
   // No background fill — transparent overlay for compositing
 
@@ -1045,8 +1057,8 @@ function drawPrompt(ctx, W, H, _S, progress) {
   const textP = easeOutExpo(Math.min(1, p / 0.5));
   ctx.save();
   ctx.globalAlpha = textP;
-  const qY = ar === "portrait" ? safeTop + safeH * 0.25 : H * 0.32;
-  const qs = sz(W, H, ar === "portrait" ? 0.11 : 0.095);
+  const qY = ar !== "landscape" ? safeTop + safeH * 0.25 : H * 0.32;
+  const qs = sz(W, H, ar !== "landscape" ? 0.11 : 0.095);
   ctx.font = `700 ${qs}px 'Lora', serif`;
   ctx.fillStyle = BRAND.colorWarm;
   ctx.textAlign = "center";
@@ -1065,7 +1077,7 @@ function drawPrompt(ctx, W, H, _S, progress) {
   // Subtitle
   ctx.font = `500 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.fillText("Choose A, B, or C", W / 2, ar === "portrait" ? safeTop + safeH * 0.40 : H * 0.47);
+  ctx.fillText("Choose A, B, or C", W / 2, ar !== "landscape" ? safeTop + safeH * 0.40 : H * 0.47);
   ctx.restore();
 
   // Option pills — larger, with more presence
@@ -1112,14 +1124,14 @@ function drawOptions(ctx, W, H, S, progress) {
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
-  const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
-  const safeTop = ar === "portrait" ? safe.contentTop : 0;
-  const pad = ar === "portrait" ? Math.max(W * 0.06, safe.left) : W * 0.04;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
+  const pad = ar !== "landscape" ? Math.max(W * 0.06, safe.left) : W * 0.04;
 
   drawBg(ctx, W, H);
 
   // "WHICH ONE IS IT?" — dramatic entrance, fades in first
-  const headerY = ar === "portrait" ? safeTop + safeH * 0.04 : H * 0.06;
+  const headerY = ar !== "landscape" ? safeTop + safeH * 0.04 : H * 0.06;
   const titleP = easeOutExpo(Math.min(1, p / 0.3));
   ctx.save();
   ctx.globalAlpha = titleP;
@@ -1153,11 +1165,11 @@ function drawOptions(ctx, W, H, S, progress) {
   ];
 
   const ow = W - pad * 2;
-  const oh = ar === "portrait" ? safeH * 0.13 : H * 0.16;
-  const og = ar === "portrait" ? safeH * 0.03 : H * 0.04;
+  const oh = ar !== "landscape" ? safeH * 0.13 : H * 0.16;
+  const og = ar !== "landscape" ? safeH * 0.03 : H * 0.04;
   const totalPillH = 3 * oh + 2 * og;
-  const availTop = ar === "portrait" ? safeTop + safeH * 0.18 : H * 0.18;
-  const availBottom = ar === "portrait" ? safe.contentBottom - safeH * 0.08 : H * 0.82;
+  const availTop = ar !== "landscape" ? safeTop + safeH * 0.18 : H * 0.18;
+  const availBottom = ar !== "landscape" ? safe.contentBottom - safeH * 0.08 : H * 0.82;
   const startY = availTop + ((availBottom - availTop) - totalPillH) / 2;
 
   for (let i = 0; i < 3; i++) {
@@ -1238,7 +1250,7 @@ function drawLockIn(ctx, W, H, S, progress) {
   const hasAnswer = letter !== "";
   const colors = { A: GAME.optionA, B: GAME.optionB, C: GAME.optionC };
   const letterColor = hasAnswer ? (colors[letter] || GAME.gold) : GAME.gold;
-  const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.45;
+  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.45;
 
   // Large DRAMATIC glow behind letter
   ctx.save();
@@ -1275,7 +1287,7 @@ function drawLockIn(ctx, W, H, S, progress) {
     // Giant letter — WHITE with coloured glow, scale in with elastic
     const letterLP = Math.min(1, Math.max(0, (p - 0.25) / 0.5));
     const letterScale = easeOutBack(letterLP);
-    const letterSz = sz(W, H, ar === "portrait" ? 0.38 : 0.30) * letterScale;
+    const letterSz = sz(W, H, ar !== "landscape" ? 0.38 : 0.30) * letterScale;
     if (letterLP > 0) {
       ctx.save();
       ctx.globalAlpha = Math.min(1, letterLP * 2);
@@ -1292,7 +1304,7 @@ function drawLockIn(ctx, W, H, S, progress) {
     // "?" placeholder — subtle, waiting for answer
     ctx.save();
     ctx.globalAlpha = 0.3;
-    ctx.font = `800 ${sz(W, H, ar === "portrait" ? 0.30 : 0.22)}px 'DM Sans', sans-serif`;
+    ctx.font = `800 ${sz(W, H, ar !== "landscape" ? 0.30 : 0.22)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -1315,7 +1327,7 @@ function drawTimer(ctx, W, H, S, progress) {
   const safe = safeZone(W, H);
   const totalSec = S.timerDuration || 3;
   const elapsed = progress * totalSec;
-  const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.40 : H * 0.47;
+  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.40 : H * 0.47;
   const ringR = sz(W, H, 0.22);
 
   if (elapsed < totalSec) {
@@ -1403,7 +1415,7 @@ function drawReveal(ctx, W, H, S, progress) {
   const cp = S.revealPrice || "---";
   const colors = { A: GAME.optionA, B: GAME.optionB, C: GAME.optionC };
   const cc = colors[cl] || GAME.gold;
-  const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.38 : H * 0.42;
+  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.38 : H * 0.42;
 
   // Phase 1 (0–0.35): tension — "THE LISTING PRICE IS..."
   // Phase 2 (0.35–1): reveal with glow
@@ -1444,7 +1456,7 @@ function drawReveal(ctx, W, H, S, progress) {
     if (rp > 0.05) {
       const letterP = Math.min(1, (rp - 0.05) / 0.3);
       const scale = easeOutBack(letterP);
-      const letterSz = sz(W, H, ar === "portrait" ? 0.30 : 0.22) * scale;
+      const letterSz = sz(W, H, ar !== "landscape" ? 0.30 : 0.22) * scale;
       ctx.save();
       ctx.shadowColor = cc;
       ctx.shadowBlur = sz(W, H, 0.08) * Math.min(1, rp * 2);
@@ -1460,7 +1472,7 @@ function drawReveal(ctx, W, H, S, progress) {
     if (rp > 0.45) {
       const priceP = Math.min(1, (rp - 0.45) / 0.25);
       const a = easeOutExpo(priceP);
-      const priceSz = sz(W, H, ar === "portrait" ? 0.12 : 0.09);
+      const priceSz = sz(W, H, ar !== "landscape" ? 0.12 : 0.09);
       ctx.save();
       ctx.shadowColor = "rgba(0,0,0,0.4)";
       ctx.shadowBlur = priceSz * 0.1;
@@ -1468,7 +1480,7 @@ function drawReveal(ctx, W, H, S, progress) {
       ctx.fillStyle = `rgba(255,255,255,${a})`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      const priceY = centerY + sz(W, H, ar === "portrait" ? 0.18 : 0.14);
+      const priceY = centerY + sz(W, H, ar !== "landscape" ? 0.18 : 0.14);
       ctx.fillText(`\u00a3${cp}`, W / 2, priceY + (1 - a) * sz(W, H, 0.02));
       ctx.restore();
     }
@@ -1479,14 +1491,14 @@ function drawReveal(ctx, W, H, S, progress) {
       ctx.font = `600 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
       ctx.fillStyle = `rgba(251,135,112,${lblP})`;
       ctx.textAlign = "center";
-      ctx.fillText("CORRECT PRICE", W / 2, centerY + sz(W, H, ar === "portrait" ? 0.26 : 0.23));
+      ctx.fillText("CORRECT PRICE", W / 2, centerY + sz(W, H, ar !== "landscape" ? 0.26 : 0.23));
     }
 
     // Result indicator — did they get it right?
     if (rp > 0.75 && S.lockLetter) {
       const resP = easeOutExpo(Math.min(1, (rp - 0.75) / 0.2));
       const gotItRight = S.lockLetter === cl;
-      const resY = centerY + sz(W, H, ar === "portrait" ? 0.32 : 0.30);
+      const resY = centerY + sz(W, H, ar !== "landscape" ? 0.32 : 0.30);
       const resSz = sz(W, H, 0.035) * (0.8 + 0.2 * easeOutBack(resP));
       ctx.save();
       ctx.globalAlpha = resP;
@@ -1515,7 +1527,7 @@ function drawReveal(ctx, W, H, S, progress) {
     const disclaimY = ar === "portrait"
       ? safeR.contentBottom - sz(W, H, 0.015)   // just above the 320px bottom safe area
       : H - sz(W, H, 0.03);
-    ctx.font = `600 ${sz(W, H, ar === "portrait" ? 0.022 : 0.016)}px 'DM Sans', sans-serif`;
+    ctx.font = `600 ${sz(W, H, ar !== "landscape" ? 0.022 : 0.016)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.45)";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
@@ -1532,7 +1544,7 @@ function drawRoundTitle(ctx, W, H, S, progress) {
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
-  const centerY = ar === "portrait" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.48 : H * 0.50;
+  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.48 : H * 0.50;
 
   // "ROUND" label — fades in with glow
   const labelP = easeOutExpo(Math.min(1, p / 0.4));
@@ -1550,7 +1562,7 @@ function drawRoundTitle(ctx, W, H, S, progress) {
   // Giant round number — scales in with elastic
   const numP = Math.min(1, Math.max(0, (p - 0.15) / 0.5));
   const numScale = easeOutBack(numP);
-  const numSz = sz(W, H, ar === "portrait" ? 0.35 : 0.28) * numScale;
+  const numSz = sz(W, H, ar !== "landscape" ? 0.35 : 0.28) * numScale;
   if (numP > 0) {
     ctx.save();
     ctx.globalAlpha = Math.min(1, numP * 2);
@@ -1654,10 +1666,10 @@ function drawRoundCard(ctx, W, H, S, progress) {
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
-  const safeTop = ar === "portrait" ? safe.contentTop : 0;
-  const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
-  const safeLeft = ar === "portrait" ? safe.left : W * 0.05;
-  const safeW = ar === "portrait" ? W - safe.left - safe.right : W * 0.9;
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+  const safeLeft = ar !== "landscape" ? safe.left : W * 0.05;
+  const safeW = ar !== "landscape" ? W - safe.left - safe.right : W * 0.9;
 
   // Staggered entrance
   const cardP = easeOutExpo(Math.min(1, p / 0.45));
@@ -1666,9 +1678,9 @@ function drawRoundCard(ctx, W, H, S, progress) {
 
   // ── Card dimensions ──
   const cardW = safeW;
-  const cardH = ar === "portrait" ? safeH * 0.80 : H * 0.76;
-  const cardX = ar === "portrait" ? safe.left : (W - cardW) / 2;
-  const cardY = ar === "portrait" ? safeTop + safeH * 0.06 : H * 0.10;
+  const cardH = ar !== "landscape" ? safeH * 0.80 : H * 0.76;
+  const cardX = ar !== "landscape" ? safe.left : (W - cardW) / 2;
+  const cardY = ar !== "landscape" ? safeTop + safeH * 0.06 : H * 0.10;
   const radius = BRAND.cornerRadius;
 
   // Drop shadow behind card (baked fillRect since shadowBlur doesn't export)
@@ -1753,7 +1765,7 @@ function drawRoundCard(ctx, W, H, S, progress) {
   let dy = detailsY + (isSplit ? detailsH * 0.08 : detailsH * 0.10);
 
   // Address (title of the listing)
-  const addrFs = sz(W, H, ar === "portrait" ? 0.042 : 0.028);
+  const addrFs = sz(W, H, ar !== "landscape" ? 0.042 : 0.028);
   ctx.font = `700 ${addrFs}px 'Lora', serif`;
   ctx.fillStyle = "#0a1628";
   ctx.textAlign = "left";
@@ -1799,7 +1811,7 @@ function drawRoundCard(ctx, W, H, S, progress) {
     ctx.font = `700 ${Math.round(addrFs * 0.6)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "rgba(10,22,40,0.55)";
     ctx.fillText("GUESS THE PRICE", detailsX, dy);
-    const priceSz = sz(W, H, ar === "portrait" ? 0.085 : 0.07) * (0.85 + 0.15 * priceP);
+    const priceSz = sz(W, H, ar !== "landscape" ? 0.085 : 0.07) * (0.85 + 0.15 * priceP);
     ctx.font = `800 ${Math.round(priceSz)}px 'Lora', serif`;
     ctx.fillStyle = GAME.gold;
     ctx.fillText("\u00a3???", detailsX, dy + addrFs * 0.8);
@@ -1864,8 +1876,8 @@ function drawScoreboard(ctx, W, H, S, progress) {
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
-  const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
-  const safeTop = ar === "portrait" ? safe.contentTop : 0;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
   const a1 = EPISODE.agents[0], a2 = EPISODE.agents[1];
   const s1 = S.score1 ?? 0, s2 = S.score2 ?? 0;
 
@@ -1879,7 +1891,7 @@ function drawScoreboard(ctx, W, H, S, progress) {
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("SCOREBOARD", W / 2, ar === "portrait" ? safeTop + safeH * 0.06 : H * 0.12);
+  ctx.fillText("SCOREBOARD", W / 2, ar !== "landscape" ? safeTop + safeH * 0.06 : H * 0.12);
   ctx.restore();
 
   // Staggered animation: card1 at 0.15, VS at 0.35, card2 at 0.45, scores pop at 0.6
@@ -1905,7 +1917,7 @@ function drawScoreboard(ctx, W, H, S, progress) {
     roundRect(ctx, cx, cy, cw, ch, BRAND.cornerRadius);
     ctx.stroke();
     // Agent name
-    ctx.font = `800 ${sz(W, H, ar === "portrait" ? 0.048 : 0.034)}px 'DM Sans', sans-serif`;
+    ctx.font = `800 ${sz(W, H, ar !== "landscape" ? 0.048 : 0.034)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -1913,7 +1925,7 @@ function drawScoreboard(ctx, W, H, S, progress) {
     ctx.restore();
     // Score number — scales up with bounce
     if (scoreAnim > 0) {
-      const scoreSz = sz(W, H, ar === "portrait" ? 0.09 : 0.10) * scoreAnim;
+      const scoreSz = sz(W, H, ar !== "landscape" ? 0.09 : 0.10) * scoreAnim;
       ctx.save();
       ctx.globalAlpha = Math.min(1, scoreAnim * 1.5);
       ctx.shadowColor = GAME.gold;
@@ -1999,8 +2011,8 @@ function drawEndboard(ctx, W, H, S, progress) {
   drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
   const safe = safeZone(W, H);
-  const safeH = ar === "portrait" ? safe.contentBottom - safe.contentTop : H;
-  const safeTop = ar === "portrait" ? safe.contentTop : 0;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
   const a1 = EPISODE.agents[0] || "Agent 1";
   const a2 = EPISODE.agents[1] || "Agent 2";
 
@@ -2031,15 +2043,15 @@ function drawEndboard(ctx, W, H, S, progress) {
   const thanksP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.7) / 0.3)));
 
   // ── Layout (landscape thirds: title, cards, footer) ──
-  const titleY    = ar === "portrait" ? safeTop + safeH * 0.14 : H * 0.17;
-  const subtitleY = titleY + sz(W, H, ar === "portrait" ? 0.06 : 0.055);
+  const titleY    = ar !== "landscape" ? safeTop + safeH * 0.14 : H * 0.17;
+  const subtitleY = titleY + sz(W, H, ar !== "landscape" ? 0.06 : 0.055);
 
   // ── Title: "GAME OVER" with glow ──
   ctx.save();
   ctx.globalAlpha = titleP;
   ctx.shadowColor = GAME.gold;
   ctx.shadowBlur = sz(W, H, 0.035);
-  ctx.font = `800 ${sz(W, H, ar === "portrait" ? 0.095 : 0.08)}px 'Lora', serif`;
+  ctx.font = `800 ${sz(W, H, ar !== "landscape" ? 0.095 : 0.08)}px 'Lora', serif`;
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -2073,14 +2085,14 @@ function drawEndboard(ctx, W, H, S, progress) {
     ctx.stroke();
 
     // Name
-    ctx.font = `700 ${sz(W, H, ar === "portrait" ? 0.035 : 0.032)}px 'DM Sans', sans-serif`;
+    ctx.font = `700 ${sz(W, H, ar !== "landscape" ? 0.035 : 0.032)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = isWinner ? "#fff" : "rgba(255,255,255,0.7)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(name, cx + cw / 2, cy + ch * 0.32);
 
     // Score number — large, gold for winner, muted for loser
-    const scoreSz = sz(W, H, ar === "portrait" ? 0.095 : 0.105);
+    const scoreSz = sz(W, H, ar !== "landscape" ? 0.095 : 0.105);
     ctx.font = `800 ${Math.round(scoreSz)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = isWinner ? GAME.gold : "rgba(255,255,255,0.85)";
     if (isWinner) {
@@ -2150,7 +2162,7 @@ function drawEndboard(ctx, W, H, S, progress) {
       : (H * 0.76);
     ctx.save();
     ctx.globalAlpha = thanksP;
-    ctx.font = `500 ${sz(W, H, ar === "portrait" ? 0.028 : 0.024)}px 'DM Sans', sans-serif`;
+    ctx.font = `500 ${sz(W, H, ar !== "landscape" ? 0.028 : 0.024)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.75)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -2177,9 +2189,9 @@ function drawProfileLowerThird(ctx, W, H, S, progress, agentIdx) {
   const role = rd?.propertyAgent === name ? "Property Choice" : "Guessing";
 
   // Position: bottom-left. In portrait clear the 120px left + 320px bottom safe zones.
-  const padL = ar === "portrait" ? safe.left : W * 0.05;
-  const padB = ar === "portrait" ? safe.bottom + H * 0.02 : H * 0.12;
-  const barH = H * (ar === "portrait" ? 0.06 : 0.08);
+  const padL = ar !== "landscape" ? safe.left : W * 0.05;
+  const padB = ar !== "landscape" ? safe.bottom + H * 0.02 : H * 0.12;
+  const barH = H * (ar !== "landscape" ? 0.06 : 0.08);
   const barY = H - padB - barH;
 
   // Slide in from left
@@ -2300,8 +2312,8 @@ function drawOpenerBody(ctx, W, H, S, progress, withBg) {
   }
 
   // ── Title position (pushed higher to make room for the listing card below) ──
-  const titleY  = ar === "portrait" ? H * 0.13 : H * 0.17;
-  const titleSz = sz(W, H, ar === "portrait" ? 0.085 : 0.068) * (0.8 + 0.2 * Math.max(0, topP));
+  const titleY  = ar !== "landscape" ? H * 0.13 : H * 0.17;
+  const titleSz = sz(W, H, ar !== "landscape" ? 0.085 : 0.068) * (0.8 + 0.2 * Math.max(0, topP));
 
   // Measure the title width now (needed later for the sub-title pill to match)
   ctx.save();
@@ -2338,7 +2350,7 @@ function drawOpenerBody(ctx, W, H, S, progress, withBg) {
   // ── Sub-line: bold white text on a solid navy pill ──
   // Pill width MATCHES the title width for visual balance. If the sub-text
   // is wider than the title, the pill grows to contain it (with min padding).
-  const subSz = sz(W, H, ar === "portrait" ? 0.032 : 0.026);
+  const subSz = sz(W, H, ar !== "landscape" ? 0.032 : 0.026);
   const subY = titleY + titleSz * 0.72 + subSz * 0.8;
   if (subP > 0) {
     const yOff = (1 - subP) * sz(W, H, 0.015);
@@ -2387,7 +2399,7 @@ function drawOpenerBody(ctx, W, H, S, progress, withBg) {
 function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   // Minimal layout: portal banner → full-width hero photo → "How Much ???"
   // No address/details — that lives on the Round Card. This card is a teaser.
-  const cardW = ar === "portrait" ? W * 0.82 : W * 0.58;
+  const cardW = ar !== "landscape" ? W * 0.82 : W * 0.58;
   const cardBottomMargin = H * 0.08;
   const cardH = Math.max(H * 0.35, H - topY - cardBottomMargin);
   const cardX = (W - cardW) / 2;
@@ -2492,7 +2504,7 @@ function drawOverlayPlayAlong(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
+  const centerY = ar !== "landscape" ? H * 0.42 : H * 0.45;
 
   // Phase 1 (0-0.4): "Guess the price time..." fades in
   // Phase 2 (0.4-0.7): "How much?" scales in with bounce + radial glow
@@ -2553,14 +2565,14 @@ function drawOverlayReadyToPlay(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
+  const centerY = ar !== "landscape" ? H * 0.42 : H * 0.45;
 
   const line1P = easeOutExpo(Math.min(1, p / 0.4));
   const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.4) / 0.35)));
 
   // "Ready to play?" — white serif
   if (line1P > 0) {
-    const topSz = sz(W, H, ar === "portrait" ? 0.082 : 0.068);
+    const topSz = sz(W, H, ar !== "landscape" ? 0.082 : 0.068);
     ctx.save();
     ctx.globalAlpha = line1P;
     ctx.font = `700 ${Math.round(topSz)}px 'Lora', serif`;
@@ -2573,7 +2585,7 @@ function drawOverlayReadyToPlay(ctx, W, H, S, progress) {
 
   // "Play along" — gold, bounces in with radial gradient glow
   if (line2P > 0) {
-    const bigSz = sz(W, H, ar === "portrait" ? 0.115 : 0.095) * (0.75 + 0.25 * line2P);
+    const bigSz = sz(W, H, ar !== "landscape" ? 0.115 : 0.095) * (0.75 + 0.25 * line2P);
     const bigY = centerY + sz(W, H, 0.065);
 
     // Radial gradient glow behind text — WHITE halo for readability
@@ -2608,14 +2620,14 @@ function drawOverlayHowDidYouDo(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const centerY = ar === "portrait" ? H * 0.42 : H * 0.45;
+  const centerY = ar !== "landscape" ? H * 0.42 : H * 0.45;
 
   const line1P = easeOutExpo(Math.min(1, p / 0.4));
   const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.4) / 0.35)));
 
   // "How did you do?"
   if (line1P > 0) {
-    const topSz = sz(W, H, ar === "portrait" ? 0.085 : 0.07);
+    const topSz = sz(W, H, ar !== "landscape" ? 0.085 : 0.07);
     ctx.save();
     ctx.globalAlpha = line1P;
     ctx.font = `700 ${Math.round(topSz)}px 'Lora', serif`;
@@ -2628,7 +2640,7 @@ function drawOverlayHowDidYouDo(ctx, W, H, S, progress) {
 
   // "Did you beat them??" — gold, bounces in with radial glow
   if (line2P > 0) {
-    const beatSz = sz(W, H, ar === "portrait" ? 0.095 : 0.08) * (0.75 + 0.25 * line2P);
+    const beatSz = sz(W, H, ar !== "landscape" ? 0.095 : 0.08) * (0.75 + 0.25 * line2P);
     const beatY = centerY + sz(W, H, 0.055);
 
     // Radial gradient glow — WHITE halo for readability
@@ -2665,7 +2677,7 @@ function drawOverlayCSSS(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const centerY = ar === "portrait" ? H * 0.45 : H * 0.48;
+  const centerY = ar !== "landscape" ? H * 0.45 : H * 0.48;
 
   // Staggered progress per word (ease-out)
   const commentP = easeOutExpo(Math.min(1, p / 0.25));
@@ -2674,9 +2686,9 @@ function drawOverlayCSSS(ctx, W, H, S, progress) {
   const subP     = easeOutBack(Math.min(1, Math.max(0, (p - 0.45) / 0.30)));
 
   // Base sizes — slightly reduced from v1
-  let topSz = sz(W, H, ar === "portrait" ? 0.062 : 0.05);
+  let topSz = sz(W, H, ar !== "landscape" ? 0.062 : 0.05);
   const subBounce = 0.8 + 0.2 * Math.max(0, subP);
-  let bigSz = sz(W, H, ar === "portrait" ? 0.088 : 0.072) * subBounce;
+  let bigSz = sz(W, H, ar !== "landscape" ? 0.088 : 0.072) * subBounce;
 
   const comma = ", ";
   const amp = " & ";
