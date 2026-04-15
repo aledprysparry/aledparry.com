@@ -2563,6 +2563,17 @@ function GraphicsTab({project,brand,updateProject}){
     updateProject({previews:batch});
   },[graphics,brand,previewRatio]);
 
+  // Auto-refresh all previews when graphics / brand / ratio change.
+  // Debounced 300ms so rapid mutations (drag reorder, multi-edit) only
+  // trigger one re-render cycle after the user settles. This replaces
+  // the manual 👁 Preview button in the toolbar.
+  useEffect(()=>{
+    if(!graphics.length) return;
+    const t=setTimeout(()=>{previewAll();},300);
+    return()=>clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[graphics,brand,previewRatio]);
+
   const exportWebM=async(g,i)=>{
     setExporting(s=>{const n=new Set(s);n.add(i);return n;});
     try{const blob=await recordGraphic(g,brand,previewRatio);const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${String(i+1).padStart(2,"0")}_${g.label||g.template}_animated.mov`;a.click();}
@@ -2770,7 +2781,8 @@ function GraphicsTab({project,brand,updateProject}){
       {/* PRIMARY TOOLBAR */}
       <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"center",flexWrap:"wrap"}}>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={()=>setShowAdd(true)} title="Add graphic manually">+ Add</button>
-        <button style={sm} onClick={previewAll} title="Preview all graphics">👁 Preview</button>
+        {/* 👁 Preview button removed — previews now auto-refresh via a
+            300ms debounced effect whenever graphics / brand / ratio change. */}
         <button style={{...sm,background:reviewing?"rgba(255,200,50,0.15)":"rgba(255,200,50,0.1)",border:"1px solid rgba(255,200,50,0.35)",opacity:reviewing?0.6:1,cursor:reviewing?"wait":"pointer"}} onClick={()=>!reviewing&&runReview()} title="AI Social Media Expert reviews all slides">{reviewing?"⏳ Reviewing...":"🧠 AI Review"}</button>
         <button style={btnPositive({padding:"7px 13px",fontSize:DS.fsSm})} onClick={exportSelectedBatch} title="Download selected graphics as still PNGs + animated MOVs">⬇ Export</button>
         <div style={{width:1,height:20,background:DS.borderSubtle,margin:"0 2px"}}/>
