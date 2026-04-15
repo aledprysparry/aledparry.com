@@ -2994,7 +2994,11 @@ Rules:
 - CTA is an action verb phrase: "Watch now", "Learn more", "Get the facts"
 - Keep all text SHORT — readable at phone thumbnail size in 1.5 seconds`;
 
-function drawPoster(canvas,poster,brand,ratio){
+// progress: 0→1 across one loop cycle. At progress=0 and progress=1 the
+// canvas must look IDENTICAL so the exported MOV loops seamlessly. All
+// motion is driven by `Math.sin(progress * 2π)` so it's periodic.
+// Pass progress=1 (default) for static renders (preview, PNG export).
+function drawPoster(canvas,poster,brand,ratio,progress=1){
   const AR=POSTER_RATIOS[ratio]||POSTER_RATIOS["1:1"];
   const W=AR.W,H=AR.H;canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext("2d");
@@ -3007,12 +3011,30 @@ function drawPoster(canvas,poster,brand,ratio){
   const isPortrait=H>W;
   const PAD=Math.round((isPortrait?60:80)*sc);
 
+  // Loop-safe periodic motion.
+  // loopPhase goes 0 → 2π over one full cycle and wraps cleanly.
+  const loopPhase=(progress%1)*Math.PI*2;
+  // waveDrift is a signed sine wave so frame 0 and frame N have the
+  // same value (sin(0) === sin(2π) === 0). Used as the x-offset of the
+  // background ripple.
+  const waveDrift=Math.sin(loopPhase);
+  // ctaPulse: gentle scale breathing, 1.0 → 1.025 → 1.0 over the cycle.
+  // Uses 1 - cos(phase) so it starts and ends at scale 1.0 (no seam).
+  const ctaPulse=1+(1-Math.cos(loopPhase))*0.0125;
+
   // Background — brand primary colour
   ctx.fillStyle=B.colorPrimary||"#1a5c5e";ctx.fillRect(0,0,W,H);
 
-  // Subtle wavy texture
+  // Subtle wavy texture — drifts horizontally on a full-cycle sine so
+  // the loop is seamless (start frame === end frame).
   ctx.save();ctx.globalAlpha=0.06;ctx.strokeStyle="#fff";ctx.lineWidth=Math.round(3*sc);
-  for(let i=0;i<5;i++){const off=i*W*0.22;ctx.beginPath();for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}ctx.stroke();}
+  const driftX=waveDrift*W*0.08;
+  for(let i=0;i<5;i++){
+    const off=i*W*0.22+driftX*(i%2?1:-0.6);
+    ctx.beginPath();
+    for(let x=-50;x<W+50;x+=4){ctx.lineTo(x,H*0.3+Math.sin((x+off)*0.003)*H*0.25+i*H*0.12);}
+    ctx.stroke();
+  }
   ctx.restore();
 
   // Content layout
@@ -3049,13 +3071,18 @@ function drawPoster(canvas,poster,brand,ratio){
     subLines.forEach(line=>{ctx.fillText(line,W/2,y);y+=Math.round(44*sc);});
     y+=Math.round(40*sc);
 
-    // CTA button
+    // CTA button (portrait) — gentle loop-safe pulse
     const ctaText=poster.cta||"Learn more";
     ctx.font=`700 ${Math.round(28*sc)}px "${FF}","Arial",sans-serif`;
     const ctaW=ctx.measureText(ctaText).width+Math.round(60*sc);
     const ctaH=Math.round(56*sc);const ctaX=W/2-ctaW/2;
+    ctx.save();
+    ctx.translate(W/2,y+ctaH/2);
+    ctx.scale(ctaPulse,ctaPulse);
+    ctx.translate(-(W/2),-(y+ctaH/2));
     rrPath(ctx,ctaX,y,ctaW,ctaH,Math.round(ctaH/2));ctx.fillStyle=accentCol;ctx.fill();
     ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ctaText,W/2,y+ctaH/2);
+    ctx.restore();
   } else {
     // 16:9 / 1:1 — left-aligned editorial
     let y=H*0.18;
@@ -3083,13 +3110,19 @@ function drawPoster(canvas,poster,brand,ratio){
     subLines.forEach(line=>{ctx.fillText(line,PAD,y);y+=Math.round(40*sc);});
     y+=Math.round(30*sc);
 
-    // CTA button
+    // CTA button (landscape) — gentle loop-safe pulse
     const ctaText=poster.cta||"Learn more";
     ctx.font=`700 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
     const ctaW=ctx.measureText(ctaText).width+Math.round(50*sc);
     const ctaH=Math.round(48*sc);
+    const ctaCX=PAD+ctaW/2,ctaCY=y+ctaH/2;
+    ctx.save();
+    ctx.translate(ctaCX,ctaCY);
+    ctx.scale(ctaPulse,ctaPulse);
+    ctx.translate(-ctaCX,-ctaCY);
     rrPath(ctx,PAD,y,ctaW,ctaH,Math.round(ctaH/2));ctx.fillStyle=accentCol;ctx.fill();
-    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ctaText,PAD+ctaW/2,y+ctaH/2);
+    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ctaText,ctaCX,ctaCY);
+    ctx.restore();
   }
 
   // Brand logo stamp. Posters ALWAYS have a dark teal background
@@ -3183,17 +3216,48 @@ function PosterTab({project,brand,updateProject}){
     setGenerating(false);
   };
 
-  const exportPoster=async(poster,i)=>{
-    const pn=project.name.replace(/\s+/g,"_");
-    for(const [ratio,ar] of Object.entries(POSTER_RATIOS)){
-      const c=document.createElement("canvas");
-      drawPoster(c,poster,brand,ratio);
-      await new Promise(res=>{c.toBlob(blob=>{
-        if(blob)dl(blob,`${pn}_poster_${poster.tone}_${ratio.replace(":","x")}.png`);
-        res();
-      },"image/png");});
-      await new Promise(r=>setTimeout(r,200));
-    }
+  // Export a single variation as BOTH 4 still PNGs and 4 animated looping
+  // MOVs (one of each per ratio). MOV is a real 3-second animation —
+  // subtle wave drift in the background + gentle CTA pulse — driven by
+  // periodic sine motion so frame 0 and frame N match exactly (seamless
+  // loop). Uses the same PNG-sequence + FFmpeg pipeline as the Graphics
+  // MOV exports (recordAsset + webmToMov from cpshomes/lib/video-export).
+  const [exportingIdx,setExportingIdx]=useState(null);
+  const exportPoster=async(poster,i,{durSec=3}={})=>{
+    setExportingIdx(i);
+    try{
+      const pn=project.name.replace(/\s+/g,"_");
+      const tone=poster.tone||"poster";
+      for(const [ratio] of Object.entries(POSTER_RATIOS)){
+        const rp=ratio.replace(":","x");
+        const AR=POSTER_RATIOS[ratio];
+        // 1. Still PNG — rendered at progress=1 (mid-cycle, full content)
+        {
+          const c=document.createElement("canvas");
+          drawPoster(c,poster,brand,ratio,1);
+          await new Promise(res=>{c.toBlob(blob=>{
+            if(blob)dl(blob,`${pn}_poster_${tone}_${rp}.png`);
+            res();
+          },"image/png");});
+          await new Promise(r=>setTimeout(r,120));
+        }
+        // 2. Animated looping MOV — recordAsset captures durSec worth of
+        //    frames, each drawn at progress = i/(N-1) so the sine motion
+        //    completes one full cycle and loops seamlessly.
+        try{
+          const seq=await recordAsset((ctx,W,H,_S,p)=>{
+            drawPoster(ctx.canvas,poster,brand,ratio,p);
+          },AR.W,AR.H,null,durSec*1000);
+          const mov=await webmToMov(seq,`${pn}_poster_${tone}_${rp}.mov`);
+          dl(mov,`${pn}_poster_${tone}_${rp}_${durSec}s.mov`);
+        }catch(movErr){
+          console.error("Poster MOV export failed for",rp,movErr);
+          // Don't block the rest of the exports — user still gets the PNG.
+        }
+        await new Promise(r=>setTimeout(r,120));
+      }
+    }catch(e){setError("Export failed: "+e.message);}
+    setExportingIdx(null);
   };
 
   const exportAll=async()=>{
@@ -3237,7 +3301,7 @@ function PosterTab({project,brand,updateProject}){
             </button>
           ))}
           <button style={{...btnPositive({padding:"8px 18px",fontSize:DS.fsSm,marginLeft:"auto"}),fontWeight:700}} onClick={exportAll}>
-            ⬇ Export All ({Object.keys(POSTER_RATIOS).length*variations.length} PNGs)
+            ⬇ Export All ({Object.keys(POSTER_RATIOS).length*variations.length} PNGs + {Object.keys(POSTER_RATIOS).length*variations.length} MOVs)
           </button>
         </div>
       )}

@@ -167,3 +167,66 @@ export async function recordAssetAsMov(
   const seq = await recordAsset(drawFn, W, H, S, durMs);
   return webmToMov(seq, filename, onProgress);
 }
+
+// ── Hold a single static canvas as a looping MOV ──
+//
+// For STATIC content (posters, title cards held at progress=1, stills)
+// recording N identical frames through recordAsset is wasteful — a 3s
+// 1920×1080 hold at 25fps would push 75 ~8MB PNGs through the FFmpeg
+// filesystem for no reason.
+//
+// Instead, this helper writes ONE PNG and uses FFmpeg's `-loop 1 -t`
+// flag to stretch that single frame for the requested duration. The
+// resulting MOV is still a real N-frame video (so platforms accept it
+// as a video upload) but the encoder only had to compress one unique
+// image — the rest is free.
+//
+// Static images loop perfectly at any duration (frame 1 === frame N),
+// so `durSec` is a free choice. 3s is a good default for social feed
+// posts: it reads as a pause, meets the ≥1s minimum most platforms
+// require for video uploads, and stays under file-size thresholds.
+export async function holdImageAsMov(
+  source: HTMLCanvasElement | Blob,
+  durSec = 3,
+  filename = "hold.mov"
+): Promise<Blob> {
+  const ff = await getFFmpeg();
+  const outputName = filename.replace(/\.[^.]+$/, "") + ".mov";
+
+  // Get a PNG Blob from whatever source we were given.
+  let pngBlob: Blob;
+  if (source instanceof Blob) {
+    pngBlob = source;
+  } else {
+    pngBlob = await new Promise<Blob>((resolve) => {
+      source.toBlob((b) => resolve(b!), "image/png");
+    });
+  }
+  const buf = new Uint8Array(await pngBlob.arrayBuffer());
+
+  const inputName = "hold_input.png";
+  // @ts-ignore — writeFile accepts Uint8Array
+  await ff.writeFile(inputName, buf);
+
+  // -loop 1  → read the single input as an infinite loop
+  // -framerate 25 → on input, interpret the single frame as 25fps stream
+  // -t durSec → cap the output duration
+  // -c:v png -pix_fmt rgba → lossless with alpha, Premiere-native
+  await ff.exec([
+    "-loop", "1",
+    "-framerate", "25",
+    "-i", inputName,
+    "-c:v", "png",
+    "-pix_fmt", "rgba",
+    "-t", String(durSec),
+    "-r", "25",
+    "-an",
+    outputName,
+  ]);
+
+  const data = await ff.readFile(outputName);
+  try { await ff.deleteFile(inputName); } catch { /* noop */ }
+  try { await ff.deleteFile(outputName); } catch { /* noop */ }
+  // @ts-ignore — ffmpeg returns Uint8Array, Blob accepts it at runtime
+  return new Blob([data], { type: "video/quicktime" });
+}
