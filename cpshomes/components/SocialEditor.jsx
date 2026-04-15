@@ -241,9 +241,11 @@ const SAFE_ZONES = {
     reels:     { top:250, bottom:320, left:120, right:120 },
   },
   "1:1": {
-    // Bottom buffer reserved for burned-in captions / subtitles on social feed.
-    // ~18% keeps body copy + logo clear of a typical Instagram/TikTok caption block.
-    universal: { top:60, bottom:200, left:60, right:60 },
+    // Bottom buffer gives the stamp() logo a bit of caption clearance.
+    // 100 is the max we can spend here — above ~100 the title template's
+    // headline + rule block eats into the body copy's vertical space and
+    // the detail text collapses (fitFont returns negative maxH).
+    universal: { top:60, bottom:100, left:60, right:60 },
   },
   "16:9": {
     universal: { top:60, bottom:60, left:80, right:80 },
@@ -979,11 +981,12 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   const isOverlay=(g.typeOverride||(TMPL[t]||{}).type||"fullscreen")==="overlay";
 
   // ── Safe area per ratio (client-approved) ──
-  // Content must stay inside these bounds or it's hidden by IG/TikTok UI or
-  // burned-in captions. 1:1 bottom is 200 to keep body copy above the
-  // typical Instagram/TikTok caption block (matches SAFE_ZONES global).
+  // Content must stay inside these bounds or it's hidden by IG/TikTok UI.
+  // 1:1 bottom is 100 — gives the logo a bit of caption clearance without
+  // eating so much vertical space that body copy collapses on dense
+  // templates (title, rule_number, etc). Matches SAFE_ZONES.
   const SAFE=(ratio||"16:9")==="9:16"?{top:250,bottom:320,left:120,right:120}
-    :(ratio||"16:9")==="1:1"?{top:60,bottom:200,left:60,right:60}
+    :(ratio||"16:9")==="1:1"?{top:60,bottom:100,left:60,right:60}
     :{top:60,bottom:60,left:80,right:80};
   const safeX=SAFE.left, safeY=SAFE.top;
   const safeW=W-SAFE.left-SAFE.right, safeH=H-SAFE.top-SAFE.bottom;
@@ -1554,17 +1557,25 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.save();ctx.globalAlpha=pulseAlpha;
     ctx.fillStyle=B.colorAccent;ctx.fillRect(W/2-sepW/2,H*sepFrac,sepW,Math.round(3*sc));
     ctx.restore();
-    // CTA headline — use brand endboard fields first, then content fields, then defaults
+    // CTA headline — variants by ratio (client spec):
+    //   1:1  → "Watch the full video now" + URL (no handles, no body)
+    //   9:16 → "Watch now" + URL           (no handles, no body)
+    //   16:9 → full branded (CTA + body + handles + URL)
     const ctaY=H*ctaFrac;
-    // Client wants minimal endboard on 1:1: just "Watch the full video now"
-    const ctaText=isSquare?"Watch the full video now":(c.headline||B.endboardCTA||"Thanks for watching");
-    // On 1:1: hide all small text (body, handles, website) per client feedback
-    const showSubtext=!isSquare;
-    const handleText=showSubtext?(c.handle||B.endboardHandles||""):"";
-    const websiteText=showSubtext?(B.endboardWebsite||""):"";
-    const bodyText=showSubtext?(c.body||""):"";
-    // Larger CTA on 1:1 since it's the only text
-    const ctaHeadSz=isSquare?Math.round(72*sc):headSz;
+    const isMinimal=isSquare||isPortrait;
+    const ctaText=isSquare
+      ? "Watch the full video now"
+      : isPortrait
+        ? "Watch now"
+        : (c.headline||B.endboardCTA||"Thanks for watching");
+    // Handles — 16:9 only. Website URL — ALL ratios (brand anchor).
+    // Body copy — 16:9 only (too crowded on 1:1 / 9:16 with the hero CTA).
+    const showHandles=!isMinimal;
+    const handleText=showHandles?(c.handle||B.endboardHandles||""):"";
+    const websiteText=B.endboardWebsite||"";
+    const bodyText=!isMinimal?(c.body||""):"";
+    // Larger CTA on minimal variants since it's the hero text
+    const ctaHeadSz=isMinimal?Math.round(72*sc):headSz;
     DT(ctaText,W/2,ctaY,W*0.8,H*0.15,ctaHeadSz,"700","center","#fff",2,FFS);
     // Body text — with subtle pulse
     if(bodyText){
@@ -4002,9 +4013,12 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     const titleSz=isSquare?Math.round(92*sc):isPortrait?Math.round(112*sc):Math.round(112*sc);
     const subSz=isSquare?Math.round(38*sc):isPortrait?Math.round(44*sc):Math.round(44*sc);
 
-    // Y anchors — spatially rhythmic, based on split + type block heights
-    // Title block ≈ 2 lines × titleSz × 1.05 leading
-    const titleBlockH=titleSz*2*1.05;
+    // Y anchors — MEASURE the actual title height instead of assuming 2 lines.
+    // "Rent Increases Explained" wraps to 3 lines at 112px on 9:16, and the
+    // old 2-line assumption put the subtitle on top of the 3rd word.
+    const titleText=B.titleCardTitle||"EPISODE TITLE";
+    const titleMeasure=measureTextHeight(ctx,titleText,W-PAD*2,titleSz,"700",3,FFS,1.05);
+    const titleBlockH=titleMeasure.height;
     // 9:16: series sits VERTICALLY CENTRED in the compact cream header band.
     //       Title starts with real breathing room below the split line.
     // 1:1/16:9: series hangs above the split line as an eyebrow.
