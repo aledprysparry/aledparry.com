@@ -4137,30 +4137,32 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
       return;
     }
 
-    // 1:1 and 16:9 — horizontal footer row (subtitle left, logo right, same baseline)
+    // 1:1 and 16:9 — logo sits in a bottom footer row, subtitle anchored
+    // to the title block so it reads as a proper editorial subhead.
+    //
+    // Previously on 1:1 the subtitle was vertically centred with the logo
+    // at the bottom, which dragged it to ~88% down the frame — orphaned
+    // from the title. Now we position it directly below the title with
+    // a fixed breathing gap, just like the 9:16 layout. The logo stays
+    // alone in the footer row.
     const logoWidthFrac=isSquare?0.18:0.16;
     const logoW=Math.round(W*logoWidthFrac);
     const logoH=logoImg?Math.round(logoW*(logoImg.naturalHeight/logoImg.naturalWidth)):Math.round(logoW*0.6);
     const footerBottom=H-PAD*0.9;
     const footerY=footerBottom-logoH;
-    const subtitleMaxW=W-PAD*2-logoW-Math.round(60*sc);
 
     if(B.titleCardSubtitle){
-      ctx.save(); ctx.globalAlpha=TXT*0.78;
-      ctx.font=`400 ${subSz}px "${FF}",Arial,sans-serif`;
-      ctx.fillStyle="rgba(255,255,255,0.80)"; ctx.textAlign="left"; ctx.textBaseline="middle";
-      const words=(B.titleCardSubtitle||"").split(" ");
-      const lines=[]; let line="";
-      for(const w of words){
-        const test=line?line+" "+w:w;
-        if(ctx.measureText(test).width>subtitleMaxW&&line){lines.push(line);line=w;}
-        else line=test;
-      }
-      if(line) lines.push(line);
-      const lineH=subSz*1.30;
-      const textCY=footerY+logoH/2;
-      const startY=textCY-((lines.length-1)*lineH)/2;
-      lines.slice(0,2).forEach((ln,i)=>ctx.fillText(ln,PAD,startY+i*lineH));
+      // Subtitle sits directly below the title block. drawText already
+      // respects \n in the source text (splits on newlines first, then
+      // wraps each paragraph), so line breaks from the editor come
+      // through to the rendered card — the old manual wrap ate them.
+      const subMaxW=W-PAD*2;
+      const subtitleY=titleY+titleBlockH+Math.round(40*sc);
+      ctx.save(); ctx.globalAlpha=TXT*0.82;
+      drawText(ctx,B.titleCardSubtitle,
+        isSquare?W/2:PAD,subtitleY,
+        subMaxW,H*0.18,subSz,"400",
+        isSquare?"center":"left","rgba(255,255,255,0.82)",3,FF,1.35);
       ctx.restore();
     }
 
