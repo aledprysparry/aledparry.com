@@ -1570,15 +1570,13 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.restore();
     // CTA headline — variants by ratio (client spec):
     //   1:1  → "Watch the full video now" + URL (no handles, no body)
-    //   9:16 → "Watch now" + URL           (no handles, no body)
+    //   9:16 → "Watch the full video now" + URL (no handles, no body)
     //   16:9 → full branded (CTA + body + handles + URL)
     const ctaY=H*ctaFrac;
     const isMinimal=isSquare||isPortrait;
-    const ctaText=isSquare
+    const ctaText=isMinimal
       ? "Watch the full video now"
-      : isPortrait
-        ? "Watch now"
-        : (c.headline||B.endboardCTA||"Thanks for watching");
+      : (c.headline||B.endboardCTA||"Thanks for watching");
     // Handles — 16:9 only. Website URL — ALL ratios (brand anchor).
     // Body copy — 16:9 only (too crowded on 1:1 / 9:16 with the hero CTA).
     const showHandles=!isMinimal;
@@ -1595,11 +1593,16 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
       DT(bodyText,W/2,bodyY,W*0.6,H*0.10,bodySz,"400","center","rgba(255,255,255,0.7)",2);
       ctx.restore();
     }
-    // Social handles + website (hidden on 1:1)
+    // Social handles + website. On minimal endboards (1:1 / 9:16) the URL is
+    // the ONLY bottom text, so bump it up so it reads clearly on mobile —
+    // 24px was unreadable on 9:16.
     const bottomLine=[handleText,websiteText].filter(Boolean).join("  ·  ");
     if(bottomLine){
-      ctx.font=`500 ${Math.round(24*sc)}px "${FF}","Arial",sans-serif`;
-      ctx.fillStyle="rgba(255,255,255,0.5)";ctx.textAlign="center";ctx.textBaseline="alphabetic";
+      const blSz=isMinimal?Math.round(40*sc):Math.round(24*sc);
+      const blWeight=isMinimal?"700":"500";
+      const blAlpha=isMinimal?"0.9":"0.5";
+      ctx.font=`${blWeight} ${blSz}px "${FF}","Arial",sans-serif`;
+      ctx.fillStyle=`rgba(255,255,255,${blAlpha})`;ctx.textAlign="center";ctx.textBaseline="alphabetic";
       ctx.fillText(bottomLine,W/2,H*handleFrac);
     }
     ctx.restore();
@@ -4076,12 +4079,18 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
     if(isPortrait){
       // 9:16 — mid-sized logo at bottom-right inside safe zone, subtitle
       // anchored to the TITLE BLOCK (editorial / magazine rhythm) not the logo.
+      //
+      // CRITICAL: use the 9:16 SAFE RIGHT margin (120), NOT the general PAD (80).
+      // PAD is 80px on every ratio, but 9:16 needs a 120px right margin to
+      // clear the TikTok/Reels side UI chrome. Using PAD put the logo 40px
+      // past the safe-area edge.
+      const safeRight=W-Math.round(120*sc);
       const safeBottom=H-Math.round(320*sc);
       // Logo ~20% width — in between the small stamp() marks on regular
       // graphics (~0.10) and the oversized hero (0.34 was too big).
       const logoW=Math.round(W*0.20);
       const logoH=logoImg?Math.round(logoW*(logoImg.naturalHeight/logoImg.naturalWidth)):Math.round(logoW*0.6);
-      const logoX=W-PAD-logoW;  // right-aligned
+      const logoX=safeRight-logoW;  // right-aligned against the safe right edge
       const logoY=safeBottom-logoH-Math.round(30*sc);  // sit just above bottom safe edge
 
       // Subtitle — sits directly below the title block with a fixed 80px
@@ -4089,7 +4098,7 @@ function drawTitleCard(canvas, brand, ratio, progress=1){
       // dragged it way down the frame. Anchoring to the title keeps it
       // visually grouped with the headline, not floating near the logo.
       if(B.titleCardSubtitle){
-        const subMaxW=W-PAD*2;
+        const subMaxW=W-Math.round(240*sc); // leave 120 on each side for 9:16 safe
         const subtitleY=titleY+titleBlockH+Math.round(80*sc);
         ctx.save(); ctx.globalAlpha=TXT*0.82;
         drawText(ctx,B.titleCardSubtitle,W/2,subtitleY,subMaxW,H*0.14,subSz,"400","center","rgba(255,255,255,0.82)",2,FF,1.35);
@@ -4166,17 +4175,15 @@ function drawEndboard(canvas, brand, ratio, progress=1){
   const PAD=Math.round(90*sc);
   const style=B.endboardStyle||"logo";
   // Endboard variants:
-  //   1:1  → "Watch the full video now" — single-line CTA, nothing else
-  //   9:16 → "Watch now" + website URL   — minimal CTA plus brand URL inside safe zone
-  //   16:9 → full branded endboard       — CTA + handles + website
+  //   1:1  → "Watch the full video now" + URL (no handles)
+  //   9:16 → "Watch the full video now" + URL (no handles)
+  //   16:9 → full branded endboard             (CTA + handles + website)
   const isSquare=Math.abs(W-H)<10;
   const isPortrait=H>W*1.2;
   const isMinimal=isSquare||isPortrait;
-  const ctaText=isSquare
+  const ctaText=isMinimal
     ? "Watch the full video now"
-    : isPortrait
-      ? "Watch now"
-      : (B.endboardCTA||"Thanks for watching");
+    : (B.endboardCTA||"Thanks for watching");
   // Handles are 16:9-only (too much clutter for 1:1 or 9:16).
   // Website URL shows on ALL ratios now — it's the brand anchor.
   const showHandles=!isMinimal;
@@ -4225,17 +4232,19 @@ function drawEndboard(canvas, brand, ratio, progress=1){
       ctx.restore();
     }
     // Website URL — all ratios. Positioned so it sits below the CTA AND
-    // inside the safe zone bottom buffer (9:16 safe bottom is 320, well above H*0.76).
+    // inside the safe zone bottom buffer.
     //   1:1   → H*0.72 — breathing room below the hero CTA
-    //   9:16  → H*0.76 — classic footer position, matches original layout
-    //   16:9  → H*0.76 — same classic footer position
-    // On 1:1 the CTA is the hero so the URL gets higher opacity to read as
-    // a standalone brand mark; on 9:16/16:9 it stays as a muted footer line.
+    //   9:16  → H*0.72 — higher than before (was H*0.76, classic landscape spot)
+    //                    so it sits visibly AND at a bigger readable size
+    //   16:9  → H*0.76 — classic footer position
+    // On minimal endboards (1:1, 9:16) the URL IS the secondary hero, so it
+    // gets bumped in size + weight + opacity. Previously 34px was unreadable
+    // on 9:16 mobile viewing.
     if(showWebsite&&B.endboardWebsite){
-      const urlY=isSquare?H*0.72:H*0.76;
-      const urlSz=isSquare?Math.round(42*sc):Math.round(34*sc);
-      ctx.save(); ctx.globalAlpha=TXT*(isSquare?0.75:0.5);
-      drawText(ctx,B.endboardWebsite,W/2,urlY,W-PAD*2,H*0.08,urlSz,isSquare?"600":"400","center",B.colorPrimary+(isSquare?"cc":"aa"),1,FF);
+      const urlY=isMinimal?H*0.72:H*0.76;
+      const urlSz=isMinimal?Math.round(54*sc):Math.round(34*sc);
+      ctx.save(); ctx.globalAlpha=TXT*(isMinimal?0.85:0.5);
+      drawText(ctx,B.endboardWebsite,W/2,urlY,W-PAD*2,H*0.10,urlSz,isMinimal?"700":"400","center",B.colorPrimary+(isMinimal?"ee":"aa"),1,FF);
       ctx.restore();
     }
   }
