@@ -1275,10 +1275,12 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Overlay card — clean label + body, no icon clutter
     const cp=Math.round(28*sc);
     if(isCompact){
-      const bW=W-PAD;
+      // Narrower than full-width so 1:1 / 9:16 match the landscape rhythm:
+      // fixed width, dynamic height, centred with breathing room on both sides.
+      const bW=Math.round(780*sc);
       const bodyM=measureTextHeight(ctx,c.body||"",bW-cp*4,Math.round(40*sc),"500",4,FF);
       const bH=Math.max(Math.round(180*sc),Math.round(36*sc)+Math.round(18*sc)+bodyM.height+cp*2+Math.round(10*sc));
-      const bX=PAD/2,bY=H-bH-Math.round(90*sc);
+      const bX=Math.round((W-bW)/2),bY=H-bH-Math.round(90*sc);
       ctx.save();ctx.translate(0,(1-ENT)*bH*0.7);ctx.globalAlpha=ENT;
       drawCardShadow(ctx,bX,bY,bW,bH,R,18,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       // Accent bar — clipped to card shape
@@ -1328,10 +1330,11 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     // Overlay bubble — text vertically centred
     const cp=Math.round(30*sc);
     if(isCompact){
-      const bW=W-PAD;
+      // Fixed narrower width + dynamic height, centred — matches landscape rhythm.
+      const bW=Math.round(780*sc);
       const bubbleM=measureTextHeight(ctx,c.text||"",bW-cp*2,Math.round(46*sc),"600",3,FFS);
       const bH=Math.max(Math.round(140*sc),bubbleM.height+cp*2);
-      const bX=PAD/2,bY=Math.round(80*sc);
+      const bX=Math.round((W-bW)/2),bY=Math.round(80*sc);
       const sc2=easeBack(ENT);ctx.save();ctx.translate(W/2,bY+bH/2);ctx.scale(sc2,sc2);ctx.translate(-W/2,-(bY+bH/2));ctx.globalAlpha=ENT;
       drawCardShadow(ctx,bX,bY,bW,bH,R,14,"rgba(0,0,0,0.12)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
       ctx.fillStyle=CW;ctx.beginPath();ctx.moveTo(W/2-24*sc,bY+bH);ctx.lineTo(W/2,bY+bH+40*sc);ctx.lineTo(W/2+24*sc,bY+bH);ctx.closePath();ctx.fill();
@@ -1371,8 +1374,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.restore();
   }
   else if(t==="timeline"){
-    // Warm cream card with teal elements
-    const bW=Math.round(Math.min(1220,W-160)*sc),bH=Math.round(220*sc),bX=(W-bW)/2,bY=H-bH-80*sc;
+    // Warm cream card with teal elements.
+    // Compact (1:1, 9:16) uses a fixed narrower card; landscape keeps its
+    // wider min(1220, W-160) rhythm.
+    const bW=isCompact?Math.round(820*sc):Math.round(Math.min(1220,W-160)*sc),bH=Math.round(220*sc),bX=Math.round((W-bW)/2),bY=H-bH-80*sc;
     ctx.save();ctx.globalAlpha=ENT;ctx.translate(0,(1-ENT)*50*sc);
     drawCardShadow(ctx,bX,bY,bW,bH,R,15,"rgba(0,0,0,0.15)");rrPath(ctx,bX,bY,bW,bH,R);ctx.fillStyle=CW;ctx.fill();
     DT(c.label||"TIMELINE",bX+bW/2,bY+46*sc,bW-80*sc,52*sc,Math.round(36*sc),"600","center",B.colorPrimary+"88",1,FFS);
@@ -1396,14 +1401,16 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     const accentCol=isLandlord?B.colorPrimary:B.colorAccent;
     const labelText=isLandlord?"LANDLORDS ASK":"TENANTS ASK";
     const cp=Math.round(28*sc);
-    const bW=isCompact?W-PAD*1.5:Math.round(620*sc);
+    // Compact (1:1, 9:16) uses a narrower fixed width centred in the frame;
+    // landscape splits left/right to contrast the two perspectives side-by-side.
+    const bW=isCompact?Math.round(780*sc):Math.round(620*sc);
     // Dynamic height: label + separator + text content
     const labelH=Math.round(16*sc)+Math.round(12*sc); // label + sep gap
     const sepH=Math.round(18*sc);
     const textM=measureTextHeight(ctx,c.text||"",bW-cp*2-Math.round(14*sc),Math.round(36*sc),"600",4,FFS);
     const bH=Math.max(Math.round(160*sc),cp+labelH+sepH+textM.height+cp);
-    // Position: landlord=right, tenant=left
-    const bX=isLandlord?(isCompact?PAD*0.75:W-bW-Math.round(80*sc)):(isCompact?PAD*0.75:Math.round(80*sc));
+    // Position: landscape keeps landlord right / tenant left; compact centres both.
+    const bX=isCompact?Math.round((W-bW)/2):(isLandlord?W-bW-Math.round(80*sc):Math.round(80*sc));
     const bY=isCompact?(H-bH-Math.round(100*sc)):(H/2-bH/2);
     // Slide in from the relevant side
     const slideDir=isLandlord?1:-1;
@@ -1434,9 +1441,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
   else if(t==="subscribe"){
     // Like & Subscribe overlay — compact branded card
     const cp=Math.round(28*sc);
-    const bW=isCompact?W-PAD*1.5:Math.round(540*sc);
+    // Compact uses narrower fixed width centred in frame (matches landscape rhythm).
+    const bW=isCompact?Math.round(780*sc):Math.round(540*sc);
     const bH=Math.round(isCompact?180*sc:160*sc);
-    const bX=isCompact?(W-bW)/2:W-bW-Math.round(80*sc);
+    const bX=isCompact?Math.round((W-bW)/2):W-bW-Math.round(80*sc);
     const bY=isCompact?H-bH-Math.round(100*sc):H-bH-Math.round(80*sc);
     // Scale-bounce entrance
     const sc2=easeBack(ENT);
@@ -1462,11 +1470,13 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.restore();
   }
   else if(t==="lower_third"){
-    // News-style name strap — bottom-left, slim card, teal accent bar
+    // News-style name strap — bottom-left, slim card, teal accent bar.
+    // Compact uses a narrower fixed width (matches landscape rhythm), still
+    // left-aligned because that's the news-strap convention.
     const cp=Math.round(20*sc);
-    const bW=isCompact?W-PAD*1.5:Math.round(520*sc);
+    const bW=isCompact?Math.round(780*sc):Math.round(520*sc);
     const bH=Math.round(isCompact?120*sc:100*sc);
-    const bX=isCompact?PAD*0.75:Math.round(60*sc);
+    const bX=isCompact?safeX:Math.round(60*sc);
     const bY=H-bH-Math.round(isCompact?80*sc:60*sc);
     // Slide in from left
     ctx.save();ctx.translate(-(1-ENT)*bW*0.6,0);ctx.globalAlpha=ENT;
@@ -1486,9 +1496,10 @@ function drawGraphic(canvas,g,brand,ratio,progress=1){
     ctx.restore();
   }
   else if(t==="advice"){
-    // Advice overlay — warm cream card, centered bottom
+    // Advice overlay — warm cream card, centered bottom.
+    // Compact uses narrower fixed width centred (matches landscape rhythm).
     const cp=Math.round(28*sc);
-    const bW=isCompact?W-PAD*1.5:Math.round(620*sc);
+    const bW=isCompact?Math.round(780*sc):Math.round(620*sc);
     // Dynamic height: label + separator + text
     const advLabelH=Math.round(16*sc)+Math.round(28*sc); // "ADVICE" + sep
     const advTextM=measureTextHeight(ctx,c.text||"",bW-cp*2,Math.round(36*sc),"600",4,FFS);
