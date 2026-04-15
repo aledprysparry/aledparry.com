@@ -54,14 +54,14 @@ export function roundRect(
 }
 
 // ── Safe zones for social platforms (portrait 9:16 base) ──
+// CPS Homes spec for 9:16 (1080×1920): top 250, bottom 320, left/right 120
 export function safeZone(W: number, H: number) {
   const ar = aspect(W, H);
   if (ar === "portrait") {
-    // TikTok/Reels worst-case paid ad margins (scaled from 1080x1920 base)
     const scale = W / 1080;
-    const top = Math.round(220 * scale);
-    const bottom = Math.round(420 * scale);
-    const side = Math.round(40 * scale);
+    const top = Math.round(250 * scale);
+    const bottom = Math.round(320 * scale);
+    const side = Math.round(120 * scale);
     return {
       top, bottom, left: side, right: side,
       cx: W / 2,

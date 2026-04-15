@@ -367,8 +367,10 @@ function drawStamp(ctx, W, H, opts = {}) {
   const scale = opts.scale ?? 1;
   const logoW = W * baseScale * scale;
   const logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
-  const pad = W * 0.05; // 5% from edges — comfortable breathing room
-  const bottomPad = ar === "portrait" ? Math.round(420 * (W / 1080)) + pad : H * 0.05;
+  // Side pad must clear the 120px side safe zone in portrait (CPS Homes 9:16 spec)
+  const pad = ar === "portrait" ? Math.round(120 * (W / 1080)) : W * 0.05;
+  // Portrait bottomPad must clear the 320px bottom safe zone (CPS Homes spec)
+  const bottomPad = ar === "portrait" ? Math.round(320 * (W / 1080)) + W * 0.03 : H * 0.05;
   // opts.centered → horizontal-centre at the bottom (used on Intro Title + Endboard)
   const x = opts.centered ? (W - logoW) / 2 : W - logoW - pad;
   // opts.liftPx → lift the logo up by N pixels (used on Intro to nudge above other content)
@@ -394,16 +396,19 @@ function sz(W, H, frac) { return Math.round(Math.min(W, H) * frac); }
 // Returns pixel values scaled to the actual canvas size.
 function safeZone(W, H) {
   if (H <= W) return { top: 0, bottom: 0, left: 0, right: 0, cx: W / 2, contentTop: 0, contentBottom: H };
-  // Portrait: scale from 1080x1920 reference
+  // Portrait 9:16 safe zone — reference: 1080×1920
+  // Values from CPS Homes safe-zone spec:
+  //   top 250, bottom 320, left 120, right 120
+  // (was 220/420/60/120 — bottom shrunk, top + sides tightened)
   const scale = W / 1080;
   return {
-    top:    Math.round(220 * scale),   // paid-safe: 220px on 1080w
-    bottom: Math.round(420 * scale),   // caption/music/username
-    left:   Math.round(60 * scale),    // left margin
-    right:  Math.round(120 * scale),   // right margin (TikTok action buttons)
-    cx: W / 2,                         // center x
-    contentTop:    Math.round(220 * scale),
-    contentBottom: H - Math.round(420 * scale),
+    top:    Math.round(250 * scale),
+    bottom: Math.round(320 * scale),
+    left:   Math.round(120 * scale),
+    right:  Math.round(120 * scale),
+    cx: W / 2,
+    contentTop:    Math.round(250 * scale),
+    contentBottom: H - Math.round(320 * scale),
   };
 }
 
@@ -1864,13 +1869,14 @@ function drawProfileLowerThird(ctx, W, H, S, progress, agentIdx) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
+  const safe = safeZone(W, H);
   const name = EPISODE.agents[agentIdx] || "Agent";
   const rd = EPISODE.rounds ? EPISODE.rounds[(S.propRound || 1) - 1] : null;
   const role = rd?.propertyAgent === name ? "Property Choice" : "Guessing";
 
-  // Position: bottom-left
-  const padL = W * 0.05;
-  const padB = ar === "portrait" ? H * 0.25 : H * 0.12;
+  // Position: bottom-left. In portrait clear the 120px left + 320px bottom safe zones.
+  const padL = ar === "portrait" ? safe.left : W * 0.05;
+  const padB = ar === "portrait" ? safe.bottom + H * 0.02 : H * 0.12;
   const barH = H * (ar === "portrait" ? 0.06 : 0.08);
   const barY = H - padB - barH;
 
@@ -2148,8 +2154,8 @@ function drawOverlayCSSS(ctx, W, H, S, progress) {
   };
 
   let m = measure();
-  // Auto-fit: keep line inside 85% of canvas width
-  const maxW = W * 0.85;
+  // Auto-fit: keep line inside 78% of canvas width (matches 9:16 safe zone: 120px side margins on 1080w)
+  const maxW = W * 0.78;
   if (m.total > maxW) {
     const fit = maxW / m.total;
     topSz *= fit;
