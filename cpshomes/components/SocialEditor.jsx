@@ -3046,13 +3046,10 @@ function drawPoster(canvas,poster,brand,ratio,progress=1){
     const safeTop=ratio==="9:16"?220:60;
     const safeBot=ratio==="9:16"?420:60;
     const contentH=H-safeTop-safeBot;
-    let y=safeTop+contentH*0.15;
-
-    // Tone badge
-    const toneLabel=POSTER_TONES.find(t=>t.id===tone);
-    ctx.font=`600 ${Math.round(22*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle="rgba(255,255,255,0.4)";ctx.textAlign="center";ctx.textBaseline="top";
-    ctx.fillText((toneLabel?.icon||"")+" "+(toneLabel?.label||tone).toUpperCase(),W/2,y);
-    y+=Math.round(50*sc);
+    // Tone is editor-only metadata (Shocking / Relatable / Informative
+    // just labels the variation for the admin when choosing between
+    // drafts). Don't render it on the actual poster creative.
+    let y=safeTop+contentH*0.18;
 
     // Hook — big serif
     ctx.font=`800 ${Math.round(72*sc)}px "${FFS}","serif"`;ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="top";
@@ -3084,15 +3081,11 @@ function drawPoster(canvas,poster,brand,ratio,progress=1){
     ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(ctaText,W/2,y+ctaH/2);
     ctx.restore();
   } else {
-    // 16:9 / 1:1 — left-aligned editorial
-    let y=H*0.18;
+    // 16:9 / 1:1 — left-aligned editorial.
+    // Tone (Shocking/Relatable/Informative) is editor-only metadata and
+    // deliberately NOT rendered on the creative.
+    let y=H*0.22;
     const textW=isPortrait?W-PAD*2:W*0.6;
-
-    // Tone badge
-    const toneLabel=POSTER_TONES.find(t=>t.id===tone);
-    ctx.font=`600 ${Math.round(20*sc)}px "${FF}","Arial",sans-serif`;ctx.fillStyle="rgba(255,255,255,0.4)";ctx.textAlign="left";ctx.textBaseline="top";
-    ctx.fillText((toneLabel?.icon||"")+" "+(toneLabel?.label||tone).toUpperCase(),PAD,y);
-    y+=Math.round(44*sc);
 
     // Hook — big serif
     ctx.font=`800 ${Math.round(80*sc)}px "${FFS}","serif"`;ctx.fillStyle="#fff";ctx.textAlign="left";ctx.textBaseline="top";
