@@ -1154,7 +1154,7 @@ function drawOptions(ctx, W, H, S, progress) {
   ctx.shadowColor = GAME.gold;
   ctx.shadowBlur = 30;
   const qScale = 0.8 + 0.2 * easeOutBack(questionP);
-  ctx.font = `800 ${sz(W, H, 0.05) * qScale}px 'Lora', serif`;
+  ctx.font = `800 ${sz(W, H, ar !== "landscape" ? 0.075 : 0.055) * qScale}px 'Lora', serif`;
   ctx.fillStyle = GAME.gold;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
