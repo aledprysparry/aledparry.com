@@ -1252,6 +1252,16 @@ function drawLockIn(ctx, W, H, S, progress) {
   const letterColor = hasAnswer ? (colors[letter] || GAME.gold) : GAME.gold;
   const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.45;
 
+  // Portrait uses a smaller letter (0.32) so it doesn't collide with the
+  // agent label above. Landscape keeps the big 0.30 letter.
+  const letterFrac = ar !== "landscape" ? 0.32 : 0.30;
+  // Bigger vertical gaps for portrait so SIAN and LOCKS IN sit clearly
+  // above the letter with breathing room.
+  const nameOffset  = ar !== "landscape" ? 0.28 : 0.20;
+  const labelOffset = ar !== "landscape" ? 0.20 : 0.13;
+  const letterOffset = ar !== "landscape" ? 0.06 : 0.05;
+  const underlineOffset = ar !== "landscape" ? 0.26 : 0.18;
+
   // Large DRAMATIC glow behind letter
   ctx.save();
   ctx.globalAlpha = 0.25;
@@ -1269,25 +1279,25 @@ function drawLockIn(ctx, W, H, S, progress) {
   ctx.globalAlpha = nameP;
   ctx.shadowColor = "rgba(0,0,0,0.5)";
   ctx.shadowBlur = 10;
-  ctx.font = `800 ${sz(W, H, 0.05)}px 'DM Sans', sans-serif`;
+  ctx.font = `800 ${sz(W, H, ar !== "landscape" ? 0.06 : 0.05)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = "#fff";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText((S.lockAgent || "Agent").toUpperCase(), W / 2, centerY - sz(W, H, 0.20));
+  ctx.fillText((S.lockAgent || "Agent").toUpperCase(), W / 2, centerY - sz(W, H, nameOffset));
 
   // Label — changes based on whether answer is selected
   ctx.shadowColor = GAME.gold;
   ctx.shadowBlur = 12;
-  ctx.font = `700 ${sz(W, H, 0.03)}px 'DM Sans', sans-serif`;
+  ctx.font = `800 ${sz(W, H, ar !== "landscape" ? 0.038 : 0.03)}px 'DM Sans', sans-serif`;
   ctx.fillStyle = GAME.gold;
-  ctx.fillText(hasAnswer ? "LOCKS IN" : "IS THINKING\u2026", W / 2, centerY - sz(W, H, 0.13));
+  ctx.fillText(hasAnswer ? "LOCKS IN" : "IS THINKING\u2026", W / 2, centerY - sz(W, H, labelOffset));
   ctx.restore();
 
   if (hasAnswer) {
     // Giant letter — WHITE with coloured glow, scale in with elastic
     const letterLP = Math.min(1, Math.max(0, (p - 0.25) / 0.5));
     const letterScale = easeOutBack(letterLP);
-    const letterSz = sz(W, H, ar !== "landscape" ? 0.38 : 0.30) * letterScale;
+    const letterSz = sz(W, H, letterFrac) * letterScale;
     if (letterLP > 0) {
       ctx.save();
       ctx.globalAlpha = Math.min(1, letterLP * 2);
@@ -1297,25 +1307,25 @@ function drawLockIn(ctx, W, H, S, progress) {
       ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(letter, W / 2, centerY + sz(W, H, 0.05));
+      ctx.fillText(letter, W / 2, centerY + sz(W, H, letterOffset));
       ctx.restore();
     }
   } else {
     // "?" placeholder — subtle, waiting for answer
     ctx.save();
     ctx.globalAlpha = 0.3;
-    ctx.font = `800 ${sz(W, H, ar !== "landscape" ? 0.30 : 0.22)}px 'DM Sans', sans-serif`;
+    ctx.font = `800 ${sz(W, H, letterFrac * 0.8)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("?", W / 2, centerY + sz(W, H, 0.05));
+    ctx.fillText("?", W / 2, centerY + sz(W, H, letterOffset));
     ctx.restore();
   }
 
   // Salmon underline
   const ulW = W * 0.15;
   ctx.fillStyle = GAME.gold;
-  roundRect(ctx, W / 2 - ulW / 2, centerY + sz(W, H, 0.18), ulW, 5, 3);
+  roundRect(ctx, W / 2 - ulW / 2, centerY + sz(W, H, underlineOffset), ulW, 5, 3);
   ctx.fill();
 
   drawStamp(ctx, W, H);
@@ -1520,13 +1530,14 @@ function drawReveal(ctx, W, H, S, progress) {
     }
   }
 
-  // Disclaimer — bumped bigger + bolder for social, positioned inside the
-  // 9:16 safe zone (above the bottom 320px strip) and clear of the centered logo.
+  // Disclaimer — positioned ABOVE the centered logo so they don't overlap.
   {
     const safeR = safeZone(W, H);
     const disclaimY = ar === "portrait"
-      ? safeR.contentBottom - sz(W, H, 0.015)   // just above the 320px bottom safe area
-      : H - sz(W, H, 0.03);
+      ? H * 0.74   // well above the logo area in portrait
+      : ar === "square"
+        ? H * 0.78  // above logo in square
+        : H * 0.88; // above logo in landscape
     ctx.font = `600 ${sz(W, H, ar !== "landscape" ? 0.022 : 0.016)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.45)";
     ctx.textAlign = "center";
