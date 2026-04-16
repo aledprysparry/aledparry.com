@@ -776,16 +776,17 @@ function drawProperty(ctx, W, H, S, progress) {
   if (rd?.addedDate) specParts.push(`Added ${rd.addedDate}`);
   const specText = specParts.join("  \u00b7  ");
 
+  // ── Info bar layout — no game logo, generous padding, text fills the bar ──
   if (ar === "portrait") {
-    const cardH = H * 0.12;
-    const pad = Math.max(W * 0.06, safe.left);
-    const cardY = safe.contentBottom - cardH - W * 0.04;
+    const cardH = H * 0.13;
+    const pad = Math.max(W * 0.08, safe.left + W * 0.02);
+    const cardY = safe.contentBottom - cardH - W * 0.05;
 
     ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
     roundRect(ctx, pad, cardY, W - pad * 2, cardH, BRAND.cornerRadius);
     ctx.fill();
 
-    // Round badge
+    // Round badge — centred above the card
     const bSize = W * 0.10;
     const bx = W / 2;
     const by = cardY - bSize * 0.6;
@@ -799,37 +800,37 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.textBaseline = "middle";
     ctx.fillText(`R${S.propRound || 1}`, bx, by);
 
-    // Address — larger for readability
-    ctx.font = `700 ${sz(W, H, 0.035)}px 'DM Sans', sans-serif`;
+    // Address — centred, bold, full card width available
+    const maxAddrW = W - pad * 2 - W * 0.08;
+    ctx.font = `700 ${sz(W, H, 0.038)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const maxAddrW = W - pad * 4;
-    ctx.fillText(S.propAddress ? S.propAddress.split(",")[0] : "", W / 2, cardY + cardH * 0.28, maxAddrW);
+    ctx.fillText(S.propAddress ? S.propAddress.split(",")[0] : "", W / 2, cardY + cardH * 0.30, maxAddrW);
 
     // Location
-    ctx.font = `500 ${sz(W, H, 0.025)}px 'DM Sans', sans-serif`;
+    ctx.font = `500 ${sz(W, H, 0.026)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = GAME.goldLight;
-    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.52);
+    ctx.fillText(S.optionLocation || "", W / 2, cardY + cardH * 0.54);
 
     // Specs
     if (specText) {
-      ctx.font = `500 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
+      ctx.font = `500 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
       ctx.fillStyle = "rgba(255,255,255,0.5)";
-      ctx.fillText(specText, W / 2, cardY + cardH * 0.75, maxAddrW);
+      ctx.fillText(specText, W / 2, cardY + cardH * 0.76, maxAddrW);
     }
   } else if (ar === "square") {
-    // Square: taller bar with address on top line, specs below
-    const barH = H * 0.12;
-    const pad = W * 0.04;
+    // Square: two-line bar, no game logo
+    const barH = H * 0.14;
+    const pad = W * 0.06;
     const barY = H - barH - pad;
 
     ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
     roundRect(ctx, pad, barY, W - pad * 2, barH, BRAND.cornerRadius);
     ctx.fill();
 
-    // Round badge — centred vertically in bar
-    const bSize = W * 0.05;
+    // Round badge — left side
+    const bSize = W * 0.055;
     const bx = pad + bSize + pad * 0.3;
     const by = barY + barH * 0.5;
     ctx.fillStyle = GAME.gold;
@@ -842,47 +843,36 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.textBaseline = "middle";
     ctx.fillText(`R${S.propRound || 1}`, bx, by);
 
-    // Address — larger, top line
+    // Address — top line, full width (no logo eating right side)
     const ax = bx + bSize;
-    const maxTextW = W - ax - pad * 2 - (EPISODE.logoImage ? W * 0.15 : 0);
-    ctx.font = `700 ${sz(W, H, 0.028)}px 'DM Sans', sans-serif`;
+    const maxTextW = W - ax - pad * 2;
+    ctx.font = `700 ${sz(W, H, 0.032)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     const addrShort = S.propAddress ? S.propAddress.split(",")[0] : "";
     ctx.fillText(addrShort, ax, barY + barH * 0.35, maxTextW);
 
-    // Specs — smaller, bottom line
+    // Specs — bottom line
     const specLine = [S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
     if (specLine) {
-      ctx.font = `500 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
+      ctx.font = `500 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
       ctx.fillStyle = GAME.goldLight;
       ctx.fillText(specLine, ax, barY + barH * 0.68, maxTextW);
     }
-
-    // Show logo on right side
-    const showLogoSrc = EPISODE.logoImage;
-    const showLogoImg = showLogoSrc ? getCachedImage(showLogoSrc) : null;
-    if (showLogoImg && showLogoImg.complete && showLogoImg.naturalWidth > 0) {
-      const maxLH = barH * 0.6;
-      const lScale = maxLH / showLogoImg.naturalHeight;
-      const lw = showLogoImg.naturalWidth * lScale;
-      const lh = showLogoImg.naturalHeight * lScale;
-      ctx.drawImage(showLogoImg, W - pad - lw - pad * 0.5, barY + (barH - lh) / 2, lw, lh);
-    }
   } else {
-    // Landscape: compact single-line bar
-    const barH = H * 0.08;
-    const pad = W * 0.03;
+    // Landscape: two-line bar, no game logo, more padding
+    const barH = H * 0.10;
+    const pad = W * 0.05;
     const barY = H - barH - pad;
 
     ctx.fillStyle = "rgba(30, 58, 64, 0.92)";
     roundRect(ctx, pad, barY, W - pad * 2, barH, BRAND.cornerRadius);
     ctx.fill();
 
-    // Round badge
-    const bSize = Math.min(W, H) * 0.04;
-    const bx = pad + bSize + pad * 0.3;
+    // Round badge — left side
+    const bSize = Math.min(W, H) * 0.045;
+    const bx = pad + bSize + pad * 0.25;
     const by = barY + barH / 2;
     ctx.fillStyle = GAME.gold;
     ctx.beginPath();
@@ -894,26 +884,22 @@ function drawProperty(ctx, W, H, S, progress) {
     ctx.textBaseline = "middle";
     ctx.fillText(`R${S.propRound || 1}`, bx, by);
 
-    // Address + specs — single line, compact
-    const ax = bx + bSize;
-    ctx.font = `700 ${sz(W, H, 0.020)}px 'DM Sans', sans-serif`;
+    // Address — top line, bigger text, full bar width
+    const ax = bx + bSize + pad * 0.3;
+    const maxTextW = W - ax - pad * 2;
+    const addrShort = S.propAddress ? S.propAddress.split(",")[0] : "";
+    ctx.font = `700 ${sz(W, H, 0.024)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = BRAND.colorText;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    const addrShort = S.propAddress ? S.propAddress.split(",")[0] : "";
-    const fullInfo = [addrShort, S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
-    const maxTextW = W - ax - pad * 2 - (EPISODE.logoImage ? W * 0.15 : 0);
-    ctx.fillText(fullInfo, ax, by, maxTextW);
+    ctx.fillText(addrShort, ax, barY + barH * 0.35, maxTextW);
 
-    // Show logo on right side (if uploaded)
-    const showLogoSrc = EPISODE.logoImage;
-    const showLogoImg = showLogoSrc ? getCachedImage(showLogoSrc) : null;
-    if (showLogoImg && showLogoImg.complete && showLogoImg.naturalWidth > 0) {
-      const maxLH = barH * 0.7;
-      const lScale = maxLH / showLogoImg.naturalHeight;
-      const lw = showLogoImg.naturalWidth * lScale;
-      const lh = showLogoImg.naturalHeight * lScale;
-      ctx.drawImage(showLogoImg, W - pad - lw - pad * 0.5, barY + (barH - lh) / 2, lw, lh);
+    // Specs — bottom line
+    const specLine = [S.optionLocation, specText].filter(Boolean).join("  \u00b7  ");
+    if (specLine) {
+      ctx.font = `500 ${sz(W, H, 0.018)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = GAME.goldLight;
+      ctx.fillText(specLine, ax, barY + barH * 0.68, maxTextW);
     }
   }
   ctx.restore(); // barP animation
