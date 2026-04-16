@@ -745,12 +745,20 @@ function drawProperty(ctx, W, H, S, progress) {
   if (numPhotos <= 1) {
     drawPhoto(photos[0] || photos[rd?.heroPhotoIndex || 0], p, 1, 0);
   } else {
+    // Crossfade fix: always draw the BASE photo at full alpha, then layer
+    // the incoming photo on top at rising alpha. The old approach drew both
+    // at partial alpha which caused a brightness dip (canvas compositing
+    // is multiplicative — 0.6 + 0.4 doesn't equal 1.0 on screen).
     if (photoIdx > 0 && photoLocalP < crossfadeDuration) {
-      const fadeOut = 1 - easeOutExpo(photoLocalP / crossfadeDuration);
-      drawPhoto(photos[photoIdx - 1], 1, fadeOut, photoIdx - 1);
+      // Base: outgoing photo stays at full alpha (no dip)
+      drawPhoto(photos[photoIdx - 1], 1, 1, photoIdx - 1);
+      // Incoming dissolves in on top, progressively covering the base
+      const fadeIn = easeOutExpo(photoLocalP / crossfadeDuration);
+      drawPhoto(photos[photoIdx], photoLocalP, fadeIn, photoIdx);
+    } else {
+      // Outside crossfade window: current photo at full alpha
+      drawPhoto(photos[photoIdx], photoLocalP, 1, photoIdx);
     }
-    const fadeIn = photoIdx === 0 ? 1 : (photoLocalP < crossfadeDuration ? easeOutExpo(photoLocalP / crossfadeDuration) : 1);
-    drawPhoto(photos[photoIdx], photoLocalP, fadeIn, photoIdx);
   }
   // Darken bottom for readability
   const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
