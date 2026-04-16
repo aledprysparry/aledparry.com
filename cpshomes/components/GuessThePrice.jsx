@@ -3915,18 +3915,24 @@ export default function GuessThePrice({ displayMode = false }) {
     const duration = (activeAsset === "timer" ? (S.timerDuration || 3) : activeAsset === "property" ? (S.photoDuration || 5) * Math.max(1, (episode.rounds[currentRound]?.photos?.length || 1)) : activeAsset === "intro" ? 6 : 3) * 1000;
     const slug = ratioSlug(ratio);
     const movName = `gtp_${activeAsset}_r${S.propRound}_${slug}.mov`;
-    setExportStatus("Recording…");
-    const { recordAsset, webmToMov } = await loadVideoExport();
-    const webm = await recordAsset(drawFn, r.W, r.H, S, duration);
-    setExportStatus("Converting to MOV…");
-    const mov = await webmToMov(webm, movName);
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(mov);
-    a.download = movName;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    setExportStatus("Done \u2713");
-    setTimeout(() => setExportStatus(""), 2000);
+    _showCpsLogo = S.showCpsLogo !== false; // sync logo toggle for export
+    try {
+      setExportStatus("Recording frames…");
+      const { recordAsset, webmToMov } = await loadVideoExport();
+      const seq = await recordAsset(drawFn, r.W, r.H, S, duration);
+      setExportStatus("Building MOV…");
+      const mov = await webmToMov(seq, movName);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(mov);
+      a.download = movName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setExportStatus("Done \u2713");
+    } catch (err) {
+      console.error("MOV export failed:", err);
+      setExportStatus(`Export failed: ${err?.message || "unknown error"}`);
+    }
+    setTimeout(() => setExportStatus(""), 4000);
   }, [activeAsset, S, ratio, exportPNG]);
 
   // ── Batch export round ──
