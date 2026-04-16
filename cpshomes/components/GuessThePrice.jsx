@@ -325,6 +325,7 @@ const SOCIAL_ASSETS = [
   { id: "overlay_howdidyoudo", label: "How Did You Do?",        icon: "\ud83e\udd14", animated: true },
   { id: "overlay_guessbelow", label: "Guess Below",            icon: "\ud83d\udcac", animated: true },
   { id: "overlay_guessreveal",label: "Guess Before Reveal",    icon: "\u23f0", animated: true },
+  { id: "overlay_cardiff",   label: "Cardiff Edition",        icon: "\ud83c\udff4", animated: true },
   { id: "overlay_csss",        label: "Comment Share Subscribe",icon: "\ud83d\udc4d", animated: true },
 ];
 ALL_ASSETS.push(...SOCIAL_ASSETS);
@@ -2786,6 +2787,64 @@ function drawOverlayGuessReveal(ctx, W, H, S, progress) {
   }
 }
 
+// "Guess the Price: Cardiff Edition" — transparent social brand overlay
+function drawOverlayCardiff(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar !== "landscape" ? H * 0.43 : H * 0.46;
+
+  const line1P = easeOutBack(Math.min(1, p / 0.40));
+  const line2P = easeOutExpo(Math.min(1, Math.max(0, (p - 0.30) / 0.40)));
+
+  // "Guess the Price:" — big gold Lora with white halo
+  if (line1P > 0) {
+    const topSz = sz(W, H, ar !== "landscape" ? 0.10 : 0.085) * (0.8 + 0.2 * line1P);
+    const topY = centerY - sz(W, H, ar !== "landscape" ? 0.05 : 0.04);
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, line1P) * 0.9;
+    const glowR = topSz * 2.6;
+    const glow = ctx.createRadialGradient(W / 2, topY, 0, W / 2, topY, glowR);
+    glow.addColorStop(0,    "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3,  "rgba(255, 255, 255, 0.45)");
+    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
+    glow.addColorStop(1,    "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(W / 2 - glowR, topY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = line1P;
+    ctx.font = `800 ${Math.round(topSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = topSz * 0.08;
+    ctx.fillText("Guess the Price:", W / 2, topY);
+    ctx.restore();
+  }
+
+  // "Cardiff Edition" — white, fades + slides up
+  if (line2P > 0) {
+    const subSz = sz(W, H, ar !== "landscape" ? 0.075 : 0.06);
+    const subY = centerY + sz(W, H, ar !== "landscape" ? 0.06 : 0.05);
+    const yOff = (1 - line2P) * sz(W, H, 0.015);
+
+    ctx.save();
+    ctx.globalAlpha = line2P;
+    ctx.font = `700 ${Math.round(subSz)}px 'Lora', serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = subSz * 0.12;
+    ctx.fillText("Cardiff Edition", W / 2, subY + yOff);
+    ctx.restore();
+  }
+}
+
 // "Comment, Share & Subscribe" — transparent social CTA with staggered entrance
 // Phase 1 (0-0.25): "Comment"   fades + slides up
 // Phase 2 (0.15-0.4): "Share"   fades + slides up
@@ -2927,6 +2986,7 @@ const DRAW_FNS = {
   overlay_howdidyoudo: drawOverlayHowDidYouDo,
   overlay_guessbelow: drawOverlayGuessBelow,
   overlay_guessreveal: drawOverlayGuessReveal,
+  overlay_cardiff: drawOverlayCardiff,
   overlay_csss: drawOverlayCSSS,
 };
 
