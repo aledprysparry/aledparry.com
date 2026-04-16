@@ -310,6 +310,7 @@ const ASSETS = [
   { id: "reveal",    label: "Price Reveal",    icon: "\ud83c\udf89", animated: true },
   { id: "scoreboard",label: "Scoreboard",      icon: "\ud83c\udfc6", animated: true },
   { id: "endboard",  label: "Endboard",        icon: "\ud83c\udfac", animated: true },
+  { id: "roles",     label: "Round Roles",     icon: "\ud83c\udfad", animated: true },
 ];
 
 const ALL_ASSETS = [...ASSETS]; // will include SOCIAL_ASSETS after definition
@@ -325,7 +326,6 @@ const SOCIAL_ASSETS = [
   { id: "overlay_howdidyoudo", label: "How Did You Do?",        icon: "\ud83e\udd14", animated: true },
   { id: "overlay_guessbelow", label: "Guess Below",            icon: "\ud83d\udcac", animated: true },
   { id: "overlay_guessreveal",label: "Guess Before Reveal",    icon: "\u23f0", animated: true },
-  { id: "overlay_roles",     label: "Round Roles",             icon: "\ud83c\udfad", animated: true },
   { id: "overlay_cardiff",   label: "Cardiff Edition",        icon: "\ud83c\udff4", animated: true },
   { id: "overlay_csss",        label: "Comment Share Subscribe",icon: "\ud83d\udc4d", animated: true },
 ];
@@ -2810,12 +2810,13 @@ function drawOverlayGuessReveal(ctx, W, H, S, progress) {
   }
 }
 
-// Round Roles — transparent overlay showing who's guessing and whose property
+// Round Roles — branded show asset showing who's guessing and whose property
 // choice it is. Reads guesser + propertyAgent from EPISODE.rounds[propRound-1].
 // Displays both agent headshots with role labels underneath.
-function drawOverlayRoles(ctx, W, H, S, progress) {
+function drawRoles(ctx, W, H, S, progress) {
   const p = progress ?? 1;
-  ctx.clearRect(0, 0, W, H);
+  drawBg(ctx, W, H);
+  drawAccentBars(ctx, W, H);
   const ar = aspect(W, H);
   const centerY = ar !== "landscape" ? H * 0.42 : H * 0.45;
 
@@ -2927,6 +2928,8 @@ function drawOverlayRoles(ctx, W, H, S, progress) {
 
   drawRoleCard(W / 2 - spread, centerY, guesser, "GUESSING", GAME.gold, leftP, guesserIdx >= 0 ? guesserIdx : 0);
   drawRoleCard(W / 2 + spread, centerY, propAgent, "PROPERTY CHOICE", "rgba(255,255,255,0.25)", rightP, propIdx >= 0 ? propIdx : 1);
+
+  drawStamp(ctx, W, H);
 }
 
 // "Guess the Price: Cardiff Edition" — transparent social brand overlay
@@ -3128,7 +3131,7 @@ const DRAW_FNS = {
   overlay_howdidyoudo: drawOverlayHowDidYouDo,
   overlay_guessbelow: drawOverlayGuessBelow,
   overlay_guessreveal: drawOverlayGuessReveal,
-  overlay_roles: drawOverlayRoles,
+  roles: drawRoles,
   overlay_cardiff: drawOverlayCardiff,
   overlay_csss: drawOverlayCSSS,
 };
