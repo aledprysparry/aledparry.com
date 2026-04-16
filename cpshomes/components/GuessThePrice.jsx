@@ -2520,51 +2520,52 @@ function drawOverlayPlayAlong(ctx, W, H, S, progress) {
   const centerY = ar !== "landscape" ? H * 0.42 : H * 0.45;
 
   // Phase 1 (0-0.4): "Guess the price time..." fades in
-  // Phase 2 (0.4-0.7): "How much?" scales in with bounce + radial glow
+  // Phase 2 (0.4-0.7): "How much?" scales in with bounce + white halo
   // Phase 3 (0.7-1): both hold
 
   const line1P = easeOutExpo(Math.min(1, p / 0.4));
-  const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.4) / 0.3)));
+  const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.35) / 0.35)));
 
-  // "Guess the price time..."
+  // "Guess the price time..." — matched to the other CTA overlays
   if (line1P > 0) {
+    const topSz = sz(W, H, ar !== "landscape" ? 0.085 : 0.07);
     ctx.save();
     ctx.globalAlpha = line1P;
-    ctx.font = `600 ${sz(W, H, 0.035)}px 'DM Sans', sans-serif`;
+    ctx.font = `700 ${Math.round(topSz)}px 'Lora', serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("Guess the price time...", W / 2, centerY - sz(W, H, 0.05));
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = topSz * 0.12;
+    ctx.fillText("Guess the price time...", W / 2, centerY - sz(W, H, 0.06));
     ctx.restore();
   }
 
-  // "How much?" — glow rendered as radial gradient (shadowBlur doesn't export via MediaRecorder)
+  // "How much?" — gold, bounces in with white halo (matched to other CTAs)
   if (line2P > 0) {
-    const howSz = sz(W, H, 0.07) * (0.8 + 0.2 * line2P);
-    const howY = centerY + sz(W, H, 0.05);
+    const bigSz = sz(W, H, ar !== "landscape" ? 0.115 : 0.095) * (0.75 + 0.25 * line2P);
+    const bigY = centerY + sz(W, H, 0.065);
 
-    // Radial gradient glow behind text — exports correctly with alpha
+    // White radial halo
     ctx.save();
-    ctx.globalAlpha = Math.min(1, line2P) * 0.85;
-    const glowR = howSz * 2.4;
-    const glow = ctx.createRadialGradient(W / 2, howY, 0, W / 2, howY, glowR);
-    // White halo — readable against any background (salmon-on-salmon was invisible)
-    glow.addColorStop(0, "rgba(255, 255, 255, 0.9)");
-    glow.addColorStop(0.3, "rgba(255, 255, 255, 0.45)");
+    ctx.globalAlpha = Math.min(1, line2P) * 0.9;
+    const glowR = bigSz * 2.6;
+    const glow = ctx.createRadialGradient(W / 2, bigY, 0, W / 2, bigY, glowR);
+    glow.addColorStop(0,    "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3,  "rgba(255, 255, 255, 0.45)");
     glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
-    glow.addColorStop(1, "rgba(255, 255, 255, 0)");
+    glow.addColorStop(1,    "rgba(255, 255, 255, 0)");
     ctx.fillStyle = glow;
-    ctx.fillRect(W / 2 - glowR, howY - glowR, glowR * 2, glowR * 2);
+    ctx.fillRect(W / 2 - glowR, bigY - glowR, glowR * 2, glowR * 2);
     ctx.restore();
 
-    // Text on top
     ctx.save();
     ctx.globalAlpha = line2P;
-    ctx.font = `800 ${Math.round(howSz)}px 'Lora', serif`;
+    ctx.font = `800 ${Math.round(bigSz)}px 'Lora', serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("How much?", W / 2, howY);
+    ctx.fillText("How much?", W / 2, bigY);
     ctx.restore();
   }
 
