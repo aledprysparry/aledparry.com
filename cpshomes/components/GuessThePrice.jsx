@@ -745,19 +745,35 @@ function drawProperty(ctx, W, H, S, progress) {
   if (numPhotos <= 1) {
     drawPhoto(photos[0] || photos[rd?.heroPhotoIndex || 0], p, 1, 0);
   } else {
-    // Crossfade fix: always draw the BASE photo at full alpha, then layer
-    // the incoming photo on top at rising alpha. The old approach drew both
-    // at partial alpha which caused a brightness dip (canvas compositing
-    // is multiplicative — 0.6 + 0.4 doesn't equal 1.0 on screen).
-    if (photoIdx > 0 && photoLocalP < crossfadeDuration) {
-      // Base: outgoing photo stays at full alpha (no dip)
-      drawPhoto(photos[photoIdx - 1], 1, 1, photoIdx - 1);
-      // Incoming dissolves in on top, progressively covering the base
-      const fadeIn = easeOutExpo(photoLocalP / crossfadeDuration);
-      drawPhoto(photos[photoIdx], photoLocalP, fadeIn, photoIdx);
-    } else {
-      // Outside crossfade window: current photo at full alpha
-      drawPhoto(photos[photoIdx], photoLocalP, 1, photoIdx);
+    // ALWAYS draw a base layer first so there's never an empty frame.
+    // If we're mid-crossfade the base is the outgoing photo; otherwise
+    // the base IS the current photo. Then the incoming dissolves on top.
+    //
+    // This prevents flicker/gaps from:
+    //  - Images not yet loaded (getCachedImage returns null)
+    //  - Exact boundary frames where photoLocalP = 0 on a new index
+    //  - The last frame where p = 1.0 and rawIdx = numPhotos exactly
+
+    // Step 1: find the best available "safe" photo to use as base.
+    // Walk backwards from photoIdx to find one that's actually loaded.
+    let baseIdx = photoIdx;
+    if (baseIdx > 0) {
+      const curImg = photos[baseIdx] ? getCachedImage(photos[baseIdx]) : null;
+      if (!curImg || !curImg.complete || !curImg.naturalWidth) {
+        baseIdx = photoIdx - 1; // fall back to previous
+      }
+    }
+
+    // Step 2: draw base at full alpha — this is ALWAYS visible, never partial
+    drawPhoto(photos[baseIdx], baseIdx === photoIdx ? photoLocalP : 1, 1, baseIdx);
+
+    // Step 3: if we're in a crossfade window AND the current photo is different
+    // from the base, dissolve the current photo in on top
+    if (photoIdx !== baseIdx || (photoIdx > 0 && photoLocalP < crossfadeDuration)) {
+      if (photoIdx > 0 && photoLocalP < crossfadeDuration) {
+        const fadeIn = easeOutExpo(photoLocalP / crossfadeDuration);
+        drawPhoto(photos[photoIdx], photoLocalP, fadeIn, photoIdx);
+      }
     }
   }
   // Darken bottom for readability
