@@ -1133,7 +1133,9 @@ function drawOptions(ctx, W, H, S, progress) {
   drawBg(ctx, W, H);
 
   // "WHICH ONE IS IT?" — dramatic entrance, fades in first
-  const headerY = ar !== "landscape" ? safeTop + safeH * 0.04 : H * 0.06;
+  // Portrait/square: pushed down from 0.04 → 0.10 so it sits comfortably
+  // inside the safe zone, not jammed against the top edge.
+  const headerY = ar !== "landscape" ? safeTop + safeH * 0.10 : H * 0.06;
   const titleP = easeOutExpo(Math.min(1, p / 0.3));
   ctx.save();
   ctx.globalAlpha = titleP;
@@ -1232,14 +1234,14 @@ function drawOptions(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  // Disclaimer
-  ctx.font = `400 ${sz(W, H, 0.013)}px 'DM Sans', sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  // Disclaimer — no CPS logo on this slide (client feedback: looks like
+  // the property is for sale with CPS Homes, which is misleading)
+  ctx.font = `600 ${sz(W, H, ar !== "landscape" ? 0.022 : 0.014)}px 'DM Sans', sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("* Listing price at time of recording", W / 2, H - sz(W, H, 0.02));
-
-  drawStamp(ctx, W, H);
+  ctx.fillText("* Listing price at time of recording", W / 2, H - sz(W, H, 0.03));
+  // NO drawStamp — intentionally omitted per client feedback
 }
 
 function drawLockIn(ctx, W, H, S, progress) {
