@@ -290,6 +290,7 @@ function saveEpisodes(episodes, activeId) {
 
 // EPISODE is kept as a module-level ref so draw functions can read it without props
 let EPISODE = createDefaultEpisode();
+let _showCpsLogo = true; // toggled by the controls-panel checkbox, read by drawStamp
 
 // BroadcastChannel for instant same-browser sync between editor and /live
 const GTP_CHANNEL_NAME = "gtp-live-sync";
@@ -365,6 +366,7 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 function drawStamp(ctx, W, H, opts = {}) {
+  if (!_showCpsLogo) return; // user toggled "Show CPS Logo" off
   const logo = getCachedImage(BRAND.logoUrlLight);
   if (!logo || !logo.complete || !logo.naturalWidth) return;
   const ar = H > W ? "portrait" : W === H ? "square" : "landscape";
@@ -3487,6 +3489,8 @@ export default function GuessThePrice({ displayMode = false }) {
     canvas.height = r.H;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, r.W, r.H);
+    // Sync the module-level flag so drawStamp knows whether to draw
+    _showCpsLogo = S.showCpsLogo !== false;
     const drawFn = DRAW_FNS[activeAsset];
     if (!drawFn) return;
     const asset = findAsset(activeAsset);
@@ -3782,6 +3786,7 @@ export default function GuessThePrice({ displayMode = false }) {
 
   // ── Export all rounds as ZIP ──
   const exportAllZIP = useCallback(async () => {
+    _showCpsLogo = S.showCpsLogo !== false; // sync for export context
     exportCancelRef.current = false;
     setExportProgress(0);
     setExportStatus("Loading ZIP library…");
@@ -5545,6 +5550,15 @@ export default function GuessThePrice({ displayMode = false }) {
               )}
             </div>
           )}
+
+          {/* Show/hide CPS Homes logo — global toggle for all show assets */}
+          <div style={{ marginTop: DS.lg, paddingTop: DS.md, borderTop: `1px solid ${DS.borderSubtle}`, display: "flex", alignItems: "center", gap: DS.sm }}>
+            <input type="checkbox" id="cps-logo-toggle"
+              checked={S.showCpsLogo !== false}
+              onChange={e => { updateS("showCpsLogo", e.target.checked); }}
+              style={{ accentColor: GAME.gold, width: 16, height: 16 }} />
+            <label htmlFor="cps-logo-toggle" style={{ fontSize: DS.fsXs, color: DS.textSecondary, cursor: "pointer" }}>Show CPS Homes Logo</label>
+          </div>
         </aside>
       </div>
 
