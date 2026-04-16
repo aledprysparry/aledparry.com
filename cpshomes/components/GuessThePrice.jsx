@@ -322,6 +322,8 @@ const SOCIAL_ASSETS = [
   { id: "overlay_playalong",   label: "Play Along",             icon: "\ud83c\udfae", animated: true },
   { id: "overlay_readytoplay", label: "Ready to Play?",         icon: "\u2728", animated: true },
   { id: "overlay_howdidyoudo", label: "How Did You Do?",        icon: "\ud83e\udd14", animated: true },
+  { id: "overlay_guessbelow", label: "Guess Below",            icon: "\ud83d\udcac", animated: true },
+  { id: "overlay_guessreveal",label: "Guess Before Reveal",    icon: "\u23f0", animated: true },
   { id: "overlay_csss",        label: "Comment Share Subscribe",icon: "\ud83d\udc4d", animated: true },
 ];
 ALL_ASSETS.push(...SOCIAL_ASSETS);
@@ -2680,6 +2682,107 @@ function drawOverlayHowDidYouDo(ctx, W, H, S, progress) {
 
 // "Comment, Share & Subscribe" — transparent social CTA with staggered entrance
 // Phase 1 (0-0.25): "Comment"   fades + slides up
+// "What's your guess? Comment below." — transparent social CTA
+function drawOverlayGuessBelow(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar !== "landscape" ? H * 0.42 : H * 0.45;
+
+  const line1P = easeOutExpo(Math.min(1, p / 0.4));
+  const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.35) / 0.35)));
+
+  // "What's your guess?"
+  if (line1P > 0) {
+    const topSz = sz(W, H, ar !== "landscape" ? 0.09 : 0.075);
+    ctx.save();
+    ctx.globalAlpha = line1P;
+    ctx.font = `700 ${Math.round(topSz)}px 'Lora', serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = topSz * 0.12;
+    ctx.fillText("What\u2019s your guess?", W / 2, centerY - sz(W, H, 0.055));
+    ctx.restore();
+  }
+
+  // "Comment below." — gold, bounces in with white halo
+  if (line2P > 0) {
+    const bigSz = sz(W, H, ar !== "landscape" ? 0.11 : 0.09) * (0.75 + 0.25 * line2P);
+    const bigY = centerY + sz(W, H, 0.06);
+
+    // White halo
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, line2P) * 0.9;
+    const glowR = bigSz * 2.6;
+    const glow = ctx.createRadialGradient(W / 2, bigY, 0, W / 2, bigY, glowR);
+    glow.addColorStop(0,    "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3,  "rgba(255, 255, 255, 0.45)");
+    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
+    glow.addColorStop(1,    "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(W / 2 - glowR, bigY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = line2P;
+    ctx.font = `800 ${Math.round(bigSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Comment below.", W / 2, bigY);
+    ctx.restore();
+  }
+}
+
+// "Guess before the reveal!" — transparent social CTA
+function drawOverlayGuessReveal(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar !== "landscape" ? H * 0.44 : H * 0.46;
+
+  const textP = easeOutBack(Math.min(1, p / 0.45));
+
+  if (textP > 0) {
+    const mainSz = sz(W, H, ar !== "landscape" ? 0.10 : 0.085) * (0.75 + 0.25 * textP);
+    const textY = centerY;
+
+    // White halo
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, textP) * 0.9;
+    const glowR = mainSz * 2.8;
+    const glow = ctx.createRadialGradient(W / 2, textY, 0, W / 2, textY, glowR);
+    glow.addColorStop(0,    "rgba(255, 255, 255, 0.9)");
+    glow.addColorStop(0.3,  "rgba(255, 255, 255, 0.45)");
+    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.12)");
+    glow.addColorStop(1,    "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(W / 2 - glowR, textY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = textP;
+    ctx.font = `800 ${Math.round(mainSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = mainSz * 0.08;
+    // Two lines for portrait, one for landscape
+    if (ar !== "landscape") {
+      ctx.fillText("Guess before", W / 2, textY - mainSz * 0.55);
+      ctx.fillText("the reveal!", W / 2, textY + mainSz * 0.55);
+    } else {
+      ctx.fillText("Guess before the reveal!", W / 2, textY);
+    }
+    ctx.restore();
+  }
+}
+
+// "Comment, Share & Subscribe" — transparent social CTA with staggered entrance
+// Phase 1 (0-0.25): "Comment"   fades + slides up
 // Phase 2 (0.15-0.4): "Share"   fades + slides up
 // Phase 3 (0.3-0.55): "&"       fades in
 // Phase 4 (0.45-0.75): "Subscribe" fades + slides up, scales with bounce
@@ -2817,6 +2920,8 @@ const DRAW_FNS = {
   overlay_playalong: drawOverlayPlayAlong,
   overlay_readytoplay: drawOverlayReadyToPlay,
   overlay_howdidyoudo: drawOverlayHowDidYouDo,
+  overlay_guessbelow: drawOverlayGuessBelow,
+  overlay_guessreveal: drawOverlayGuessReveal,
   overlay_csss: drawOverlayCSSS,
 };
 
