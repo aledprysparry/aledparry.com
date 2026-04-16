@@ -2682,7 +2682,7 @@ function drawOverlayHowDidYouDo(ctx, W, H, S, progress) {
 
 // "Comment, Share & Subscribe" — transparent social CTA with staggered entrance
 // Phase 1 (0-0.25): "Comment"   fades + slides up
-// "What's your guess? Comment below." — transparent social CTA
+// "What's your guess? Comment below" — transparent social CTA
 function drawOverlayGuessBelow(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
@@ -2707,7 +2707,7 @@ function drawOverlayGuessBelow(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  // "Comment below." — gold, bounces in with white halo
+  // "Comment below" — gold, bounces in with white halo
   if (line2P > 0) {
     const bigSz = sz(W, H, ar !== "landscape" ? 0.11 : 0.09) * (0.75 + 0.25 * line2P);
     const bigY = centerY + sz(W, H, 0.06);
@@ -2731,7 +2731,7 @@ function drawOverlayGuessBelow(ctx, W, H, S, progress) {
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("Comment below.", W / 2, bigY);
+    ctx.fillText("Comment below", W / 2, bigY);
     ctx.restore();
   }
 }
