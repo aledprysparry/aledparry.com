@@ -578,8 +578,8 @@ function drawIntro(ctx, W, H, S, progress) {
   // Landscape: lifted from 0.62 → 0.48 (with shrunk title area above)
   // so agents sit firmly in the upper-mid of the frame.
   const vsY = ar !== "landscape" ? safeTop + safeH * 0.55 : H * 0.48;
-  const headR = sz(W, H, ar !== "landscape" ? 0.13 : 0.10); // MUCH bigger headshots
-  const spread = ar !== "landscape" ? W * 0.24 : W * 0.18;
+  const headR = sz(W, H, ar !== "landscape" ? 0.13 : 0.14); // 16:9 bumped 0.10→0.14
+  const spread = ar !== "landscape" ? W * 0.24 : W * 0.22;  // wider spread to match
 
   const leftX = W / 2 - spread;
   const rightX = W / 2 + spread;
