@@ -325,6 +325,7 @@ const SOCIAL_ASSETS = [
   { id: "overlay_howdidyoudo", label: "How Did You Do?",        icon: "\ud83e\udd14", animated: true },
   { id: "overlay_guessbelow", label: "Guess Below",            icon: "\ud83d\udcac", animated: true },
   { id: "overlay_guessreveal",label: "Guess Before Reveal",    icon: "\u23f0", animated: true },
+  { id: "overlay_roles",     label: "Round Roles",             icon: "\ud83c\udfad", animated: true },
   { id: "overlay_cardiff",   label: "Cardiff Edition",        icon: "\ud83c\udff4", animated: true },
   { id: "overlay_csss",        label: "Comment Share Subscribe",icon: "\ud83d\udc4d", animated: true },
 ];
@@ -2787,6 +2788,125 @@ function drawOverlayGuessReveal(ctx, W, H, S, progress) {
   }
 }
 
+// Round Roles — transparent overlay showing who's guessing and whose property
+// choice it is. Reads guesser + propertyAgent from EPISODE.rounds[propRound-1].
+// Displays both agent headshots with role labels underneath.
+function drawOverlayRoles(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  ctx.clearRect(0, 0, W, H);
+  const ar = aspect(W, H);
+  const centerY = ar !== "landscape" ? H * 0.42 : H * 0.45;
+
+  const rd = EPISODE.rounds ? EPISODE.rounds[(S.propRound || 1) - 1] : null;
+  const guesser = rd?.guesser || EPISODE.agents[0] || "Agent 1";
+  const propAgent = rd?.propertyAgent || EPISODE.agents[1] || "Agent 2";
+  const roundNum = S.propRound || 1;
+
+  // Staggered phases
+  const titleP = easeOutExpo(Math.min(1, p / 0.35));
+  const leftP  = easeOutBack(Math.min(1, Math.max(0, (p - 0.20) / 0.35)));
+  const rightP = easeOutBack(Math.min(1, Math.max(0, (p - 0.35) / 0.35)));
+
+  // "ROUND X" label at top
+  if (titleP > 0) {
+    const labelSz = sz(W, H, ar !== "landscape" ? 0.035 : 0.028);
+    ctx.save();
+    ctx.globalAlpha = titleP;
+    ctx.font = `800 ${Math.round(labelSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = labelSz * 0.15;
+    ctx.fillText(`ROUND ${roundNum}`, W / 2, centerY - sz(W, H, ar !== "landscape" ? 0.22 : 0.18));
+    ctx.restore();
+  }
+
+  // Draw a role card: headshot circle + name + role badge
+  const drawRoleCard = (cx, cy, name, role, roleColor, anim, agentIdx) => {
+    if (anim <= 0) return;
+    const headR = sz(W, H, ar !== "landscape" ? 0.10 : 0.08);
+    const slideX = (1 - anim) * W * 0.08 * (agentIdx === 0 ? -1 : 1);
+
+    ctx.save();
+    ctx.globalAlpha = anim;
+    ctx.translate(slideX, 0);
+
+    // Headshot circle — image or initial
+    const imgUrl = EPISODE.agentImages?.[agentIdx];
+    const img = imgUrl ? getCachedImage(imgUrl) : null;
+    const imgReady = img && img.complete && img.naturalWidth > 0;
+
+    // Gold ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, headR + headR * 0.08, 0, Math.PI * 2);
+    ctx.strokeStyle = GAME.gold;
+    ctx.lineWidth = headR * 0.08;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, headR, 0, Math.PI * 2);
+    ctx.closePath();
+    if (imgReady) {
+      ctx.clip();
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      const scale = Math.max(headR * 2 / iw, headR * 2 / ih);
+      const dw = iw * scale, dh = ih * scale;
+      ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+    } else {
+      const pg = ctx.createRadialGradient(cx, cy, 0, cx, cy, headR);
+      pg.addColorStop(0, agentIdx === 0 ? BRAND.colorAccent : BRAND.colorPositive);
+      pg.addColorStop(1, agentIdx === 0 ? "#c2564a" : "#5a7a58");
+      ctx.fillStyle = pg;
+      ctx.fill();
+      ctx.font = `800 ${headR * 0.8}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(name.charAt(0).toUpperCase(), cx, cy);
+    }
+    ctx.restore();
+
+    // Name
+    const nameSz = sz(W, H, ar !== "landscape" ? 0.048 : 0.038);
+    const nameY = cy + headR + headR * 0.3;
+    ctx.font = `800 ${nameSz}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(name.toUpperCase(), cx, nameY);
+
+    // Role badge pill
+    const badgeSz = sz(W, H, ar !== "landscape" ? 0.025 : 0.020);
+    const badgeY = nameY + nameSz * 1.6;
+    ctx.font = `700 ${badgeSz}px 'DM Sans', sans-serif`;
+    const tw = ctx.measureText(role).width;
+    const pillW = tw + badgeSz * 1.6;
+    const pillH = badgeSz * 2.2;
+    ctx.fillStyle = roleColor;
+    roundRect(ctx, cx - pillW / 2, badgeY - pillH / 2, pillW, pillH, pillH / 2);
+    ctx.fill();
+    ctx.fillStyle = roleColor === GAME.gold ? "#1E3A40" : "#fff";
+    ctx.shadowColor = "transparent";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(role, cx, badgeY);
+
+    ctx.restore();
+  };
+
+  // Layout: two cards side by side
+  const spread = ar !== "landscape" ? W * 0.22 : W * 0.20;
+  const guesserIdx = EPISODE.agents.indexOf(guesser);
+  const propIdx = EPISODE.agents.indexOf(propAgent);
+
+  drawRoleCard(W / 2 - spread, centerY, guesser, "GUESSING", GAME.gold, leftP, guesserIdx >= 0 ? guesserIdx : 0);
+  drawRoleCard(W / 2 + spread, centerY, propAgent, "PROPERTY CHOICE", "rgba(255,255,255,0.25)", rightP, propIdx >= 0 ? propIdx : 1);
+}
+
 // "Guess the Price: Cardiff Edition" — transparent social brand overlay
 function drawOverlayCardiff(ctx, W, H, S, progress) {
   const p = progress ?? 1;
@@ -2986,6 +3106,7 @@ const DRAW_FNS = {
   overlay_howdidyoudo: drawOverlayHowDidYouDo,
   overlay_guessbelow: drawOverlayGuessBelow,
   overlay_guessreveal: drawOverlayGuessReveal,
+  overlay_roles: drawOverlayRoles,
   overlay_cardiff: drawOverlayCardiff,
   overlay_csss: drawOverlayCSSS,
 };
