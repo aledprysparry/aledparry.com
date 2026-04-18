@@ -2872,19 +2872,14 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   //   4. Property photo fallback
   const rd = EPISODE.rounds?.[(S.propRound || 1) - 1];
   const manualMapSrc = EPISODE.mapImage;
-  // Try mapIndex first. If not set (older episodes), use the last photo
-  // (the scraper always appends floorplan then map, so map is typically last).
-  const scrapedMapIdx = rd?.mapIndex != null ? rd.mapIndex : (rd?.floorplanIndex != null && rd?.photos?.length > rd.floorplanIndex + 1 ? rd.photos.length - 1 : -1);
+  // Map source: scraper appends the Mapbox map as the LAST photo in the array.
+  // Use mapIndex if set, otherwise fall back to the last photo.
+  const numPhotos = rd?.photos?.length || 0;
+  const scrapedMapIdx = rd?.mapIndex != null ? rd.mapIndex : (numPhotos > 1 ? numPhotos - 1 : -1);
   const scrapedMapSrc = (scrapedMapIdx >= 0 && rd?.photos?.[scrapedMapIdx]) ? rd.photos[scrapedMapIdx] : null;
-  const autoMapSrc = (!manualMapSrc && !scrapedMapSrc && rd?.location) ? getMapUrl(rd.location) : null;
-  const mapSrc = manualMapSrc || scrapedMapSrc || autoMapSrc;
+  const mapSrc = manualMapSrc || scrapedMapSrc;
   const mapImg = mapSrc ? getCachedImage(mapSrc) : null;
   const useMap = mapImg && mapImg.complete && mapImg.naturalWidth > 0;
-  // Debug: log map resolution chain (remove after confirmed working)
-  if (typeof window !== "undefined" && !window._mapDbgDone) {
-    console.log("[Opener Map Debug]", { manualMapSrc, scrapedMapIdx, scrapedMapSrc, autoMapSrc, mapSrc, useMap, roundLocation: rd?.location, mapIndex: rd?.mapIndex, floorplanIndex: rd?.floorplanIndex, photosLength: rd?.photos?.length });
-    window._mapDbgDone = true;
-  }
 
   const photos = (S.propPhotos && S.propPhotos.length)
     ? S.propPhotos
