@@ -1708,9 +1708,9 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
   ctx.restore();
 
   // ── Agent name — "NATHAN'S" or "SIAN'S", bigger + bolder ──
+  const nameFs = sz(W, H, ar !== "landscape" ? 0.06 : 0.048);
+  const nameY = headY + headR + sz(W, H, 0.04);
   if (nameP > 0) {
-    const nameFs = sz(W, H, ar !== "landscape" ? 0.075 : 0.055);
-    const nameY = headY + headR + sz(W, H, 0.065);
     ctx.save();
     ctx.globalAlpha = nameP;
     ctx.font = `800 ${Math.round(nameFs)}px 'DM Sans', sans-serif`;
@@ -1723,27 +1723,27 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
     ctx.restore();
   }
 
-  // ── "3 MYSTERY PROPERTIES" — gold, bold, central ──
+  // ── "3 MYSTERY PROPERTIES" — gold, bold, positioned BELOW the name ──
+  const titleSz = sz(W, H, ar !== "landscape" ? 0.08 : 0.065) * (0.85 + 0.15 * Math.max(0, titleP));
+  const titleY = nameY + nameFs + sz(W, H, 0.035);
   if (titleP > 0) {
-    const titleY = ar !== "landscape" ? safeTop + safeH * 0.48 : H * 0.50;
-    const titleSz = sz(W, H, ar !== "landscape" ? 0.08 : 0.065) * (0.85 + 0.15 * titleP);
     ctx.save();
     ctx.globalAlpha = titleP;
     ctx.font = `800 ${Math.round(titleSz)}px 'Lora', serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.textBaseline = "top";
     ctx.shadowColor = "rgba(0,0,0,0.4)";
     ctx.shadowBlur = titleSz * 0.06;
-    ctx.fillText("3 MYSTERY", W / 2, titleY - titleSz * 0.55);
-    ctx.fillText("PROPERTIES", W / 2, titleY + titleSz * 0.55);
+    ctx.fillText("3 MYSTERY", W / 2, titleY);
+    ctx.fillText("PROPERTIES", W / 2, titleY + titleSz * 1.1);
     ctx.restore();
   }
 
-  // ── 3 mystery cards — bigger, more prominent ──
+  // ── 3 mystery cards — positioned below the title ──
   const cardW = sz(W, H, ar !== "landscape" ? 0.20 : 0.13);
   const cardH = cardW * 1.3;
-  const cardsY = ar !== "landscape" ? safeTop + safeH * 0.65 : H * 0.66;
+  const cardsY = titleY + titleSz * 2.5;
   drawMysteryCards(ctx, W / 2, cardsY, cardW, cardH, p, ar);
 
   drawStamp(ctx, W, H);
