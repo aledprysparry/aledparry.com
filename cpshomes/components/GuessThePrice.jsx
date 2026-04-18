@@ -1761,9 +1761,9 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
   const nameP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.15) / 0.30)));
   const titleP = easeOutBack(Math.min(1, Math.max(0, (p - 0.30) / 0.30)));
 
-  // ── Headshot — positioned to leave room for title + cards + logo below ──
+  // ── Headshot — vertically centered in the content block ──
   const headR = sz(W, H, ar !== "landscape" ? 0.11 : 0.09);
-  const headY = ar !== "landscape" ? safeTop + safeH * 0.14 : H * 0.22;
+  const headY = ar !== "landscape" ? safeTop + safeH * 0.18 : H * 0.24;
   const headSlide = W * 0.06 * (1 - headP) * (fromRight ? 1 : -1);
   ctx.save();
   ctx.globalAlpha = headP;
@@ -2872,7 +2872,10 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   //   4. Property photo fallback
   const rd = EPISODE.rounds?.[(S.propRound || 1) - 1];
   const manualMapSrc = EPISODE.mapImage;
-  const scrapedMapSrc = (rd?.mapIndex != null && rd?.photos?.[rd.mapIndex]) ? rd.photos[rd.mapIndex] : null;
+  // Try mapIndex first. If not set (older episodes), use the last photo
+  // (the scraper always appends floorplan then map, so map is typically last).
+  const scrapedMapIdx = rd?.mapIndex != null ? rd.mapIndex : (rd?.floorplanIndex != null && rd?.photos?.length > rd.floorplanIndex + 1 ? rd.photos.length - 1 : -1);
+  const scrapedMapSrc = (scrapedMapIdx >= 0 && rd?.photos?.[scrapedMapIdx]) ? rd.photos[scrapedMapIdx] : null;
   const autoMapSrc = (!manualMapSrc && !scrapedMapSrc && rd?.location) ? getMapUrl(rd.location) : null;
   const mapSrc = manualMapSrc || scrapedMapSrc || autoMapSrc;
   const mapImg = mapSrc ? getCachedImage(mapSrc) : null;
