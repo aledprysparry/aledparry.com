@@ -2867,12 +2867,14 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
 
   // Image source priority:
   //   1. Manual map upload (EPISODE.mapImage) — user override
-  //   2. Auto-generated map from round location (dynamic per round)
-  //   3. Property photo fallback
+  //   2. Round's scraped map image (rd.photos[rd.mapIndex]) — from Rightmove/Mapbox
+  //   3. Auto-generated OSM tile from round location
+  //   4. Property photo fallback
   const rd = EPISODE.rounds?.[(S.propRound || 1) - 1];
   const manualMapSrc = EPISODE.mapImage;
-  const autoMapSrc = rd?.location ? getMapUrl(rd.location) : null;
-  const mapSrc = manualMapSrc || autoMapSrc;
+  const scrapedMapSrc = (rd?.mapIndex != null && rd?.photos?.[rd.mapIndex]) ? rd.photos[rd.mapIndex] : null;
+  const autoMapSrc = (!manualMapSrc && !scrapedMapSrc && rd?.location) ? getMapUrl(rd.location) : null;
+  const mapSrc = manualMapSrc || scrapedMapSrc || autoMapSrc;
   const mapImg = mapSrc ? getCachedImage(mapSrc) : null;
   const useMap = mapImg && mapImg.complete && mapImg.naturalWidth > 0;
 
