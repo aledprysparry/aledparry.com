@@ -350,12 +350,19 @@ const GTP_CHANNEL_NAME = "gtp-live-sync";
 // ═══════════════════════════════════════════════════════════════
 //  ASSET TYPES
 // ═══════════════════════════════════════════════════════════════
-const ASSETS = [
+// Episode-level assets (not tied to a round — shown on the "Extras" tab)
+const EPISODE_ASSETS = [
   { id: "intro",      label: "Intro Title",    icon: "\u25b6", animated: true },
   { id: "opener",     label: "Opener (Filled)", icon: "\ud83c\udfaa", animated: true },
   { id: "instr1",     label: "Instructions 1",  icon: "\ud83d\udccb", animated: true },
   { id: "instr2",     label: "Instructions 2",  icon: "\ud83d\udccb", animated: true },
   { id: "instr3",     label: "Instructions 3",  icon: "\ud83d\udccb", animated: true },
+  { id: "endboard",  label: "Endboard",        icon: "\ud83c\udfac", animated: true },
+  { id: "roles",     label: "Round Roles",     icon: "\ud83c\udfad", animated: true },
+];
+
+// Round-specific assets (change per round — shown on round pages)
+const ROUND_ASSETS = [
   { id: "roundtitle", label: "Round Title",     icon: "#", animated: true },
   { id: "roundcard",  label: "Round Card",      icon: "\ud83d\udccb", animated: true },
   { id: "property",   label: "Property Frame",  icon: "\ud83c\udfe0", animated: true },
@@ -364,9 +371,10 @@ const ASSETS = [
   { id: "timer",     label: "Countdown",       icon: "\u23f1", animated: true },
   { id: "reveal",    label: "Price Reveal",    icon: "\ud83c\udf89", animated: true },
   { id: "scoreboard",label: "Scoreboard",      icon: "\ud83c\udfc6", animated: true },
-  { id: "endboard",  label: "Endboard",        icon: "\ud83c\udfac", animated: true },
-  { id: "roles",     label: "Round Roles",     icon: "\ud83c\udfad", animated: true },
 ];
+
+// Combined list for findAsset / DRAW_FNS / export (both groups)
+const ASSETS = [...EPISODE_ASSETS, ...ROUND_ASSETS];
 
 const ALL_ASSETS = [...ASSETS]; // will include SOCIAL_ASSETS after definition
 // Social media / edit overlay assets (transparent background, MOV with alpha)
@@ -3602,6 +3610,7 @@ export default function GuessThePrice({ displayMode = false }) {
   });
   useEffect(() => { localStorage.setItem("gtp_ratio", ratio); }, [ratio]);
   const [activeAsset, setActiveAsset] = useState("intro");
+  const [assetTab, setAssetTab] = useState("round"); // "round" | "extras"
   const [currentRound, setCurrentRound] = useState(0);
   const [scores, setScores] = useState([0, 0]);
   const [animProgress, setAnimProgress] = useState(0);
@@ -6201,24 +6210,40 @@ export default function GuessThePrice({ displayMode = false }) {
 
       {/* MAIN */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* Asset Nav */}
-        <nav style={{ width: 160, flexShrink: 0, padding: `${DS.md}px ${DS.sm}px`, borderRight: `1px solid ${DS.borderSubtle}`, display: "flex", flexDirection: "column", gap: DS.xs, overflowY: "auto" }}>
-          <div style={sectionHead({ marginBottom: DS.sm })}>Assets</div>
-          {ASSETS.map(a => (
-            <button key={a.id} onClick={() => { cancelAnimationFrame(animRef.current); clearTimeout(sequenceRef.current); setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
-              style={{ ...btn({ padding: "8px 12px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textPrimary }) }}>
-              <span style={{ fontSize: 14 }}>{a.icon}</span>
-              <span style={{ fontSize: DS.fsSm }}>{a.label}</span>
+        {/* Asset Nav — tabbed: "Round" shows round-specific assets, "Extras" shows episode-level */}
+        <nav style={{ width: 170, flexShrink: 0, borderRight: `1px solid ${DS.borderSubtle}`, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          {/* Tab toggle */}
+          <div style={{ display: "flex", borderBottom: `1px solid ${DS.borderSubtle}`, flexShrink: 0 }}>
+            <button onClick={() => setAssetTab("round")}
+              style={{ flex: 1, padding: "8px 4px", fontSize: DS.fsXs, fontWeight: 700, border: "none", cursor: "pointer", background: assetTab === "round" ? DS.bgSurface : "transparent", color: assetTab === "round" ? GAME.gold : DS.textMuted, borderBottom: assetTab === "round" ? `2px solid ${GAME.gold}` : "2px solid transparent" }}>
+              Round
             </button>
-          ))}
-          <div style={{ ...sectionHead({ marginTop: DS.lg, marginBottom: DS.sm }), fontSize: 9, color: DS.textMuted }}>SOCIAL / EDIT</div>
-          {SOCIAL_ASSETS.map(a => (
-            <button key={a.id} onClick={() => { cancelAnimationFrame(animRef.current); clearTimeout(sequenceRef.current); setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
-              style={{ ...btn({ padding: "6px 10px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textSecondary, fontSize: DS.fsXs }) }}>
-              <span style={{ fontSize: 12 }}>{a.icon}</span>
-              <span>{a.label}</span>
+            <button onClick={() => setAssetTab("extras")}
+              style={{ flex: 1, padding: "8px 4px", fontSize: DS.fsXs, fontWeight: 700, border: "none", cursor: "pointer", background: assetTab === "extras" ? DS.bgSurface : "transparent", color: assetTab === "extras" ? GAME.gold : DS.textMuted, borderBottom: assetTab === "extras" ? `2px solid ${GAME.gold}` : "2px solid transparent" }}>
+              Extras
             </button>
-          ))}
+          </div>
+
+          <div style={{ padding: `${DS.sm}px ${DS.sm}px`, display: "flex", flexDirection: "column", gap: DS.xs, flex: 1 }}>
+            {/* Show assets for the active tab */}
+            {(assetTab === "round" ? ROUND_ASSETS : EPISODE_ASSETS).map(a => (
+              <button key={a.id} onClick={() => { cancelAnimationFrame(animRef.current); clearTimeout(sequenceRef.current); setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
+                style={{ ...btn({ padding: "8px 12px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textPrimary }) }}>
+                <span style={{ fontSize: 14 }}>{a.icon}</span>
+                <span style={{ fontSize: DS.fsSm }}>{a.label}</span>
+              </button>
+            ))}
+
+            {/* Social overlays section — shown on both tabs */}
+            <div style={{ ...sectionHead({ marginTop: DS.lg, marginBottom: DS.sm }), fontSize: 9, color: DS.textMuted }}>SOCIAL / EDIT</div>
+            {SOCIAL_ASSETS.map(a => (
+              <button key={a.id} onClick={() => { cancelAnimationFrame(animRef.current); clearTimeout(sequenceRef.current); setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
+                style={{ ...btn({ padding: "6px 10px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textSecondary, fontSize: DS.fsXs }) }}>
+                <span style={{ fontSize: 12 }}>{a.icon}</span>
+                <span>{a.label}</span>
+              </button>
+            ))}
+          </div>
         </nav>
 
         {/* Canvas */}
