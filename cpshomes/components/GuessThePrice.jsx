@@ -1679,8 +1679,9 @@ function drawMysteryCards(ctx, cx, cy, cardW, cardH, p, ar) {
   }
 }
 
-// Instruction 1: "[Agent]'s 3 Mystery Properties" — first agent (index 0)
-function drawInstr1(ctx, W, H, S, progress) {
+// Shared instruction body: "[AGENT'S] 3 MYSTERY PROPERTIES"
+// agentIdx 0 = slides from left, 1 = slides from right
+function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
   const p = progress ?? 1;
   drawBg(ctx, W, H);
   drawAccentBars(ctx, W, H);
@@ -1688,118 +1689,72 @@ function drawInstr1(ctx, W, H, S, progress) {
   const safe = safeZone(W, H);
   const safeTop = ar !== "landscape" ? safe.contentTop : 0;
   const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
-  const name = EPISODE.agents[0] || "Agent 1";
+  const name = EPISODE.agents[agentIdx] || `Agent ${agentIdx + 1}`;
+  const fromRight = agentIdx === 1;
 
-  // Headshot — slides in from left
-  const headP = easeOutExpo(Math.min(1, p / 0.4));
-  const headR = sz(W, H, ar !== "landscape" ? 0.10 : 0.08);
-  const headY = ar !== "landscape" ? safeTop + safeH * 0.22 : H * 0.30;
-  const headSlide = W * 0.08 * (1 - headP);
-  ctx.save();
-  ctx.globalAlpha = headP;
-  ctx.translate(-headSlide, 0);
-  drawInstrHeadshot(ctx, W / 2, headY, headR, 0);
-  ctx.restore();
+  // ── Phase timings (smooth, no hard cuts) ──
+  const headP = easeOutExpo(Math.min(1, p / 0.35));
+  const nameP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.15) / 0.30)));
+  const titleP = easeOutBack(Math.min(1, Math.max(0, (p - 0.30) / 0.30)));
 
-  // Agent name
-  if (headP > 0.3) {
-    const nameP = easeOutExpo(Math.min(1, (p - 0.15) / 0.3));
-    const nameFs = sz(W, H, ar !== "landscape" ? 0.055 : 0.042);
-    ctx.save();
-    ctx.globalAlpha = nameP;
-    ctx.font = `800 ${nameFs}px 'DM Sans', sans-serif`;
-    ctx.fillStyle = "#fff";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(name.toUpperCase(), W / 2, headY + headR + headR * 0.4);
-    ctx.restore();
-  }
-
-  // "3 MYSTERY PROPERTIES" title
-  const titleP = easeOutBack(Math.min(1, Math.max(0, (p - 0.25) / 0.35)));
-  if (titleP > 0) {
-    const titleY = ar !== "landscape" ? safeTop + safeH * 0.48 : H * 0.52;
-    const titleSz = sz(W, H, ar !== "landscape" ? 0.065 : 0.055) * (0.85 + 0.15 * titleP);
-    ctx.save();
-    ctx.globalAlpha = titleP;
-    ctx.font = `800 ${Math.round(titleSz)}px 'Lora', serif`;
-    ctx.fillStyle = GAME.gold;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("3 MYSTERY PROPERTIES", W / 2, titleY);
-    ctx.restore();
-  }
-
-  // 3 mystery cards
-  const cardW = sz(W, H, ar !== "landscape" ? 0.18 : 0.12);
-  const cardH = cardW * 1.3;
-  const cardsY = ar !== "landscape" ? safeTop + safeH * 0.60 : H * 0.64;
-  drawMysteryCards(ctx, W / 2, cardsY, cardW, cardH, p, ar);
-
-  drawStamp(ctx, W, H);
-}
-
-// Instruction 2: "[Agent]'s 3 Mystery Properties" — second agent (index 1)
-function drawInstr2(ctx, W, H, S, progress) {
-  const p = progress ?? 1;
-  drawBg(ctx, W, H);
-  drawAccentBars(ctx, W, H);
-  const ar = aspect(W, H);
-  const safe = safeZone(W, H);
-  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
-  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
-  const name = EPISODE.agents[1] || "Agent 2";
-
-  // Headshot — slides in from right
-  const headP = easeOutExpo(Math.min(1, p / 0.4));
-  const headR = sz(W, H, ar !== "landscape" ? 0.10 : 0.08);
-  const headY = ar !== "landscape" ? safeTop + safeH * 0.22 : H * 0.30;
-  const headSlide = W * 0.08 * (1 - headP);
+  // ── Headshot — bigger, positioned higher for impact ──
+  const headR = sz(W, H, ar !== "landscape" ? 0.13 : 0.10);
+  const headY = ar !== "landscape" ? safeTop + safeH * 0.18 : H * 0.26;
+  const headSlide = W * 0.06 * (1 - headP) * (fromRight ? 1 : -1);
   ctx.save();
   ctx.globalAlpha = headP;
   ctx.translate(headSlide, 0);
-  drawInstrHeadshot(ctx, W / 2, headY, headR, 1);
+  drawInstrHeadshot(ctx, W / 2, headY, headR, agentIdx);
   ctx.restore();
 
-  // Agent name
-  if (headP > 0.3) {
-    const nameP = easeOutExpo(Math.min(1, (p - 0.15) / 0.3));
-    const nameFs = sz(W, H, ar !== "landscape" ? 0.055 : 0.042);
+  // ── Agent name — "NATHAN'S" or "SIAN'S", bigger + bolder ──
+  if (nameP > 0) {
+    const nameFs = sz(W, H, ar !== "landscape" ? 0.075 : 0.055);
+    const nameY = headY + headR + sz(W, H, 0.04);
     ctx.save();
     ctx.globalAlpha = nameP;
-    ctx.font = `800 ${nameFs}px 'DM Sans', sans-serif`;
+    ctx.font = `800 ${Math.round(nameFs)}px 'DM Sans', sans-serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(name.toUpperCase(), W / 2, headY + headR + headR * 0.4);
+    ctx.textBaseline = "top";
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = nameFs * 0.08;
+    ctx.fillText(`${name.toUpperCase()}\u2019S`, W / 2, nameY);
     ctx.restore();
   }
 
-  // "3 MYSTERY PROPERTIES" title
-  const titleP = easeOutBack(Math.min(1, Math.max(0, (p - 0.25) / 0.35)));
+  // ── "3 MYSTERY PROPERTIES" — gold, bold, central ──
   if (titleP > 0) {
-    const titleY = ar !== "landscape" ? safeTop + safeH * 0.48 : H * 0.52;
-    const titleSz = sz(W, H, ar !== "landscape" ? 0.065 : 0.055) * (0.85 + 0.15 * titleP);
+    const titleY = ar !== "landscape" ? safeTop + safeH * 0.48 : H * 0.50;
+    const titleSz = sz(W, H, ar !== "landscape" ? 0.08 : 0.065) * (0.85 + 0.15 * titleP);
     ctx.save();
     ctx.globalAlpha = titleP;
     ctx.font = `800 ${Math.round(titleSz)}px 'Lora', serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("3 MYSTERY PROPERTIES", W / 2, titleY);
+    ctx.shadowColor = "rgba(0,0,0,0.4)";
+    ctx.shadowBlur = titleSz * 0.06;
+    ctx.fillText("3 MYSTERY", W / 2, titleY - titleSz * 0.55);
+    ctx.fillText("PROPERTIES", W / 2, titleY + titleSz * 0.55);
     ctx.restore();
   }
 
-  // 3 mystery cards
-  const cardW = sz(W, H, ar !== "landscape" ? 0.18 : 0.12);
+  // ── 3 mystery cards — bigger, more prominent ──
+  const cardW = sz(W, H, ar !== "landscape" ? 0.20 : 0.13);
   const cardH = cardW * 1.3;
-  const cardsY = ar !== "landscape" ? safeTop + safeH * 0.60 : H * 0.64;
+  const cardsY = ar !== "landscape" ? safeTop + safeH * 0.65 : H * 0.66;
   drawMysteryCards(ctx, W / 2, cardsY, cardW, cardH, p, ar);
 
   drawStamp(ctx, W, H);
 }
 
+function drawInstr1(ctx, W, H, S, progress) { drawInstrAgent(ctx, W, H, S, progress, 0); }
+function drawInstr2(ctx, W, H, S, progress) { drawInstrAgent(ctx, W, H, S, progress, 1); }
+
 // Instruction 3: "How Much Have They Been Listed For?" — the challenge
+// Reworked: bigger pills matching Options slide style, dramatic £??? with glow,
+// bolder "PICK THE RIGHT PRICE" label, tighter spacing to fill the frame.
 function drawInstr3(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   drawBg(ctx, W, H);
@@ -1809,86 +1764,134 @@ function drawInstr3(ctx, W, H, S, progress) {
   const safeTop = ar !== "landscape" ? safe.contentTop : 0;
   const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
 
-  // Big question — bounces in
-  const titleP = easeOutBack(Math.min(1, p / 0.4));
+  // ── Title question — bounces in ──
+  const titleP = easeOutBack(Math.min(1, p / 0.35));
   if (titleP > 0) {
-    const titleY = ar !== "landscape" ? safeTop + safeH * 0.15 : H * 0.18;
-    const titleSz = sz(W, H, ar !== "landscape" ? 0.065 : 0.055) * (0.8 + 0.2 * titleP);
+    const titleY = ar !== "landscape" ? safeTop + safeH * 0.10 : H * 0.14;
+    const titleSz = sz(W, H, ar !== "landscape" ? 0.075 : 0.06) * (0.8 + 0.2 * titleP);
     ctx.save();
     ctx.globalAlpha = titleP;
     ctx.font = `800 ${Math.round(titleSz)}px 'Lora', serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.4)";
+    ctx.shadowBlur = titleSz * 0.06;
     if (ar !== "landscape") {
       ctx.fillText("How Much Have They", W / 2, titleY);
-      ctx.fillText("Been Listed For?", W / 2, titleY + titleSz * 1.1);
+      ctx.fillText("Been Listed For?", W / 2, titleY + titleSz * 1.15);
     } else {
       ctx.fillText("How Much Have They Been Listed For?", W / 2, titleY);
     }
     ctx.restore();
   }
 
-  // Big "£???" — dramatic, centred
-  const priceP = easeOutBack(Math.min(1, Math.max(0, (p - 0.3) / 0.35)));
+  // ── "£???" — HUGE, gold with glow, dramatic central element ──
+  const priceP = easeOutBack(Math.min(1, Math.max(0, (p - 0.25) / 0.30)));
   if (priceP > 0) {
-    const priceY = ar !== "landscape" ? safeTop + safeH * 0.42 : H * 0.42;
-    const priceSz = sz(W, H, ar !== "landscape" ? 0.16 : 0.14) * (0.75 + 0.25 * priceP);
+    const priceY = ar !== "landscape" ? safeTop + safeH * 0.38 : H * 0.40;
+    const priceSz = sz(W, H, ar !== "landscape" ? 0.22 : 0.18) * (0.75 + 0.25 * priceP);
+
+    // Gold radial glow behind the price
+    ctx.save();
+    ctx.globalAlpha = priceP * 0.25;
+    const glowR = priceSz * 2.5;
+    const glow = ctx.createRadialGradient(W / 2, priceY, 0, W / 2, priceY, glowR);
+    glow.addColorStop(0, GAME.gold);
+    glow.addColorStop(0.5, GAME.goldDark);
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(W / 2 - glowR, priceY - glowR, glowR * 2, glowR * 2);
+    ctx.restore();
+
     ctx.save();
     ctx.globalAlpha = priceP;
     ctx.font = `900 ${Math.round(priceSz)}px 'Lora', serif`;
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = priceSz * 0.08;
     ctx.fillText("\u00a3???", W / 2, priceY);
     ctx.restore();
   }
 
-  // A / B / C option preview — mini pills showing the game mechanic
-  const pillP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.55) / 0.3)));
-  if (pillP > 0) {
-    const pillY = ar !== "landscape" ? safeTop + safeH * 0.62 : H * 0.62;
-    const pillW = sz(W, H, ar !== "landscape" ? 0.20 : 0.12);
-    const pillH = sz(W, H, ar !== "landscape" ? 0.06 : 0.05);
-    const pillGap = sz(W, H, 0.025);
+  // ── A / B / C option pills — BIG, matching the Options slide style ──
+  // (shadow, glossy highlight, letter badge on left, "£???" price on right)
+  const pillsP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.50) / 0.30)));
+  if (pillsP > 0) {
     const letters = ["A", "B", "C"];
     const colors = [GAME.optionA, GAME.optionB, GAME.optionC];
-    const totalW = pillW * 3 + pillGap * 2;
-    let px = W / 2 - totalW / 2;
+    const pad = ar !== "landscape" ? Math.max(W * 0.08, safe.left + W * 0.02) : W * 0.25;
+    const ow = W - pad * 2;
+    const oh = ar !== "landscape" ? safeH * 0.08 : H * 0.09;
+    const og = ar !== "landscape" ? safeH * 0.02 : H * 0.025;
+    const startY = ar !== "landscape" ? safeTop + safeH * 0.55 : H * 0.56;
 
     for (let i = 0; i < 3; i++) {
-      const delay = 0.55 + i * 0.08;
+      const delay = 0.50 + i * 0.10;
       const lp = easeOutBack(Math.min(1, Math.max(0, (p - delay) / 0.25)));
-      if (lp <= 0) { px += pillW + pillGap; continue; }
+      if (lp <= 0) continue;
 
+      const slideY = oh * 0.4 * (1 - lp);
+      const oy = startY + i * (oh + og) + slideY;
       ctx.save();
       ctx.globalAlpha = lp;
-      ctx.translate(0, (1 - lp) * pillH * 0.5);
 
-      // Pill
+      // Pill with shadow (matching Options slide)
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.45)";
+      ctx.shadowBlur = oh * 0.35;
+      ctx.shadowOffsetY = oh * 0.08;
       ctx.fillStyle = colors[i];
-      roundRect(ctx, px, pillY, pillW, pillH, pillH / 2);
+      roundRect(ctx, pad, oy, ow, oh, oh / 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Glossy highlight
+      const glossGrad = ctx.createLinearGradient(0, oy, 0, oy + oh * 0.45);
+      glossGrad.addColorStop(0, "rgba(255,255,255,0.22)");
+      glossGrad.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = glossGrad;
+      roundRect(ctx, pad, oy, ow, oh, oh / 2);
       ctx.fill();
 
-      // Letter
-      ctx.font = `800 ${Math.round(pillH * 0.55)}px 'DM Sans', sans-serif`;
+      // Letter badge (circle, left side)
+      const br = oh * 0.38;
+      const bx = pad + oh / 2;
+      const by = oy + oh / 2;
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = `800 ${Math.round(br * 1.3)}px 'DM Sans', sans-serif`;
       ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(letters[i], px + pillW / 2, pillY + pillH / 2);
+      ctx.fillText(letters[i], bx, by);
+
+      // "£???" price — centred in the remaining space
+      const priceX = pad + oh + (ow - oh) / 2;
+      ctx.font = `800 ${Math.round(oh * 0.48)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0,0,0,0.3)";
+      ctx.shadowBlur = 6;
+      ctx.fillText("\u00a3???", priceX, by);
 
       ctx.restore();
-      px += pillW + pillGap;
     }
 
-    // "PICK THE RIGHT PRICE" label underneath
-    const labelP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.75) / 0.25)));
+    // "PICK THE RIGHT PRICE" — bigger, bolder, gold
+    const labelP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.80) / 0.20)));
     if (labelP > 0) {
-      const labelY = pillY + pillH + sz(W, H, 0.04);
+      const labelY = startY + 3 * (oh + og) + sz(W, H, 0.03);
+      const labelSz = sz(W, H, ar !== "landscape" ? 0.045 : 0.035);
       ctx.save();
       ctx.globalAlpha = labelP;
-      ctx.font = `700 ${sz(W, H, ar !== "landscape" ? 0.032 : 0.025)}px 'DM Sans', sans-serif`;
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.font = `800 ${Math.round(labelSz)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = GAME.gold;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("PICK THE RIGHT PRICE", W / 2, labelY);
