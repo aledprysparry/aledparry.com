@@ -1753,9 +1753,9 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
   const nameP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.15) / 0.30)));
   const titleP = easeOutBack(Math.min(1, Math.max(0, (p - 0.30) / 0.30)));
 
-  // ── Headshot — bigger, positioned higher for impact ──
-  const headR = sz(W, H, ar !== "landscape" ? 0.13 : 0.10);
-  const headY = ar !== "landscape" ? safeTop + safeH * 0.18 : H * 0.26;
+  // ── Headshot — positioned to leave room for title + cards + logo below ──
+  const headR = sz(W, H, ar !== "landscape" ? 0.11 : 0.09);
+  const headY = ar !== "landscape" ? safeTop + safeH * 0.14 : H * 0.22;
   const headSlide = W * 0.06 * (1 - headP) * (fromRight ? 1 : -1);
   ctx.save();
   ctx.globalAlpha = headP;
@@ -1763,9 +1763,9 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
   drawInstrHeadshot(ctx, W / 2, headY, headR, agentIdx);
   ctx.restore();
 
-  // ── Agent name — "NATHAN'S" or "SIAN'S", bigger + bolder ──
-  const nameFs = sz(W, H, ar !== "landscape" ? 0.06 : 0.048);
-  const nameY = headY + headR + sz(W, H, 0.04);
+  // ── Agent name — "NATHAN'S" or "SIAN'S" ──
+  const nameFs = sz(W, H, ar !== "landscape" ? 0.055 : 0.045);
+  const nameY = headY + headR + sz(W, H, 0.025);
   if (nameP > 0) {
     ctx.save();
     ctx.globalAlpha = nameP;
@@ -1780,8 +1780,8 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
   }
 
   // ── "3 MYSTERY PROPERTIES" — gold, bold, positioned BELOW the name ──
-  const titleSz = sz(W, H, ar !== "landscape" ? 0.08 : 0.065) * (0.85 + 0.15 * Math.max(0, titleP));
-  const titleY = nameY + nameFs + sz(W, H, 0.035);
+  const titleSz = sz(W, H, ar !== "landscape" ? 0.07 : 0.06) * (0.85 + 0.15 * Math.max(0, titleP));
+  const titleY = nameY + nameFs + sz(W, H, 0.02);
   if (titleP > 0) {
     ctx.save();
     ctx.globalAlpha = titleP;
@@ -1796,10 +1796,10 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
     ctx.restore();
   }
 
-  // ── 3 mystery cards — positioned below the title ──
-  const cardW = sz(W, H, ar !== "landscape" ? 0.20 : 0.13);
-  const cardH = cardW * 1.3;
-  const cardsY = titleY + titleSz * 2.5;
+  // ── 3 mystery cards — positioned below the title, capped above logo zone ──
+  const cardW = sz(W, H, ar !== "landscape" ? 0.17 : 0.12);
+  const cardH = cardW * 1.25;
+  const cardsY = titleY + titleSz * 2.3;
   drawMysteryCards(ctx, W / 2, cardsY, cardW, cardH, p, ar);
 
   drawStamp(ctx, W, H);
@@ -1851,7 +1851,7 @@ function drawInstr3(ctx, W, H, S, progress) {
     ctx.save();
     ctx.globalAlpha = priceP;
     ctx.font = `900 ${Math.round(priceSz)}px 'Lora', serif`;
-    ctx.fillStyle = GAME.gold;
+    ctx.fillStyle = BRAND.colorWarm; // off-white (#F2E6D8), not salmon
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.shadowColor = "rgba(0,0,0,0.5)";
