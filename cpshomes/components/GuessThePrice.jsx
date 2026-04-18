@@ -1792,18 +1792,6 @@ function drawInstr3(ctx, W, H, S, progress) {
     const priceY = ar !== "landscape" ? safeTop + safeH * 0.38 : H * 0.40;
     const priceSz = sz(W, H, ar !== "landscape" ? 0.22 : 0.18) * (0.75 + 0.25 * priceP);
 
-    // Gold radial glow behind the price
-    ctx.save();
-    ctx.globalAlpha = priceP * 0.25;
-    const glowR = priceSz * 2.5;
-    const glow = ctx.createRadialGradient(W / 2, priceY, 0, W / 2, priceY, glowR);
-    glow.addColorStop(0, GAME.gold);
-    glow.addColorStop(0.5, GAME.goldDark);
-    glow.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(W / 2 - glowR, priceY - glowR, glowR * 2, glowR * 2);
-    ctx.restore();
-
     ctx.save();
     ctx.globalAlpha = priceP;
     ctx.font = `900 ${Math.round(priceSz)}px 'Lora', serif`;
