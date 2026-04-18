@@ -2880,6 +2880,11 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   const mapSrc = manualMapSrc || scrapedMapSrc || autoMapSrc;
   const mapImg = mapSrc ? getCachedImage(mapSrc) : null;
   const useMap = mapImg && mapImg.complete && mapImg.naturalWidth > 0;
+  // Debug: log map resolution chain (remove after confirmed working)
+  if (typeof window !== "undefined" && !window._mapDbgDone) {
+    console.log("[Opener Map Debug]", { manualMapSrc, scrapedMapIdx, scrapedMapSrc, autoMapSrc, mapSrc, useMap, roundLocation: rd?.location, mapIndex: rd?.mapIndex, floorplanIndex: rd?.floorplanIndex, photosLength: rd?.photos?.length });
+    window._mapDbgDone = true;
+  }
 
   const photos = (S.propPhotos && S.propPhotos.length)
     ? S.propPhotos
