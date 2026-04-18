@@ -6239,15 +6239,17 @@ export default function GuessThePrice({ displayMode = false }) {
               </button>
             ))}
 
-            {/* Social overlays section — shown on both tabs */}
-            <div style={{ ...sectionHead({ marginTop: DS.lg, marginBottom: DS.sm }), fontSize: 9, color: DS.textMuted }}>SOCIAL / EDIT</div>
-            {SOCIAL_ASSETS.map(a => (
-              <button key={a.id} onClick={() => { cancelAnimationFrame(animRef.current); clearTimeout(sequenceRef.current); setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
-                style={{ ...btn({ padding: "6px 10px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textSecondary, fontSize: DS.fsXs }) }}>
-                <span style={{ fontSize: 12 }}>{a.icon}</span>
-                <span>{a.label}</span>
-              </button>
-            ))}
+            {/* Social overlays — only on Extras tab */}
+            {assetTab === "extras" && (<>
+              <div style={{ ...sectionHead({ marginTop: DS.lg, marginBottom: DS.sm }), fontSize: 9, color: DS.textMuted }}>SOCIAL / EDIT</div>
+              {SOCIAL_ASSETS.map(a => (
+                <button key={a.id} onClick={() => { cancelAnimationFrame(animRef.current); clearTimeout(sequenceRef.current); setActiveAsset(a.id); setAnimProgress(0); setIsPlaying(false); }}
+                  style={{ ...btn({ padding: "6px 10px", width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: DS.sm, background: activeAsset === a.id ? "rgba(251,135,112,0.15)" : DS.bgButton, border: activeAsset === a.id ? `1px solid rgba(251,135,112,0.25)` : `1px solid ${DS.borderSubtle}`, color: activeAsset === a.id ? GAME.gold : DS.textSecondary, fontSize: DS.fsXs }) }}>
+                  <span style={{ fontSize: 12 }}>{a.icon}</span>
+                  <span>{a.label}</span>
+                </button>
+              ))}
+            </>)}
           </div>
         </nav>
 
