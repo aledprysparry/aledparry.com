@@ -750,7 +750,7 @@ function drawIntro(ctx, W, H, S, progress) {
     ctx.restore();
   }
 
-  drawStamp(ctx, W, H, { liftPx: 100 });
+  drawStamp(ctx, W, H);
 }
 
 function drawProperty(ctx, W, H, S, progress) {
