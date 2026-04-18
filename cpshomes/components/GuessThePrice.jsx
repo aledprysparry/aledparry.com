@@ -144,6 +144,58 @@ const GAME = {
 };
 
 // ═══════════════════════════════════════════════════════════════
+//  CARDIFF MAP — auto-generate static map URL per round location
+// ═══════════════════════════════════════════════════════════════
+const CARDIFF_COORDS = {
+  "roath":          { lat: 51.4925, lng: -3.1625 },
+  "cathays":        { lat: 51.4920, lng: -3.1780 },
+  "canton":         { lat: 51.4810, lng: -3.2050 },
+  "pontcanna":      { lat: 51.4870, lng: -3.2000 },
+  "penylan":        { lat: 51.4990, lng: -3.1580 },
+  "splott":         { lat: 51.4780, lng: -3.1530 },
+  "grangetown":     { lat: 51.4700, lng: -3.1900 },
+  "riverside":      { lat: 51.4800, lng: -3.1900 },
+  "cardiff bay":    { lat: 51.4630, lng: -3.1650 },
+  "llandaff":       { lat: 51.4960, lng: -3.2180 },
+  "whitchurch":     { lat: 51.5180, lng: -3.2120 },
+  "heath":          { lat: 51.5100, lng: -3.1750 },
+  "cyncoed":        { lat: 51.5080, lng: -3.1500 },
+  "llanishen":      { lat: 51.5220, lng: -3.1700 },
+  "rhiwbina":       { lat: 51.5200, lng: -3.2050 },
+  "gabalfa":        { lat: 51.5020, lng: -3.1950 },
+  "adamsdown":      { lat: 51.4840, lng: -3.1620 },
+  "butetown":       { lat: 51.4680, lng: -3.1700 },
+  "ely":            { lat: 51.4850, lng: -3.2400 },
+  "fairwater":      { lat: 51.4920, lng: -3.2350 },
+  "pentwyn":        { lat: 51.5140, lng: -3.1380 },
+  "rumney":         { lat: 51.4920, lng: -3.1200 },
+  "llanrumney":     { lat: 51.5020, lng: -3.1200 },
+  "st mellons":     { lat: 51.5020, lng: -3.0950 },
+  "radyr":          { lat: 51.5100, lng: -3.2500 },
+  "tongwynlais":    { lat: 51.5300, lng: -3.2500 },
+  "creigiau":       { lat: 51.5100, lng: -3.2800 },
+  "century wharf":  { lat: 51.4680, lng: -3.1680 },
+  "atlantic wharf": { lat: 51.4660, lng: -3.1650 },
+  "cardiff":        { lat: 51.4816, lng: -3.1791 }, // city centre fallback
+};
+
+// Look up coordinates from a round's location string (fuzzy match on neighborhood name)
+function getLocationCoords(locationStr) {
+  if (!locationStr) return CARDIFF_COORDS.cardiff;
+  const lower = locationStr.toLowerCase();
+  for (const [key, coords] of Object.entries(CARDIFF_COORDS)) {
+    if (lower.includes(key)) return coords;
+  }
+  return CARDIFF_COORDS.cardiff; // default to city centre
+}
+
+// Build a proxied static map URL for a location — avoids CORS via /api/gtp/map
+function getMapUrl(locationStr, w = 800, h = 600) {
+  const { lat, lng } = getLocationCoords(locationStr);
+  return `/api/gtp/map?lat=${lat}&lng=${lng}&zoom=15&w=${w}&h=${h}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  IMAGE CACHE
 // ═══════════════════════════════════════════════════════════════
 const IMG_CACHE = {};
@@ -582,7 +634,11 @@ function drawIntro(ctx, W, H, S, progress) {
   // ── VS section — DRAMATIC, big headshots, tight layout ──
   // Landscape: lifted from 0.62 → 0.48 (with shrunk title area above)
   // so agents sit firmly in the upper-mid of the frame.
-  const vsY = ar !== "landscape" ? safeTop + safeH * 0.58 : H * 0.48;
+  // When CPS logo is visible, push headshots higher to clear the logo area.
+  // When hidden, content can sit lower / more centered in the frame.
+  const vsY = ar !== "landscape"
+    ? safeTop + safeH * (_showCpsLogo ? 0.52 : 0.58)
+    : H * (_showCpsLogo ? 0.46 : 0.48);
   const headR = sz(W, H, ar !== "landscape" ? 0.13 : 0.14); // 16:9 bumped 0.10→0.14
   const spread = ar !== "landscape" ? W * 0.24 : W * 0.22;  // wider spread to match
 
@@ -2801,14 +2857,20 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   const photoW = cardW - pad * 2;
   const photoH = contentH - priceBlockH - pad * 1.5;
 
-  // Image source: prefer map image (with zoom + pin drop) over property photo
-  const mapSrc = EPISODE.mapImage;
+  // Image source priority:
+  //   1. Manual map upload (EPISODE.mapImage) — user override
+  //   2. Auto-generated map from round location (dynamic per round)
+  //   3. Property photo fallback
+  const rd = EPISODE.rounds?.[(S.propRound || 1) - 1];
+  const manualMapSrc = EPISODE.mapImage;
+  const autoMapSrc = rd?.location ? getMapUrl(rd.location) : null;
+  const mapSrc = manualMapSrc || autoMapSrc;
   const mapImg = mapSrc ? getCachedImage(mapSrc) : null;
   const useMap = mapImg && mapImg.complete && mapImg.naturalWidth > 0;
 
   const photos = (S.propPhotos && S.propPhotos.length)
     ? S.propPhotos
-    : (EPISODE.rounds?.[(S.propRound || 1) - 1]?.photos || []);
+    : (rd?.photos || []);
   const heroSrc = useMap ? null : photos[0];
   const heroImg = heroSrc ? getCachedImage(heroSrc) : null;
 
