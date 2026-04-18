@@ -2810,16 +2810,60 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   const photoW = cardW - pad * 2;
   const photoH = contentH - priceBlockH - pad * 1.5;
 
-  // Hero photo — from S.propPhotos or EPISODE.rounds[propRound-1].photos
+  // Image source: prefer map image (with zoom + pin drop) over property photo
+  const mapSrc = EPISODE.mapImage;
+  const mapImg = mapSrc ? getCachedImage(mapSrc) : null;
+  const useMap = mapImg && mapImg.complete && mapImg.naturalWidth > 0;
+
   const photos = (S.propPhotos && S.propPhotos.length)
     ? S.propPhotos
     : (EPISODE.rounds?.[(S.propRound || 1) - 1]?.photos || []);
-  const heroSrc = photos[0];
+  const heroSrc = useMap ? null : photos[0];
   const heroImg = heroSrc ? getCachedImage(heroSrc) : null;
+
   ctx.save();
   roundRect(ctx, photoX, photoY, photoW, photoH, radius * 0.5);
   ctx.clip();
-  if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
+
+  if (useMap) {
+    // Map with Ken Burns zoom — starts wide, pushes in toward center
+    const iw = mapImg.naturalWidth, ih = mapImg.naturalHeight;
+    const zoomStart = 1.0, zoomEnd = 1.35;
+    const zoom = zoomStart + (zoomEnd - zoomStart) * anim;
+    const scale = Math.max(photoW / iw, photoH / ih) * zoom;
+    const dw = iw * scale, dh = ih * scale;
+    ctx.drawImage(mapImg, photoX + (photoW - dw) / 2, photoY + (photoH - dh) / 2, dw, dh);
+
+    // Location pin — drops in with bounce at 50% progress
+    const pinP = easeOutBack(Math.min(1, Math.max(0, (anim - 0.4) / 0.35)));
+    if (pinP > 0) {
+      const pinSz = Math.min(photoW, photoH) * 0.12;
+      const pinX = photoX + photoW * 0.5;
+      const pinBaseY = photoY + photoH * 0.48;
+      const pinDropY = pinBaseY - pinSz * 1.8 * (1 - pinP);
+
+      ctx.save();
+      ctx.globalAlpha = pinP;
+      // Pin shadow on the map
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.beginPath();
+      ctx.ellipse(pinX, pinBaseY + pinSz * 0.1, pinSz * 0.35, pinSz * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Pin body — salmon/gold teardrop
+      ctx.fillStyle = GAME.gold;
+      ctx.beginPath();
+      ctx.arc(pinX, pinDropY, pinSz * 0.4, Math.PI, 0);
+      ctx.lineTo(pinX, pinDropY + pinSz * 0.9);
+      ctx.closePath();
+      ctx.fill();
+      // Pin center dot
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(pinX, pinDropY, pinSz * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  } else if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
     const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
     const scale = Math.max(photoW / iw, photoH / ih);
     const dw = iw * scale, dh = ih * scale;
@@ -3035,47 +3079,70 @@ function drawOverlayHowDidYouDo(ctx, W, H, S, progress) {
 // "Comment, Share & Subscribe" — transparent social CTA with staggered entrance
 // Phase 1 (0-0.25): "Comment"   fades + slides up
 // "What's your guess? Comment below" — transparent social CTA
+// Shared helper: draw mini A/B/C option pills on a transparent overlay
+function drawMiniABCPills(ctx, cx, cy, p, W, H, ar) {
+  const pillW = sz(W, H, ar !== "landscape" ? 0.14 : 0.08);
+  const pillH = sz(W, H, ar !== "landscape" ? 0.045 : 0.035);
+  const gap = sz(W, H, 0.02);
+  const letters = ["A", "B", "C"];
+  const colors = [GAME.optionA, GAME.optionB, GAME.optionC];
+  const totalW = pillW * 3 + gap * 2;
+  let px = cx - totalW / 2;
+
+  for (let i = 0; i < 3; i++) {
+    const delay = 0.5 + i * 0.08;
+    const lp = easeOutBack(Math.min(1, Math.max(0, (p - delay) / 0.25)));
+    if (lp <= 0) { px += pillW + gap; continue; }
+
+    ctx.save();
+    ctx.globalAlpha = lp;
+    ctx.translate(0, (1 - lp) * pillH * 0.5);
+    ctx.fillStyle = colors[i];
+    roundRect(ctx, px, cy, pillW, pillH, pillH / 2);
+    ctx.fill();
+    ctx.font = `800 ${Math.round(pillH * 0.55)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(letters[i], px + pillW / 2, cy + pillH / 2);
+    ctx.restore();
+    px += pillW + gap;
+  }
+}
+
+// "A, B, or C? Comment below" — sharper CTA with option pills
 function drawOverlayGuessBelow(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const centerY = ar !== "landscape" ? H * 0.42 : H * 0.45;
+  const centerY = ar !== "landscape" ? H * 0.38 : H * 0.40;
 
-  const line1P = easeOutExpo(Math.min(1, p / 0.4));
-  const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.35) / 0.35)));
+  const line1P = easeOutExpo(Math.min(1, p / 0.35));
+  const line2P = easeOutBack(Math.min(1, Math.max(0, (p - 0.30) / 0.30)));
 
-  // "What's your guess?"
+  // "A, B, or C?" — white, punchy
   if (line1P > 0) {
-    const topSz = sz(W, H, ar !== "landscape" ? 0.09 : 0.075);
+    const topSz = sz(W, H, ar !== "landscape" ? 0.095 : 0.08);
     ctx.save();
     ctx.globalAlpha = line1P;
-    ctx.font = `700 ${Math.round(topSz)}px 'Lora', serif`;
+    ctx.font = `800 ${Math.round(topSz)}px 'Lora', serif`;
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.shadowColor = "rgba(0,0,0,0.6)";
     ctx.shadowBlur = topSz * 0.12;
-    ctx.fillText("What\u2019s your guess?", W / 2, centerY - sz(W, H, 0.055));
+    ctx.fillText("A, B, or C?", W / 2, centerY - sz(W, H, 0.02));
     ctx.restore();
   }
 
-  // "Comment below" — gold, bounces in with white halo
-  if (line2P > 0) {
-    const bigSz = sz(W, H, ar !== "landscape" ? 0.11 : 0.09) * (0.75 + 0.25 * line2P);
-    const bigY = centerY + sz(W, H, 0.06);
+  // Mini A/B/C pills
+  const pillsY = centerY + sz(W, H, 0.06);
+  drawMiniABCPills(ctx, W / 2, pillsY, p, W, H, ar);
 
-    // White halo
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, line2P) * 0.9;
-    const glowR = bigSz * 2.6;
-    const glow = ctx.createRadialGradient(W / 2, bigY, 0, W / 2, bigY, glowR);
-    glow.addColorStop(0,    "rgba(255, 255, 255, 0.35)");
-    glow.addColorStop(0.3,  "rgba(255, 255, 255, 0.15)");
-    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.04)");
-    glow.addColorStop(1,    "rgba(255, 255, 255, 0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(W / 2 - glowR, bigY - glowR, glowR * 2, glowR * 2);
-    ctx.restore();
+  // "Drop your guess below" — gold, bounces in
+  if (line2P > 0) {
+    const bigSz = sz(W, H, ar !== "landscape" ? 0.075 : 0.06) * (0.8 + 0.2 * line2P);
+    const bigY = pillsY + sz(W, H, ar !== "landscape" ? 0.10 : 0.08);
 
     ctx.save();
     ctx.globalAlpha = line2P;
@@ -3083,52 +3150,55 @@ function drawOverlayGuessBelow(ctx, W, H, S, progress) {
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("Comment below", W / 2, bigY);
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = bigSz * 0.08;
+    ctx.fillText("Drop your guess below", W / 2, bigY);
     ctx.restore();
   }
 }
 
-// "Guess before the reveal!" — transparent social CTA
+// "GUESS NOW!" + A/B/C pills + "before we reveal" — sharper pre-reveal CTA
 function drawOverlayGuessReveal(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   ctx.clearRect(0, 0, W, H);
   const ar = aspect(W, H);
-  const centerY = ar !== "landscape" ? H * 0.44 : H * 0.46;
+  const centerY = ar !== "landscape" ? H * 0.36 : H * 0.40;
 
-  const textP = easeOutBack(Math.min(1, p / 0.45));
+  const titleP = easeOutBack(Math.min(1, p / 0.35));
+  const subP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.35) / 0.35)));
 
-  if (textP > 0) {
-    const mainSz = sz(W, H, ar !== "landscape" ? 0.10 : 0.085) * (0.75 + 0.25 * textP);
-    const textY = centerY;
-
-    // White halo
+  // "GUESS NOW!" — big, gold, urgent
+  if (titleP > 0) {
+    const titleSz = sz(W, H, ar !== "landscape" ? 0.12 : 0.10) * (0.75 + 0.25 * titleP);
     ctx.save();
-    ctx.globalAlpha = Math.min(1, textP) * 0.9;
-    const glowR = mainSz * 2.8;
-    const glow = ctx.createRadialGradient(W / 2, textY, 0, W / 2, textY, glowR);
-    glow.addColorStop(0,    "rgba(255, 255, 255, 0.35)");
-    glow.addColorStop(0.3,  "rgba(255, 255, 255, 0.15)");
-    glow.addColorStop(0.65, "rgba(255, 255, 255, 0.04)");
-    glow.addColorStop(1,    "rgba(255, 255, 255, 0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(W / 2 - glowR, textY - glowR, glowR * 2, glowR * 2);
-    ctx.restore();
-
-    ctx.save();
-    ctx.globalAlpha = textP;
-    ctx.font = `800 ${Math.round(mainSz)}px 'Lora', serif`;
+    ctx.globalAlpha = titleP;
+    ctx.font = `900 ${Math.round(titleSz)}px 'Lora', serif`;
     ctx.fillStyle = GAME.gold;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.shadowColor = "rgba(0,0,0,0.5)";
-    ctx.shadowBlur = mainSz * 0.08;
-    // Two lines for portrait, one for landscape
-    if (ar !== "landscape") {
-      ctx.fillText("Guess before", W / 2, textY - mainSz * 0.55);
-      ctx.fillText("the reveal!", W / 2, textY + mainSz * 0.55);
-    } else {
-      ctx.fillText("Guess before the reveal!", W / 2, textY);
-    }
+    ctx.shadowBlur = titleSz * 0.08;
+    ctx.fillText("GUESS NOW!", W / 2, centerY);
+    ctx.restore();
+  }
+
+  // Mini A/B/C pills
+  const pillsY = centerY + sz(W, H, ar !== "landscape" ? 0.10 : 0.08);
+  drawMiniABCPills(ctx, W / 2, pillsY, p, W, H, ar);
+
+  // "before we reveal" — white, fades in
+  if (subP > 0) {
+    const subSz = sz(W, H, ar !== "landscape" ? 0.055 : 0.042);
+    const subY = pillsY + sz(W, H, ar !== "landscape" ? 0.10 : 0.07);
+    ctx.save();
+    ctx.globalAlpha = subP;
+    ctx.font = `700 ${Math.round(subSz)}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0,0,0,0.6)";
+    ctx.shadowBlur = subSz * 0.15;
+    ctx.fillText("before we reveal", W / 2, subY);
     ctx.restore();
   }
 }
@@ -5326,6 +5396,23 @@ export default function GuessThePrice({ displayMode = false }) {
         </>);
       case "scoreboard":
         return <p style={{ color: DS.textMuted, fontSize: DS.fsSm }}>Scores controlled from the round bar above. Use +1 buttons.</p>;
+      case "opener":
+      case "overlay_opener":
+        return (<>
+          <div style={{ ...sectionHead(), fontSize: DS.fsXs, color: GAME.gold }}>MAP IMAGE</div>
+          <div style={label()}>Cardiff Map (for zoom animation)</div>
+          <input style={inputS()} placeholder="Paste map image URL…" value={episode.mapImage || ""}
+            onChange={e => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, mapImage: e.target.value } : ep)); setDirty(true); getCachedImage(e.target.value); }} />
+          <div
+            style={{ marginTop: DS.xs, padding: DS.md, border: `2px dashed ${DS.borderSubtle}`, borderRadius: DS.rSm, textAlign: "center", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}
+            onClick={() => { const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = async (ev) => { const f = ev.target.files[0]; if (!f) return; const reader = new FileReader(); reader.onload = async (re) => { const b64 = re.target.result; const url = await uploadPhotoToBlob(b64, "map", 0); setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, mapImage: url } : ep)); setDirty(true); getCachedImage(url); }; reader.readAsDataURL(f); }; inp.click(); }}
+          >
+            <div style={{ fontSize: DS.fsXs, color: DS.textMuted }}>or click to upload</div>
+          </div>
+          {episode.mapImage && <img src={episode.mapImage} style={{ maxWidth: "100%", maxHeight: 100, objectFit: "contain", marginTop: DS.sm, borderRadius: 4, background: "rgba(0,0,0,0.3)", padding: 8 }} alt="Map preview" />}
+          {episode.mapImage && <button onClick={() => { setEpisodes(prev => prev.map(ep => ep.id === activeEpisodeId ? { ...ep, mapImage: "" } : ep)); setDirty(true); }} style={btn({ padding: "3px 8px", fontSize: DS.fsXs, color: DS.textMuted, marginTop: DS.xs })}>Remove map</button>}
+          <div style={{ fontSize: DS.fsXs, color: DS.textMuted, marginTop: DS.sm }}>Upload a Cardiff map screenshot. The opener will zoom in with a pin drop animation instead of showing the property photo.</div>
+        </>);
       default:
         return null;
     }
