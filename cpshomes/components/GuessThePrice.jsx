@@ -1710,7 +1710,7 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
   // ── Agent name — "NATHAN'S" or "SIAN'S", bigger + bolder ──
   if (nameP > 0) {
     const nameFs = sz(W, H, ar !== "landscape" ? 0.075 : 0.055);
-    const nameY = headY + headR + sz(W, H, 0.04);
+    const nameY = headY + headR + sz(W, H, 0.065);
     ctx.save();
     ctx.globalAlpha = nameP;
     ctx.font = `800 ${Math.round(nameFs)}px 'DM Sans', sans-serif`;
