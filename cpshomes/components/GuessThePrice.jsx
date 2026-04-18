@@ -1505,54 +1505,54 @@ function drawReveal(ctx, W, H, S, progress) {
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
 
-    // Letter — scale in with elastic, WHITE with coloured glow
+    // Letter — scale in with elastic, WHITE with coloured glow — BIGGER for social
     if (rp > 0.05) {
       const letterP = Math.min(1, (rp - 0.05) / 0.3);
       const scale = easeOutBack(letterP);
-      const letterSz = sz(W, H, ar !== "landscape" ? 0.30 : 0.22) * scale;
+      const letterSz = sz(W, H, ar !== "landscape" ? 0.35 : 0.24) * scale;
       ctx.save();
       ctx.shadowColor = cc;
       ctx.shadowBlur = sz(W, H, 0.08) * Math.min(1, rp * 2);
-      ctx.font = `800 ${Math.round(letterSz)}px 'DM Sans', sans-serif`;
+      ctx.font = `900 ${Math.round(letterSz)}px 'DM Sans', sans-serif`;
       ctx.fillStyle = "#fff";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(cl, W / 2, centerY - sz(W, H, 0.04));
+      ctx.fillText(cl, W / 2, centerY - sz(W, H, 0.05));
       ctx.restore();
     }
 
-    // Price — fade up, BIGGER
+    // Price — fade up, MUCH BIGGER for social impact
     if (rp > 0.45) {
       const priceP = Math.min(1, (rp - 0.45) / 0.25);
       const a = easeOutExpo(priceP);
-      const priceSz = sz(W, H, ar !== "landscape" ? 0.12 : 0.09);
+      const priceSz = sz(W, H, ar !== "landscape" ? 0.16 : 0.11);
       ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.4)";
-      ctx.shadowBlur = priceSz * 0.1;
-      ctx.font = `800 ${priceSz}px 'DM Sans', sans-serif`;
+      ctx.shadowColor = "rgba(0,0,0,0.5)";
+      ctx.shadowBlur = priceSz * 0.12;
+      ctx.font = `900 ${priceSz}px 'DM Sans', sans-serif`;
       ctx.fillStyle = `rgba(255,255,255,${a})`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      const priceY = centerY + sz(W, H, ar !== "landscape" ? 0.18 : 0.14);
+      const priceY = centerY + sz(W, H, ar !== "landscape" ? 0.20 : 0.15);
       ctx.fillText(`\u00a3${cp}`, W / 2, priceY + (1 - a) * sz(W, H, 0.02));
       ctx.restore();
     }
 
-    // "CORRECT PRICE" label
+    // "CORRECT PRICE" label — bolder for social
     if (rp > 0.6) {
       const lblP = Math.min(1, (rp - 0.6) / 0.2);
-      ctx.font = `600 ${sz(W, H, 0.022)}px 'DM Sans', sans-serif`;
+      ctx.font = `800 ${sz(W, H, ar !== "landscape" ? 0.035 : 0.025)}px 'DM Sans', sans-serif`;
       ctx.fillStyle = `rgba(251,135,112,${lblP})`;
       ctx.textAlign = "center";
-      ctx.fillText("CORRECT PRICE", W / 2, centerY + sz(W, H, ar !== "landscape" ? 0.26 : 0.23));
+      ctx.fillText("CORRECT PRICE", W / 2, centerY + sz(W, H, ar !== "landscape" ? 0.30 : 0.25));
     }
 
-    // Result indicator — did they get it right?
+    // Result indicator — did they get it right? — BIGGER for social
     if (rp > 0.75 && S.lockLetter) {
       const resP = easeOutExpo(Math.min(1, (rp - 0.75) / 0.2));
       const gotItRight = S.lockLetter === cl;
-      const resY = centerY + sz(W, H, ar !== "landscape" ? 0.32 : 0.30);
-      const resSz = sz(W, H, 0.035) * (0.8 + 0.2 * easeOutBack(resP));
+      const resY = centerY + sz(W, H, ar !== "landscape" ? 0.37 : 0.32);
+      const resSz = sz(W, H, ar !== "landscape" ? 0.05 : 0.038) * (0.8 + 0.2 * easeOutBack(resP));
       ctx.save();
       ctx.globalAlpha = resP;
       ctx.font = `800 ${Math.round(resSz)}px 'DM Sans', sans-serif`;
