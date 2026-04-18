@@ -301,6 +301,9 @@ const GTP_CHANNEL_NAME = "gtp-live-sync";
 const ASSETS = [
   { id: "intro",      label: "Intro Title",    icon: "\u25b6", animated: true },
   { id: "opener",     label: "Opener (Filled)", icon: "\ud83c\udfaa", animated: true },
+  { id: "instr1",     label: "Instructions 1",  icon: "\ud83d\udccb", animated: true },
+  { id: "instr2",     label: "Instructions 2",  icon: "\ud83d\udccb", animated: true },
+  { id: "instr3",     label: "Instructions 3",  icon: "\ud83d\udccb", animated: true },
   { id: "roundtitle", label: "Round Title",     icon: "#", animated: true },
   { id: "roundcard",  label: "Round Card",      icon: "\ud83d\udccb", animated: true },
   { id: "property",   label: "Property Frame",  icon: "\ud83c\udfe0", animated: true },
@@ -1589,6 +1592,316 @@ function drawReveal(ctx, W, H, S, progress) {
   drawStamp(ctx, W, H);
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  GAME INSTRUCTIONS — 3 episode-level infographic slides
+//  Explain the format before Round 1 starts.
+// ═══════════════════════════════════════════════════════════════
+
+// Shared helper: draw an agent headshot circle at (cx, cy)
+function drawInstrHeadshot(ctx, cx, cy, r, agentIdx) {
+  const imgUrl = EPISODE.agentImages?.[agentIdx];
+  const img = imgUrl ? getCachedImage(imgUrl) : null;
+  const imgReady = img && img.complete && img.naturalWidth > 0;
+  const name = EPISODE.agents[agentIdx] || `Agent ${agentIdx + 1}`;
+
+  // Gold ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + r * 0.08, 0, Math.PI * 2);
+  ctx.strokeStyle = GAME.gold;
+  ctx.lineWidth = r * 0.08;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.closePath();
+  if (imgReady) {
+    ctx.clip();
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const scale = Math.max(r * 2 / iw, r * 2 / ih);
+    const dw = iw * scale, dh = ih * scale;
+    ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+  } else {
+    const pg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    pg.addColorStop(0, agentIdx === 0 ? BRAND.colorAccent : BRAND.colorPositive);
+    pg.addColorStop(1, agentIdx === 0 ? "#c2564a" : "#5a7a58");
+    ctx.fillStyle = pg;
+    ctx.fill();
+    ctx.font = `800 ${r * 0.8}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(name.charAt(0).toUpperCase(), cx, cy);
+  }
+  ctx.restore();
+}
+
+// Shared helper: draw 3 mystery property cards (house silhouettes with "?")
+function drawMysteryCards(ctx, cx, cy, cardW, cardH, p, ar) {
+  const gap = cardW * 0.15;
+  const totalW = cardW * 3 + gap * 2;
+  let startX = cx - totalW / 2;
+
+  for (let i = 0; i < 3; i++) {
+    const delay = 0.3 + i * 0.12;
+    const cardP = easeOutBack(Math.min(1, Math.max(0, (p - delay) / 0.35)));
+    if (cardP <= 0) { startX += cardW + gap; continue; }
+
+    const x = startX;
+    const yOff = (1 - cardP) * cardH * 0.3;
+    ctx.save();
+    ctx.globalAlpha = cardP;
+    ctx.translate(0, yOff);
+
+    // Card background
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    roundRect(ctx, x, cy, cardW, cardH, BRAND.cornerRadius);
+    ctx.fill();
+    ctx.strokeStyle = GAME.gold;
+    ctx.lineWidth = 2;
+    roundRect(ctx, x, cy, cardW, cardH, BRAND.cornerRadius);
+    ctx.stroke();
+
+    // House icon + "?"
+    const iconSz = Math.min(cardW, cardH) * 0.35;
+    ctx.font = `${Math.round(iconSz)}px serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("\ud83c\udfe0", x + cardW / 2, cy + cardH * 0.38);
+
+    ctx.font = `800 ${Math.round(iconSz * 0.9)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.fillText("?", x + cardW / 2, cy + cardH * 0.72);
+
+    ctx.restore();
+    startX += cardW + gap;
+  }
+}
+
+// Instruction 1: "[Agent]'s 3 Mystery Properties" — first agent (index 0)
+function drawInstr1(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  drawBg(ctx, W, H);
+  drawAccentBars(ctx, W, H);
+  const ar = aspect(W, H);
+  const safe = safeZone(W, H);
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+  const name = EPISODE.agents[0] || "Agent 1";
+
+  // Headshot — slides in from left
+  const headP = easeOutExpo(Math.min(1, p / 0.4));
+  const headR = sz(W, H, ar !== "landscape" ? 0.10 : 0.08);
+  const headY = ar !== "landscape" ? safeTop + safeH * 0.22 : H * 0.30;
+  const headSlide = W * 0.08 * (1 - headP);
+  ctx.save();
+  ctx.globalAlpha = headP;
+  ctx.translate(-headSlide, 0);
+  drawInstrHeadshot(ctx, W / 2, headY, headR, 0);
+  ctx.restore();
+
+  // Agent name
+  if (headP > 0.3) {
+    const nameP = easeOutExpo(Math.min(1, (p - 0.15) / 0.3));
+    const nameFs = sz(W, H, ar !== "landscape" ? 0.055 : 0.042);
+    ctx.save();
+    ctx.globalAlpha = nameP;
+    ctx.font = `800 ${nameFs}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(name.toUpperCase(), W / 2, headY + headR + headR * 0.4);
+    ctx.restore();
+  }
+
+  // "3 MYSTERY PROPERTIES" title
+  const titleP = easeOutBack(Math.min(1, Math.max(0, (p - 0.25) / 0.35)));
+  if (titleP > 0) {
+    const titleY = ar !== "landscape" ? safeTop + safeH * 0.48 : H * 0.52;
+    const titleSz = sz(W, H, ar !== "landscape" ? 0.065 : 0.055) * (0.85 + 0.15 * titleP);
+    ctx.save();
+    ctx.globalAlpha = titleP;
+    ctx.font = `800 ${Math.round(titleSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("3 MYSTERY PROPERTIES", W / 2, titleY);
+    ctx.restore();
+  }
+
+  // 3 mystery cards
+  const cardW = sz(W, H, ar !== "landscape" ? 0.18 : 0.12);
+  const cardH = cardW * 1.3;
+  const cardsY = ar !== "landscape" ? safeTop + safeH * 0.60 : H * 0.64;
+  drawMysteryCards(ctx, W / 2, cardsY, cardW, cardH, p, ar);
+
+  drawStamp(ctx, W, H);
+}
+
+// Instruction 2: "[Agent]'s 3 Mystery Properties" — second agent (index 1)
+function drawInstr2(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  drawBg(ctx, W, H);
+  drawAccentBars(ctx, W, H);
+  const ar = aspect(W, H);
+  const safe = safeZone(W, H);
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+  const name = EPISODE.agents[1] || "Agent 2";
+
+  // Headshot — slides in from right
+  const headP = easeOutExpo(Math.min(1, p / 0.4));
+  const headR = sz(W, H, ar !== "landscape" ? 0.10 : 0.08);
+  const headY = ar !== "landscape" ? safeTop + safeH * 0.22 : H * 0.30;
+  const headSlide = W * 0.08 * (1 - headP);
+  ctx.save();
+  ctx.globalAlpha = headP;
+  ctx.translate(headSlide, 0);
+  drawInstrHeadshot(ctx, W / 2, headY, headR, 1);
+  ctx.restore();
+
+  // Agent name
+  if (headP > 0.3) {
+    const nameP = easeOutExpo(Math.min(1, (p - 0.15) / 0.3));
+    const nameFs = sz(W, H, ar !== "landscape" ? 0.055 : 0.042);
+    ctx.save();
+    ctx.globalAlpha = nameP;
+    ctx.font = `800 ${nameFs}px 'DM Sans', sans-serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(name.toUpperCase(), W / 2, headY + headR + headR * 0.4);
+    ctx.restore();
+  }
+
+  // "3 MYSTERY PROPERTIES" title
+  const titleP = easeOutBack(Math.min(1, Math.max(0, (p - 0.25) / 0.35)));
+  if (titleP > 0) {
+    const titleY = ar !== "landscape" ? safeTop + safeH * 0.48 : H * 0.52;
+    const titleSz = sz(W, H, ar !== "landscape" ? 0.065 : 0.055) * (0.85 + 0.15 * titleP);
+    ctx.save();
+    ctx.globalAlpha = titleP;
+    ctx.font = `800 ${Math.round(titleSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("3 MYSTERY PROPERTIES", W / 2, titleY);
+    ctx.restore();
+  }
+
+  // 3 mystery cards
+  const cardW = sz(W, H, ar !== "landscape" ? 0.18 : 0.12);
+  const cardH = cardW * 1.3;
+  const cardsY = ar !== "landscape" ? safeTop + safeH * 0.60 : H * 0.64;
+  drawMysteryCards(ctx, W / 2, cardsY, cardW, cardH, p, ar);
+
+  drawStamp(ctx, W, H);
+}
+
+// Instruction 3: "How Much Have They Been Listed For?" — the challenge
+function drawInstr3(ctx, W, H, S, progress) {
+  const p = progress ?? 1;
+  drawBg(ctx, W, H);
+  drawAccentBars(ctx, W, H);
+  const ar = aspect(W, H);
+  const safe = safeZone(W, H);
+  const safeTop = ar !== "landscape" ? safe.contentTop : 0;
+  const safeH = ar !== "landscape" ? safe.contentBottom - safe.contentTop : H;
+
+  // Big question — bounces in
+  const titleP = easeOutBack(Math.min(1, p / 0.4));
+  if (titleP > 0) {
+    const titleY = ar !== "landscape" ? safeTop + safeH * 0.15 : H * 0.18;
+    const titleSz = sz(W, H, ar !== "landscape" ? 0.065 : 0.055) * (0.8 + 0.2 * titleP);
+    ctx.save();
+    ctx.globalAlpha = titleP;
+    ctx.font = `800 ${Math.round(titleSz)}px 'Lora', serif`;
+    ctx.fillStyle = GAME.gold;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    if (ar !== "landscape") {
+      ctx.fillText("How Much Have They", W / 2, titleY);
+      ctx.fillText("Been Listed For?", W / 2, titleY + titleSz * 1.1);
+    } else {
+      ctx.fillText("How Much Have They Been Listed For?", W / 2, titleY);
+    }
+    ctx.restore();
+  }
+
+  // Big "£???" — dramatic, centred
+  const priceP = easeOutBack(Math.min(1, Math.max(0, (p - 0.3) / 0.35)));
+  if (priceP > 0) {
+    const priceY = ar !== "landscape" ? safeTop + safeH * 0.42 : H * 0.42;
+    const priceSz = sz(W, H, ar !== "landscape" ? 0.16 : 0.14) * (0.75 + 0.25 * priceP);
+    ctx.save();
+    ctx.globalAlpha = priceP;
+    ctx.font = `900 ${Math.round(priceSz)}px 'Lora', serif`;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("\u00a3???", W / 2, priceY);
+    ctx.restore();
+  }
+
+  // A / B / C option preview — mini pills showing the game mechanic
+  const pillP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.55) / 0.3)));
+  if (pillP > 0) {
+    const pillY = ar !== "landscape" ? safeTop + safeH * 0.62 : H * 0.62;
+    const pillW = sz(W, H, ar !== "landscape" ? 0.20 : 0.12);
+    const pillH = sz(W, H, ar !== "landscape" ? 0.06 : 0.05);
+    const pillGap = sz(W, H, 0.025);
+    const letters = ["A", "B", "C"];
+    const colors = [GAME.optionA, GAME.optionB, GAME.optionC];
+    const totalW = pillW * 3 + pillGap * 2;
+    let px = W / 2 - totalW / 2;
+
+    for (let i = 0; i < 3; i++) {
+      const delay = 0.55 + i * 0.08;
+      const lp = easeOutBack(Math.min(1, Math.max(0, (p - delay) / 0.25)));
+      if (lp <= 0) { px += pillW + pillGap; continue; }
+
+      ctx.save();
+      ctx.globalAlpha = lp;
+      ctx.translate(0, (1 - lp) * pillH * 0.5);
+
+      // Pill
+      ctx.fillStyle = colors[i];
+      roundRect(ctx, px, pillY, pillW, pillH, pillH / 2);
+      ctx.fill();
+
+      // Letter
+      ctx.font = `800 ${Math.round(pillH * 0.55)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(letters[i], px + pillW / 2, pillY + pillH / 2);
+
+      ctx.restore();
+      px += pillW + pillGap;
+    }
+
+    // "PICK THE RIGHT PRICE" label underneath
+    const labelP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.75) / 0.25)));
+    if (labelP > 0) {
+      const labelY = pillY + pillH + sz(W, H, 0.04);
+      ctx.save();
+      ctx.globalAlpha = labelP;
+      ctx.font = `700 ${sz(W, H, ar !== "landscape" ? 0.032 : 0.025)}px 'DM Sans', sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("PICK THE RIGHT PRICE", W / 2, labelY);
+      ctx.restore();
+    }
+  }
+
+  drawStamp(ctx, W, H);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ROUND TITLE
+// ═══════════════════════════════════════════════════════════════
 function drawRoundTitle(ctx, W, H, S, progress) {
   const p = progress ?? 1;
   drawBg(ctx, W, H);
@@ -3122,6 +3435,9 @@ function drawOverlayCSSS(ctx, W, H, S, progress) {
 const DRAW_FNS = {
   intro: drawIntro,
   opener: drawOpener,
+  instr1: drawInstr1,
+  instr2: drawInstr2,
+  instr3: drawInstr3,
   roundtitle: drawRoundTitle,
   roundcard: drawRoundCard,
   property: drawProperty,
@@ -4095,6 +4411,40 @@ export default function GuessThePrice({ displayMode = false }) {
         await new Promise(r => setTimeout(r, 500));
       } catch {
         setExportStatus(`${variant.label} failed — skipping`);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    // Game instruction slides (episode-level, before rounds)
+    for (const instr of [
+      { id: "instr1", prefix: "00d_instructions_1", label: "Instructions 1" },
+      { id: "instr2", prefix: "00e_instructions_2", label: "Instructions 2" },
+      { id: "instr3", prefix: "00f_instructions_3", label: "Instructions 3" },
+    ]) {
+      try {
+        setExportStatus(`${instr.label} still…`);
+        canvas.width = rat.W;
+        canvas.height = rat.H;
+        const iCtx = canvas.getContext("2d");
+        iCtx.clearRect(0, 0, rat.W, rat.H);
+        DRAW_FNS[instr.id](iCtx, rat.W, rat.H, S, 1);
+        const iBlob = await new Promise(res => canvas.toBlob(res, "image/png"));
+        if (iBlob) zip.file(`${instr.prefix}_${slug}.png`, iBlob);
+        await new Promise(r => setTimeout(r, 50));
+
+        setExportStatus(`${instr.label} MOV…`);
+        const ve = await loadVideoExport();
+        const iSeq = await ve.recordAsset(DRAW_FNS[instr.id], rat.W, rat.H, S, 3500);
+        const iMovName = `${instr.prefix}_${slug}.mov`;
+        const iMov = await ve.webmToMov(iSeq, iMovName);
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(iMov);
+        a.download = iMovName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        await new Promise(r => setTimeout(r, 500));
+      } catch {
+        setExportStatus(`${instr.label} failed — skipping`);
         await new Promise(r => setTimeout(r, 1000));
       }
     }
