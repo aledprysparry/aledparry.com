@@ -523,8 +523,8 @@ function drawIntro(ctx, W, H, S, progress) {
   const logoImg = logoSrc ? getCachedImage(logoSrc) : null;
   // Landscape: tightened title area (was 0.06 → 0.44, now 0.03 → 0.33)
   // so the Sian/Nathan headshots sit noticeably higher without clipping the logo.
-  const titleAreaTop = ar !== "landscape" ? safeTop + safeH * 0.02 : H * 0.03;
-  const titleAreaH = ar !== "landscape" ? safeH * 0.35 : H * 0.30;
+  const titleAreaTop = ar !== "landscape" ? safeTop + safeH * 0.06 : H * 0.03;
+  const titleAreaH = ar !== "landscape" ? safeH * 0.30 : H * 0.30;
 
   // Entrance timing: logo 0-0.4, headshots 0.3-0.7, VS 0.5-0.8
   const logoP = Math.min(1, p / 0.4);
@@ -582,7 +582,7 @@ function drawIntro(ctx, W, H, S, progress) {
   // ── VS section — DRAMATIC, big headshots, tight layout ──
   // Landscape: lifted from 0.62 → 0.48 (with shrunk title area above)
   // so agents sit firmly in the upper-mid of the frame.
-  const vsY = ar !== "landscape" ? safeTop + safeH * 0.55 : H * 0.48;
+  const vsY = ar !== "landscape" ? safeTop + safeH * 0.58 : H * 0.48;
   const headR = sz(W, H, ar !== "landscape" ? 0.13 : 0.14); // 16:9 bumped 0.10→0.14
   const spread = ar !== "landscape" ? W * 0.24 : W * 0.22;  // wider spread to match
 
@@ -1098,7 +1098,7 @@ function drawPrompt(ctx, W, H, _S, progress) {
   const textP = easeOutExpo(Math.min(1, p / 0.5));
   ctx.save();
   ctx.globalAlpha = textP;
-  const qY = ar !== "landscape" ? safeTop + safeH * 0.25 : H * 0.32;
+  const qY = ar !== "landscape" ? safeTop + safeH * 0.30 : H * 0.32;
   const qs = sz(W, H, ar !== "landscape" ? 0.11 : 0.095);
   ctx.font = `700 ${qs}px 'Lora', serif`;
   ctx.fillStyle = BRAND.colorWarm;
@@ -1293,7 +1293,7 @@ function drawLockIn(ctx, W, H, S, progress) {
   const hasAnswer = letter !== "";
   const colors = { A: GAME.optionA, B: GAME.optionB, C: GAME.optionC };
   const letterColor = hasAnswer ? (colors[letter] || GAME.gold) : GAME.gold;
-  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.45;
+  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.45 : H * 0.45;
 
   // Portrait uses a smaller letter (0.32) so it doesn't collide with the
   // agent label above. Landscape keeps the big 0.30 letter.
@@ -1380,7 +1380,7 @@ function drawTimer(ctx, W, H, S, progress) {
   const safe = safeZone(W, H);
   const totalSec = S.timerDuration || 3;
   const elapsed = progress * totalSec;
-  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.40 : H * 0.47;
+  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.43 : H * 0.47;
   const ringR = sz(W, H, 0.22);
 
   if (elapsed < totalSec) {
@@ -1468,7 +1468,7 @@ function drawReveal(ctx, W, H, S, progress) {
   const cp = S.revealPrice || "---";
   const colors = { A: GAME.optionA, B: GAME.optionB, C: GAME.optionC };
   const cc = colors[cl] || GAME.gold;
-  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.38 : H * 0.42;
+  const centerY = ar !== "landscape" ? safe.contentTop + (safe.contentBottom - safe.contentTop) * 0.42 : H * 0.42;
 
   // Phase 1 (0–0.35): tension — "THE LISTING PRICE IS..."
   // Phase 2 (0.35–1): reveal with glow
