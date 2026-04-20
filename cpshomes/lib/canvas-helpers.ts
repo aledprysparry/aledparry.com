@@ -79,6 +79,8 @@ let _imgLoadCallbacks: Array<() => void> = [];
 
 export function getCachedImage(src: string): HTMLImageElement | null {
   if (!src) return null;
+  // Reject bare strings that aren't URLs (e.g. "Adamsdown" location text in photos array)
+  if (!src.startsWith("http") && !src.startsWith("/") && !src.startsWith("data:") && !src.startsWith("blob:")) return null;
   if (IMG_CACHE[src]) return IMG_CACHE[src].complete ? IMG_CACHE[src] : null;
   const img = new Image();
   img.crossOrigin = "anonymous";
