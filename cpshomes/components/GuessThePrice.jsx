@@ -1764,9 +1764,11 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
   const nameP = easeOutExpo(Math.min(1, Math.max(0, (p - 0.15) / 0.30)));
   const titleP = easeOutBack(Math.min(1, Math.max(0, (p - 0.30) / 0.30)));
 
-  // ── Headshot — vertically centered in the content block ──
+  // ── Headshot — push down when logo is hidden so content isn't top-heavy ──
   const headR = sz(W, H, ar !== "landscape" ? 0.11 : 0.09);
-  const headY = ar !== "landscape" ? safeTop + safeH * 0.18 : H * 0.24;
+  const headY = ar !== "landscape"
+    ? safeTop + safeH * (_showCpsLogo ? 0.18 : 0.24)
+    : H * (_showCpsLogo ? 0.24 : 0.28);
   const headSlide = W * 0.06 * (1 - headP) * (fromRight ? 1 : -1);
   ctx.save();
   ctx.globalAlpha = headP;
