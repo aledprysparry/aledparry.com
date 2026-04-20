@@ -2813,14 +2813,15 @@ function drawOpenerBody(ctx, W, H, S, progress, withBg) {
   // ── Compact listing card below the title ──
   if (cardP > 0) {
     const cardTop = subY + subSz * 1.3 + sz(W, H, 0.015);
-    drawOpenerListingCard(ctx, W, H, S, cardP, cardTop, ar);
+    drawOpenerListingCard(ctx, W, H, S, cardP, cardTop, ar, p);
   }
 }
 
 // Compact Rightmove-style listing card drawn on a transparent canvas.
 // Used only inside drawOverlayOpener. Similar to drawRoundCard but smaller,
 // no "ROUND N/6" badge, sits in a rect below the title.
-function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
+// overallP = the full 0→1 animation progress (used for slow map zoom)
+function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar, overallP) {
   // Minimal layout: portal banner → full-width hero photo → "How Much ???"
   // No address/details — that lives on the Round Card. This card is a teaser.
   const cardW = ar !== "landscape" ? W * 0.82 : W * 0.58;
@@ -2901,11 +2902,12 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   ctx.clip();
 
   if (useMap) {
-    // Map with Ken Burns zoom — starts wide, pushes in toward center.
-    // The Mapbox static map already has a pin baked in — no need to draw another.
+    // Map with Ken Burns zoom — runs across the FULL animation duration (not just
+    // the card entrance) so it's a slow, smooth 2-3 second push, not a quick snap.
     const iw = mapImg.naturalWidth, ih = mapImg.naturalHeight;
     const zoomStart = 1.0, zoomEnd = 1.5;
-    const zoom = zoomStart + (zoomEnd - zoomStart) * anim;
+    const zoomP = overallP != null ? overallP : anim;
+    const zoom = zoomStart + (zoomEnd - zoomStart) * zoomP;
     const scale = Math.max(photoW / iw, photoH / ih) * zoom;
     const dw = iw * scale, dh = ih * scale;
     ctx.drawImage(mapImg, photoX + (photoW - dw) / 2, photoY + (photoH - dh) / 2, dw, dh);
