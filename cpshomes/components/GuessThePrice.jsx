@@ -1783,7 +1783,7 @@ function drawInstrAgent(ctx, W, H, S, progress, agentIdx) {
     ctx.textBaseline = "top";
     ctx.shadowColor = "rgba(0,0,0,0.5)";
     ctx.shadowBlur = nameFs * 0.08;
-    ctx.fillText(`${name.toUpperCase()}\u2019S`, W / 2, nameY);
+    ctx.fillText(`PLAYER ${fromRight ? "B" : "A"}`, W / 2, nameY);
     ctx.restore();
   }
 
@@ -2872,16 +2872,9 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   //   4. Property photo fallback
   const rd = EPISODE.rounds?.[(S.propRound || 1) - 1];
   const manualMapSrc = EPISODE.mapImage;
-  // Map source: scraper appends the Mapbox map as the LAST photo in the array.
-  // Use mapIndex if set, otherwise fall back to the last photo.
-  // IMPORTANT: validate the URL — some rounds have raw location strings
-  // (e.g. "Adamsdown") accidentally in the photos array, which would 404.
-  const isValidUrl = (s) => s && (s.startsWith("http") || s.startsWith("/api/") || s.startsWith("data:") || s.startsWith("blob:"));
-  const numPhotos = rd?.photos?.length || 0;
-  const scrapedMapIdx = rd?.mapIndex != null ? rd.mapIndex : (numPhotos > 1 ? numPhotos - 1 : -1);
-  const rawMapSrc = (scrapedMapIdx >= 0 && rd?.photos?.[scrapedMapIdx]) ? rd.photos[scrapedMapIdx] : null;
-  const scrapedMapSrc = isValidUrl(rawMapSrc) ? rawMapSrc : null;
-  const mapSrc = manualMapSrc || scrapedMapSrc;
+  // Map source: manual upload only. Auto-map disabled (data corruption issues).
+  // User can upload a map screenshot via the Opener controls panel if wanted.
+  const mapSrc = manualMapSrc;
   const mapImg = mapSrc ? getCachedImage(mapSrc) : null;
   const useMap = mapImg && mapImg.complete && mapImg.naturalWidth > 0;
 
