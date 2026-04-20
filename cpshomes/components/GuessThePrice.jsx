@@ -2875,9 +2875,16 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   //   4. Property photo fallback
   const rd = EPISODE.rounds?.[(S.propRound || 1) - 1];
   const manualMapSrc = EPISODE.mapImage;
-  // Map source: manual upload only. Auto-map disabled (data corruption issues).
-  // User can upload a map screenshot via the Opener controls panel if wanted.
-  const mapSrc = manualMapSrc;
+  // Map source: manual upload OR last valid photo in the round (the scraper
+  // always appends the Mapbox map last). Search backwards through photos to
+  // skip corrupted entries like "Adamsdown" that aren't real URLs.
+  const isUrl = (s) => s && (s.startsWith("http") || s.startsWith("/api/") || s.startsWith("data:") || s.startsWith("blob:"));
+  const lastValidPhoto = rd?.photos ? [...rd.photos].reverse().find(isUrl) : null;
+  // Use mapIndex if set, otherwise the last valid photo (= the map)
+  const scrapedMapSrc = rd?.mapIndex != null && isUrl(rd.photos?.[rd.mapIndex])
+    ? rd.photos[rd.mapIndex]
+    : lastValidPhoto;
+  const mapSrc = manualMapSrc || scrapedMapSrc;
   const mapImg = mapSrc ? getCachedImage(mapSrc) : null;
   const useMap = mapImg && mapImg.complete && mapImg.naturalWidth > 0;
 
