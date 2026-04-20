@@ -202,6 +202,9 @@ const IMG_CACHE = {};
 let _imgLoadCallback = null; // set by component to trigger re-render on image load
 function getCachedImage(src) {
   if (!src) return null;
+  // Reject strings that aren't real URLs (e.g. "Adamsdown" location text
+  // accidentally stored in the photos array — causes 404 loop on every frame)
+  if (typeof src === "string" && !src.startsWith("http") && !src.startsWith("/") && !src.startsWith("data:") && !src.startsWith("blob:")) return null;
   if (IMG_CACHE[src]) return IMG_CACHE[src].complete ? IMG_CACHE[src] : null;
   const img = new Image();
   img.crossOrigin = "anonymous";
