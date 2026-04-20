@@ -2899,43 +2899,14 @@ function drawOpenerListingCard(ctx, W, H, S, anim, topY, ar) {
   ctx.clip();
 
   if (useMap) {
-    // Map with Ken Burns zoom — starts wide, pushes in toward center
+    // Map with Ken Burns zoom — starts wide, pushes in toward center.
+    // The Mapbox static map already has a pin baked in — no need to draw another.
     const iw = mapImg.naturalWidth, ih = mapImg.naturalHeight;
-    const zoomStart = 1.0, zoomEnd = 1.35;
+    const zoomStart = 1.0, zoomEnd = 1.5;
     const zoom = zoomStart + (zoomEnd - zoomStart) * anim;
     const scale = Math.max(photoW / iw, photoH / ih) * zoom;
     const dw = iw * scale, dh = ih * scale;
     ctx.drawImage(mapImg, photoX + (photoW - dw) / 2, photoY + (photoH - dh) / 2, dw, dh);
-
-    // Location pin — drops in with bounce at 50% progress
-    const pinP = easeOutBack(Math.min(1, Math.max(0, (anim - 0.4) / 0.35)));
-    if (pinP > 0) {
-      const pinSz = Math.min(photoW, photoH) * 0.12;
-      const pinX = photoX + photoW * 0.5;
-      const pinBaseY = photoY + photoH * 0.48;
-      const pinDropY = pinBaseY - pinSz * 1.8 * (1 - pinP);
-
-      ctx.save();
-      ctx.globalAlpha = pinP;
-      // Pin shadow on the map
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
-      ctx.beginPath();
-      ctx.ellipse(pinX, pinBaseY + pinSz * 0.1, pinSz * 0.35, pinSz * 0.12, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Pin body — salmon/gold teardrop
-      ctx.fillStyle = GAME.gold;
-      ctx.beginPath();
-      ctx.arc(pinX, pinDropY, pinSz * 0.4, Math.PI, 0);
-      ctx.lineTo(pinX, pinDropY + pinSz * 0.9);
-      ctx.closePath();
-      ctx.fill();
-      // Pin center dot
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(pinX, pinDropY, pinSz * 0.16, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
   } else if (heroImg && heroImg.complete && heroImg.naturalWidth > 0) {
     const iw = heroImg.naturalWidth, ih = heroImg.naturalHeight;
     const scale = Math.max(photoW / iw, photoH / ih);
