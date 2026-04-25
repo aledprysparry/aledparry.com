@@ -68,6 +68,16 @@ export const demos: DemoEntry[] = [
     href: "#",
   },
   {
+    clientSlug: "tinopolis",
+    clientName: "Tinopolis Cymru",
+    toolSlug: "qt-live",
+    toolName: "QT Live",
+    description:
+      "Live interactive question time platform for broadcast and audience engagement.",
+    componentPath: "",
+    href: "#",
+  },
+  {
     clientSlug: "aledparry",
     clientName: "Aled Parry",
     toolSlug: "mastery",
@@ -85,7 +95,7 @@ export const demos: DemoEntry[] = [
     description:
       "Production management app for broadcast teams – scheduling, task tracking, and resource planning.",
     componentPath: "",
-    href: "https://edit-intelligence.vercel.app/",
+    href: "https://pma-nine.vercel.app/",
   },
   {
     clientSlug: "aledparry",
@@ -95,7 +105,7 @@ export const demos: DemoEntry[] = [
     description:
       "Community app connecting people with local services, businesses, and events.",
     componentPath: "KeepItLocal",
-    href: "/app/keepitlocal",
+    href: "https://deft-alpaca-a1d2aa.netlify.app/",
   },
 ];
 
