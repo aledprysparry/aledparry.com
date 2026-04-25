@@ -75,7 +75,7 @@ export const demos: DemoEntry[] = [
     description:
       "Live interactive question time platform for broadcast and audience engagement.",
     componentPath: "",
-    href: "#",
+    href: "https://qt-live-production.up.railway.app/",
   },
   {
     clientSlug: "aledparry",
