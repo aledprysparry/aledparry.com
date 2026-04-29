@@ -100,6 +100,16 @@ export const demos: DemoEntry[] = [
   {
     clientSlug: "aledparry",
     clientName: "Aled Parry",
+    toolSlug: "notes",
+    toolName: "Notes",
+    description:
+      "AI-powered notes app with smart organisation and search.",
+    componentPath: "",
+    href: "https://notes-app-aled-parrys-projects.vercel.app/",
+  },
+  {
+    clientSlug: "aledparry",
+    clientName: "Aled Parry",
     toolSlug: "keepitlocal",
     toolName: "Keep it Local",
     description:
