@@ -2,258 +2,43 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  BACKSTORY_SEEDS,
+  ENTITIES,
+  EP1,
+  EP2,
+  buildBackstoryEvents,
+} from "@/lib/capsiynau/data";
+import {
+  approveProposal as engineApproveProposal,
+  proposeRules,
+} from "@/lib/capsiynau/engine";
+import type {
+  CorrectionEvent,
+  Entity,
+  MeasurementResult,
+  Proposal,
+  Rule,
+  Segment,
+  TranscriptLine,
+} from "@/lib/capsiynau/types";
+
 /**
  * Capsiynau — Series Memory
  *
- * Interactive demo of the self-improving production-intelligence layer.
+ * Interactive surface for the self-improving production-intelligence layer.
  * The visitor plays the role of an editor on the Welsh series "Y Sesiwn".
  * They correct mis-spelled contributor names on Episode 1 and watch the
  * system propose rules, accept their approval, then pre-apply those rules
  * to Episode 2 — visibly improving before they touch it.
  *
- * Fully client-side. No backend, no API keys.
+ * The loop logic lives in `lib/capsiynau/engine.ts` and is shared with the
+ * /api/capsiynau/measure route. The Impact screen calls that route to
+ * report a measured precision delta on a held-out reference clip.
  */
 
 type Lang = "en" | "cy";
 type Stage = "intro" | "ep1" | "ep2" | "impact";
-type EntityType = "person" | "place" | "organisation" | "programme_term";
-
-type Entity = {
-  canonical: string;
-  variant: string;
-  type: EntityType;
-  seededByEditorB: boolean; // backstory: another editor caught this earlier
-  seedHoursAgo: number;
-};
-
-type Segment =
-  | { kind: "text"; value: string }
-  | { kind: "entity"; entityCanonical: string };
-
-type TranscriptLine = {
-  id: string;
-  ms: number;
-  speaker: string;
-  segments: Segment[];
-};
-
-type Rule = {
-  id: string;
-  entityCanonical: string;
-  pattern: string;
-  replacement: string;
-  type: EntityType;
-  status: "approved";
-  supportingCorrections: number;
-  contributors: string[]; // distinct editor ids
-  approvedAt: number;
-};
-
-type Proposal = {
-  entityCanonical: string;
-  pattern: string;
-  replacement: string;
-  type: EntityType;
-  supportingCorrections: number;
-  contributors: string[];
-};
-
-const ENTITIES: Entity[] = [
-  { canonical: "Bethan Gwanas",         variant: "Bethan Gwannus",      type: "person",          seededByEditorB: true,  seedHoursAgo: 14 },
-  { canonical: "Iwan Bala",             variant: "Iwan Bahla",          type: "person",          seededByEditorB: true,  seedHoursAgo:  9 },
-  { canonical: "Catrin Finch",          variant: "Catrin Vinch",        type: "person",          seededByEditorB: true,  seedHoursAgo: 22 },
-  { canonical: "Gareth Roberts",        variant: "Gareth Robberts",     type: "person",          seededByEditorB: true,  seedHoursAgo:  5 },
-  { canonical: "Cerys Matthews",        variant: "Caris Mathuse",       type: "person",          seededByEditorB: false, seedHoursAgo:  0 },
-  { canonical: "Llanfair Pwllgwyngyll", variant: "Llanvair Pulgwingull",type: "place",           seededByEditorB: true,  seedHoursAgo: 31 },
-  { canonical: "Caernarfon",            variant: "Caernarvon",          type: "place",           seededByEditorB: true,  seedHoursAgo:  3 },
-  { canonical: "Pobol y Cwm",           variant: "Pobol e Coom",        type: "programme_term",  seededByEditorB: true,  seedHoursAgo: 18 },
-];
-
-const EP1_LINES: TranscriptLine[] = [
-  {
-    id: "ep1-l1",
-    ms: 4_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "Croeso i'r Sesiwn. Heddiw mae " },
-      { kind: "entity", entityCanonical: "Bethan Gwanas" },
-      { kind: "text", value: " yn ymuno â ni o " },
-      { kind: "entity", entityCanonical: "Caernarfon" },
-      { kind: "text", value: "." },
-    ],
-  },
-  {
-    id: "ep1-l2",
-    ms: 19_000,
-    speaker: "Bethan",
-    segments: [
-      { kind: "text", value: "Diolch. Mae'n braf bod yma — dwi newydd ddod yn ôl o " },
-      { kind: "entity", entityCanonical: "Llanfair Pwllgwyngyll" },
-      { kind: "text", value: " bore 'ma." },
-    ],
-  },
-  {
-    id: "ep1-l3",
-    ms: 38_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "Yn ymuno hefyd, yr arlunydd " },
-      { kind: "entity", entityCanonical: "Iwan Bala" },
-      { kind: "text", value: " a'r delynores " },
-      { kind: "entity", entityCanonical: "Catrin Finch" },
-      { kind: "text", value: "." },
-    ],
-  },
-  {
-    id: "ep1-l4",
-    ms: 61_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "Cyn i ni ddechrau, gair byr am bennod nesaf " },
-      { kind: "entity", entityCanonical: "Pobol y Cwm" },
-      { kind: "text", value: "." },
-    ],
-  },
-  {
-    id: "ep1-l5",
-    ms: 83_000,
-    speaker: "Iwan",
-    segments: [
-      { kind: "text", value: "Diolch. Mae'r arddangosfa newydd yn " },
-      { kind: "entity", entityCanonical: "Caernarfon" },
-      { kind: "text", value: " yn agor wythnos nesaf." },
-    ],
-  },
-  {
-    id: "ep1-l6",
-    ms: 104_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "A nawr, llais arbennig — " },
-      { kind: "entity", entityCanonical: "Gareth Roberts" },
-      { kind: "text", value: " yn canu'n fyw." },
-    ],
-  },
-  {
-    id: "ep1-l7",
-    ms: 132_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "A'n gwestai olaf heno — " },
-      { kind: "entity", entityCanonical: "Cerys Matthews" },
-      { kind: "text", value: "." },
-    ],
-  },
-  {
-    id: "ep1-l8",
-    ms: 156_000,
-    speaker: "Cerys",
-    segments: [
-      { kind: "text", value: "Helo bawb. Dwi'n cofio chwarae yng " },
-      { kind: "entity", entityCanonical: "Caernarfon" },
-      { kind: "text", value: " gyda " },
-      { kind: "entity", entityCanonical: "Catrin Finch" },
-      { kind: "text", value: " flynyddoedd yn ôl." },
-    ],
-  },
-];
-
-const EP2_LINES: TranscriptLine[] = [
-  {
-    id: "ep2-l1",
-    ms: 3_500,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "Croeso nôl. Mae " },
-      { kind: "entity", entityCanonical: "Bethan Gwanas" },
-      { kind: "text", value: " gyda ni eto." },
-    ],
-  },
-  {
-    id: "ep2-l2",
-    ms: 21_000,
-    speaker: "Bethan",
-    segments: [
-      { kind: "text", value: "Diolch. Mae'r tywydd yn " },
-      { kind: "entity", entityCanonical: "Llanfair Pwllgwyngyll" },
-      { kind: "text", value: " yn well heddiw." },
-    ],
-  },
-  {
-    id: "ep2-l3",
-    ms: 42_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "Yn dychwelyd: " },
-      { kind: "entity", entityCanonical: "Iwan Bala" },
-      { kind: "text", value: " a " },
-      { kind: "entity", entityCanonical: "Catrin Finch" },
-      { kind: "text", value: "." },
-    ],
-  },
-  {
-    id: "ep2-l4",
-    ms: 64_000,
-    speaker: "Iwan",
-    segments: [
-      { kind: "text", value: "Sgwrs am yr arddangosfa newydd yn " },
-      { kind: "entity", entityCanonical: "Caernarfon" },
-      { kind: "text", value: "." },
-    ],
-  },
-  {
-    id: "ep2-l5",
-    ms: 88_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "Pennod arbennig o " },
-      { kind: "entity", entityCanonical: "Pobol y Cwm" },
-      { kind: "text", value: " wythnos nesaf." },
-    ],
-  },
-  {
-    id: "ep2-l6",
-    ms: 109_000,
-    speaker: "Catrin",
-    segments: [
-      { kind: "text", value: "Roedd y cyngerdd diwetha' yn " },
-      { kind: "entity", entityCanonical: "Caernarfon" },
-      { kind: "text", value: " yn fendigedig." },
-    ],
-  },
-  {
-    id: "ep2-l7",
-    ms: 134_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "A nawr — " },
-      { kind: "entity", entityCanonical: "Gareth Roberts" },
-      { kind: "text", value: " unwaith eto." },
-    ],
-  },
-  {
-    id: "ep2-l8",
-    ms: 162_000,
-    speaker: "Cyflwynydd",
-    segments: [
-      { kind: "text", value: "I gloi — " },
-      { kind: "entity", entityCanonical: "Cerys Matthews" },
-      { kind: "text", value: " a " },
-      { kind: "entity", entityCanonical: "Bethan Gwanas" },
-      { kind: "text", value: " yn sgwrsio." },
-    ],
-  },
-  {
-    id: "ep2-l9",
-    ms: 189_000,
-    speaker: "Cerys",
-    segments: [
-      { kind: "text", value: "Pleser eich gweld eto. Anfon cofion at bawb yng " },
-      { kind: "entity", entityCanonical: "Caernarfon" },
-      { kind: "text", value: "." },
-    ],
-  },
-];
 
 const STRINGS: Record<string, Record<Lang, string>> = {
   title:              { en: "Capsiynau — Series Memory",                       cy: "Capsiynau — Cof y Gyfres" },
@@ -345,6 +130,34 @@ function entityFor(canonical: string): Entity {
   return e;
 }
 
+function seedInfoFor(canonical: string) {
+  return BACKSTORY_SEEDS.find((s) => s.entityCanonical === canonical) ?? null;
+}
+
+function buildSessionEvents(
+  correctedSpans: Set<string>,
+  spanLookup: Map<string, string>,
+  now: number,
+): CorrectionEvent[] {
+  const events: CorrectionEvent[] = [];
+  for (const sk of correctedSpans) {
+    const canonical = spanLookup.get(sk);
+    if (!canonical) continue;
+    const e = entityFor(canonical);
+    events.push({
+      id: `you-${sk}`,
+      entityCanonical: canonical,
+      spanKey: sk,
+      before: e.variant,
+      after: e.canonical,
+      userId: "you",
+      episodeId: EP1.id,
+      occurredAt: now,
+    });
+  }
+  return events;
+}
+
 function formatHm(line: TranscriptLine): string {
   const total = Math.floor(line.ms / 1000);
   const m = Math.floor(total / 60).toString().padStart(2, "0");
@@ -390,31 +203,13 @@ export default function CapsiynauMemory() {
     return m;
   }, [rules]);
 
-  const correctionsObserved = useMemo(() => {
-    let total = 0;
-    // pre-seeded by editor-b for those entities
-    for (const e of ENTITIES) if (e.seededByEditorB) total += 1;
-    // plus user corrections on Ep 1
-    total += correctedSpansEp1.size;
-    return total;
-  }, [correctedSpansEp1]);
-
-  const distinctContributors = useMemo(() => {
-    const s = new Set<string>();
-    if (correctedSpansEp1.size > 0) s.add("you");
-    if (ENTITIES.some((e) => e.seededByEditorB)) s.add("editor-b");
-    return s.size;
-  }, [correctedSpansEp1.size]);
-
-  const ep1SpansByEntity = useMemo(() => {
-    const m = new Map<string, string[]>();
-    for (const line of EP1_LINES) {
+  const ep1SpanLookup = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const line of EP1.lines) {
       let idx = 0;
       for (const seg of line.segments) {
         if (seg.kind === "entity") {
-          const arr = m.get(seg.entityCanonical) ?? [];
-          arr.push(`${line.id}-${idx}`);
-          m.set(seg.entityCanonical, arr);
+          m.set(`${line.id}-${idx}`, seg.entityCanonical);
         }
         idx++;
       }
@@ -422,60 +217,57 @@ export default function CapsiynauMemory() {
     return m;
   }, []);
 
+  const correctionsObserved = useMemo(() => {
+    return BACKSTORY_SEEDS.length + correctedSpansEp1.size;
+  }, [correctedSpansEp1.size]);
+
+  const distinctContributors = useMemo(() => {
+    const s = new Set<string>();
+    if (correctedSpansEp1.size > 0) s.add("you");
+    for (const seed of BACKSTORY_SEEDS) s.add(seed.userId);
+    return s.size;
+  }, [correctedSpansEp1.size]);
+
   const handleCorrect = useCallback(
     (entityCanonical: string, spanKey: string) => {
       if (correctedSpansEp1.has(spanKey)) return;
-      const e = entityFor(entityCanonical);
 
       const nextSet = new Set(correctedSpansEp1);
       nextSet.add(spanKey);
       setCorrectedSpansEp1(nextSet);
 
-      // Already approved? Don't re-propose.
       if (ruleByCanonical.has(entityCanonical)) return;
 
-      // Count user corrections for this entity in this session
-      const allSpanKeysForEntity = ep1SpansByEntity.get(entityCanonical) ?? [];
-      const userCorrectionsForEntity = allSpanKeysForEntity.filter((k) =>
-        nextSet.has(k),
-      ).length;
-
-      const support =
-        userCorrectionsForEntity + (e.seededByEditorB ? 1 : 0);
-      const contributors: string[] = [];
-      if (userCorrectionsForEntity > 0) contributors.push("you");
-      if (e.seededByEditorB) contributors.push("editor-b");
-
-      if (
-        support >= SUPPORT_THRESHOLD &&
-        contributors.length >= MIN_CONTRIBUTORS
-      ) {
-        setProposal({
-          entityCanonical: e.canonical,
-          pattern: e.variant,
-          replacement: e.canonical,
-          type: e.type,
-          supportingCorrections: support,
-          contributors,
-        });
-      }
+      // Run the same engine that the production loop would run. The
+      // events list is the union of the backstory (other editors' prior
+      // corrections on earlier episodes) and this session's corrections.
+      const now = Date.now();
+      const events = [
+        ...buildBackstoryEvents(now),
+        ...buildSessionEvents(nextSet, ep1SpanLookup, now),
+      ];
+      const proposals = proposeRules({
+        events,
+        existingRules: rules,
+        entities: ENTITIES,
+      });
+      const next = proposals.find((p) => p.entityCanonical === entityCanonical);
+      if (next) setProposal(next);
     },
-    [correctedSpansEp1, ep1SpansByEntity, ruleByCanonical],
+    [correctedSpansEp1, ep1SpanLookup, ruleByCanonical, rules],
   );
 
   const handleApproveProposal = useCallback(() => {
     if (!proposal) return;
-    const newRule: Rule = {
-      id: `rule-${proposal.entityCanonical.replace(/\s+/g, "-").toLowerCase()}`,
-      entityCanonical: proposal.entityCanonical,
-      pattern: proposal.pattern,
-      replacement: proposal.replacement,
-      type: proposal.type,
-      status: "approved",
-      supportingCorrections: proposal.supportingCorrections,
-      contributors: proposal.contributors,
+    const ruleId = `rule-${proposal.entityCanonical
+      .replace(/\s+/g, "-")
+      .toLowerCase()}`;
+    const newRule = engineApproveProposal({
+      proposal,
+      approvedBy: "curator-demo",
       approvedAt: Date.now(),
-    };
+      ruleId,
+    });
     setRules((prev) => [...prev, newRule]);
     setJustApprovedFlash(proposal.entityCanonical);
     setProposal(null);
@@ -484,7 +276,7 @@ export default function CapsiynauMemory() {
 
   const ep2PreCorrectedCount = useMemo(() => {
     let count = 0;
-    for (const line of EP2_LINES) {
+    for (const line of EP2.lines) {
       for (const seg of line.segments) {
         if (seg.kind === "entity" && ruleByCanonical.has(seg.entityCanonical)) {
           count++;
@@ -493,18 +285,6 @@ export default function CapsiynauMemory() {
     }
     return count;
   }, [ruleByCanonical]);
-
-  const ep2TotalEntitySpans = useMemo(() => {
-    let count = 0;
-    for (const line of EP2_LINES) {
-      for (const seg of line.segments) {
-        if (seg.kind === "entity") count++;
-      }
-    }
-    return count;
-  }, []);
-
-  const ep2RemainingErrors = ep2TotalEntitySpans - ep2PreCorrectedCount;
 
   const resetDemo = useCallback(() => {
     setStage("intro");
@@ -569,9 +349,8 @@ export default function CapsiynauMemory() {
       {stage === "impact" && (
         <ImpactView
           t={t}
-          rulesCount={rules.length}
+          rules={rules}
           preCorrectedCount={ep2PreCorrectedCount}
-          remainingErrors={ep2RemainingErrors}
           onReset={resetDemo}
         />
       )}
@@ -694,7 +473,7 @@ function Ep1View({
 }) {
   const totalEp1Spans = useMemo(() => {
     let n = 0;
-    for (const line of EP1_LINES) {
+    for (const line of EP1.lines) {
       for (const seg of line.segments) if (seg.kind === "entity") n++;
     }
     return n;
@@ -714,7 +493,7 @@ function Ep1View({
           <p className="text-sm text-stone-400 mb-6">{t("ep1Hint")}</p>
 
           <div className="space-y-3">
-            {EP1_LINES.map((line) => (
+            {EP1.lines.map((line) => (
               <Line
                 key={line.id}
                 line={line}
@@ -839,7 +618,7 @@ function Ep1View({
                       {r.replacement}
                     </div>
                     <div className="text-[0.7rem] text-stone-400 mt-1">
-                      {r.supportingCorrections} corrections · {r.contributors.length} editors
+                      {r.supportingEventIds.length} corrections · {r.contributors.length} editors
                     </div>
                   </li>
                 ))}
@@ -876,7 +655,7 @@ function ProposalCard({
   onApprove: () => void;
   onDismiss: () => void;
 }) {
-  const e = entityFor(proposal.entityCanonical);
+  const seed = seedInfoFor(proposal.entityCanonical);
   return (
     <div className="mb-5 border border-accent/40 bg-gradient-to-br from-accent/5 to-transparent rounded-md p-3 shadow-sm">
       <div className="flex items-center gap-2 mb-2">
@@ -898,7 +677,9 @@ function ProposalCard({
             {i > 0 && ", "}
             {c === "you"
               ? t("byYou")
-              : `${t("byEditorB")} · ${e.seedHoursAgo}${t("hoursAgo")}`}
+              : seed
+                ? `${t("byEditorB")} · ${seed.hoursAgo}${t("hoursAgo")}`
+                : t("byEditorB")}
           </span>
         ))}
       </div>
@@ -998,7 +779,7 @@ function Ep2View({
           </h2>
 
           <div className="space-y-3">
-            {EP2_LINES.map((line) => (
+            {EP2.lines.map((line) => (
               <Line
                 key={line.id}
                 line={line}
@@ -1014,7 +795,7 @@ function Ep2View({
                         title={fmt(t("preCorrectedFmt"), {
                           from: rule.pattern,
                           to: rule.replacement,
-                          n: rule.supportingCorrections,
+                          n: rule.supportingEventIds.length,
                           k: rule.contributors.length,
                         })}
                       >
@@ -1069,7 +850,7 @@ function Ep2View({
               >
                 <div className="text-stone-900 font-medium">{r.replacement}</div>
                 <div className="text-[0.7rem] text-stone-400 mt-0.5">
-                  {r.supportingCorrections} corrections · {r.contributors.length} editors
+                  {r.supportingEventIds.length} corrections · {r.contributors.length} editors
                 </div>
               </li>
             ))}
@@ -1082,27 +863,59 @@ function Ep2View({
 
 function ImpactView({
   t,
-  rulesCount,
+  rules,
   preCorrectedCount,
-  remainingErrors,
   onReset,
 }: {
   t: ReturnType<typeof tFn>;
-  rulesCount: number;
+  rules: Rule[];
   preCorrectedCount: number;
-  remainingErrors: number;
   onReset: () => void;
 }) {
-  // Assume ~25 seconds of editor time per correction.
-  const minutesSavedRaw = (preCorrectedCount * 25) / 60;
-  const minutesSaved = Math.round(minutesSavedRaw * 10) / 10;
-  const totalEp2 = preCorrectedCount + remainingErrors;
-  const withoutErrors = totalEp2; // all variant entities would be wrong without rules
-  const withErrors = remainingErrors;
-  const improvementPct =
-    withoutErrors === 0
-      ? 0
-      : Math.round(((withoutErrors - withErrors) / withoutErrors) * 100);
+  const [baseline, setBaseline] = useState<MeasurementResult | null>(null);
+  const [withRules, setWithRules] = useState<MeasurementResult | null>(null);
+  const [goldenSetSize, setGoldenSetSize] = useState<number | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      try {
+        const [baselineRes, withRulesRes] = await Promise.all([
+          fetch("/api/capsiynau/measure", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rules: [] }),
+          }).then((r) => r.json()),
+          fetch("/api/capsiynau/measure", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rules }),
+          }).then((r) => r.json()),
+        ]);
+        if (cancelled) return;
+        setBaseline(baselineRes.result);
+        setWithRules(withRulesRes.result);
+        setGoldenSetSize(baselineRes.goldenSetSize);
+        setStatus("ready");
+      } catch {
+        if (cancelled) return;
+        setStatus("error");
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [rules]);
+
+  const precisionDelta =
+    baseline && withRules ? withRules.precision - baseline.precision : 0;
+  const improvementPct = Math.round(precisionDelta * 100);
+  const minutesSaved =
+    Math.round(((preCorrectedCount * 25) / 60) * 10) / 10;
 
   return (
     <div className="flex-1 overflow-y-auto px-6 py-10">
@@ -1110,21 +923,32 @@ function ImpactView({
         <div className="text-xs uppercase tracking-[0.18em] text-accent mb-3">
           {t("impactHeading")}
         </div>
-        <h2 className="font-serif text-3xl text-stone-900 mb-8">
-          +{improvementPct}% on contributor names
+        <h2 className="font-serif text-3xl text-stone-900 mb-2">
+          {status === "loading"
+            ? "Measuring against held-out reference…"
+            : status === "error"
+              ? "Measurement unavailable"
+              : `+${improvementPct} precision points on the held-out clip`}
         </h2>
+        {status === "ready" && goldenSetSize !== null && (
+          <p className="text-sm text-stone-500 mb-8">
+            Measured against a hand-labelled, held-out clip with {goldenSetSize}{" "}
+            entity spans the system never saw. Same audio, same reference,
+            scored before and after your approved rules were applied.
+          </p>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
           <ImpactCell
             label={t("impactWithout")}
-            value={`${withoutErrors}`}
-            sub={t("errorsPerEp")}
+            value={baseline ? formatPct(baseline.precision) : "—"}
+            sub={`precision · ${baseline ? baseline.truePositives : "—"} / ${baseline ? baseline.total : "—"}`}
             tone="warm"
           />
           <ImpactCell
             label={t("impactWith")}
-            value={`${withErrors}`}
-            sub={t("errorsPerEp")}
+            value={withRules ? formatPct(withRules.precision) : "—"}
+            sub={`precision · ${withRules ? withRules.truePositives : "—"} / ${withRules ? withRules.total : "—"}`}
             tone="good"
           />
           <ImpactCell
@@ -1135,12 +959,31 @@ function ImpactView({
           />
         </div>
 
+        {status === "ready" && baseline && withRules && (
+          <div className="border border-stone-200 bg-white rounded-lg p-5 mb-8">
+            <div className="text-xs uppercase tracking-wider text-stone-400 mb-3">
+              Held-out measurement detail · Y Sesiwn
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-sm mb-3">
+              <MetricRow label="Precision" before={baseline.precision} after={withRules.precision} />
+              <MetricRow label="Recall"    before={baseline.recall}    after={withRules.recall} />
+              <MetricRow label="F1"        before={baseline.f1}        after={withRules.f1} />
+            </div>
+            <div className="text-xs text-stone-500 leading-relaxed">
+              {withRules.rulesApplied.length} of your {rules.length} approved rules
+              fired against the held-out clip. The remaining errors are entities
+              the system has never been corrected on — they become the next round
+              of proposals.
+            </div>
+          </div>
+        )}
+
         <div className="border border-stone-200 bg-white rounded-lg p-5 mb-8">
           <div className="text-xs uppercase tracking-wider text-stone-400 mb-2">
             Series Memory · Y Sesiwn
           </div>
           <div className="font-serif text-2xl text-stone-900 mb-2">
-            {rulesCount} rules · {preCorrectedCount} pre-corrections
+            {rules.length} rules · {preCorrectedCount} pre-corrections
           </div>
           <p className="text-sm text-stone-600 leading-relaxed">
             {t("ongoingNote")}
@@ -1156,6 +999,34 @@ function ImpactView({
       </div>
     </div>
   );
+}
+
+function MetricRow({
+  label,
+  before,
+  after,
+}: {
+  label: string;
+  before: number;
+  after: number;
+}) {
+  return (
+    <div>
+      <div className="text-[0.65rem] uppercase tracking-wider text-stone-400 mb-1">
+        {label}
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-stone-400 text-sm line-through decoration-stone-300">
+          {formatPct(before)}
+        </span>
+        <span className="text-stone-900 font-medium">{formatPct(after)}</span>
+      </div>
+    </div>
+  );
+}
+
+function formatPct(n: number): string {
+  return `${(n * 100).toFixed(1)}%`;
 }
 
 function ImpactCell({
