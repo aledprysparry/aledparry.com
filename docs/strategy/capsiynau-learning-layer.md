@@ -212,6 +212,9 @@ Grounded in measurement, not vibes:
 
 A realistic sequence. Twelve to eighteen months total.
 
+**Phase 0 — 2-week MVP loop (weeks 0–2)**
+See `./mvp/` for a runnable starting point. Scope: contributor name corrections on one pilot series, end to end, with one measured precision delta.
+
 **Phase 1 — Foundations (months 0–4)**
 - Event log schema and ingestion
 - Tenant isolation primitives
