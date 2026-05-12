@@ -80,6 +80,16 @@ export const demos: DemoEntry[] = [
   {
     clientSlug: "aledparry",
     clientName: "Aled Parry",
+    toolSlug: "capsiynau",
+    toolName: "Capsiynau — Series Memory",
+    description:
+      "Bilingual Welsh production intelligence layer. Learns contributor names, places, and house style from editor corrections — then pre-applies them on every future episode.",
+    componentPath: "CapsiynauMemory",
+    href: "/app/capsiynau",
+  },
+  {
+    clientSlug: "aledparry",
+    clientName: "Aled Parry",
     toolSlug: "mastery",
     toolName: "Mastery Companion",
     description:
