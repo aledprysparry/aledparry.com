@@ -159,7 +159,7 @@ async function callAI({system,messages,max_tokens=2500}){
   const res=await fetch("/api/ai",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({system,messages,max_tokens,model:"claude-sonnet-4-20250514"})
+    body:JSON.stringify({system,messages,max_tokens,model:"claude-sonnet-4-6"})
   });
   if(!res.ok) throw new Error(`AI request failed (${res.status})`);
   const data=await res.json();
@@ -4795,7 +4795,7 @@ function StyleExtractor({onExtracted,S}){
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
+          model:"claude-sonnet-4-6",
           max_tokens:1024,
           messages:[{role:"user",content}]
         })

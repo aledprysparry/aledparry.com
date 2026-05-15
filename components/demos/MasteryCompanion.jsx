@@ -229,7 +229,7 @@ async function aiCall(system, userContent) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1024, system, messages:[{ role:"user", content: userContent }] }),
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1024, system, messages:[{ role:"user", content: userContent }] }),
   });
   if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error?.message || `API error ${res.status}`); }
   const data = await res.json();
