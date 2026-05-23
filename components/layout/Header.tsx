@@ -26,7 +26,6 @@ export function Header() {
   }, [pathname]);
 
   const links = [
-    { href: "/work", label: t.nav.work },
     { href: "/services", label: t.nav.services },
     { href: "/about", label: t.nav.about },
     { href: "/contact", label: t.nav.contact },

@@ -32,7 +32,7 @@ export function HomeContent() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-4">
             <a
-              href="/work"
+              href="/about"
               className="bg-stone-900 text-white px-6 py-3 text-sm font-sans font-medium tracking-wide hover:bg-stone-800 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.97]"
             >
               {t.home.hero.cta}
@@ -42,12 +42,6 @@ export function HomeContent() {
               className="text-sm font-sans text-stone-500 hover:text-stone-900 transition-colors underline underline-offset-4 decoration-stone-300 hover:decoration-stone-500"
             >
               {t.home.footerCta.cta}
-            </a>
-            <a
-              href="/about"
-              className="text-sm font-sans text-stone-500 hover:text-stone-900 transition-colors underline underline-offset-4 decoration-stone-300 hover:decoration-stone-500"
-            >
-              {t.nav.about}
             </a>
             <a
               href="https://linkedin.com/in/aledparry"
