@@ -1,7 +1,6 @@
 "use client";
 
 import { useLanguage } from "@/lib/i18n/context";
-import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { TetrisBackground } from "@/components/ui/TetrisBackground";
 
 export function HomeContent() {
@@ -10,7 +9,7 @@ export function HomeContent() {
   return (
     <>
     <TetrisBackground />
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 -mt-16 relative z-10 pointer-events-none">
+    <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center px-6 relative z-10 pointer-events-none">
       <div className="text-center max-w-xl pointer-events-auto">
         {/* Hero */}
         <p className="text-sm font-sans font-medium tracking-widest uppercase text-stone-400 mb-6">
@@ -62,10 +61,6 @@ export function HomeContent() {
         </div>
 
       </div>
-    </div>
-    {/* Language toggle - fixed bottom left */}
-    <div className="fixed bottom-4 left-4 z-10 pointer-events-auto">
-      <LanguageToggle />
     </div>
     </>
   );
