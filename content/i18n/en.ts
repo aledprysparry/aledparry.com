@@ -2,9 +2,9 @@ import { SiteContent } from "./types";
 
 export const en: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry – Award-Winning Digital Producer & Creative Director",
+    siteTitle: "Aled Parry – Creative Technologist & Founder",
     siteDescription:
-      "BAFTA-winning digital producer and creative director. Over 20 years creating interactive content, games, websites and apps for S4C, BBC, ITV, Sesame Street and more. Bilingual in English and Welsh.",
+      "Creative technologist and founder working between media, AI and bilingual digital products. BAFTA-winning background in broadcast and interactive content. Builder of Capsiynau.com and Nodiadau.com.",
   },
   nav: {
     home: "Home",
@@ -17,10 +17,10 @@ export const en: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Award-Winning Digital Producer & Creative Director",
+      title: "Creative Technologist & Founder",
       valueStatement:
-        "Hello & chroeso! I produce and create video content, games, websites and apps for broadcasters and brands worldwide. BAFTA winner. Bilingual in English and Welsh.",
-      cta: "Work with me",
+        "Hello & croeso! I work at the intersection of media formats, AI infrastructure and bilingual digital products. From scaling national daily gaming rituals like Cwis Bob Dydd to building automated language tools like Capsiynau.com, I design and engineer products that solve complex media and workflow challenges. BAFTA winner. Bilingual in English and Welsh.",
+      cta: "Explore the case study archive",
     },
     credibility: {
       heading: "Worked with",
@@ -55,13 +55,13 @@ export const en: SiteContent = {
     footerCta: {
       heading: "Got a project in mind?",
       body: "I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.",
-      cta: "Let's talk",
+      cta: "Get in touch",
     },
   },
   work: {
     heading: "Work",
     description:
-      "A selection of projects spanning broadcast, digital, and content strategy.",
+      "A product and case study archive spanning founder projects, broadcast formats, AI tooling and creative pipelines.",
     filterAll: "All",
     types: {
       broadcast: "Broadcast",
@@ -82,101 +82,90 @@ export const en: SiteContent = {
   services: {
     heading: "Services",
     description:
-      "I offer a focused set of services built on years of experience in broadcast and digital production.",
+      "Three pillars of work, built on years of moving between broadcast, digital product and AI infrastructure.",
     items: [
       {
-        title: "Digital Production",
+        title: "Product Strategy & Adaptation",
         description:
-          "End-to-end digital production for broadcast and online platforms. From concept development through to delivery, I manage the full production pipeline.",
-        goodFor: "Broadcasters, production companies, digital-first brands",
+          "Bringing formats to life. Navigating regulatory compliance, structuring user retention loops, and converting traditional broadcast and media formats into digital-first products that audiences actually return to. The work behind Cwis Bob Dydd and Cwis-iau.",
+        goodFor: "Broadcasters, format owners, education and public-sector teams",
       },
       {
-        title: "Creative Direction",
+        title: "Creative Workflow & Pipeline Engineering",
         description:
-          "Strategic creative leadership for campaigns, series, and brand projects. I shape the creative vision and ensure it's executed consistently across every touchpoint.",
-        goodFor: "Brands launching campaigns, series producers, content teams",
+          "Lowering production bottlenecks. Designing custom, lightweight technical tools – browser-based live graphics engines, optimised CGI/VFX pipelines, automated social cut-down systems – that let lean teams deliver broadcast-quality output on a fraction of the budget.",
+        goodFor: "Indie producers, in-house studios, broadcast teams working lean",
       },
       {
-        title: "Bilingual Content Strategy",
+        title: "Bilingual AI Integration",
         description:
-          "Content strategy that works authentically in both Welsh and English. Not translation – genuine bilingual thinking from the ground up.",
-        goodFor:
-          "Welsh-language broadcasters, public sector, bilingual organisations",
-      },
-      {
-        title: "Format Development",
-        description:
-          "Original format creation and development for TV, digital, and social platforms. I develop formats that travel across languages and territories.",
-        goodFor: "Broadcasters, distributors, production companies",
+          "Protecting linguistic integrity. Engineering specialised, context-aware AI tools and language applications that streamline bilingual workflows and automation without watering down minoritised languages. The work behind Capsiynau.com and Nodiadau.com.",
+        goodFor: "Welsh-language broadcasters, bilingual organisations, public sector",
       },
     ],
     cta: {
-      heading: "Not sure what you need?",
-      body: "Let's have a conversation. I can help you figure out the right approach for your project.",
+      heading: "Not sure where your project fits?",
+      body: "Most interesting briefs sit across two of these. Let's talk through it.",
       button: "Get in touch",
     },
   },
   about: {
     heading: "About",
-    hero: "I\u2019m a BAFTA-winning Digital Producer and Creative Director working across TV, apps and interactive content.",
+    hero: "I\u2019m a creative technologist and founder working between media formats, AI infrastructure and bilingual digital products.",
     bio: [
-      "I create formats, products and experiences that connect with audiences \u2013 from broadcast programmes and short-form video to apps, games and digital platforms. My work sits at the intersection of editorial, technology and audience engagement, helping broadcasters and brands move beyond traditional content into more interactive, scalable experiences.",
-      "I\u2019ve worked with broadcasters and partners across the UK and internationally, developing projects from concept through to production and live operation.",
+      "My background is broadcast and interactive media \u2013 over twenty years of producing programmes, apps, games and content for S4C, BBC, CBBC, ITV, Sesame Street and more. A BAFTA winner with a Graphic Communication grounding that still shapes how I approach storytelling, design and user experience.",
+      "More recently I\u2019ve become much more interested in the technology behind the content. Capsiynau.com and Nodiadau.com are the obvious examples \u2013 language tools I had to build because no one else was going to build them properly for Welsh.",
     ],
     sections: [
       {
-        heading: "What I Do",
-        intro: "I work with broadcasters, digital teams and brands to:",
+        heading: "The Foundation",
+        intro: "Two decades of work in some of the most demanding corners of media:",
         items: [
-          "Develop new content formats and ideas",
-          "Build digital products and audience experiences",
-          "Extend broadcast IP into apps, games and platforms",
-          "Create content that drives engagement and repeat use",
-          "Prototype and test new concepts quickly",
+          "BAFTA-winning interactive and digital projects",
+          "Daily-engagement formats for S4C and broadcasters",
+          "Children\u2019s and family content for CBBC, Sesame Street and CYW",
+          "Bilingual Welsh / English productions across TV and digital",
+          "Format development, production management and creative direction",
         ],
-        outro: "My approach is practical and collaborative \u2013 combining creative thinking with delivery.",
+        outro: "That work built the editorial instinct and operational discipline that everything else sits on.",
       },
       {
-        heading: "Approach",
-        intro: "I\u2019m particularly interested in how content evolves beyond a single platform. That means:",
+        heading: "The Friction",
+        intro: "Over time, the same handful of systemic problems kept getting in the way of good work:",
         items: [
-          "Designing formats that work across TV and digital",
-          "Building products that encourage habit and repeat engagement",
-          "Using data and insight to refine ideas over time",
-          "Creating systems that scale, not just one-off projects",
+          "Rigid compliance laws blocking young audiences from joining quiz formats",
+          "Indie filmmakers priced out of high-end VFX and post-production",
+          "Generic AI tools quietly watering down the nuance of the Welsh language",
+          "Broadcasters expecting creators to self-fund increasingly polished pilots",
+          "Bilingual teams losing hours to admin that should be automated",
         ],
-        outro: "Much of my recent work has focused on building digital products that sit alongside broadcast \u2013 creating longer-term value and deeper audience relationships.",
+        outro: "Each of those problems was easier to engineer around than to manage around.",
       },
       {
-        heading: "Current Focus (2026)",
-        intro: "I\u2019m currently focused on using AI and large language models to:",
+        heading: "The Evolution",
+        intro: "So the work moved upstream \u2013 from managing these problems to building software that fixes them:",
         items: [
-          "Rapidly prototype apps and digital products",
-          "Develop proof of concepts at speed",
-          "Explore new ways of creating and delivering content",
-          "Support the development and pitching of new ideas",
+          "Capsiynau.com \u2013 Welsh-first captioning, transcription and localisation",
+          "Nodiadau.com \u2013 bilingual dictation and AI productivity for Welsh / English teams",
+          "Live browser-based graphics tooling for lean pilot production",
+          "Open-source VFX pipelines making cinematic worldbuilding accessible to indies",
+          "Classroom-safe spin-offs of audience formats, like Cwis-iau",
         ],
-        outro: "This allows me to move quickly from concept to working prototype \u2013 and test ideas in real-world scenarios.",
-      },
-      {
-        heading: "Background",
-        intro: "",
-        items: [],
-        outro: "My background is in Graphic Communication, which underpins my approach to storytelling, design and user experience. I\u2019m fluent in Welsh and English, and much of my work focuses on creating content that works naturally across both languages and cultures.",
+        outro: "Capsiynau and Nodiadau aren\u2019t side-projects. They\u2019re the inevitable culmination of every previous part of the job.",
       },
     ],
     skills: {
       heading: "Skills & Experience",
       items: [
+        "Product Strategy",
         "Creative Direction",
         "Digital Production",
-        "UX & UI Design",
-        "Graphic & Web Design",
-        "Project Management",
-        "Interactive Content",
-        "App Development",
+        "Format Development",
+        "AI Tooling & Workflow",
         "Bilingual (English & Welsh)",
-        "Adobe Creative Suite",
+        "UX & UI Design",
+        "Frontend Engineering",
+        "Live Graphics & Pipeline Tools",
         "Team Leadership",
       ],
     },

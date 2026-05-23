@@ -8,6 +8,7 @@ export interface CaseStudyFrontmatter {
   type: "broadcast" | "digital" | "content" | "format";
   heroImage: string;
   featured: boolean;
+  displayOrder?: number;
   summary?: string;
   summaryCy?: string;
   stats?: Array<{ label: string; labelCy?: string; value: string }>;
