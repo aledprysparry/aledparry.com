@@ -24,7 +24,14 @@ export function getCaseStudies(): CaseStudy[] {
         content,
       };
     })
-    .sort((a, b) => b.frontmatter.year - a.frontmatter.year);
+    .sort((a, b) => {
+      const aOrder = a.frontmatter.displayOrder;
+      const bOrder = b.frontmatter.displayOrder;
+      if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+      if (aOrder !== undefined) return -1;
+      if (bOrder !== undefined) return 1;
+      return b.frontmatter.year - a.frontmatter.year;
+    });
 }
 
 export function getFeaturedCaseStudies(): CaseStudy[] {

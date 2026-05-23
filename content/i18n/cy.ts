@@ -2,9 +2,9 @@ import { SiteContent } from "./types";
 
 export const cy: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry – Cynhyrchydd Digidol a Chyfarwyddwr Creadigol Arobryn",
+    siteTitle: "Aled Parry – Technolegydd Creadigol a Sylfaenydd",
     siteDescription:
-      "Cynhyrchydd digidol a chyfarwyddwr creadigol arobryn BAFTA. Dros 20 mlynedd yn creu cynnwys rhyngweithiol, gemau, gwefannau ac apiau i S4C, BBC, ITV, Sesame Street a mwy. Dwyieithog.",
+      "Technolegydd creadigol a sylfaenydd sy'n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. Cefndir Enillydd BAFTA ym maes darlledu a chynnwys rhyngweithiol. Adeiladydd Capsiynau.com a Nodiadau.com.",
   },
   nav: {
     home: "Hafan",
@@ -17,10 +17,10 @@ export const cy: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Cynhyrchydd Digidol a Chyfarwyddwr Creadigol",
+      title: "Technolegydd Creadigol a Sylfaenydd",
       valueStatement:
-        "Helo a chroeso! Rwy\u2019n cynhyrchu ac yn creu cynnwys fideo, gemau, gwefannau ac apiau ar gyfer darlunwyr a brandiau ledled y byd. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
-      cta: "Gweithiwch gyda mi",
+        "Helo a chroeso! Rwy\u2019n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. O dyfu defodau gemau dyddiol cenedlaethol fel Cwis Bob Dydd i adeiladu offer iaith awtomataidd fel Capsiynau.com, rwy\u2019n dylunio ac yn peiriannu cynhyrchion sy\u2019n datrys heriau cyfryngau a llif-gwaith cymhleth. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
+      cta: "Archwilio\u2019r archif astudiaethau achos",
     },
     credibility: {
       heading: "Wedi gweithio gyda",
@@ -55,13 +55,13 @@ export const cy: SiteContent = {
     footerCta: {
       heading: "Oes gennych chi brosiect mewn golwg?",
       body: "Rwyf bob amser yn agored i drafod prosiectau newydd, syniadau creadigol, neu gyfleoedd i fod yn rhan o\u2019ch gweledigaeth.",
-      cta: "Gweithiwch gyda mi",
+      cta: "Cysylltwch",
     },
   },
   work: {
     heading: "Gwaith",
     description:
-      "Detholiad o brosiectau sy'n cwmpasu darlledu, digidol, a strategaeth cynnwys.",
+      "Archif cynnyrch ac astudiaethau achos sy'n cwmpasu prosiectau sylfaenydd, fformatau darlledu, offer AI a phiblinellau creadigol.",
     filterAll: "Pob un",
     types: {
       broadcast: "Darlledu",
@@ -82,101 +82,91 @@ export const cy: SiteContent = {
   services: {
     heading: "Gwasanaethau",
     description:
-      "Rwy'n cynnig set ffocysedig o wasanaethau wedi'u hadeiladu ar flynyddoedd o brofiad mewn cynhyrchu darlledu a digidol.",
+      "Tri philer o waith, wedi'u hadeiladu ar flynyddoedd o symud rhwng darlledu, cynnyrch digidol a seilwaith AI.",
     items: [
       {
-        title: "Cynhyrchu Digidol",
+        title: "Strategaeth Cynnyrch ac Addasu",
         description:
-          "Cynhyrchu digidol o'r dechrau i'r diwedd ar gyfer llwyfannau darlledu ac ar-lein. O ddatblygu cysyniad hyd at gyflwyno, rwy'n rheoli'r biblinell gynhyrchu lawn.",
-        goodFor: "Darlledwyr, cwmnïau cynhyrchu, brandiau digidol-gyntaf",
+          "Dod â fformatau yn fyw. Llywio cydymffurfio rheoliadol, strwythuro dolenni cadw defnyddwyr, a throi fformatau darlledu a chyfryngau traddodiadol yn gynhyrchion digidol-yn-gyntaf y mae cynulleidfaoedd yn dychwelyd atynt go iawn. Y gwaith y tu ôl i Cwis Bob Dydd a Cwis-iau.",
+        goodFor: "Darlledwyr, perchnogion fformat, timau addysg a sector cyhoeddus",
       },
       {
-        title: "Cyfarwyddo Creadigol",
+        title: "Llif-Gwaith Creadigol a Pheirianneg Piblinell",
         description:
-          "Arweinyddiaeth greadigol strategol ar gyfer ymgyrchoedd, cyfresi, a phrosiectau brand. Rwy'n llunio'r weledigaeth greadigol ac yn sicrhau ei bod yn cael ei gweithredu'n gyson.",
-        goodFor:
-          "Brandiau sy'n lansio ymgyrchoedd, cynhyrchwyr cyfresi, timau cynnwys",
+          "Gostwng tagfeydd cynhyrchu. Dylunio offer technegol ysgafn, pwrpasol – peiriannau graffeg byw porwr, piblinellau CGI/VFX wedi'u hoptimeiddio, systemau torri awtomatig ar gyfer cyfryngau cymdeithasol – sy'n galluogi timau ystwyth i gyflawni allbwn safon darlledu ar ffracsiwn o'r gyllideb.",
+        goodFor: "Cynhyrchwyr annibynnol, stiwdios mewnol, timau darlledu ystwyth",
       },
       {
-        title: "Strategaeth Cynnwys Dwyieithog",
+        title: "Integreiddio AI Dwyieithog",
         description:
-          "Strategaeth cynnwys sy'n gweithio'n ddilys yn Gymraeg a Saesneg. Nid cyfieithu – meddwl dwyieithog go iawn o'r cychwyn cyntaf.",
-        goodFor:
-          "Darlledwyr Cymraeg, sector cyhoeddus, sefydliadau dwyieithog",
-      },
-      {
-        title: "Datblygu Fformatau",
-        description:
-          "Creu a datblygu fformatau gwreiddiol ar gyfer teledu, digidol, a llwyfannau cymdeithasol. Rwy'n datblygu fformatau sy'n teithio ar draws ieithoedd a thiriogaethau.",
-        goodFor: "Darlledwyr, dosbarthwyr, cwmnïau cynhyrchu",
+          "Diogelu cywirdeb ieithyddol. Peiriannu offer AI arbenigol a chymwysiadau iaith sy'n symleiddio llif-gwaith dwyieithog ac awtomeiddio heb wanhau ieithoedd lleiafrifoledig. Y gwaith y tu ôl i Capsiynau.com a Nodiadau.com.",
+        goodFor: "Darlledwyr Cymraeg, sefydliadau dwyieithog, sector cyhoeddus",
       },
     ],
     cta: {
-      heading: "Ddim yn siŵr beth sydd ei angen?",
-      body: "Gadewch i ni gael sgwrs. Gallaf eich helpu i ddarganfod y dull cywir ar gyfer eich prosiect.",
+      heading: "Ddim yn siŵr lle mae eich prosiect yn ffitio?",
+      body: "Mae'r briffiau mwyaf diddorol yn croesi dau ohonynt. Awn drwyddo gyda'n gilydd.",
       button: "Cysylltwch",
     },
   },
   about: {
     heading: "Amdanaf",
-    hero: "Cynhyrchydd Digidol a Chyfarwyddwr Creadigol sydd wedi ennill BAFTA, yn gweithio ar draws teledu, apiau a chynnwys rhyngweithiol.",
+    hero: "Technolegydd creadigol a sylfaenydd ydw i, yn gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog.",
     bio: [
-      "Rwy\u2019n creu fformatau, cynnyrch a phrofiadau sy\u2019n cysylltu \u00e2 chynulleidfaoedd \u2013 o raglenni darlledu a fideo ffurf-fer i apiau, gemau a llwyfannau digidol. Mae fy ngwaith ar y croestoriad rhwng golygu, technoleg ac ymgysylltu cynulleidfaoedd, yn helpu darlledwyr a brandiau i symud y tu hwnt i gynnwys traddodiadol tuag at brofiadau mwy rhyngweithiol a graddadwy.",
-      "Rwyf wedi gweithio gyda darlledwyr a phartneriaid ar draws y DU ac yn rhyngwladol, yn datblygu prosiectau o\u2019r cysyniad hyd at gynhyrchu a gweithrediad byw.",
+      "Mae fy nghefndir mewn darlledu a chyfryngau rhyngweithiol \u2013 dros ugain mlynedd o gynhyrchu rhaglenni, apiau, gemau a chynnwys ar gyfer S4C, BBC, CBBC, ITV, Sesame Street a mwy. Enillydd BAFTA gyda chefndir mewn Cyfathrebu Graffig sy\u2019n dal i lywio fy null o adrodd straeon, dylunio a phrofiad defnyddiwr.",
+      "Yn fwy diweddar, mae gen i lawer mwy o ddiddordeb yn y dechnoleg y tu \u00f4l i\u2019r cynnwys. Mae Capsiynau.com a Nodiadau.com yn enghreifftiau amlwg \u2013 offer iaith yr oedd rhaid i mi eu hadeiladu am nad oedd neb arall yn mynd i\u2019w hadeiladu\u2019n iawn ar gyfer y Gymraeg.",
     ],
     sections: [
       {
-        heading: "Beth Rwy\u2019n ei Wneud",
-        intro: "Rwy\u2019n gweithio gyda darlledwyr, timau digidol a brandiau i:",
+        heading: "Y Sylfaen",
+        intro: "Dau ddegawd o waith yn rhai o gorneli mwyaf heriol y cyfryngau:",
         items: [
-          "Datblygu fformatau a syniadau cynnwys newydd",
-          "Adeiladu cynnyrch digidol a phrofiadau cynulleidfa",
-          "Ymestyn IP darlledu i apiau, gemau a llwyfannau",
-          "Creu cynnwys sy\u2019n gyrru ymgysylltiad a defnydd rheolaidd",
-          "Prototeip a phrofi cysyniadau newydd yn gyflym",
+          "Prosiectau rhyngweithiol a digidol arobryn BAFTA",
+          "Fformatau ymgysylltu dyddiol i S4C a darlledwyr",
+          "Cynnwys plant a theulu i CBBC, Sesame Street a CYW",
+          "Cynyrchiadau dwyieithog Cymraeg / Saesneg ar deledu a digidol",
+          "Datblygu fformatau, rheoli cynhyrchu a chyfarwyddo creadigol",
         ],
-        outro: "Mae fy null gweithio yn ymarferol a chydweithredol \u2013 yn cyfuno meddwl creadigol \u00e2 chyflawni.",
+        outro: "Adeiladodd y gwaith hwnnw\u2019r reddf olygyddol a\u2019r ddisgyblaeth weithredol mae popeth arall yn sefyll arno.",
       },
       {
-        heading: "Dull Gweithio",
-        intro: "Mae gen i ddiddordeb arbennig yn y ffordd mae cynnwys yn esblygu y tu hwnt i un llwyfan. Mae hynny\u2019n golygu:",
+        heading: "Y Rhwystrau",
+        intro: "Dros amser, roedd yr un dyrnaid o broblemau systemig yn parhau i sefyll yn ffordd gwaith da:",
         items: [
-          "Dylunio fformatau sy\u2019n gweithio ar draws teledu a digidol",
-          "Adeiladu cynnyrch sy\u2019n annog arfer ac ymgysylltiad rheolaidd",
-          "Defnyddio data a mewnwelediad i fireinio syniadau dros amser",
-          "Creu systemau sy\u2019n graddio, nid prosiectau untro yn unig",
+          "Deddfau cydymffurfio caeth yn rhwystro cynulleidfaoedd ifanc rhag ymuno \u00e2 fformatau cwis",
+          "Gwneuthurwyr ffilm annibynnol yn cael eu prisio allan o VFX a chynhyrchu \u00f4l o safon",
+          "Offer AI generig yn gwanhau naws yr iaith Gymraeg yn dawel",
+          "Darlledwyr yn disgwyl i grewyr ariannu peilotiau cynyddol gaboledig eu hunain",
+          "Timau dwyieithog yn colli oriau i waith gweinyddol y dylid ei awtomeiddio",
         ],
-        outro: "Mae llawer o fy ngwaith diweddar wedi canolbwyntio ar adeiladu cynnyrch digidol sy\u2019n eistedd ochr yn ochr \u00e2 darlledu \u2013 yn creu gwerth tymor hwy a pherthnasoedd dyfnach \u00e2 chynulleidfaoedd.",
+        outro: "Roedd pob un o\u2019r problemau hynny\u2019n haws i\u2019w peiriannu o\u2019u cwmpas nag i\u2019w rheoli o\u2019u cwmpas.",
       },
       {
-        heading: "Ffocws Presennol (2026)",
-        intro: "Ar hyn o bryd rwy\u2019n canolbwyntio ar ddefnyddio AI a modelau iaith mawr i:",
+        heading: "Yr Esblygiad",
+        intro: "Felly symudodd y gwaith i fyny\u2019r afon \u2013 o reoli\u2019r problemau hyn i adeiladu meddalwedd sy\u2019n eu trwsio:",
         items: [
-          "Prototeip apiau a chynnyrch digidol yn gyflym",
-          "Datblygu profion cysyniad ar gyflymder",
-          "Archwilio ffyrdd newydd o greu a darparu cynnwys",
-          "Cefnogi datblygiad a chyflwyno syniadau newydd",
+          "Capsiynau.com \u2013 capsiynu, trawsgrifio a lleoli Cymraeg-yn-gyntaf",
+          "Nodiadau.com \u2013 arddweud dwyieithog a chynhyrchedd AI i dimau Cymraeg / Saesneg",
+          "Offer graffeg byw mewn porwr ar gyfer cynhyrchu peilot ystwyth",
+          "Piblinellau VFX cod-agored sy\u2019n gwneud creu byd sinematig yn hygyrch i grewyr annibynnol",
+          "Fersiynau diogel-i-ystafell-ddosbarth o fformatau cynulleidfa, fel Cwis-iau",
         ],
-        outro: "Mae hyn yn fy ngalluogi i symud yn gyflym o gysyniad i brototeip gweithredol \u2013 a phrofi syniadau mewn sefyllfaoedd go iawn.",
-      },
-      {
-        heading: "Cefndir",
-        intro: "",
-        items: [],
-        outro: "Mae fy nghefndir mewn Cyfathrebu Graffig, sy\u2019n sail i fy null gweithio o ran adrodd straeon, dylunio a phrofiad defnyddiwr. Rwy\u2019n rhugl yn Gymraeg a Saesneg, ac mae llawer o fy ngwaith yn canolbwyntio ar greu cynnwys sy\u2019n gweithio\u2019n naturiol ar draws y ddwy iaith a diwylliant.",
+        outro: "Nid prosiectau ochr yw Capsiynau a Nodiadau. Nhw yw uchafbwynt anorfod pob rhan flaenorol o\u2019r gwaith.",
       },
     ],
     skills: {
-      heading: "Cefndir",
+      heading: "Sgiliau a Phrofiad",
       items: [
-        "Cynhyrchu Digidol",
+        "Strategaeth Cynnyrch",
         "Cyfarwyddo Creadigol",
-        "Cynhyrchu Darlledu",
-        "Strategaeth Cynnwys",
+        "Cynhyrchu Digidol",
         "Datblygu Fformatau",
-        "Cynnwys Dwyieithog",
-        "Rheoli Prosiectau",
-        "Rheoli Rhanddeiliaid",
+        "Offer a Llif-Gwaith AI",
+        "Dwyieithog (Cymraeg a Saesneg)",
+        "Dylunio UX & UI",
+        "Peirianneg Frontend",
+        "Offer Graffeg Byw a Phiblinell",
+        "Arweinyddiaeth T\u00eem",
       ],
     },
     cta: {

@@ -21,9 +21,9 @@ export function generateMetadata({ params }: Props): Metadata {
   if (!cs) return {};
 
   const { title, client, summary, heroImage, role, type } = cs.frontmatter;
-  const metaTitle = `${title} — ${client} | ${type?.charAt(0).toUpperCase()}${type?.slice(1)} Project`;
+  const metaTitle = `${title} – ${client} | ${type?.charAt(0).toUpperCase()}${type?.slice(1)} Project`;
   const metaDescription =
-    summary || `${title} for ${client} — ${role}. A ${type} project by Aled Parry.`;
+    summary || `${title} for ${client}, ${role}. A ${type} project by Aled Parry.`;
 
   return {
     title: metaTitle,
