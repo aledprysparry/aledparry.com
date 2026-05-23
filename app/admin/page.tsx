@@ -55,14 +55,13 @@ export default function AdminPage() {
   const [testimonialQuoteCy, setTestimonialQuoteCy] = useState("");
   const [testimonialAuthor, setTestimonialAuthor] = useState("");
   const [testimonialRole, setTestimonialRole] = useState("");
-  const [brief, setBrief] = useState("");
-  const [myRole, setMyRole] = useState("");
-  const [approach, setApproach] = useState("");
-  const [outcome, setOutcome] = useState("");
+  const [body, setBody] = useState("");
   const [showTestimonial, setShowTestimonial] = useState(false);
 
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [resultSlug, setResultSlug] = useState("");
+  const [resultVia, setResultVia] = useState<"github" | "filesystem" | null>(null);
+  const [resultCommitUrl, setResultCommitUrl] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState("");
 
   // Check auth on page load
@@ -143,10 +142,7 @@ export default function AdminPage() {
         setFeatured(data.featured || false);
         setSummary(data.summary || "");
         setSummaryCy(data.summaryCy || "");
-        setBrief(data.brief || "");
-        setMyRole(data.myRole || "");
-        setApproach(data.approach || "");
-        setOutcome(data.outcome || "");
+        setBody(data.body || "");
 
         // Stats
         if (data.stats && data.stats.length > 0) {
@@ -186,6 +182,8 @@ export default function AdminPage() {
   };
 
   const clearForm = () => {
+    setResultVia(null);
+    setResultCommitUrl("");
     setEditSlug(null);
     setTitle("");
     setTitleCy("");
@@ -205,10 +203,7 @@ export default function AdminPage() {
     setTestimonialAuthor("");
     setTestimonialRole("");
     setShowTestimonial(false);
-    setBrief("");
-    setMyRole("");
-    setApproach("");
-    setOutcome("");
+    setBody("");
     setStatus("idle");
     setErrorMsg("");
   };
@@ -238,10 +233,7 @@ export default function AdminPage() {
     formData.append("summary", summary);
     formData.append("summaryCy", summaryCy);
     formData.append("stats", JSON.stringify(stats.filter((s) => s.label && s.value)));
-    formData.append("brief", brief);
-    formData.append("myRole", myRole);
-    formData.append("approach", approach);
-    formData.append("outcome", outcome);
+    formData.append("body", body);
 
     if (testimonialQuote) {
       formData.append(
@@ -267,6 +259,8 @@ export default function AdminPage() {
       if (res.ok) {
         setStatus("success");
         setResultSlug(data.slug);
+        setResultVia(data.via ?? null);
+        setResultCommitUrl(data.commitUrl ?? "");
       } else {
         setStatus("error");
         setErrorMsg(data.error || "Failed to save project");
@@ -344,6 +338,31 @@ export default function AdminPage() {
           {editSlug ? "Updated" : "Created"}{" "}
           <code className="bg-stone-100 px-2 py-0.5 text-sm">{resultSlug}.mdx</code>
         </p>
+        {resultVia === "github" && (
+          <div className="border-l-2 border-stone-900 pl-4 py-2 bg-stone-100/50">
+            <p className="text-sm font-sans text-stone-700">
+              Committed to GitHub. Vercel rebuild is running &mdash; live on aledparry.com in roughly 2 minutes.
+            </p>
+            {resultCommitUrl && (
+              <a
+                href={resultCommitUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-sans text-stone-500 hover:text-stone-900 underline underline-offset-2 mt-1 inline-block"
+              >
+                View commit on GitHub &rarr;
+              </a>
+            )}
+          </div>
+        )}
+        {resultVia === "filesystem" && (
+          <div className="border-l-2 border-amber-500 pl-4 py-2 bg-amber-50/40">
+            <p className="text-sm font-sans text-stone-700">
+              Saved to local filesystem only (no GITHUB_CONTENTS_TOKEN env var detected).
+              Commit + push the file manually to go live.
+            </p>
+          </div>
+        )}
         <div className="flex gap-4">
           <a
             href={`/work/${resultSlug}`}
@@ -584,27 +603,19 @@ export default function AdminPage() {
         )}
       </div>
 
-      {/* Body sections */}
+      {/* Body — raw markdown */}
       <div className={sectionClass}>
-        <h2 className="text-lg font-serif font-semibold text-stone-900 mb-4">Content Sections</h2>
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>The Brief</label>
-            <textarea value={brief} onChange={(e) => setBrief(e.target.value)} className={inputClass} rows={5} placeholder="What was the client looking for?" />
-          </div>
-          <div>
-            <label className={labelClass}>My Role</label>
-            <textarea value={myRole} onChange={(e) => setMyRole(e.target.value)} className={inputClass} rows={5} placeholder="What did you do on this project?" />
-          </div>
-          <div>
-            <label className={labelClass}>Approach</label>
-            <textarea value={approach} onChange={(e) => setApproach(e.target.value)} className={inputClass} rows={5} placeholder="How did you tackle it?" />
-          </div>
-          <div>
-            <label className={labelClass}>Outcome</label>
-            <textarea value={outcome} onChange={(e) => setOutcome(e.target.value)} className={inputClass} rows={5} placeholder="What were the results?" />
-          </div>
-        </div>
+        <h2 className="text-lg font-serif font-semibold text-stone-900 mb-2">Body</h2>
+        <p className="text-xs text-stone-500 mb-3">
+          Raw markdown. Use <code className="text-stone-700">## Heading</code> for sections (e.g. The Human Story, The Breakdown, The Brief), <code className="text-stone-700">**bold**</code>, lists, etc. Written verbatim into the MDX file.
+        </p>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          className={`${inputClass} font-mono text-xs`}
+          rows={24}
+          placeholder={`## The Human Story\n\nWhy this project mattered…\n\n## The Breakdown\n\n**Type:** …\n\n**Role:** …\n\n**The Challenge:** …`}
+        />
       </div>
 
       {/* Submit */}
