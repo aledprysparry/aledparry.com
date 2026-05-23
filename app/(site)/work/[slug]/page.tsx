@@ -7,6 +7,7 @@ import { CaseStudyHeader } from "@/components/sections/CaseStudyHeader";
 import { CaseStudyContent } from "@/components/sections/CaseStudyContent";
 import { StatRow } from "@/components/sections/StatRow";
 import { CaseStudyNav } from "@/components/sections/CaseStudyNav";
+import { HeroImage } from "@/components/ui/HeroImage";
 
 interface Props {
   params: { slug: string };
@@ -49,17 +50,11 @@ export default function CaseStudyPage({ params }: Props) {
   return (
     <section className="py-24">
       <Container>
-        {/* Hero image */}
-        <div className="aspect-[21/9] bg-stone-200 mb-12 overflow-hidden">
-          {cs.frontmatter.heroImage && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={cs.frontmatter.heroImage}
-              alt={cs.frontmatter.title}
-              className="w-full h-full object-cover"
-            />
-          )}
-        </div>
+        <HeroImage
+          src={cs.frontmatter.heroImage}
+          alt={cs.frontmatter.title}
+          className="aspect-[21/9] mb-12"
+        />
 
         <CaseStudyHeader frontmatter={cs.frontmatter} />
 

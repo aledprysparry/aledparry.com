@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { Badge } from "./Badge";
@@ -12,6 +15,11 @@ interface CardProps {
   className?: string;
 }
 
+function looksLikePlaceholder(image?: string): boolean {
+  if (!image) return true;
+  return image.includes("/placeholder");
+}
+
 export function Card({
   title,
   subtitle,
@@ -21,20 +29,32 @@ export function Card({
   image,
   className,
 }: CardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const showImage = !looksLikePlaceholder(image) && !imageFailed;
+
+  // The image may have already 404'd by the time React hydrates, in which case
+  // onError never fires. Catch that case post-mount by checking naturalWidth.
+  useEffect(() => {
+    if (!showImage) return;
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth === 0) {
+      setImageFailed(true);
+    }
+  }, [image, showImage]);
+
   const content = (
     <>
-      <div className="aspect-[16/10] bg-stone-200 overflow-hidden mb-4 rounded-sm">
-        {image ? (
+      <div className="aspect-[16/10] overflow-hidden mb-4 rounded-sm relative bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300">
+        {showImage && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            ref={imgRef}
             src={image}
             alt={title}
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            onError={() => setImageFailed(true)}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-stone-400 text-sm font-sans">Image</span>
-          </div>
         )}
       </div>
       <div className="space-y-2">
