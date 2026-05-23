@@ -1,16 +1,13 @@
 "use client";
 
 import { useLanguage } from "@/lib/i18n/context";
-import { TetrisBackground } from "@/components/ui/TetrisBackground";
 
 export function HomeContent() {
   const { t } = useLanguage();
 
   return (
-    <>
-    <TetrisBackground />
-    <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center px-6 relative z-10 pointer-events-none">
-      <div className="text-center max-w-xl pointer-events-auto">
+    <div className="min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center px-6">
+      <div className="text-center max-w-xl">
         {/* Hero */}
         <p className="text-sm font-sans font-medium tracking-widest uppercase text-stone-400 mb-6">
           {t.home.hero.title}
@@ -53,9 +50,7 @@ export function HomeContent() {
             </a>
           </div>
         </div>
-
       </div>
     </div>
-    </>
   );
 }
