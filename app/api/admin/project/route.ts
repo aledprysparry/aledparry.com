@@ -2,11 +2,32 @@ import { NextResponse, NextRequest } from "next/server";
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
-import { commitFiles, type CommitFile } from "@/lib/admin/github-commit";
+import { commitFiles, fetchFile, type CommitFile } from "@/lib/admin/github-commit";
 
 const REPO_OWNER = "aledprysparry";
 const REPO_NAME = "aledparry.com";
 const REPO_BRANCH = "main";
+
+/**
+ * Read a case-study MDX file. When GITHUB_CONTENTS_TOKEN is set, we read from
+ * GitHub so writes-then-reads stay consistent during the ~2 min Vercel rebuild
+ * window. Otherwise (local dev), read from the working-tree filesystem.
+ */
+async function readCaseStudyMdx(slug: string): Promise<string | null> {
+  const token = process.env.GITHUB_CONTENTS_TOKEN;
+  if (token) {
+    return await fetchFile({
+      owner: REPO_OWNER,
+      repo: REPO_NAME,
+      branch: REPO_BRANCH,
+      path: `content/case-studies/${slug}.mdx`,
+      token,
+    });
+  }
+  const mdxPath = path.join(process.cwd(), "content/case-studies", `${slug}.mdx`);
+  if (!fs.existsSync(mdxPath)) return null;
+  return fs.readFileSync(mdxPath, "utf-8");
+}
 
 function slugify(text: string): string {
   return text
@@ -40,11 +61,10 @@ export async function GET(request: NextRequest) {
 
   // Single project by slug
   if (slug) {
-    const mdxPath = path.join(caseStudiesDir, `${slug}.mdx`);
-    if (!fs.existsSync(mdxPath)) {
+    const raw = await readCaseStudyMdx(slug);
+    if (raw === null) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const raw = fs.readFileSync(mdxPath, "utf-8");
     const { data, content } = matter(raw);
 
     return NextResponse.json({
@@ -132,20 +152,25 @@ export async function POST(request: Request) {
   const slug = editSlug || slugify(title);
   const mdxPath = path.join(caseStudiesDir, `${slug}.mdx`);
 
-  // For new projects, check duplicate
-  if (!editSlug && fs.existsSync(mdxPath)) {
-    return NextResponse.json(
-      { error: `A project with slug "${slug}" already exists.` },
-      { status: 409 }
-    );
+  // For new projects, check duplicate (via GitHub when token set, else fs)
+  if (!editSlug) {
+    const existing = await readCaseStudyMdx(slug);
+    if (existing !== null) {
+      return NextResponse.json(
+        { error: `A project with slug "${slug}" already exists.` },
+        { status: 409 }
+      );
+    }
   }
 
   // Read existing heroImage path if updating (preserve if no new image uploaded)
   let heroImagePath = `/images/work/${slug}-hero.jpg`;
-  if (editSlug && fs.existsSync(mdxPath)) {
-    const raw = fs.readFileSync(mdxPath, "utf-8");
-    const { data } = matter(raw);
-    if (data.heroImage) heroImagePath = data.heroImage;
+  if (editSlug) {
+    const raw = await readCaseStudyMdx(editSlug);
+    if (raw) {
+      const { data } = matter(raw);
+      if (data.heroImage) heroImagePath = data.heroImage;
+    }
   }
 
   // Capture hero image buffer if a new one was uploaded (write below)
