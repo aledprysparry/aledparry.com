@@ -575,7 +575,7 @@ export function TetrisBackground() {
 
   return (
     <>
-      <canvas ref={canvasRef} className="fixed inset-0 z-0" />
+      <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none" />
       <div className="fixed bottom-4 right-4 z-10 text-xs font-sans text-stone-400 select-none">
         {bestScore > 0 && `★ ${bestScore}`}
       </div>
