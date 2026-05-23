@@ -2,6 +2,11 @@ import { NextResponse, NextRequest } from "next/server";
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
+import { commitFiles, type CommitFile } from "@/lib/admin/github-commit";
+
+const REPO_OWNER = "aledprysparry";
+const REPO_NAME = "aledparry.com";
+const REPO_BRANCH = "main";
 
 function slugify(text: string): string {
   return text
@@ -42,28 +47,10 @@ export async function GET(request: NextRequest) {
     const raw = fs.readFileSync(mdxPath, "utf-8");
     const { data, content } = matter(raw);
 
-    // Parse body sections
-    const sections: Record<string, string> = {};
-    const sectionRegex = /^## (.+)$/gm;
-    let match;
-    const matches: { heading: string; index: number }[] = [];
-    while ((match = sectionRegex.exec(content)) !== null) {
-      matches.push({ heading: match[1], index: match.index + match[0].length });
-    }
-    for (let i = 0; i < matches.length; i++) {
-      const end = i + 1 < matches.length ? matches[i + 1].index - matches[i + 1].heading.length - 3 : content.length;
-      const text = content.slice(matches[i].index, end).trim();
-      const key = matches[i].heading.toLowerCase().replace(/\s+/g, "_").replace(/^the_/, "");
-      sections[key] = text;
-    }
-
     return NextResponse.json({
       slug,
       ...data,
-      brief: sections["brief"] || "",
-      myRole: sections["my_role"] || "",
-      approach: sections["approach"] || "",
-      outcome: sections["outcome"] || "",
+      body: content.trim(),
     });
   }
 
@@ -127,10 +114,8 @@ export async function POST(request: Request) {
   const summaryCy = formData.get("summaryCy") as string;
   const statsJson = formData.get("stats") as string;
   const testimonialJson = formData.get("testimonial") as string;
-  const brief = formData.get("brief") as string;
-  const myRole = formData.get("myRole") as string;
-  const approach = formData.get("approach") as string;
-  const outcome = formData.get("outcome") as string;
+  // FormData multipart normalises newlines to CRLF — flatten back to LF for consistent diffs
+  const body = ((formData.get("body") as string) || "").replace(/\r\n?/g, "\n");
   const heroImageFile = formData.get("heroImage") as File | null;
 
   if (!title || !client || !year || !role || !type) {
@@ -163,13 +148,12 @@ export async function POST(request: Request) {
     if (data.heroImage) heroImagePath = data.heroImage;
   }
 
-  // Save hero image if new one uploaded
+  // Capture hero image buffer if a new one was uploaded (write below)
+  let heroImageBuffer: Buffer | null = null;
   if (heroImageFile && heroImageFile.size > 0) {
     const ext = heroImageFile.name.split(".").pop() || "jpg";
     heroImagePath = `/images/work/${slug}-hero.${ext}`;
-    const buffer = Buffer.from(await heroImageFile.arrayBuffer());
-    fs.mkdirSync(imagesDir, { recursive: true });
-    fs.writeFileSync(path.join(process.cwd(), "public", heroImagePath), buffer);
+    heroImageBuffer = Buffer.from(await heroImageFile.arrayBuffer());
   }
 
   // Build frontmatter
@@ -218,38 +202,62 @@ export async function POST(request: Request) {
   lines.push("---");
   lines.push("");
 
-  // Body sections
-  if (brief) {
-    lines.push("## The Brief");
-    lines.push("");
-    lines.push(brief.trim());
+  // Body (raw markdown, written verbatim — supports any section structure)
+  if (body.trim()) {
+    lines.push(body.trim());
     lines.push("");
   }
 
-  if (myRole) {
-    lines.push("## My Role");
-    lines.push("");
-    lines.push(myRole.trim());
-    lines.push("");
+  const mdxContent = lines.join("\n");
+  const githubToken = process.env.GITHUB_CONTENTS_TOKEN;
+
+  // ── Persistence path A: commit to GitHub (works on Vercel + local) ──────────
+  if (githubToken) {
+    const filesToCommit: CommitFile[] = [
+      { path: `content/case-studies/${slug}.mdx`, content: mdxContent },
+    ];
+    if (heroImageBuffer) {
+      // heroImagePath looks like "/images/work/foo.jpg" — repo path is "public/images/work/foo.jpg"
+      filesToCommit.push({
+        path: `public${heroImagePath}`,
+        content: heroImageBuffer,
+      });
+    }
+
+    try {
+      const result = await commitFiles({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        branch: REPO_BRANCH,
+        message: `${editSlug ? "Admin: update" : "Admin: add"} ${title} (${slug})`,
+        files: filesToCommit,
+        token: githubToken,
+      });
+
+      return NextResponse.json({
+        success: true,
+        slug,
+        updated: !!editSlug,
+        via: "github",
+        commitUrl: result.commitUrl,
+        liveInSeconds: 120,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return NextResponse.json(
+        { error: `GitHub commit failed: ${message}` },
+        { status: 502 }
+      );
+    }
   }
 
-  if (approach) {
-    lines.push("## Approach");
-    lines.push("");
-    lines.push(approach.trim());
-    lines.push("");
+  // ── Persistence path B: write to local filesystem (npm run dev fallback) ────
+  if (heroImageBuffer) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+    fs.writeFileSync(path.join(process.cwd(), "public", heroImagePath), heroImageBuffer);
   }
-
-  if (outcome) {
-    lines.push("## Outcome");
-    lines.push("");
-    lines.push(outcome.trim());
-    lines.push("");
-  }
-
-  // Write MDX file
   fs.mkdirSync(caseStudiesDir, { recursive: true });
-  fs.writeFileSync(mdxPath, lines.join("\n"), "utf-8");
+  fs.writeFileSync(mdxPath, mdxContent, "utf-8");
 
-  return NextResponse.json({ success: true, slug, updated: !!editSlug });
+  return NextResponse.json({ success: true, slug, updated: !!editSlug, via: "filesystem" });
 }
