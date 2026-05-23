@@ -19,7 +19,7 @@ export function ServicesContent() {
         </p>
       </FadeIn>
 
-      <div className="mb-24">
+      <div className="mb-16">
         {t.services.items.map((item, i) => (
           <ServiceBlock
             key={item.title}
@@ -30,6 +30,27 @@ export function ServicesContent() {
           />
         ))}
       </div>
+
+      {t.services.groups?.map((group) => (
+        <div key={group.title} className="mb-16">
+          <FadeIn>
+            <h2 className="text-sm font-sans font-medium tracking-widest uppercase text-stone-400 mb-4 pt-8 border-t border-stone-200">
+              {group.title}
+            </h2>
+          </FadeIn>
+          <div>
+            {group.items.map((item, i) => (
+              <ServiceBlock
+                key={item.title}
+                title={item.title}
+                description={item.description}
+                goodFor={item.goodFor}
+                index={i}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
 
       <FadeIn>
         <div className="max-w-2xl mx-auto text-center py-16 border-t border-stone-200">

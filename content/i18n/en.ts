@@ -103,6 +103,42 @@ export const en: SiteContent = {
         goodFor: "Welsh-language broadcasters, bilingual organisations, public sector",
       },
     ],
+    groups: [
+      {
+        title: "Production & Content",
+        items: [
+          {
+            title: "Freelance Producer",
+            description:
+              "Broadcast, branded and digital-first production across factual, entertainment and social content. Experienced in agile workflows, multi-platform delivery and rapid-turnaround productions.",
+            goodFor: "Broadcasters, production companies, agencies",
+          },
+          {
+            title: "Shooting Producer / Cameraman",
+            description:
+              "Self-shooting producer and DOP for lean, agile productions – broadcasters, agencies and direct-to-brand clients.",
+            goodFor: "Lean productions, mid-tier docs, branded content",
+          },
+        ],
+      },
+      {
+        title: "Digital & Product",
+        items: [
+          {
+            title: "Digital Producer",
+            description:
+              "Developing audience-focused digital experiences, interactive formats and social-first workflows that bridge production and technology.",
+            goodFor: "Broadcasters, brands and agencies launching digital products",
+          },
+          {
+            title: "Creative Technology",
+            description:
+              "Building bilingual AI tools, live graphics systems and workflow automation for Welsh and English media teams.",
+            goodFor: "Welsh-language broadcasters, bilingual organisations, public sector",
+          },
+        ],
+      },
+    ],
     cta: {
       heading: "Not sure where your project fits?",
       body: "Most interesting briefs sit across two of these. Let's talk through it.",

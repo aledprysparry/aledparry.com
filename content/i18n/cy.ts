@@ -103,6 +103,42 @@ export const cy: SiteContent = {
         goodFor: "Darlledwyr Cymraeg, sefydliadau dwyieithog, sector cyhoeddus",
       },
     ],
+    groups: [
+      {
+        title: "Cynhyrchu a Chynnwys",
+        items: [
+          {
+            title: "Cynhyrchydd Llawrydd",
+            description:
+              "Cynhyrchu darlledu, brand a digidol-yn-gyntaf ar draws ffeithiol, adloniant a chynnwys cymdeithasol. Profiad o lif-gwaith ystwyth, cyflawni aml-lwyfan a chynyrchiadau cyflym.",
+            goodFor: "Darlledwyr, cwmnïau cynhyrchu, asiantaethau",
+          },
+          {
+            title: "Cynhyrchydd Saethu / Dyn Camera",
+            description:
+              "Cynhyrchydd hunan-saethu a DOP ar gyfer cynyrchiadau ystwyth, hyblyg – darlledwyr, asiantaethau a chleientiaid brand uniongyrchol.",
+            goodFor: "Cynyrchiadau ystwyth, dogfennau lefel-canol, cynnwys brand",
+          },
+        ],
+      },
+      {
+        title: "Digidol a Chynnyrch",
+        items: [
+          {
+            title: "Cynhyrchydd Digidol",
+            description:
+              "Datblygu profiadau digidol cynulleidfa-ganolog, fformatau rhyngweithiol a llif-gwaith cymdeithasol-yn-gyntaf sy'n pontio cynhyrchu a thechnoleg.",
+            goodFor: "Darlledwyr, brandiau ac asiantaethau yn lansio cynnyrch digidol",
+          },
+          {
+            title: "Technoleg Greadigol",
+            description:
+              "Adeiladu offer AI dwyieithog, systemau graffeg byw ac awtomeiddio llif-gwaith ar gyfer timau cyfryngau Cymraeg a Saesneg.",
+            goodFor: "Darlledwyr Cymraeg, sefydliadau dwyieithog, sector cyhoeddus",
+          },
+        ],
+      },
+    ],
     cta: {
       heading: "Ddim yn siŵr lle mae eich prosiect yn ffitio?",
       body: "Mae'r briffiau mwyaf diddorol yn croesi dau ohonynt. Awn drwyddo gyda'n gilydd.",
