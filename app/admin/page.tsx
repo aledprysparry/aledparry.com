@@ -42,6 +42,7 @@ export default function AdminPage() {
   const [titleCy, setTitleCy] = useState("");
   const [client, setClient] = useState("");
   const [year, setYear] = useState(new Date().getFullYear());
+  const [displayOrder, setDisplayOrder] = useState<string>("");
   const [role, setRole] = useState("");
   const [roleCy, setRoleCy] = useState("");
   const [type, setType] = useState<string>("digital");
@@ -65,15 +66,25 @@ export default function AdminPage() {
   const [errorMsg, setErrorMsg] = useState("");
 
   // Check auth on page load
-  useState(() => {
-    const stored = typeof window !== "undefined" ? sessionStorage.getItem("admin_pw") : null;
+  useEffect(() => {
+    const stored = sessionStorage.getItem("admin_pw");
     if (stored) {
       setPassword(stored);
       setAuthed(true);
     }
-  });
+  }, []);
 
   const getAuthHeader = () => sessionStorage.getItem("admin_pw") || "";
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("admin_pw");
+    setPassword("");
+    setAuthed(false);
+    setView("list");
+    setProjects([]);
+    setEditSlug(null);
+    setStatus("idle");
+  };
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -125,6 +136,7 @@ export default function AdminPage() {
         setTitleCy(data.titleCy || "");
         setClient(data.client || "");
         setYear(data.year || new Date().getFullYear());
+        setDisplayOrder(data.displayOrder !== undefined ? String(data.displayOrder) : "");
         setRole(data.role || "");
         setRoleCy(data.roleCy || "");
         setType(data.type || "digital");
@@ -179,6 +191,7 @@ export default function AdminPage() {
     setTitleCy("");
     setClient("");
     setYear(new Date().getFullYear());
+    setDisplayOrder("");
     setRole("");
     setRoleCy("");
     setType("digital");
@@ -217,6 +230,7 @@ export default function AdminPage() {
     formData.append("titleCy", titleCy);
     formData.append("client", client);
     formData.append("year", String(year));
+    if (displayOrder.trim() !== "") formData.append("displayOrder", displayOrder.trim());
     formData.append("role", role);
     formData.append("roleCy", roleCy);
     formData.append("type", type);
@@ -268,16 +282,37 @@ export default function AdminPage() {
   const labelClass = "block text-sm font-sans font-medium text-stone-700 mb-1";
   const sectionClass = "border-t border-stone-200 pt-8 mt-8";
 
+  const signOutButton = (
+    <button
+      type="button"
+      onClick={handleLogout}
+      className="fixed top-4 right-4 z-50 text-sm font-sans text-stone-500 hover:text-stone-900 transition-colors"
+    >
+      Sign out
+    </button>
+  );
+
   // ── Password gate ─────────────────────────────────────────────────
   if (!authed) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <form onSubmit={handleLogin} className="w-full max-w-xs space-y-4">
           <h1 className="text-2xl font-serif font-bold text-stone-900">Admin</h1>
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            defaultValue="aledparry-admin"
+            readOnly
+            hidden
+          />
           <div>
-            <label className={labelClass}>Password</label>
+            <label className={labelClass} htmlFor="admin-password">Password</label>
             <input
+              id="admin-password"
               type="password"
+              name="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={inputClass}
@@ -299,6 +334,8 @@ export default function AdminPage() {
   // ── Success state ─────────────────────────────────────────────────
   if (status === "success") {
     return (
+      <>
+      {signOutButton}
       <div className="space-y-6">
         <h1 className="text-2xl font-serif font-bold text-stone-900">
           Project {editSlug ? "updated" : "saved"}
@@ -326,12 +363,15 @@ export default function AdminPage() {
           </button>
         </div>
       </div>
+      </>
     );
   }
 
   // ── Project list ──────────────────────────────────────────────────
   if (view === "list") {
     return (
+      <>
+      {signOutButton}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-serif font-bold text-stone-900">Projects</h1>
@@ -373,11 +413,14 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+      </>
     );
   }
 
   // ── Form (create or edit) ─────────────────────────────────────────
   return (
+    <>
+    {signOutButton}
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-serif font-bold text-stone-900">
@@ -438,17 +481,33 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          id="featured"
-          checked={featured}
-          onChange={(e) => setFeatured(e.target.checked)}
-          className="w-4 h-4 accent-accent"
-        />
-        <label htmlFor="featured" className="text-sm font-sans text-stone-700">
-          Featured on homepage
-        </label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Display order (optional)</label>
+          <input
+            type="number"
+            value={displayOrder}
+            onChange={(e) => setDisplayOrder(e.target.value)}
+            placeholder="e.g. 1-9 to pin to top of Work page"
+            className={inputClass}
+            min={1}
+          />
+          <p className="text-xs text-stone-400 mt-1">
+            Leave blank for normal year-sorted position. Lower number = higher on Work page.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 pt-7">
+          <input
+            type="checkbox"
+            id="featured"
+            checked={featured}
+            onChange={(e) => setFeatured(e.target.checked)}
+            className="w-4 h-4 accent-accent"
+          />
+          <label htmlFor="featured" className="text-sm font-sans text-stone-700">
+            Featured on homepage
+          </label>
+        </div>
       </div>
 
       <div>
@@ -558,5 +617,6 @@ export default function AdminPage() {
         {status === "submitting" ? "Saving..." : editSlug ? "Update Project" : "Save Project"}
       </button>
     </form>
+    </>
   );
 }

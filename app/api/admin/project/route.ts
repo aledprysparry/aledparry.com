@@ -82,9 +82,15 @@ export async function GET(request: NextRequest) {
       year: data.year || 0,
       type: data.type || "",
       featured: data.featured || false,
+      displayOrder: typeof data.displayOrder === "number" ? data.displayOrder : null,
     };
   });
-  projects.sort((a, b) => b.year - a.year);
+  projects.sort((a, b) => {
+    if (a.displayOrder !== null && b.displayOrder !== null) return a.displayOrder - b.displayOrder;
+    if (a.displayOrder !== null) return -1;
+    if (b.displayOrder !== null) return 1;
+    return b.year - a.year;
+  });
   return NextResponse.json(projects);
 }
 
@@ -111,6 +117,8 @@ export async function POST(request: Request) {
   const titleCy = formData.get("titleCy") as string;
   const client = formData.get("client") as string;
   const year = formData.get("year") as string;
+  const displayOrderRaw = formData.get("displayOrder") as string | null;
+  const displayOrder = displayOrderRaw && displayOrderRaw.trim() !== "" ? Number(displayOrderRaw) : null;
   const role = formData.get("role") as string;
   const roleCy = formData.get("roleCy") as string;
   const type = formData.get("type") as string;
@@ -178,6 +186,9 @@ export async function POST(request: Request) {
   lines.push(`type: ${escapeYaml(type)}`);
   lines.push(`heroImage: ${escapeYaml(heroImagePath)}`);
   lines.push(`featured: ${featured}`);
+  if (displayOrder !== null && Number.isFinite(displayOrder)) {
+    lines.push(`displayOrder: ${displayOrder}`);
+  }
   if (summary) lines.push(`summary: ${escapeYaml(summary)}`);
   if (summaryCy) lines.push(`summaryCy: ${escapeYaml(summaryCy)}`);
 
