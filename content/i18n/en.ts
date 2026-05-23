@@ -4,7 +4,7 @@ export const en: SiteContent = {
   meta: {
     siteTitle: "Aled Parry – Creative Technologist & Founder",
     siteDescription:
-      "Creative technologist and founder working between media, AI and bilingual digital products. BAFTA-winning background in broadcast and interactive content. Builder of Capsiynau.com and Nodiadau.com.",
+      "Creative technologist and founder working between media, AI and bilingual digital products. BAFTA-winning background in broadcast and interactive content. Builder of Nodiadau.com.",
   },
   nav: {
     home: "Home",
@@ -19,7 +19,7 @@ export const en: SiteContent = {
       name: "Aled Parry",
       title: "Creative Technologist & Founder",
       valueStatement:
-        "Hello & croeso! I work at the intersection of media formats, AI infrastructure and bilingual digital products. From scaling national daily gaming rituals like Cwis Bob Dydd to building automated language tools like Capsiynau.com, I design and engineer products that solve complex media and workflow challenges. BAFTA winner. Bilingual in English and Welsh.",
+        "Hello & croeso! I work at the intersection of media formats, AI infrastructure and bilingual digital products. From scaling national daily gaming rituals like Cwis Bob Dydd to building bilingual AI tools like Nodiadau.com, I design and engineer products that solve complex media and workflow challenges. BAFTA winner. Bilingual in English and Welsh.",
       cta: "Read the full story",
     },
     credibility: {
@@ -99,7 +99,7 @@ export const en: SiteContent = {
       {
         title: "Bilingual AI Integration",
         description:
-          "Protecting linguistic integrity. Engineering specialised, context-aware AI tools and language applications that streamline bilingual workflows and automation without watering down minoritised languages. The work behind Capsiynau.com and Nodiadau.com.",
+          "Protecting linguistic integrity. Engineering specialised, context-aware AI tools and language applications that streamline bilingual workflows and automation without watering down minoritised languages. The work behind Nodiadau.com.",
         goodFor: "Welsh-language broadcasters, bilingual organisations, public sector",
       },
     ],
@@ -150,7 +150,7 @@ export const en: SiteContent = {
     hero: "I\u2019m a creative technologist and founder working between media formats, AI infrastructure and bilingual digital products.",
     bio: [
       "My background is broadcast and interactive media \u2013 over twenty years of producing programmes, apps, games and content for S4C, BBC, CBBC, ITV, Sesame Street and more. A BAFTA winner with a Graphic Communication grounding that still shapes how I approach storytelling, design and user experience.",
-      "More recently I\u2019ve become much more interested in the technology behind the content. Capsiynau.com and Nodiadau.com are the obvious examples \u2013 language tools I had to build because no one else was going to build them properly for Welsh.",
+      "More recently I\u2019ve become much more interested in the technology behind the content. Nodiadau.com is the obvious example \u2013 a language tool I had to build because no one else was going to build it properly for Welsh.",
     ],
     sections: [
       {
@@ -181,13 +181,12 @@ export const en: SiteContent = {
         heading: "The Evolution",
         intro: "So the work moved upstream \u2013 from managing these problems to building software that fixes them:",
         items: [
-          "Capsiynau.com \u2013 Welsh-first captioning, transcription and localisation",
           "Nodiadau.com \u2013 bilingual dictation and AI productivity for Welsh / English teams",
           "Live browser-based graphics tooling for lean pilot production",
           "Open-source VFX pipelines making cinematic worldbuilding accessible to indies",
           "Classroom-safe spin-offs of audience formats, like Cwis-iau",
         ],
-        outro: "Capsiynau and Nodiadau aren\u2019t side-projects. They\u2019re the inevitable culmination of every previous part of the job.",
+        outro: "Nodiadau isn\u2019t a side-project. It\u2019s the inevitable culmination of every previous part of the job.",
       },
     ],
     skills: {

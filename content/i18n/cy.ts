@@ -4,7 +4,7 @@ export const cy: SiteContent = {
   meta: {
     siteTitle: "Aled Parry – Technolegydd Creadigol a Sylfaenydd",
     siteDescription:
-      "Technolegydd creadigol a sylfaenydd sy'n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. Cefndir Enillydd BAFTA ym maes darlledu a chynnwys rhyngweithiol. Adeiladydd Capsiynau.com a Nodiadau.com.",
+      "Technolegydd creadigol a sylfaenydd sy'n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. Cefndir Enillydd BAFTA ym maes darlledu a chynnwys rhyngweithiol. Adeiladydd Nodiadau.com.",
   },
   nav: {
     home: "Hafan",
@@ -19,7 +19,7 @@ export const cy: SiteContent = {
       name: "Aled Parry",
       title: "Technolegydd Creadigol a Sylfaenydd",
       valueStatement:
-        "Helo a chroeso! Rwy\u2019n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. O dyfu defodau gemau dyddiol cenedlaethol fel Cwis Bob Dydd i adeiladu offer iaith awtomataidd fel Capsiynau.com, rwy\u2019n dylunio ac yn peiriannu cynhyrchion sy\u2019n datrys heriau cyfryngau a llif-gwaith cymhleth. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
+        "Helo a chroeso! Rwy\u2019n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. O dyfu defodau gemau dyddiol cenedlaethol fel Cwis Bob Dydd i adeiladu offer AI dwyieithog fel Nodiadau.com, rwy\u2019n dylunio ac yn peiriannu cynhyrchion sy\u2019n datrys heriau cyfryngau a llif-gwaith cymhleth. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
       cta: "Darllen y stori lawn",
     },
     credibility: {
@@ -99,7 +99,7 @@ export const cy: SiteContent = {
       {
         title: "Integreiddio AI Dwyieithog",
         description:
-          "Diogelu cywirdeb ieithyddol. Peiriannu offer AI arbenigol a chymwysiadau iaith sy'n symleiddio llif-gwaith dwyieithog ac awtomeiddio heb wanhau ieithoedd lleiafrifoledig. Y gwaith y tu ôl i Capsiynau.com a Nodiadau.com.",
+          "Diogelu cywirdeb ieithyddol. Peiriannu offer AI arbenigol a chymwysiadau iaith sy'n symleiddio llif-gwaith dwyieithog ac awtomeiddio heb wanhau ieithoedd lleiafrifoledig. Y gwaith y tu ôl i Nodiadau.com.",
         goodFor: "Darlledwyr Cymraeg, sefydliadau dwyieithog, sector cyhoeddus",
       },
     ],
@@ -150,7 +150,7 @@ export const cy: SiteContent = {
     hero: "Technolegydd creadigol a sylfaenydd ydw i, yn gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog.",
     bio: [
       "Mae fy nghefndir mewn darlledu a chyfryngau rhyngweithiol \u2013 dros ugain mlynedd o gynhyrchu rhaglenni, apiau, gemau a chynnwys ar gyfer S4C, BBC, CBBC, ITV, Sesame Street a mwy. Enillydd BAFTA gyda chefndir mewn Cyfathrebu Graffig sy\u2019n dal i lywio fy null o adrodd straeon, dylunio a phrofiad defnyddiwr.",
-      "Yn fwy diweddar, mae gen i lawer mwy o ddiddordeb yn y dechnoleg y tu \u00f4l i\u2019r cynnwys. Mae Capsiynau.com a Nodiadau.com yn enghreifftiau amlwg \u2013 offer iaith yr oedd rhaid i mi eu hadeiladu am nad oedd neb arall yn mynd i\u2019w hadeiladu\u2019n iawn ar gyfer y Gymraeg.",
+      "Yn fwy diweddar, mae gen i lawer mwy o ddiddordeb yn y dechnoleg y tu \u00f4l i\u2019r cynnwys. Mae Nodiadau.com yn enghraifft amlwg \u2013 offeryn iaith yr oedd rhaid i mi ei adeiladu am nad oedd neb arall yn mynd i\u2019w adeiladu\u2019n iawn ar gyfer y Gymraeg.",
     ],
     sections: [
       {
@@ -181,13 +181,12 @@ export const cy: SiteContent = {
         heading: "Yr Esblygiad",
         intro: "Felly symudodd y gwaith i fyny\u2019r afon \u2013 o reoli\u2019r problemau hyn i adeiladu meddalwedd sy\u2019n eu trwsio:",
         items: [
-          "Capsiynau.com \u2013 capsiynu, trawsgrifio a lleoli Cymraeg-yn-gyntaf",
           "Nodiadau.com \u2013 arddweud dwyieithog a chynhyrchedd AI i dimau Cymraeg / Saesneg",
           "Offer graffeg byw mewn porwr ar gyfer cynhyrchu peilot ystwyth",
           "Piblinellau VFX cod-agored sy\u2019n gwneud creu byd sinematig yn hygyrch i grewyr annibynnol",
           "Fersiynau diogel-i-ystafell-ddosbarth o fformatau cynulleidfa, fel Cwis-iau",
         ],
-        outro: "Nid prosiectau ochr yw Capsiynau a Nodiadau. Nhw yw uchafbwynt anorfod pob rhan flaenorol o\u2019r gwaith.",
+        outro: "Nid prosiect ochr yw Nodiadau. Hwn yw uchafbwynt anorfod pob rhan flaenorol o\u2019r gwaith.",
       },
     ],
     skills: {
