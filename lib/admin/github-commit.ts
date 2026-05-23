@@ -125,3 +125,41 @@ async function ghError(step: string, res: Response): Promise<Error> {
   }
   return new Error(`GitHub API ${step} failed: ${res.status} ${res.statusText} — ${body.slice(0, 300)}`);
 }
+
+interface FetchFileOpts {
+  owner: string;
+  repo: string;
+  branch: string;
+  path: string;
+  token: string;
+}
+
+/**
+ * Reads a single file from GitHub via the Contents API. Returns the decoded
+ * file contents as a string, or null if the file does not exist on the branch.
+ *
+ * Why this exists: when admin saves are committed to GitHub, the local container
+ * filesystem stays stale until the next Vercel rebuild completes (~2 min window).
+ * Reading from GitHub closes that loop so two quick edits in a row don't clobber
+ * the in-flight commit. Falls back to local fs when the token isn't set.
+ */
+export async function fetchFile(opts: FetchFileOpts): Promise<string | null> {
+  const { owner, repo, branch, path: filePath, token } = opts;
+  const url = `${API}/repos/${owner}/${repo}/contents/${encodeURI(filePath)}?ref=${encodeURIComponent(branch)}`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+    cache: "no-store", // never serve stale; defeats Vercel's data cache too
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw await ghError(`read ${filePath}`, res);
+
+  const data = await res.json();
+  if (Array.isArray(data) || data.type !== "file") {
+    throw new Error(`Path ${filePath} is not a file`);
+  }
+  return Buffer.from(data.content as string, "base64").toString("utf-8");
+}
