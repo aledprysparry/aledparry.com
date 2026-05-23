@@ -17,7 +17,7 @@ export function Footer() {
   ];
 
   return (
-    <footer className="border-t border-stone-200 py-12 mt-24">
+    <footer className="relative z-10 bg-stone-50 border-t border-stone-200 py-12 mt-24">
       <Container>
         <div className="flex flex-col items-center gap-8 md:flex-row md:justify-between">
           <div className="flex flex-col items-center gap-4 md:flex-row md:items-center md:gap-8">
