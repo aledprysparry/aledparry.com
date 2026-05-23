@@ -68,6 +68,10 @@ export interface SiteContent {
     heading: string;
     description: string;
     items: ServiceItem[];
+    groups?: Array<{
+      title: string;
+      items: ServiceItem[];
+    }>;
     cta: {
       heading: string;
       body: string;
