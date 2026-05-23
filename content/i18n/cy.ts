@@ -205,7 +205,7 @@ export const cy: SiteContent = {
       submit: "Anfon neges",
     },
     success:
-      "Diolch am gysylltu. Byddaf yn ymateb o fewn 48 awr.",
+      "Dylai eich ap e-bost agor gyda'r neges yn barod i'w hanfon. Tarwch yr anfon pan fyddwch yn hapus a byddaf yn ymateb o fewn 48 awr.",
     error:
       "Aeth rhywbeth o'i le. Rhowch gynnig arall arni neu e-bostiwch fi'n uniongyrchol.",
     directContact: "Neu cysylltwch yn uniongyrchol",

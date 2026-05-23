@@ -204,7 +204,7 @@ export const en: SiteContent = {
       },
       submit: "Send message",
     },
-    success: "Thanks for getting in touch. I'll get back to you within 48 hours.",
+    success: "Your mail app should be opening with the message ready to send. Hit send when you're happy with it and I'll get back to you within 48 hours.",
     error: "Something went wrong. Please try again or email me directly.",
     directContact: "Or reach out directly",
     emailLabel: "Email",
