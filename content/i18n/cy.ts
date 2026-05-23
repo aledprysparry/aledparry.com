@@ -20,7 +20,7 @@ export const cy: SiteContent = {
       title: "Technolegydd Creadigol a Sylfaenydd",
       valueStatement:
         "Helo a chroeso! Rwy\u2019n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. O dyfu defodau gemau dyddiol cenedlaethol fel Cwis Bob Dydd i adeiladu offer iaith awtomataidd fel Capsiynau.com, rwy\u2019n dylunio ac yn peiriannu cynhyrchion sy\u2019n datrys heriau cyfryngau a llif-gwaith cymhleth. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
-      cta: "Archwilio\u2019r archif astudiaethau achos",
+      cta: "Darllen y stori lawn",
     },
     credibility: {
       heading: "Wedi gweithio gyda",

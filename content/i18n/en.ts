@@ -20,7 +20,7 @@ export const en: SiteContent = {
       title: "Creative Technologist & Founder",
       valueStatement:
         "Hello & croeso! I work at the intersection of media formats, AI infrastructure and bilingual digital products. From scaling national daily gaming rituals like Cwis Bob Dydd to building automated language tools like Capsiynau.com, I design and engineer products that solve complex media and workflow challenges. BAFTA winner. Bilingual in English and Welsh.",
-      cta: "Explore the case study archive",
+      cta: "Read the full story",
     },
     credibility: {
       heading: "Worked with",
