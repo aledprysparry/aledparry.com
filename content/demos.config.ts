@@ -108,6 +108,15 @@ export const demos: DemoEntry[] = [
     href: "https://notes-app-aled-parrys-projects.vercel.app/",
   },
   {
+    clientSlug: "msparc",
+    clientName: "M-SPARC",
+    toolSlug: "tanio",
+    toolName: "Tanio",
+    description:
+      "Bilingual (EN/CY) QR drive-in ordering demo – scan, order from your car, enter your numberplate, mock payment, then track progress live (received → preparing → on its way → delivered) while it lands on the café staff dashboard. Numberplates power visit stats + a simple loyalty layer.",
+    componentPath: "Tanio",
+  },
+  {
     clientSlug: "aledparry",
     clientName: "Aled Parry",
     toolSlug: "keepitlocal",

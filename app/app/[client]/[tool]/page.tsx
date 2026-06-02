@@ -24,6 +24,8 @@ const PMADemo = dynamic(() => import("@/components/demos/PMA"), { ssr: false, lo
 const KeepItLocal = dynamic(() => import("@/components/demos/KeepItLocal"), { ssr: false, loading: () => <DemoLoading /> });
 // @ts-ignore
 const GuessThePrice = dynamic(() => import("@/cpshomes/components/GuessThePrice"), { ssr: false, loading: () => <DemoLoading /> });
+// @ts-ignore
+const Tanio = dynamic(() => import("@/components/demos/Tanio"), { ssr: false, loading: () => <DemoLoading /> });
 
 const componentMap: Record<string, React.ComponentType> = {
   SocialEditor,
@@ -31,6 +33,7 @@ const componentMap: Record<string, React.ComponentType> = {
   PMA: PMADemo,
   KeepItLocal,
   GuessThePrice,
+  Tanio,
 };
 
 interface Props {
