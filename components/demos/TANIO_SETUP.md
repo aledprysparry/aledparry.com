@@ -1,6 +1,6 @@
-# Tanio demo – setup
+# Tanio demo – notes
 
-Live demo route: **`/app/msparc/tanio`** (e.g. `https://aledparry.com/app/msparc/tanio`).
+Live demo route: **`/app/msparc/tanio`** (e.g. `https://www.aledparry.com/app/msparc/tanio`).
 
 The QR code on the landing view encodes `…/app/msparc/tanio?view=menu`, so a phone
 that scans it opens the customer ordering flow directly. The café opens
@@ -8,47 +8,35 @@ that scans it opens the customer ordering flow directly. The café opens
 
 Bilingual (English / Cymraeg, toggle persisted per device). Customers identify
 their car by **numberplate** (stored on each order, so it powers visit stats and a
-simple loyalty layer – returning-customer badge on the dashboard + a "free coffee
-every 5 orders" indicator on the confirmation). Order status runs
-**new → preparing → on its way → delivered**, and the customer's confirmation
-screen tracks it live.
+simple spend-based loyalty layer – returning-customer badge on the dashboard + a
+"free coffee every £50" indicator on the confirmation). Order status runs
+**new → preparing → on its way → delivered**, tracked live on the customer's
+confirmation screen.
 
-## Two modes (chosen automatically at runtime)
+## Backend – Vercel Blob (no setup required)
 
-| Mode | When | Behaviour |
-|------|------|-----------|
-| **Local** | Supabase env vars absent | Orders live in `localStorage` + `BroadcastChannel`. Works live across tabs in the **same browser only**. Great for a quick single-device walkthrough, zero setup. |
-| **Live (cross-device)** | both env vars set | Orders go to a Supabase `tanio_orders` table via PostgREST. The dashboard polls every ~2.5s, so a phone order appears on a **separate** café screen. |
+Orders are shared server-side via the **`/api/tanio`** route, backed by **Vercel
+Blob** (one JSON blob per order under `tanio/orders/`). This is what makes the
+demo work **cross-device** – a phone order shows up on a café screen on another
+device, because the orders live on the server, not in the browser.
 
-The footer chip on each view shows which mode is active.
+- Uses aledparry's existing `BLOB_READ_WRITE_TOKEN` (already set in Vercel). **No
+  external account, no migration, nothing to configure** – it just works on deploy.
+- The dashboard polls `/api/tanio` every ~2.5s.
+- "Clear all" on the dashboard deletes every demo blob.
 
-## To enable cross-device live mode
+### Local fallback
+If the Blob token isn't present (e.g. `npm run dev` locally without pulling Vercel
+env), the `/api/tanio` route returns 503 and the client transparently falls back to
+`localStorage` + `BroadcastChannel` – still live across tabs in the **same browser**,
+just not cross-device. The footer chip shows which mode is active
+("Live · cross-device" vs "Local demo (this browser)").
 
-1. **Pick a Supabase project.** A throwaway/free project is ideal – this table is
-   public-demo only. (Don't reuse a production project's anon key for a public demo
-   unless you're comfortable with the permissive policy below.)
-
-2. **Run the migration** in that project's SQL editor:
-   `supabase/migrations/20260602_tanio_orders.sql`
-   It creates `public.tanio_orders`, enables RLS with a permissive anon policy
-   (fine for a public demo – see the warning in the file), and grants the Data API.
-
-3. **Set two env vars** (Vercel → Project → Settings → Environment Variables, and
-   `.env.local` for local dev). Both are `NEXT_PUBLIC_*` because the browser needs
-   them – the anon key is safe to expose:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
-   ```
-
-4. **Redeploy** (or restart `npm run dev`). The chip should now read
-   “Live · cross-device”. Scan the QR on a phone, place an order, and watch it land
-   on the dashboard open on another device.
+To exercise the real Blob path locally, pull the token first:
+`vercel link` then `vercel env pull .env.local`, then `npm run dev`.
 
 ## Notes
-
-- No new npm dependency – the store talks to Supabase over plain `fetch` (PostgREST).
-- "Clear all" on the dashboard deletes every demo row (anon has delete rights). Fine
-  for a demo; remove the delete grant/policy if you don't want that.
-- Latency is the ~2.5s poll interval. If you want instant push later, swap the poll
-  in `tanioStore.js#subscribe` for Supabase Realtime (would add `@supabase/supabase-js`).
+- Blob objects are **public** (demo data only: name, numberplate, items, total).
+  Don't put anything sensitive through this demo.
+- Concurrency-safe creates: each order is its own blob, so simultaneous orders can't
+  clobber each other. Status updates overwrite that one order's blob.
