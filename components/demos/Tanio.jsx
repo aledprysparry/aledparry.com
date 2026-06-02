@@ -499,6 +499,7 @@ function Customer({ go }) {
         </>
       )}
 
+      <Banner />
       <div className="footrow">
         <button className="linkbtn" onClick={() => go("landing")}>{t("back_start")}</button>
         <ModeChip />
@@ -590,7 +591,6 @@ function Dashboard({ go }) {
       )}
 
       <div className="note"><strong>{t("how_head")}</strong>{t("how_body")}</div>
-      <Banner />
       <div className="footrow"><button className="linkbtn" onClick={() => go("landing")}>{t("back_start")}</button><ModeChip /></div>
     </div>
   );
