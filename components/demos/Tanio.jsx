@@ -15,15 +15,16 @@
    confirmation screen subscribes to its own order so it updates
    live as the kitchen advances it.
 
-   Realtime via ./tanioStore (Supabase REST when configured,
-   localStorage + BroadcastChannel fallback otherwise).
+   Realtime via ./tanioStore (shared /api/tanio server store backed
+   by Vercel Blob; localStorage + BroadcastChannel fallback if the
+   API is unreachable, e.g. local dev without the Blob token).
    ============================================================ */
 
 import {
   useState, useEffect, useCallback, createContext, useContext,
 } from "react";
 import {
-  LIVE, money, newId, timeAgo, normPlate,
+  money, newId, timeAgo, normPlate, probeApi,
   placeOrder, setStatus, clearAll, subscribe,
 } from "./tanioStore";
 
@@ -191,7 +192,7 @@ const DICT = {
 const fill = (str, vars) =>
   str.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
 
-const I18n = createContext({ lang: "en", t: (k) => k, setLang: () => {} });
+const I18n = createContext({ lang: "en", t: (k) => k, setLang: () => {}, live: null });
 const useI18n = () => useContext(I18n);
 
 /* ---------------------------------------------------------------- */
@@ -243,10 +244,11 @@ function Banner() {
 }
 
 function ModeChip() {
-  const { t } = useI18n();
+  const { t, live } = useI18n();
+  const isLive = live !== false; // null (checking) shows as live/optimistic
   return (
-    <span className={`mode ${LIVE ? "mode--live" : "mode--local"}`}>
-      {LIVE ? t("mode_live") : t("mode_local")}
+    <span className={`mode ${isLive ? "mode--live" : "mode--local"}`}>
+      {isLive ? t("mode_live") : t("mode_local")}
     </span>
   );
 }
@@ -255,7 +257,7 @@ function ModeChip() {
 /*  Landing / QR table-tent                                          */
 /* ---------------------------------------------------------------- */
 function Landing({ menuUrl, go }) {
-  const { t } = useI18n();
+  const { t, live } = useI18n();
   const qrSrc = menuUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=${encodeURIComponent(menuUrl)}`
     : null;
@@ -272,7 +274,7 @@ function Landing({ menuUrl, go }) {
         <button className="btn" onClick={() => go("menu")}>{t("open_menu")}</button>
         <div className="spacer" />
         <button className="btn btn--ghost" onClick={() => go("dashboard")}>{t("view_dash")}</button>
-        <div className="note">{LIVE ? t("demo_note_live") : t("demo_note_local")}</div>
+        <div className="note">{live === false ? t("demo_note_local") : t("demo_note_live")}</div>
       </div>
       <Banner />
       <div className="footrow"><ModeChip /></div>
@@ -601,6 +603,7 @@ export default function Tanio() {
   const [view, setView] = useState("landing");
   const [menuUrl, setMenuUrl] = useState("");
   const [lang, setLangState] = useState(DEFAULT_LANG);
+  const [live, setLive] = useState(null); // null = checking, true = shared server, false = local only
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -611,6 +614,7 @@ export default function Tanio() {
       const saved = localStorage.getItem(LANG_KEY);
       if (saved === "en" || saved === "cy") setLangState(saved);
     } catch {}
+    probeApi().then(setLive);
   }, []);
 
   const setLang = useCallback((l) => {
@@ -631,7 +635,7 @@ export default function Tanio() {
   }, []);
 
   return (
-    <I18n.Provider value={{ lang, setLang, t }}>
+    <I18n.Provider value={{ lang, setLang, t, live }}>
       <div className="tanio" lang={lang}>
         <style>{CSS}</style>
         {view === "landing" && <Landing menuUrl={menuUrl} go={go} />}
