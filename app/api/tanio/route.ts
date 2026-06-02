@@ -1,4 +1,4 @@
-import { list, put, del } from "@vercel/blob";
+import { list, put, del, get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 /* ============================================================
@@ -9,33 +9,35 @@ import { NextResponse } from "next/server";
    without any external database – it uses aledparry's own Blob
    store (BLOB_READ_WRITE_TOKEN, already configured on Vercel).
 
-   Blobs are public (demo data only: name, numberplate, items).
+   The store is PRIVATE: blobs are written and read with the
+   token (via get(..., { access: 'private' })), never exposed by
+   public URL, so customer names / numberplates stay server-side.
    ============================================================ */
 
 export const dynamic = "force-dynamic"; // never cache this route
 export const runtime = "nodejs";
 
 const PREFIX = "tanio/orders/";
-
 const putOpts = {
-  access: "public" as const,
-  addRandomSuffix: false,
+  access: "private" as const,
   allowOverwrite: true,
   contentType: "application/json",
-  cacheControlMaxAge: 0, // keep the CDN from serving stale order JSON
 };
+
+async function readOne(pathname: string) {
+  const res = await get(pathname, { access: "private", useCache: false });
+  if (!res || !res.stream) return null;
+  try {
+    return await new Response(res.stream).json();
+  } catch {
+    return null;
+  }
+}
 
 async function readAll() {
   const { blobs } = await list({ prefix: PREFIX });
   const orders = await Promise.all(
-    blobs.map(async (b) => {
-      try {
-        const r = await fetch(b.url, { cache: "no-store" });
-        return r.ok ? await r.json() : null;
-      } catch {
-        return null;
-      }
-    })
+    blobs.map((b) => readOne(b.pathname).catch(() => null))
   );
   return orders
     .filter(Boolean)
@@ -46,7 +48,6 @@ export async function GET() {
   try {
     return NextResponse.json({ orders: await readAll() });
   } catch (e: any) {
-    // No token / Blob unavailable: report empty so the client can fall back.
     return NextResponse.json({ orders: [], error: String(e?.message || e) }, { status: 503 });
   }
 }
@@ -66,10 +67,8 @@ export async function PATCH(req: Request) {
   try {
     const { id, status } = await req.json();
     if (!id || !status) return NextResponse.json({ error: "missing id/status" }, { status: 400 });
-    const { blobs } = await list({ prefix: `${PREFIX}${id}.json` });
-    if (!blobs.length) return NextResponse.json({ error: "not found" }, { status: 404 });
-    const r = await fetch(blobs[0].url, { cache: "no-store" });
-    const order = await r.json();
+    const order = await readOne(`${PREFIX}${id}.json`);
+    if (!order) return NextResponse.json({ error: "not found" }, { status: 404 });
     order.status = status;
     await put(`${PREFIX}${id}.json`, JSON.stringify(order), putOpts);
     return NextResponse.json({ order });

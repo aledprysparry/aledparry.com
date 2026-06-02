@@ -36,7 +36,9 @@ To exercise the real Blob path locally, pull the token first:
 `vercel link` then `vercel env pull .env.local`, then `npm run dev`.
 
 ## Notes
-- Blob objects are **public** (demo data only: name, numberplate, items, total).
-  Don't put anything sensitive through this demo.
+- The Blob store is **private**: order JSON is written/read server-side with the
+  token (`get(..., { access: 'private' })`), never exposed by a public URL, so
+  names / numberplates stay server-side. Still a demo – don't put anything truly
+  sensitive through it.
 - Concurrency-safe creates: each order is its own blob, so simultaneous orders can't
   clobber each other. Status updates overwrite that one order's blob.
