@@ -36,7 +36,8 @@ export const demos: DemoEntry[] = [
     toolName: "Editorial Radar",
     description:
       "A Welsh editorial radar: anniversaries, centenaries and 'why now' stories, scored for Welsh relevance and editorial usefulness, with ready Cwis, Heno and pitch drafts.",
-    componentPath: "Momentwm",
+    componentPath: "",
+    href: "/app/momentwm",
   },
   {
     clientSlug: "cpshomes",
