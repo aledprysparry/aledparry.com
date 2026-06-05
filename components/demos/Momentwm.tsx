@@ -94,7 +94,7 @@ export default function Momentwm() {
   const allThemes = useMemo(() => {
     const s = new Set<string>();
     for (const o of data.opportunities) for (const t of o.welshRelevance.tags) s.add(t);
-    return [...s].sort();
+    return Array.from(s).sort();
   }, []);
   const allUses = ["quiz", "heno", "social", "pitch", "documentary", "schools", "themed-week"];
 
