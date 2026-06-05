@@ -26,6 +26,8 @@ const KeepItLocal = dynamic(() => import("@/components/demos/KeepItLocal"), { ss
 const GuessThePrice = dynamic(() => import("@/cpshomes/components/GuessThePrice"), { ssr: false, loading: () => <DemoLoading /> });
 // @ts-ignore
 const Tanio = dynamic(() => import("@/components/demos/Tanio"), { ssr: false, loading: () => <DemoLoading /> });
+// @ts-ignore
+const Momentwm = dynamic(() => import("@/components/demos/Momentwm"), { ssr: false, loading: () => <DemoLoading /> });
 
 const componentMap: Record<string, React.ComponentType> = {
   SocialEditor,
@@ -34,6 +36,7 @@ const componentMap: Record<string, React.ComponentType> = {
   KeepItLocal,
   GuessThePrice,
   Tanio,
+  Momentwm,
 };
 
 interface Props {

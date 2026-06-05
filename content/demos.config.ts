@@ -30,6 +30,15 @@ export interface DemoEntry {
 
 export const demos: DemoEntry[] = [
   {
+    clientSlug: "momentwm",
+    clientName: "Momentwm",
+    toolSlug: "radar",
+    toolName: "Editorial Radar",
+    description:
+      "A Welsh editorial radar: anniversaries, centenaries and 'why now' stories, scored for Welsh relevance and editorial usefulness, with ready Cwis, Heno and pitch drafts.",
+    componentPath: "Momentwm",
+  },
+  {
     clientSlug: "cpshomes",
     clientName: "CPS Homes",
     toolSlug: "socialeditor",
