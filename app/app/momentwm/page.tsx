@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import AppGate from "@/components/app/AppGate";
 
 const Momentwm = dynamic(() => import("@/components/demos/Momentwm"), {
   ssr: false,
@@ -11,8 +12,10 @@ const Momentwm = dynamic(() => import("@/components/demos/Momentwm"), {
 
 export default function MomentwmPage() {
   return (
-    <div className="h-screen">
-      <Momentwm />
-    </div>
+    <AppGate>
+      <div className="h-screen">
+        <Momentwm />
+      </div>
+    </AppGate>
   );
 }
