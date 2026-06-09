@@ -29,10 +29,13 @@ interface Opp {
   };
 }
 
+interface NewsItem { source: string; title: string; link: string; dateISO: string | null }
+
 const data = snapshot as unknown as {
   today: string;
   stats: { shortlisted: number; filteredLowValue: number; sensitiveFlagged: number };
   opportunities: Opp[];
+  news?: NewsItem[];
 };
 
 const MONTHS_CY = ["Ionawr", "Chwefror", "Mawrth", "Ebrill", "Mai", "Mehefin", "Gorffennaf", "Awst", "Medi", "Hydref", "Tachwedd", "Rhagfyr"];
@@ -105,6 +108,42 @@ function DarganfodView({ onOpen }: { onOpen: (o: Opp) => void }) {
           <Row items={themed} />
         </section>
       )}
+    </div>
+  );
+}
+
+/* ── Newyddion (live press surface) ─────────────────────────────────────── */
+function NewyddionView() {
+  const news = data.news ?? [];
+  const when = (iso: string | null) => {
+    if (!iso) return "";
+    const day = iso.slice(0, 10);
+    return day === data.today ? "Heddiw" : welshDate(day);
+  };
+  const sources = useMemo(() => Array.from(new Set(news.map((n) => n.source))), []);
+  return (
+    <div className="mw-newyddion">
+      <header className="mw-ny-head">
+        <div className="mw-ny-kicker">Yn fyw o&apos;r wasg Gymreig</div>
+        <h1 className="mw-dg-h">Newyddion</h1>
+        <p className="mw-ny-sub">Beth mae Cymru&apos;n ei drafod heddiw. Stori heddiw yw archif yfory &middot; bydd y radar yn dal y penblwyddi sy&apos;n tyfu o&apos;r straeon hyn.</p>
+        {sources.length > 0 && <div className="mw-ny-srcs">{sources.map((s) => <span key={s} className="mw-ny-srctag">{s}</span>)}</div>}
+      </header>
+      {news.length === 0 ? (
+        <div className="mw-ny-empty"><p>Dim penawdau wedi&apos;u nôl eto.</p></div>
+      ) : (
+        <ol className="mw-ny-list">
+          {news.map((n, i) => (
+            <li key={i} className="mw-ny-item">
+              <a className="mw-ny-link" href={n.link} target="_blank" rel="noreferrer">
+                <div className="mw-ny-meta"><span className="mw-ny-src">{n.source}</span>{when(n.dateISO) && <span className="mw-ny-date">{when(n.dateISO)}</span>}</div>
+                <div className="mw-ny-title">{n.title}</div>
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
+      <p className="mw-ny-foot">Penawdau a dolenni&apos;n unig, yn uniongyrchol o ffrydiau cyhoeddedig y cyhoeddwyr. Nid ydym yn ailgynhyrchu erthyglau llawn.</p>
     </div>
   );
 }
@@ -196,7 +235,7 @@ function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
 }
 
 export default function Momentwm() {
-  const [view, setView] = useState<"heddiw" | "darganfod" | "radar">("heddiw");
+  const [view, setView] = useState<"heddiw" | "darganfod" | "newyddion" | "radar">("heddiw");
   const [creu, setCreu] = useState<Opp | null>(null);
   const moments = useMemo(() => {
     return Array.from(data.opportunities).sort((a, b) => {
@@ -209,10 +248,12 @@ export default function Momentwm() {
       <style>{CSS}</style>
       {view === "heddiw" && <HeddiwView moments={moments} onCreu={setCreu} />}
       {view === "darganfod" && <DarganfodView onOpen={setCreu} />}
+      {view === "newyddion" && <NewyddionView />}
       {view === "radar" && <RadarView onOpen={setCreu} />}
       <nav className="mw-nav">
         <button className={view === "heddiw" ? "on" : ""} onClick={() => setView("heddiw")}>Heddiw</button>
         <button className={view === "darganfod" ? "on" : ""} onClick={() => setView("darganfod")}>Darganfod</button>
+        <button className={view === "newyddion" ? "on" : ""} onClick={() => setView("newyddion")}>Newyddion</button>
         <button className={view === "radar" ? "on" : ""} onClick={() => setView("radar")}>Radar</button>
       </nav>
       {creu && <CreuSheet opp={creu} onClose={() => setCreu(null)} />}
@@ -311,5 +352,22 @@ const CSS = `
 .mw-cr-note{font-size:12px;color:var(--ink-faint);margin-top:18px;line-height:1.5;}
 .mw-cr-note a{color:inherit;}
 .mw-cr-blocked{font-size:13px;color:var(--red);margin-top:12px;}
-@media (max-width:680px){.mw-hd-body{padding:0 6vw 120px;}.mw-darganfod,.mw-radar{padding:48px 6vw 130px;}}
+.mw-newyddion{height:100%;overflow-y:auto;padding:64px 8vw 130px;max-width:880px;margin:0 auto;}
+.mw-ny-head{margin-bottom:30px;}
+.mw-ny-kicker{font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--red);margin-bottom:12px;}
+.mw-ny-sub{color:var(--ink-soft);font-size:16px;line-height:1.55;margin:8px 0 16px;max-width:56ch;}
+.mw-ny-srcs{display:flex;flex-wrap:wrap;gap:7px;}
+.mw-ny-srctag{font-size:11px;letter-spacing:.04em;color:var(--ink-faint);border:1px solid var(--rule);border-radius:999px;padding:3px 10px;}
+.mw-ny-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule);}
+.mw-ny-item{border-bottom:1px solid var(--rule);}
+.mw-ny-link{display:block;padding:16px 4px;color:inherit;text-decoration:none;transition:padding-left .18s var(--ease);}
+.mw-ny-link:hover{padding-left:12px;}
+.mw-ny-link:hover .mw-ny-title{color:var(--red);}
+.mw-ny-meta{display:flex;align-items:center;gap:10px;margin-bottom:5px;}
+.mw-ny-src{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:#2f6b66;}
+.mw-ny-date{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);}
+.mw-ny-title{font-family:var(--serif);font-size:clamp(18px,2.2vw,22px);line-height:1.28;letter-spacing:-.01em;transition:color .18s var(--ease);}
+.mw-ny-empty{padding:40px 0;color:var(--ink-soft);font-size:16px;}
+.mw-ny-foot{margin-top:26px;font-size:12px;color:var(--ink-faint);line-height:1.55;max-width:60ch;}
+@media (max-width:680px){.mw-hd-body{padding:0 6vw 120px;}.mw-darganfod,.mw-radar,.mw-newyddion{padding:48px 6vw 130px;}}
 `;
