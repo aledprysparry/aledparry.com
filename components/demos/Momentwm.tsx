@@ -148,7 +148,35 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
 /* ── Creu ───────────────────────────────────────────────────────────────── */
 function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
   const d = opp.drafts;
-  const copy = (t: string) => { try { navigator.clipboard?.writeText(t); } catch { /* unavailable */ } };
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (key: string, text: string) => {
+    let ok = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch { ok = false; }
+    if (!ok) {
+      // Fallback for blocked Clipboard API / Permissions-Policy contexts.
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        ta.setAttribute("readonly", "");
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+      } catch { ok = false; }
+    }
+    if (ok) {
+      setCopied(key);
+      window.setTimeout(() => setCopied((c) => (c === key ? null : c)), 1600);
+    }
+  };
+  const label = (key: string) => (copied === key ? "Copïwyd ✓" : "Copïo");
   return (
     <div className="mw-creu-back" onClick={onClose}>
       <div className="mw-creu" onClick={(e) => e.stopPropagation()}>
@@ -157,9 +185,9 @@ function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
           <button className="mw-creu-x" onClick={onClose} aria-label="Cau">&times;</button>
         </div>
         {d?.brief && <div className="mw-cr-block"><div className="mw-cr-k">Pam nawr</div><p className="meta">{d.brief.whyNow}</p></div>}
-        {d?.quiz && <div className="mw-cr-block"><div className="mw-cr-k">Cwis Bob Dydd</div><p>{d.quiz.questionCy}</p><p className="meta">Ateb: {d.quiz.answer}</p><div className="mw-cr-actions"><button className="mw-cr-btn primary" onClick={() => copy(`${d?.quiz?.questionCy ?? ""} (${d?.quiz?.answer ?? ""})`)}>Copïo</button></div></div>}
-        {d?.heno && <div className="mw-cr-block"><div className="mw-cr-k">Heno</div><p>{d.heno.hookCy}</p><p className="meta">{d.heno.treatmentCy}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy(`${d?.heno?.hookCy ?? ""}: ${d?.heno?.treatmentCy ?? ""}`)}>Copïo</button></div></div>}
-        {d?.pitch && <div className="mw-cr-block"><div className="mw-cr-k">Pitch</div><p>{d.pitch.loglineCy}</p><p className="meta">{d.pitch.format}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy(d?.pitch?.loglineCy ?? "")}>Copïo</button></div></div>}
+        {d?.quiz && <div className="mw-cr-block"><div className="mw-cr-k">Cwis Bob Dydd</div><p>{d.quiz.questionCy}</p><p className="meta">Ateb: {d.quiz.answer}</p><div className="mw-cr-actions"><button className="mw-cr-btn primary" onClick={() => copy("quiz", `${d?.quiz?.questionCy ?? ""} (${d?.quiz?.answer ?? ""})`)}>{label("quiz")}</button></div></div>}
+        {d?.heno && <div className="mw-cr-block"><div className="mw-cr-k">Heno</div><p>{d.heno.hookCy}</p><p className="meta">{d.heno.treatmentCy}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("heno", `${d?.heno?.hookCy ?? ""}: ${d?.heno?.treatmentCy ?? ""}`)}>{label("heno")}</button></div></div>}
+        {d?.pitch && <div className="mw-cr-block"><div className="mw-cr-k">Pitch</div><p>{d.pitch.loglineCy}</p><p className="meta">{d.pitch.format}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("pitch", d?.pitch?.loglineCy ?? "")}>{label("pitch")}</button></div></div>}
         {d?.blocked && d.blocked.length > 0 && <p className="mw-cr-blocked">Wedi&apos;i atal yn awtomatig (pwnc sensitif): {d.blocked.join(", ")}</p>}
         <p className="mw-cr-note">Cymraeg drafft (templed) yw hwn. Ffynhonnell: <a href={opp.candidate.sourceUrl} target="_blank" rel="noreferrer">{opp.candidate.sourceName} &#8599;</a></p>
       </div>
