@@ -216,6 +216,19 @@ function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
     }
   };
   const label = (key: string) => (copied === key ? "Copïwyd ✓" : "Copïo");
+  // Each "Copïo" yields a self-contained, paste-ready summary (title + angle +
+  // Pam nawr + source), not just the bare line: ready to drop into an email/CMS.
+  const title = opp.candidate.eventTitle;
+  const why = d?.brief?.whyNow ?? "";
+  const src = `Ffynhonnell: ${opp.candidate.sourceName} (${opp.candidate.sourceUrl})`;
+  // keep intentional "" spacers (blank lines), drop only missing/false fields
+  const join = (lines: (string | false | undefined)[]) => lines.filter((l) => l !== undefined && l !== false).join("\n");
+  const summary = {
+    brief: () => join([title, "", why, src]),
+    quiz: () => join([`Cwis Bob Dydd: ${title}`, "", d?.quiz?.questionCy, `Ateb: ${d?.quiz?.answer}`, "", why && `Pam nawr: ${why}`, src]),
+    heno: () => join([`Heno: ${title}`, "", d?.heno?.hookCy, d?.heno?.treatmentCy, "", why && `Pam nawr: ${why}`, src]),
+    pitch: () => join([`Pitch: ${title}`, "", d?.pitch?.loglineCy, `Fformat: ${d?.pitch?.format}`, "", why && `Pam nawr: ${why}`, src]),
+  };
   return (
     <div className="mw-creu-back" onClick={onClose}>
       <div className="mw-creu" onClick={(e) => e.stopPropagation()}>
@@ -223,10 +236,10 @@ function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
           <div><div className="mw-creu-k">Creu</div><h2>{opp.candidate.eventTitle}</h2></div>
           <button className="mw-creu-x" onClick={onClose} aria-label="Cau">&times;</button>
         </div>
-        {d?.brief && <div className="mw-cr-block"><div className="mw-cr-k">Pam nawr</div><p className="meta">{d.brief.whyNow}</p></div>}
-        {d?.quiz && <div className="mw-cr-block"><div className="mw-cr-k">Cwis Bob Dydd</div><p>{d.quiz.questionCy}</p><p className="meta">Ateb: {d.quiz.answer}</p><div className="mw-cr-actions"><button className="mw-cr-btn primary" onClick={() => copy("quiz", `${d?.quiz?.questionCy ?? ""} (${d?.quiz?.answer ?? ""})`)}>{label("quiz")}</button></div></div>}
-        {d?.heno && <div className="mw-cr-block"><div className="mw-cr-k">Heno</div><p>{d.heno.hookCy}</p><p className="meta">{d.heno.treatmentCy}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("heno", `${d?.heno?.hookCy ?? ""}: ${d?.heno?.treatmentCy ?? ""}`)}>{label("heno")}</button></div></div>}
-        {d?.pitch && <div className="mw-cr-block"><div className="mw-cr-k">Pitch</div><p>{d.pitch.loglineCy}</p><p className="meta">{d.pitch.format}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("pitch", d?.pitch?.loglineCy ?? "")}>{label("pitch")}</button></div></div>}
+        {d?.brief && <div className="mw-cr-block"><div className="mw-cr-k">Pam nawr</div><p className="meta">{d.brief.whyNow}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("brief", summary.brief())}>{label("brief")}</button></div></div>}
+        {d?.quiz && <div className="mw-cr-block"><div className="mw-cr-k">Cwis Bob Dydd</div><p>{d.quiz.questionCy}</p><p className="meta">Ateb: {d.quiz.answer}</p><div className="mw-cr-actions"><button className="mw-cr-btn primary" onClick={() => copy("quiz", summary.quiz())}>{label("quiz")}</button></div></div>}
+        {d?.heno && <div className="mw-cr-block"><div className="mw-cr-k">Heno</div><p>{d.heno.hookCy}</p><p className="meta">{d.heno.treatmentCy}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("heno", summary.heno())}>{label("heno")}</button></div></div>}
+        {d?.pitch && <div className="mw-cr-block"><div className="mw-cr-k">Pitch</div><p>{d.pitch.loglineCy}</p><p className="meta">{d.pitch.format}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("pitch", summary.pitch())}>{label("pitch")}</button></div></div>}
         {d?.blocked && d.blocked.length > 0 && <p className="mw-cr-blocked">Wedi&apos;i atal yn awtomatig (pwnc sensitif): {d.blocked.join(", ")}</p>}
         <p className="mw-cr-note">Cymraeg drafft (templed) yw hwn. Ffynhonnell: <a href={opp.candidate.sourceUrl} target="_blank" rel="noreferrer">{opp.candidate.sourceName} &#8599;</a></p>
       </div>
