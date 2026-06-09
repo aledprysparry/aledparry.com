@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import AppGate from "@/components/app/AppGate";
 import { FadeIn } from "@/components/ui/FadeIn";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
@@ -53,6 +54,13 @@ const CLIENT_VISUAL: Record<string, { from: string; to: string; mono: string }> 
 };
 const FALLBACK_VISUAL = { from: "#475569", to: "#94a3b8", mono: "•" };
 
+// Demos with a real captured preview image at /app/previews/<toolSlug>.jpg.
+// The rest (login-walled / coming-soon) fall back to the gradient cover.
+const HAS_PREVIEW = new Set([
+  "radar", "socialeditor", "guessprice", "carousel", "tanio",
+  "qt-live", "pma", "notes", "keepitlocal",
+]);
+
 const STATUS_ORDER: Record<DemoStatus, number> = { live: 0, demo: 1, soon: 2 };
 
 function hrefFor(demo: DemoEntry): string {
@@ -77,20 +85,31 @@ function ProjectCard({ demo, locale }: { demo: DemoEntry; locale: "en" | "cy" })
   const isExternal = /^https?:\/\//.test(href);
   const isSoon = demo.status === "soon";
   const vis = CLIENT_VISUAL[demo.clientSlug] ?? FALLBACK_VISUAL;
+  const preview = HAS_PREVIEW.has(demo.toolSlug) ? `/app/previews/${demo.toolSlug}.jpg` : null;
 
   const inner = (
     <>
-      {/* gradient cover */}
+      {/* cover: real preview image when available, else gradient + monogram */}
       <div
-        className="relative h-32 overflow-hidden"
+        className="relative h-40 overflow-hidden border-b border-stone-200/60"
         style={{ backgroundImage: `linear-gradient(135deg, ${vis.from}, ${vis.to})` }}
       >
-        {/* dot texture */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.22)_1px,transparent_0)] [background-size:14px_14px] opacity-60" />
-        {/* monogram */}
-        <span className="absolute -bottom-3 left-4 select-none font-serif text-6xl font-bold leading-none text-white/25 transition-transform duration-300 group-hover:scale-105">
-          {vis.mono}
-        </span>
+        {preview ? (
+          <Image
+            src={preview}
+            alt={`${demo.toolName} preview`}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover object-top transition-transform duration-500 group-hover:scale-[1.04]"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.22)_1px,transparent_0)] [background-size:14px_14px] opacity-60" />
+            <span className="absolute -bottom-3 left-4 select-none font-serif text-6xl font-bold leading-none text-white/25 transition-transform duration-300 group-hover:scale-105">
+              {vis.mono}
+            </span>
+          </>
+        )}
         <div className="absolute right-3 top-3">
           <StatusPill status={demo.status} label={c.status[demo.status]} />
         </div>
