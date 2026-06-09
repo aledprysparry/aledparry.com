@@ -68,6 +68,16 @@ export const demos: DemoEntry[] = [
     href: "https://cwis-creator-hub.vercel.app",
   },
   {
+    clientSlug: "s4c",
+    clientName: "S4C",
+    toolSlug: "carousel",
+    toolName: "Cwis Bob Dydd Carousels",
+    description:
+      "Auto-builds the weekly Top 10 leaderboard as a branded Instagram carousel – paste or upload (CSV/XLSX) the week's scores and export cover, places 1–5, 6–10, winner spotlight and a call-to-action as PNG/JPEG or a ZIP.",
+    componentPath: "",
+    href: "/app/carousel",
+  },
+  {
     clientSlug: "tinopolis",
     clientName: "Tinopolis Cymru",
     toolSlug: "pressroom",
