@@ -1,30 +1,27 @@
 "use client";
 
 /* ============================================================
-   Momentwm – Editorial Intelligence Network (read-only demo)
-   A Welsh editorial radar: anniversaries, centenaries and
-   "why now" stories, scored for Welsh relevance + editorial
-   usefulness, with a sensitivity gate and ready Cwis/Heno/pitch
-   drafts. This portal demo renders a committed snapshot
-   (components/demos/momentwm-snapshot.json) from the standalone
-   app (github.com/aledprysparry/momentwm). Self-contained with a
-   scoped dark theme (.mw-root) so it can't touch the rest of the site.
-   Refresh the data: `npm run snapshot` in the momentwm repo, then
-   copy src/data/opportunities.json here.
+   Momentwm – the Welsh editorial radar, reimagined.
+   Not a dashboard: a warm, image-led daily almanac.
+   Heddiw (today's moment) -> Darganfod (explore) -> Creu (make),
+   with the old dense radar demoted to a "Radar" power-view.
+   Self-contained read-only demo: renders a committed snapshot
+   (./momentwm-snapshot.json) from the standalone app. Scoped
+   styling (.mw-root) so it never touches the rest of the site.
    ============================================================ */
 import { useMemo, useState } from "react";
 import snapshot from "./momentwm-snapshot.json";
 
-type Severity = "none" | "caution" | "high";
 interface Opp {
-  candidate: { eventTitle: string; sourceUrl: string; sourceName: string; confidence: number };
-  anniversary: { anniversaryType: string; windowLabel: string; occursOn: string | null; occursYear: number; isRound: boolean };
-  welshRelevance: { score: number; tags: string[]; reasons: string[] };
-  editorial: { score: number; reasons: string[] };
-  sensitivity: { severity: Severity; handling: string; flags: string[] };
+  candidate: { eventTitle: string; sourceUrl: string; sourceName: string; confidence: number; imageUrl?: string };
+  anniversary: { anniversaryType: string; windowLabel: string; occursOn: string | null; occursYear: number; isRound: boolean; milestoneYear: number };
+  welshRelevance: { score: number; tags: string[] };
+  editorial: { score: number };
+  sensitivity: { severity: "none" | "caution" | "high"; handling: string };
   suggestedUse: string[];
   horizon: string;
   drafts?: {
+    brief?: { whyNow: string };
     quiz?: { questionCy: string; answer: string } | null;
     heno?: { hookCy: string; treatmentCy: string };
     pitch?: { loglineCy: string; format: string };
@@ -38,254 +35,253 @@ const data = snapshot as unknown as {
   opportunities: Opp[];
 };
 
-const USE_LABEL: Record<string, string> = {
-  quiz: "Cwis", heno: "Heno", social: "Social", pitch: "Pitch",
-  documentary: "Doc", schools: "Schools", "themed-week": "Themed week",
-};
-const HORIZONS = ["all", "week", "month", "quarter", "year", "longrange"] as const;
-const HLABEL: Record<string, string> = {
-  all: "All", week: "This week", month: "This month", quarter: "This quarter", year: "This year", longrange: "Long-range",
-};
-
+const MONTHS_CY = ["Ionawr", "Chwefror", "Mawrth", "Ebrill", "Mai", "Mehefin", "Gorffennaf", "Awst", "Medi", "Hydref", "Tachwedd", "Rhagfyr"];
+function welshDate(iso: string) { const [y, m, d] = iso.split("-").map(Number); return `${d} ${MONTHS_CY[m - 1]} ${y}`; }
+function agoWelsh(milestone: number) {
+  const named: Record<number, string> = { 25: "Chwarter canrif yn ôl", 50: "Hanner canrif yn ôl", 100: "Canmlwyddiant", 150: "Cant a hanner o flynyddoedd yn ôl", 200: "Daucanmlwyddiant" };
+  return named[milestone] ?? `${milestone} mlynedd yn ôl`;
+}
+function welshWhen(occursOn: string | null, occursYear: number) { return occursOn ? welshDate(occursOn) : `yn ${occursYear}`; }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const band = (n: number) => (n >= 75 ? "high" : n >= 55 ? "mid" : "low");
 
-function daysBetween(from: string, to: string) {
-  return Math.round((Date.parse(to + "T00:00:00Z") - Date.parse(from + "T00:00:00Z")) / 86_400_000);
-}
-function countdown(o: Opp, today: string) {
-  const a = o.anniversary;
-  if (a.occursOn) {
-    const d = daysBetween(today, a.occursOn);
-    if (d < 0) return "passed";
-    if (d === 0) return "today";
-    if (d < 31) return `in ${d} days`;
-    if (d < 365) return `in ${Math.max(1, Math.round(d / 30))} months`;
-    return `in ${(d / 365).toFixed(d / 365 < 2 ? 1 : 0)} years`;
-  }
-  const ty = Number(today.slice(0, 4));
-  if (a.occursYear <= ty) return "this year";
-  return a.occursYear - ty === 1 ? "next year" : `in ${a.occursYear - ty} years`;
-}
-function sevMeta(s: Severity) {
-  if (s === "high") return { sym: "⚠", cls: "sev-high", label: "Sensitive – commemorative only" };
-  if (s === "caution") return { sym: "·", cls: "sev-caution", label: "Handle with care" };
-  return null;
-}
-
-function Bar({ label, score }: { label: string; score: number }) {
+/* ── Heddiw ─────────────────────────────────────────────────────────────── */
+function HeddiwView({ moments, onCreu }: { moments: Opp[]; onCreu: (o: Opp) => void }) {
+  const [index, setIndex] = useState(0);
+  const [why, setWhy] = useState(false);
+  if (moments.length === 0) return <div className="mw-heddiw mw-light"><div className="mw-bg none" /><div className="mw-hd-body"><h1 className="mw-hd-title">Dim stori heddiw.</h1></div></div>;
+  const m = moments[index % moments.length];
+  const img = m.candidate.imageUrl;
+  const sensitive = m.sensitivity.severity === "high";
   return (
-    <div className="mw-bar">
-      <span className="mw-bar-l">{label}</span>
-      <span className="mw-bar-t"><span className={`mw-bar-f mw-${band(score)}`} style={{ width: `${score}%` }} /></span>
-      <span className="mw-bar-n">{score}</span>
+    <div className={`mw-heddiw ${img ? "mw-dark" : "mw-light"}`}>
+      <div className={`mw-bg ${img ? "" : "none"}`} style={img ? { backgroundImage: `url("${img}")` } : undefined} />
+      <div className="mw-scrim" />
+      {moments.length > 1 && <button className="mw-hd-next" onClick={() => { setWhy(false); setIndex((i) => (i + 1) % moments.length); }}>Stori nesaf &rarr;</button>}
+      <div className="mw-hd-body" key={index}>
+        <div className="mw-hd-kicker">Momentwm &middot; {welshDate(data.today)}</div>
+        <div className="mw-hd-ago">{agoWelsh(m.anniversary.milestoneYear)}</div>
+        <h1 className="mw-hd-title">{m.candidate.eventTitle}</h1>
+        <div className="mw-hd-when">{welshWhen(m.anniversary.occursOn, m.anniversary.occursYear)}{sensitive ? " · er cof" : ""}</div>
+        <div className="mw-hd-actions">
+          <button className="mw-cta" onClick={() => onCreu(m)}>Creu &rarr;</button>
+          <button className="mw-link" onClick={() => setWhy((s) => !s)}>Pam nawr?</button>
+        </div>
+        {why && (
+          <div className="mw-pam">
+            {sensitive && <div className="mw-sens">{m.sensitivity.handling}</div>}
+            {m.welshRelevance.tags.length > 0 && <div className="mw-tags">{m.welshRelevance.tags.map((t) => <span className="mw-tag" key={t}>{t}</span>)}</div>}
+            <p style={{ marginTop: 10 }}><a href={m.candidate.sourceUrl} target="_blank" rel="noreferrer">Ffynhonnell: {m.candidate.sourceName} &#8599;</a></p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Darganfod ──────────────────────────────────────────────────────────── */
+function DarganfodView({ onOpen }: { onOpen: (o: Opp) => void }) {
+  const soon = useMemo(() => data.opportunities.filter((o) => o.horizon === "year").slice(0, 12), []);
+  const round = useMemo(() => data.opportunities.filter((o) => o.anniversary.isRound).slice(0, 12), []);
+  const themes = useMemo(() => { const s = new Set<string>(); for (const o of data.opportunities) for (const t of o.welshRelevance.tags) s.add(t); return Array.from(s).sort(); }, []);
+  const [theme, setTheme] = useState(themes[0] ?? "");
+  const themed = useMemo(() => data.opportunities.filter((o) => o.welshRelevance.tags.includes(theme)).slice(0, 12), [theme]);
+  const Card = ({ o }: { o: Opp }) => (
+    <div className="mw-dg-card" onClick={() => onOpen(o)}>
+      <div className={`mw-dg-thumb ${o.candidate.imageUrl ? "" : "none"}`} style={o.candidate.imageUrl ? { backgroundImage: `url("${o.candidate.imageUrl}")` } : undefined} />
+      <div className="mw-dg-meta"><div className="mw-dg-when">{welshWhen(o.anniversary.occursOn, o.anniversary.occursYear)}</div><div className="mw-dg-title">{o.candidate.eventTitle}</div></div>
+    </div>
+  );
+  const Row = ({ items }: { items: Opp[] }) => <div className="mw-dg-row">{items.map((o, i) => <Card key={i} o={o} />)}</div>;
+  return (
+    <div className="mw-darganfod">
+      <h1 className="mw-dg-h">Darganfod</h1>
+      <p className="mw-dg-sub">Pori trwy stori Cymru: yr hyn sydd ar ddod, a&apos;r hyn sy&apos;n cysylltu.</p>
+      <section className="mw-dg-section"><h3>Eleni</h3><Row items={soon} /></section>
+      <section className="mw-dg-section"><h3>Penblwyddi mawr</h3><Row items={round} /></section>
+      {themes.length > 0 && (
+        <section className="mw-dg-section">
+          <h3>Yn ôl thema</h3>
+          <div className="mw-dg-themes">{themes.map((t) => <button key={t} className={`mw-dg-theme ${t === theme ? "on" : ""}`} onClick={() => setTheme(t)}>{cap(t)}</button>)}</div>
+          <Row items={themed} />
+        </section>
+      )}
+    </div>
+  );
+}
+
+/* ── Radar (compact power-view) ─────────────────────────────────────────── */
+function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
+  const [q, setQ] = useState("");
+  const [min, setMin] = useState(45);
+  const shown = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    return data.opportunities.filter((o) => o.editorial.score >= min && (!query || o.candidate.eventTitle.toLowerCase().includes(query)));
+  }, [q, min]);
+  return (
+    <div className="mw-radar">
+      <div className="mw-radar-bar">
+        <h1 className="mw-dg-h" style={{ fontSize: 34 }}>Radar</h1>
+        <input className="mw-search" placeholder="Chwilio..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <label className="mw-minl">Sgôr &ge; {min}<input type="range" min={0} max={100} step={5} value={min} onChange={(e) => setMin(Number(e.target.value))} /></label>
+        <span className="mw-count">{shown.length} stori</span>
+      </div>
+      <div className="mw-radar-grid">
+        {shown.map((o, i) => {
+          const sev = o.sensitivity.severity;
+          return (
+            <div key={i} className={`mw-rc ${sev === "high" ? "sens" : ""}`} onClick={() => onOpen(o)}>
+              <div className="mw-rc-top">
+                <span className="mw-rc-badge">{o.anniversary.isRound ? "★ " : ""}{o.anniversary.anniversaryType}</span>
+                <span className="mw-rc-score">{o.editorial.score}</span>
+              </div>
+              <div className="mw-rc-when">{welshWhen(o.anniversary.occursOn, o.anniversary.occursYear)}</div>
+              <div className="mw-rc-title">{o.candidate.eventTitle}</div>
+              <div className="mw-rc-uses">{o.suggestedUse.slice(0, 4).map((u) => <span key={u} className="mw-rc-use">{u}</span>)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Creu ───────────────────────────────────────────────────────────────── */
+function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
+  const d = opp.drafts;
+  const copy = (t: string) => { try { navigator.clipboard?.writeText(t); } catch { /* unavailable */ } };
+  return (
+    <div className="mw-creu-back" onClick={onClose}>
+      <div className="mw-creu" onClick={(e) => e.stopPropagation()}>
+        <div className="mw-creu-top">
+          <div><div className="mw-creu-k">Creu</div><h2>{opp.candidate.eventTitle}</h2></div>
+          <button className="mw-creu-x" onClick={onClose} aria-label="Cau">&times;</button>
+        </div>
+        {d?.brief && <div className="mw-cr-block"><div className="mw-cr-k">Pam nawr</div><p className="meta">{d.brief.whyNow}</p></div>}
+        {d?.quiz && <div className="mw-cr-block"><div className="mw-cr-k">Cwis Bob Dydd</div><p>{d.quiz.questionCy}</p><p className="meta">Ateb: {d.quiz.answer}</p><div className="mw-cr-actions"><button className="mw-cr-btn primary" onClick={() => copy(`${d?.quiz?.questionCy ?? ""} (${d?.quiz?.answer ?? ""})`)}>Copïo</button></div></div>}
+        {d?.heno && <div className="mw-cr-block"><div className="mw-cr-k">Heno</div><p>{d.heno.hookCy}</p><p className="meta">{d.heno.treatmentCy}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy(`${d?.heno?.hookCy ?? ""}: ${d?.heno?.treatmentCy ?? ""}`)}>Copïo</button></div></div>}
+        {d?.pitch && <div className="mw-cr-block"><div className="mw-cr-k">Pitch</div><p>{d.pitch.loglineCy}</p><p className="meta">{d.pitch.format}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy(d?.pitch?.loglineCy ?? "")}>Copïo</button></div></div>}
+        {d?.blocked && d.blocked.length > 0 && <p className="mw-cr-blocked">Wedi&apos;i atal yn awtomatig (pwnc sensitif): {d.blocked.join(", ")}</p>}
+        <p className="mw-cr-note">Cymraeg drafft (templed) yw hwn. Ffynhonnell: <a href={opp.candidate.sourceUrl} target="_blank" rel="noreferrer">{opp.candidate.sourceName} &#8599;</a></p>
+      </div>
     </div>
   );
 }
 
 export default function Momentwm() {
-  const [horizon, setHorizon] = useState<string>("all");
-  const [minScore, setMinScore] = useState(45);
-  const [themes, setThemes] = useState<string[]>([]);
-  const [uses, setUses] = useState<string[]>([]);
-  const [showSensitive, setShowSensitive] = useState(true);
-  const [q, setQ] = useState("");
-
-  const allThemes = useMemo(() => {
-    const s = new Set<string>();
-    for (const o of data.opportunities) for (const t of o.welshRelevance.tags) s.add(t);
-    return Array.from(s).sort();
-  }, []);
-  const allUses = ["quiz", "heno", "social", "pitch", "documentary", "schools", "themed-week"];
-
-  const toggle = (arr: string[], v: string, set: (x: string[]) => void) =>
-    set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
-
-  const shown = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    return data.opportunities.filter((o) => {
-      if (o.editorial.score < minScore) return false;
-      if (horizon !== "all" && o.horizon !== horizon) return false;
-      if (!showSensitive && o.sensitivity.severity === "high") return false;
-      if (themes.length && !o.welshRelevance.tags.some((t) => themes.includes(t))) return false;
-      if (uses.length && !o.suggestedUse.some((u) => uses.includes(u))) return false;
-      if (query && !o.candidate.eventTitle.toLowerCase().includes(query)) return false;
-      return true;
+  const [view, setView] = useState<"heddiw" | "darganfod" | "radar">("heddiw");
+  const [creu, setCreu] = useState<Opp | null>(null);
+  const moments = useMemo(() => {
+    return Array.from(data.opportunities).sort((a, b) => {
+      const ai = a.candidate.imageUrl ? 0 : 1; const bi = b.candidate.imageUrl ? 0 : 1;
+      return ai !== bi ? ai - bi : b.editorial.score - a.editorial.score;
     });
-  }, [horizon, minScore, themes, uses, showSensitive, q]);
-
-  const reset = () => { setHorizon("all"); setMinScore(45); setThemes([]); setUses([]); setShowSensitive(true); setQ(""); };
-
+  }, []);
   return (
     <div className="mw-root">
       <style>{CSS}</style>
-      <aside className="mw-rail">
-        <input className="mw-search" placeholder="Search titles…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <div className="mw-count">Showing <strong>{shown.length}</strong> of {data.opportunities.length}</div>
-
-        <section><h4>Horizon</h4><div className="mw-seg">
-          {HORIZONS.map((h) => (
-            <button key={h} className={`mw-pill ${horizon === h ? "on" : ""}`} onClick={() => setHorizon(h)}>{HLABEL[h]}</button>
-          ))}
-        </div></section>
-
-        <section><h4>Min editorial score · {minScore}</h4>
-          <input type="range" min={0} max={100} step={5} value={minScore} onChange={(e) => setMinScore(Number(e.target.value))} />
-        </section>
-
-        <section><h4>Editorial use</h4><div className="mw-seg">
-          {allUses.map((u) => (
-            <button key={u} className={`mw-pill ${uses.includes(u) ? "on" : ""}`} onClick={() => toggle(uses, u, setUses)}>{USE_LABEL[u]}</button>
-          ))}
-        </div></section>
-
-        {allThemes.length > 0 && (
-          <section><h4>Theme</h4><div className="mw-seg">
-            {allThemes.map((t) => (
-              <button key={t} className={`mw-pill ${themes.includes(t) ? "on" : ""}`} onClick={() => toggle(themes, t, setThemes)}>{cap(t)}</button>
-            ))}
-          </div></section>
-        )}
-
-        <label className="mw-toggle">
-          <input type="checkbox" checked={showSensitive} onChange={(e) => setShowSensitive(e.target.checked)} /> Show sensitive items
-        </label>
-        <button className="mw-reset" onClick={reset}>Reset filters</button>
-      </aside>
-
-      <main className="mw-main">
-        <header className="mw-top">
-          <div>
-            <div className="mw-brand">Momentwm · radar golygyddol Cymru</div>
-            <h1>Radar</h1>
-          </div>
-          <dl className="mw-stats">
-            <div><dt>Shortlisted</dt><dd>{data.stats.shortlisted}</dd></div>
-            <div><dt>Noise filtered</dt><dd>{data.stats.filteredLowValue}</dd></div>
-            <div><dt>Sensitive</dt><dd>{data.stats.sensitiveFlagged}</dd></div>
-            <div><dt>Source</dt><dd>Wikidata + news · {data.today}</dd></div>
-          </dl>
-        </header>
-
-        {shown.length === 0 ? (
-          <div className="mw-empty">
-            <p className="mw-empty-t">Nothing matches these filters.</p>
-            <p className="mw-empty-s">Lower the score, widen the horizon, or clear theme/use filters.</p>
-            <button className="mw-reset" onClick={reset}>Reset filters</button>
-          </div>
-        ) : (
-          <div className="mw-grid">
-            {shown.map((o, i) => {
-              const sev = sevMeta(o.sensitivity.severity);
-              const a = o.anniversary;
-              const d = o.drafts;
-              return (
-                <article key={i} className={`mw-card ${sev ? sev.cls : ""}`}>
-                  <header className="mw-card-top">
-                    <div className="mw-badges">
-                      {a.isRound ? <span className="mw-badge round">★ {a.anniversaryType}</span> : <span className="mw-badge soft">{a.anniversaryType}</span>}
-                      {sev && <span className={`mw-badge ${sev.cls}`} title={sev.label}>{sev.sym} sensitive</span>}
-                    </div>
-                    <span className="mw-score">{o.editorial.score}</span>
-                  </header>
-                  <div className="mw-when"><span>{a.windowLabel}</span><span className="mw-cd">{countdown(o, data.today)}</span></div>
-                  <h3 className="mw-title">{o.candidate.eventTitle}</h3>
-                  <div className="mw-chips">
-                    {o.suggestedUse.map((u) => <span key={u} className={`mw-chip use ${u === "documentary" && sev ? "commem" : ""}`}>{USE_LABEL[u] ?? u}</span>)}
-                  </div>
-                  {o.welshRelevance.tags.length > 0 && (
-                    <div className="mw-chips">{o.welshRelevance.tags.map((t) => <span key={t} className="mw-chip theme">{cap(t)}</span>)}</div>
-                  )}
-                  <div className="mw-bars"><Bar label="Editorial" score={o.editorial.score} /><Bar label="Welsh" score={o.welshRelevance.score} /></div>
-                  {sev && <p className="mw-handling">{o.sensitivity.handling}</p>}
-                  {d && (
-                    <details className="mw-drafts">
-                      <summary>Drafts</summary>
-                      {d.quiz && <div className="mw-draft"><span className="mw-dk">Cwis</span><p>{d.quiz.questionCy}</p><p className="mw-dm">Ateb: {d.quiz.answer}</p></div>}
-                      {d.heno && <div className="mw-draft"><span className="mw-dk">Heno</span><p>{d.heno.hookCy}</p><p className="mw-dm">{d.heno.treatmentCy}</p></div>}
-                      {d.pitch && <div className="mw-draft"><span className="mw-dk">Pitch</span><p>{d.pitch.loglineCy}</p><p className="mw-dm">{d.pitch.format}</p></div>}
-                      {d.blocked && d.blocked.length > 0 && <p className="mw-dblock">Withheld (sensitivity): {d.blocked.join(", ")}</p>}
-                    </details>
-                  )}
-                  <footer className="mw-foot">
-                    <a href={o.candidate.sourceUrl} target="_blank" rel="noreferrer">{o.candidate.sourceName} ↗</a>
-                    <span className="mw-htag">{o.horizon}</span>
-                  </footer>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </main>
+      {view === "heddiw" && <HeddiwView moments={moments} onCreu={setCreu} />}
+      {view === "darganfod" && <DarganfodView onOpen={setCreu} />}
+      {view === "radar" && <RadarView onOpen={setCreu} />}
+      <nav className="mw-nav">
+        <button className={view === "heddiw" ? "on" : ""} onClick={() => setView("heddiw")}>Heddiw</button>
+        <button className={view === "darganfod" ? "on" : ""} onClick={() => setView("darganfod")}>Darganfod</button>
+        <button className={view === "radar" ? "on" : ""} onClick={() => setView("radar")}>Radar</button>
+      </nav>
+      {creu && <CreuSheet opp={creu} onClose={() => setCreu(null)} />}
     </div>
   );
 }
 
 const CSS = `
-.mw-root{--bg:#0b0d11;--panel:#14171d;--panel2:#181c23;--ink:#e8eaf0;--ink2:#aeb6c5;--muted:#7c8597;--line:#232936;--line2:#2c3342;--accent:#4f8cff;--accentink:#bcd3ff;--gold:#e3b341;--green:#3fb968;--amber:#e0a23a;--red:#e5544b;
-display:grid;grid-template-columns:264px 1fr;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,"Inter",sans-serif;}
+.mw-root{--paper:#faf6ee;--paper-2:#f1e9db;--ink:#211e19;--ink-soft:#6f675b;--ink-faint:#9c9486;--rule:#e6ddcd;--red:#b23a2e;
+  --serif:"Playfair Display",Georgia,serif;--sans:"Inter",ui-sans-serif,system-ui,sans-serif;--ease:cubic-bezier(.22,1,.36,1);
+  height:100%;background:var(--paper);color:var(--ink);font-family:var(--sans);position:relative;overflow:hidden;}
 .mw-root *{box-sizing:border-box;}
-.mw-rail{background:#0f1217;border-right:1px solid var(--line);padding:18px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
-.mw-rail section{display:flex;flex-direction:column;gap:8px;}
-.mw-rail h4{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0;font-weight:600;}
-.mw-search{width:100%;padding:8px 10px;font-size:14px;background:var(--panel);border:1px solid var(--line2);border-radius:6px;color:var(--ink);}
-.mw-search:focus{outline:none;border-color:var(--accent);}
-.mw-count{font-size:12px;color:var(--muted);}.mw-count strong{color:var(--ink);}
-.mw-seg{display:flex;flex-wrap:wrap;gap:6px;}
-.mw-pill{font-size:12px;padding:5px 9px;border-radius:999px;cursor:pointer;background:var(--panel);border:1px solid var(--line2);color:var(--ink2);transition:all .16s ease;}
-.mw-pill:hover{border-color:var(--accent);color:var(--ink);}
-.mw-pill.on{background:rgba(79,140,255,.16);border-color:var(--accent);color:var(--accentink);}
-.mw-root input[type=range]{width:100%;accent-color:var(--accent);}
-.mw-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink2);cursor:pointer;}
-.mw-reset{font-size:12px;padding:8px 12px;border-radius:6px;cursor:pointer;background:var(--panel);border:1px solid var(--line2);color:var(--ink2);}
-.mw-reset:hover{border-color:var(--accent);color:var(--ink);}
-.mw-main{padding:22px 26px;overflow-y:auto;}
-.mw-top{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:22px;}
-.mw-brand{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;}
-.mw-top h1{font-size:30px;line-height:1.15;letter-spacing:-.02em;margin:6px 0 0;}
-.mw-stats{display:flex;gap:26px;margin:0;}.mw-stats div{display:flex;flex-direction:column;gap:2px;}
-.mw-stats dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
-.mw-stats dd{margin:0;font-size:20px;font-weight:600;}
-.mw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
-.mw-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:11px;transition:transform .16s ease,border-color .16s ease;}
-.mw-card:hover{transform:translateY(-2px);border-color:var(--line2);}
-.mw-card.sev-high{border-left:3px solid var(--red);}.mw-card.sev-caution{border-left:3px solid var(--amber);}
-.mw-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-.mw-badges{display:flex;flex-wrap:wrap;gap:6px;}
-.mw-badge{font-size:11px;padding:3px 8px;border-radius:999px;font-weight:600;white-space:nowrap;}
-.mw-badge.round{background:rgba(227,179,65,.16);color:var(--gold);}
-.mw-badge.soft{background:var(--panel2);color:var(--ink2);}
-.mw-badge.sev-high{background:rgba(229,84,75,.16);color:var(--red);}
-.mw-badge.sev-caution{background:rgba(224,162,58,.16);color:var(--amber);}
-.mw-score{flex:none;min-width:30px;height:30px;padding:0 8px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;background:rgba(79,140,255,.16);color:var(--accentink);}
-.mw-when{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:13px;color:var(--ink2);}
-.mw-cd{font-size:12px;color:var(--muted);white-space:nowrap;}
-.mw-title{font-size:16px;line-height:1.35;margin:0;letter-spacing:-.01em;}
-.mw-chips{display:flex;flex-wrap:wrap;gap:6px;}
-.mw-chip{font-size:11px;padding:3px 8px;border-radius:6px;}
-.mw-chip.use{background:rgba(79,140,255,.12);color:var(--accentink);}
-.mw-chip.use.commem{background:rgba(229,84,75,.14);color:var(--red);}
-.mw-chip.theme{background:var(--panel2);color:var(--muted);}
-.mw-bars{display:flex;flex-direction:column;gap:6px;}
-.mw-bar{display:grid;grid-template-columns:58px 1fr 26px;align-items:center;gap:8px;}
-.mw-bar-l{font-size:11px;color:var(--muted);}
-.mw-bar-t{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;}
-.mw-bar-f{display:block;height:100%;border-radius:3px;}
-.mw-high{background:var(--green);}.mw-mid{background:var(--accent);}.mw-low{background:var(--amber);}
-.mw-bar-n{font-size:11px;color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums;}
-.mw-handling{margin:0;font-size:12px;line-height:1.5;color:var(--red);background:rgba(229,84,75,.08);padding:8px 10px;border-radius:6px;}
-.mw-drafts{font-size:12px;}
-.mw-drafts summary{cursor:pointer;color:var(--accentink);list-style:none;}
-.mw-drafts summary::-webkit-details-marker{display:none;}
-.mw-draft{margin-top:8px;padding:8px 10px;background:var(--panel2);border-radius:6px;}
-.mw-dk{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;}
-.mw-draft p{margin:4px 0 0;line-height:1.45;}.mw-dm{color:var(--muted);font-size:11px;}
-.mw-dblock{margin:8px 0 0;font-size:11px;color:var(--red);}
-.mw-foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;border-top:1px solid var(--line);padding-top:10px;margin-top:auto;}
-.mw-foot a{color:var(--accentink);text-decoration:none;}.mw-foot a:hover{text-decoration:underline;}
-.mw-htag{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
-.mw-empty{text-align:center;padding:70px 24px;max-width:440px;margin:0 auto;}
-.mw-empty-t{font-size:18px;font-weight:600;margin:0 0 8px;}
-.mw-empty-s{font-size:14px;color:var(--muted);line-height:1.6;margin:0 0 18px;}
-@media (max-width:820px){.mw-root{grid-template-columns:1fr;}.mw-rail{border-right:none;border-bottom:1px solid var(--line);}}
+@keyframes mwrise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes mwfade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.mw-root *{animation:none!important}}
+.mw-nav{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:40;display:flex;gap:4px;padding:5px;border-radius:999px;
+  background:rgba(250,246,238,.85);backdrop-filter:blur(12px);border:1px solid var(--rule);box-shadow:0 6px 24px rgba(40,30,10,.14);}
+.mw-nav button{font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border:none;border-radius:999px;background:transparent;color:var(--ink-soft);cursor:pointer;transition:all .2s var(--ease);}
+.mw-nav button:hover{color:var(--ink);}
+.mw-nav button.on{background:var(--ink);color:var(--paper);}
+
+.mw-heddiw{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;}
+.mw-bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.04);animation:mwfade 1.2s var(--ease) both;}
+.mw-bg.none{background:radial-gradient(120% 120% at 70% 10%,var(--paper-2),var(--paper) 60%);}
+.mw-scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(20,16,10,.88) 0%,rgba(20,16,10,.42) 38%,rgba(20,16,10,.05) 70%);}
+.mw-heddiw.mw-light .mw-scrim{background:linear-gradient(to top,rgba(250,246,238,.7),transparent 55%);}
+.mw-hd-body{position:relative;z-index:2;padding:0 8vw 120px;max-width:1000px;animation:mwrise .9s var(--ease) both;}
+.mw-heddiw.mw-dark .mw-hd-body{color:#fdfaf4;}
+.mw-hd-kicker{font-size:12px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;opacity:.82;margin-bottom:20px;}
+.mw-hd-ago{font-family:var(--serif);font-size:clamp(20px,3.2vw,30px);font-style:italic;opacity:.92;margin-bottom:6px;}
+.mw-hd-title{font-family:var(--serif);font-weight:500;font-size:clamp(40px,7vw,86px);line-height:1.03;letter-spacing:-.02em;margin:0 0 18px;max-width:16ch;}
+.mw-hd-when{font-size:15px;opacity:.82;margin-bottom:22px;}
+.mw-hd-actions{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.mw-cta{font-family:var(--sans);font-size:16px;font-weight:600;padding:14px 30px;border-radius:999px;border:none;cursor:pointer;background:var(--red);color:#fff;transition:transform .2s var(--ease),filter .2s var(--ease);}
+.mw-cta:hover{transform:translateY(-1px);filter:brightness(1.06);}
+.mw-link{background:none;border:none;cursor:pointer;font-family:var(--sans);font-size:14px;color:inherit;opacity:.82;text-decoration:underline;text-underline-offset:3px;}
+.mw-link:hover{opacity:1;}
+.mw-hd-next{position:absolute;right:8vw;bottom:122px;z-index:2;background:none;border:none;cursor:pointer;font-family:var(--sans);font-size:13px;letter-spacing:.04em;color:inherit;opacity:.72;}
+.mw-heddiw.mw-dark .mw-hd-next{color:#fdfaf4;}
+.mw-hd-next:hover{opacity:1;}
+.mw-pam{position:relative;z-index:2;margin:14px 0 0;font-size:14px;line-height:1.6;opacity:.9;max-width:60ch;}
+.mw-pam a{color:inherit;text-decoration:underline;text-underline-offset:2px;}
+.mw-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.mw-tag{font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid currentColor;opacity:.6;}
+.mw-sens{margin-top:6px;font-size:13px;line-height:1.5;padding:10px 14px;border-radius:10px;background:rgba(178,58,46,.2);max-width:60ch;}
+
+.mw-darganfod,.mw-radar{height:100%;overflow-y:auto;padding:64px 8vw 130px;}
+.mw-dg-h{font-family:var(--serif);font-weight:500;font-size:clamp(30px,5vw,50px);letter-spacing:-.02em;margin:0 0 6px;}
+.mw-dg-sub{color:var(--ink-soft);font-size:16px;margin:0 0 40px;}
+.mw-dg-section{margin-bottom:44px;}
+.mw-dg-section h3{font-family:var(--serif);font-size:22px;font-weight:500;margin:0 0 16px;}
+.mw-dg-row{display:flex;gap:16px;overflow-x:auto;padding-bottom:8px;}
+.mw-dg-card{flex:0 0 260px;cursor:pointer;background:#fff;border:1px solid var(--rule);border-radius:14px;overflow:hidden;transition:transform .2s var(--ease),box-shadow .2s var(--ease);}
+.mw-dg-card:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(40,30,10,.1);}
+.mw-dg-thumb{height:130px;background-size:cover;background-position:center;background-color:var(--paper-2);}
+.mw-dg-thumb.none{background:linear-gradient(135deg,var(--paper-2),#e8ddc9);}
+.mw-dg-meta{padding:12px 14px;}
+.mw-dg-when{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);}
+.mw-dg-title{font-family:var(--serif);font-size:17px;line-height:1.25;margin:4px 0 0;}
+.mw-dg-themes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.mw-dg-theme{font-size:13px;padding:7px 14px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink-soft);cursor:pointer;transition:all .18s var(--ease);}
+.mw-dg-theme:hover,.mw-dg-theme.on{border-color:var(--ink);color:var(--ink);}
+
+.mw-radar-bar{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:28px;}
+.mw-search{padding:9px 14px;font-size:14px;background:#fff;border:1px solid var(--rule);border-radius:999px;color:var(--ink);min-width:200px;}
+.mw-search:focus{outline:none;border-color:var(--ink-soft);}
+.mw-minl{font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:10px;}
+.mw-minl input{accent-color:var(--red);}
+.mw-count{font-size:13px;color:var(--ink-faint);margin-left:auto;}
+.mw-radar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.mw-rc{background:#fff;border:1px solid var(--rule);border-radius:14px;padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:transform .18s var(--ease),box-shadow .18s var(--ease);}
+.mw-rc:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(40,30,10,.08);}
+.mw-rc.sens{border-left:3px solid var(--red);}
+.mw-rc-top{display:flex;justify-content:space-between;align-items:center;}
+.mw-rc-badge{font-size:11px;font-weight:600;color:var(--ink-soft);}
+.mw-rc-score{font-size:13px;font-weight:700;color:var(--red);}
+.mw-rc-when{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);}
+.mw-rc-title{font-family:var(--serif);font-size:18px;line-height:1.2;}
+.mw-rc-uses{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;}
+.mw-rc-use{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--paper-2);color:var(--ink-soft);}
+
+.mw-creu-back{position:fixed;inset:0;z-index:50;background:rgba(20,16,10,.45);backdrop-filter:blur(3px);animation:mwfade .25s var(--ease) both;display:flex;align-items:flex-end;justify-content:center;}
+.mw-creu{width:100%;max-width:680px;max-height:88%;overflow-y:auto;background:var(--paper);border-radius:22px 22px 0 0;padding:28px 32px 40px;animation:mwrise .35s var(--ease) both;}
+.mw-creu-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
+.mw-creu-k{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);}
+.mw-creu h2{font-family:var(--serif);font-weight:500;font-size:28px;line-height:1.1;margin:4px 0 22px;}
+.mw-creu-x{background:none;border:none;font-size:26px;line-height:1;color:var(--ink-faint);cursor:pointer;}
+.mw-creu-x:hover{color:var(--ink);}
+.mw-cr-block{border-top:1px solid var(--rule);padding:18px 0;}
+.mw-cr-k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);font-weight:600;}
+.mw-cr-block p{margin:8px 0 0;line-height:1.5;font-size:16px;}
+.mw-cr-block .meta{color:var(--ink-soft);font-size:14px;}
+.mw-cr-actions{display:flex;gap:10px;margin-top:12px;}
+.mw-cr-btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:8px 16px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink);cursor:pointer;}
+.mw-cr-btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+.mw-cr-note{font-size:12px;color:var(--ink-faint);margin-top:18px;line-height:1.5;}
+.mw-cr-note a{color:inherit;}
+.mw-cr-blocked{font-size:13px;color:var(--red);margin-top:12px;}
+@media (max-width:680px){.mw-hd-body{padding:0 6vw 120px;}.mw-darganfod,.mw-radar{padding:48px 6vw 130px;}}
 `;
