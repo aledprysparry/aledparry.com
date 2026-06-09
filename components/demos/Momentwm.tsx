@@ -21,6 +21,7 @@ interface Opp {
   suggestedUse: string[];
   horizon: string;
   drafts?: {
+    templated?: boolean;
     brief?: { whyNow: string };
     quiz?: { questionCy: string; answer: string } | null;
     heno?: { hookCy: string; treatmentCy: string };
@@ -241,7 +242,7 @@ function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
         {d?.heno && <div className="mw-cr-block"><div className="mw-cr-k">Heno</div><p>{d.heno.hookCy}</p><p className="meta">{d.heno.treatmentCy}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("heno", summary.heno())}>{label("heno")}</button></div></div>}
         {d?.pitch && <div className="mw-cr-block"><div className="mw-cr-k">Pitch</div><p>{d.pitch.loglineCy}</p><p className="meta">{d.pitch.format}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("pitch", summary.pitch())}>{label("pitch")}</button></div></div>}
         {d?.blocked && d.blocked.length > 0 && <p className="mw-cr-blocked">Wedi&apos;i atal yn awtomatig (pwnc sensitif): {d.blocked.join(", ")}</p>}
-        <p className="mw-cr-note">Cymraeg drafft (templed) yw hwn. Ffynhonnell: <a href={opp.candidate.sourceUrl} target="_blank" rel="noreferrer">{opp.candidate.sourceName} &#8599;</a></p>
+        <p className="mw-cr-note">{d?.templated === false ? "Drafft golygyddol (Claude). Adolygwch cyn ei gyhoeddi." : "Cymraeg drafft (templed) yw hwn."} Ffynhonnell: <a href={opp.candidate.sourceUrl} target="_blank" rel="noreferrer">{opp.candidate.sourceName} &#8599;</a></p>
       </div>
     </div>
   );
