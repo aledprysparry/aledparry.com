@@ -187,10 +187,26 @@ function NewyddionView() {
 function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
   const [q, setQ] = useState("");
   const [min, setMin] = useState(45);
+  const [rf, setRf] = useState<{ state: "idle" | "busy" | "ok" | "err"; msg: string }>({ state: "idle", msg: "" });
   const shown = useMemo(() => {
     const query = q.trim().toLowerCase();
     return data.opportunities.filter((o) => o.editorial.score >= min && (!query || o.candidate.eventTitle.toLowerCase().includes(query)));
   }, [q, min]);
+
+  const doRefresh = async () => {
+    if (rf.state === "busy") return;
+    if (!window.confirm("Ailgynhyrchu'r holl ddata gyda Claude? Mae'n cymryd ~30 munud ac yn costio ~£1-2 mewn credydau API. Bydd PR yn ymddangos i'w adolygu cyn i'r data fynd yn fyw.")) return;
+    setRf({ state: "busy", msg: "Wrthi'n cychwyn…" });
+    try {
+      const res = await fetch("/api/momentwm/refresh", { method: "POST" });
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+      if (res.ok && j.ok) setRf({ state: "ok", msg: j.message || "Ailgynhyrchu wedi cychwyn." });
+      else setRf({ state: "err", msg: j.message || `Methodd (${res.status}).` });
+    } catch {
+      setRf({ state: "err", msg: "Methodd y cais." });
+    }
+  };
+
   return (
     <div className="mw-radar">
       <div className="mw-radar-bar">
@@ -198,7 +214,11 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
         <input className="mw-search" placeholder="Chwilio..." value={q} onChange={(e) => setQ(e.target.value)} />
         <label className="mw-minl">Sgôr &ge; {min}<input type="range" min={0} max={100} step={5} value={min} onChange={(e) => setMin(Number(e.target.value))} /></label>
         <span className="mw-count">{shown.length} stori</span>
+        <button className="mw-refresh-data" onClick={doRefresh} disabled={rf.state === "busy"} title="Ailgynhyrchu'r holl ddata gyda Claude (~30 munud)">
+          {rf.state === "busy" ? "Wrthi…" : "⟳ Ailgynhyrchu"}
+        </button>
       </div>
+      {rf.msg && <p className={`mw-rf-msg ${rf.state}`}>{rf.msg}</p>}
       <div className="mw-radar-grid">
         {shown.map((o, i) => {
           const sev = o.sensitivity.severity;
@@ -381,6 +401,13 @@ const CSS = `
 .mw-minl{font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:10px;}
 .mw-minl input{accent-color:var(--red);}
 .mw-count{font-size:13px;color:var(--ink-faint);margin-left:auto;}
+.mw-refresh-data{font-family:var(--sans);font-size:12px;font-weight:500;padding:6px 12px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink-soft);cursor:pointer;transition:border-color .18s var(--ease),color .18s var(--ease),opacity .18s var(--ease);}
+.mw-refresh-data:hover:not(:disabled){border-color:var(--red);color:var(--red);}
+.mw-refresh-data:disabled{opacity:.55;cursor:default;}
+.mw-rf-msg{font-size:13px;margin:-16px 0 22px;line-height:1.5;}
+.mw-rf-msg.ok{color:#2f6b66;}
+.mw-rf-msg.err{color:var(--red);}
+.mw-rf-msg.busy{color:var(--ink-soft);}
 .mw-radar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
 .mw-rc{background:#fff;border:1px solid var(--rule);border-radius:14px;padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:transform .18s var(--ease),box-shadow .18s var(--ease);}
 .mw-rc:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(40,30,10,.08);}
