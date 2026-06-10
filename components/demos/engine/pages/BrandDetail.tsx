@@ -1,0 +1,328 @@
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  Plus, Trash2, ImagePlus, Sparkles, Copy, ExternalLink, ArrowLeft, Wand2,
+} from 'lucide-react';
+import { useStore } from '@engine/lib/store/StoreProvider';
+import { Button, Panel, Badge, TextInput, EmptyState } from '@engine/components/ui';
+import { TEMPLATE_KIND_LIST, getKind } from '@engine/lib/templates/registry';
+import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
+import type { AssetType, SocialAccount } from '@engine/lib/model/types';
+
+type Tab = 'overview' | 'templates' | 'graphics' | 'assets' | 'social';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'templates', label: 'Templates' },
+  { id: 'graphics', label: 'Graphics' },
+  { id: 'assets', label: 'Assets' },
+  { id: 'social', label: 'Social' },
+];
+
+const ASSET_TYPES: AssetType[] = ['logo', 'background', 'icon', 'product', 'reference', 'social-post'];
+const SOCIAL_PLATFORMS: SocialAccount['platform'][] = ['instagram', 'tiktok', 'facebook', 'linkedin', 'x'];
+
+export default function BrandDetail() {
+  const { brandId = '' } = useParams();
+  const store = useStore();
+  const navigate = useNavigate();
+  const brand = store.getBrand(brandId);
+  const [tab, setTab] = useState<Tab>('overview');
+
+  if (!brand) {
+    return (
+      <div className="mx-auto max-w-6xl px-8 py-10">
+        <EmptyState title="Brand not found" action={<Link to="/"><Button variant="subtle">Back to dashboard</Button></Link>} />
+      </div>
+    );
+  }
+
+  const templates = store.templatesByBrand(brandId);
+  const graphics = store.graphicsByBrand(brandId);
+  const assets = store.assetsByBrand(brandId);
+
+  return (
+    <div className="mx-auto max-w-6xl px-8 py-10">
+      <Link to="/" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white">
+        <ArrowLeft size={14} /> Dashboard
+      </Link>
+
+      <header className="mb-6 flex items-end justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="grid h-12 w-12 place-items-center rounded-2xl text-[20px] font-bold" style={{ background: brand.colours[0] || '#6366f1' }}>
+            {brand.name.slice(0, 1).toUpperCase()}
+          </span>
+          <div>
+            <h1 className="font-serif text-[26px] font-extrabold tracking-tight" style={{ fontFamily: 'Bitter, serif' }}>{brand.name}</h1>
+            <p className="text-[12px] text-white/40">{templates.length} templates · {graphics.length} graphics · {assets.length} assets</p>
+          </div>
+        </div>
+        <Button onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> Create graphic</Button>
+      </header>
+
+      {/* tabs */}
+      <div className="mb-6 flex gap-1 border-b border-white/10">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors ${
+              tab === t.id ? 'border-indigo-400 text-white' : 'border-transparent text-white/45 hover:text-white/80'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'overview' && <OverviewTab brandId={brandId} />}
+      {tab === 'templates' && <TemplatesTab brandId={brandId} />}
+      {tab === 'graphics' && <GraphicsTab brandId={brandId} />}
+      {tab === 'assets' && <AssetsTab brandId={brandId} />}
+      {tab === 'social' && <SocialTab brandId={brandId} />}
+    </div>
+  );
+}
+
+// ── Overview ──
+function OverviewTab({ brandId }: { brandId: string }) {
+  const store = useStore();
+  const navigate = useNavigate();
+  const brand = store.getBrand(brandId)!;
+  const [newColour, setNewColour] = useState('#6366f1');
+
+  return (
+    <div className="grid gap-5 md:grid-cols-2">
+      <Panel className="p-5">
+        <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-white/55">Identity</h3>
+        <label className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">Name</label>
+        <TextInput value={brand.name} onChange={(e) => store.updateBrand(brandId, { name: e.target.value })} />
+        <label className="mb-1 mt-4 block text-[11px] uppercase tracking-wide text-white/40">Fonts (comma separated)</label>
+        <TextInput value={brand.fonts.join(', ')} onChange={(e) => store.updateBrand(brandId, { fonts: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
+        <label className="mb-1 mt-4 block text-[11px] uppercase tracking-wide text-white/40">Tone notes</label>
+        <textarea
+          value={brand.toneNotes ?? ''}
+          onChange={(e) => store.updateBrand(brandId, { toneNotes: e.target.value })}
+          className="w-full h-24 resize-y rounded-lg bg-black/30 border border-white/10 focus:border-indigo-400/60 focus:outline-none px-3 py-2 text-[13px] text-white/90"
+        />
+      </Panel>
+
+      <Panel className="p-5">
+        <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-white/55">Colours</h3>
+        <div className="flex flex-wrap gap-2">
+          {brand.colours.map((c, i) => (
+            <div key={i} className="group relative">
+              <span className="block h-12 w-12 rounded-xl border border-white/10" style={{ background: c }} />
+              <button
+                onClick={() => store.updateBrand(brandId, { colours: brand.colours.filter((_, j) => j !== i) })}
+                className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-black text-white/70 group-hover:grid"
+                title="Remove"
+              >
+                <Trash2 size={11} />
+              </button>
+              <span className="mt-1 block text-center text-[9px] text-white/35">{c}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <input type="color" value={newColour} onChange={(e) => setNewColour(e.target.value)} className="h-9 w-12 rounded bg-transparent" />
+          <Button variant="subtle" onClick={() => store.updateBrand(brandId, { colours: [...brand.colours, newColour] })}>
+            <Plus size={14} /> Add colour
+          </Button>
+        </div>
+        <p className="mt-5 text-[12px] text-white/40">Brand colours feed template styles and the canvas palette.</p>
+        <Button className="mt-3" onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> Create a graphic</Button>
+      </Panel>
+    </div>
+  );
+}
+
+// ── Templates ──
+function TemplatesTab({ brandId }: { brandId: string }) {
+  const store = useStore();
+  const navigate = useNavigate();
+  const templates = store.templatesByBrand(brandId);
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {TEMPLATE_KIND_LIST.map((k) => (
+          <Button key={k.id} variant="subtle" onClick={() => store.createTemplate(brandId, k.id)}>
+            <Plus size={14} /> {k.name}
+          </Button>
+        ))}
+      </div>
+      {templates.length === 0 ? (
+        <EmptyState title="No templates yet" hint="Add a template kind above to start generating graphics." />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {templates.map((t) => (
+            <Panel key={t.id} className="flex flex-col p-5">
+              <div className="flex items-start justify-between">
+                <Badge tone="accent">{t.type}</Badge>
+                <button onClick={() => store.deleteTemplate(t.id)} className="text-white/30 hover:text-red-300"><Trash2 size={14} /></button>
+              </div>
+              <h3 className="mt-3 font-serif text-[16px] font-bold" style={{ fontFamily: 'Bitter, serif' }}>{t.name}</h3>
+              <p className="mt-1 text-[12px] text-white/45">{getKind(t.kind)?.description ?? t.kind}</p>
+              <div className="mt-3 flex flex-wrap gap-1">
+                {t.supportedPlatforms.slice(0, 4).map((p) => (
+                  <span key={p} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-white/40">{PLATFORM_PRESETS[p].name}</span>
+                ))}
+              </div>
+              <Button className="mt-4" onClick={() => navigate(`/brands/${brandId}/create?template=${t.id}`)}>
+                <Sparkles size={14} /> Use template
+              </Button>
+            </Panel>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Graphics ──
+function GraphicsTab({ brandId }: { brandId: string }) {
+  const store = useStore();
+  const navigate = useNavigate();
+  const graphics = store.graphicsByBrand(brandId);
+
+  if (graphics.length === 0)
+    return <EmptyState title="No saved graphics" hint="Create one from a template." action={<Button onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> Create graphic</Button>} />;
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {graphics.map((g) => {
+        const platform = g.platformPresetId ? PLATFORM_PRESETS[g.platformPresetId] : undefined;
+        return (
+          <Panel key={g.id} className="flex flex-col p-5">
+            <div className="flex items-start justify-between">
+              <Badge>{platform?.name ?? 'Graphic'}</Badge>
+              <div className="flex gap-1">
+                <button onClick={() => store.duplicateGraphic(g.id)} className="text-white/30 hover:text-white" title="Duplicate"><Copy size={14} /></button>
+                <button onClick={() => store.deleteGraphic(g.id)} className="text-white/30 hover:text-red-300" title="Delete"><Trash2 size={14} /></button>
+              </div>
+            </div>
+            <h3 className="mt-3 truncate font-semibold">{g.name}</h3>
+            <p className="text-[12px] text-white/40">Updated {new Date(g.updatedAt).toLocaleDateString('en-GB')}</p>
+            <Button className="mt-4" variant="subtle" onClick={() => navigate(`/graphics/${g.id}`)}>Open editor</Button>
+          </Panel>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Assets ──
+function AssetsTab({ brandId }: { brandId: string }) {
+  const store = useStore();
+  const assets = store.assetsByBrand(brandId);
+  const [type, setType] = useState<AssetType>('logo');
+
+  const onFile = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => store.addAsset(brandId, { type, name: file.name, url: String(reader.result) });
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div>
+      <Panel className="mb-5 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <select value={type} onChange={(e) => setType(e.target.value as AssetType)} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+            {ASSET_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <label className="cursor-pointer">
+            <input type="file" accept="image/*,.woff,.woff2,.ttf,.otf" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+            <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10"><ImagePlus size={15} /> Upload {type}</span>
+          </label>
+          <span className="text-[12px] text-white/35">Stored locally for the POC.</span>
+        </div>
+      </Panel>
+
+      {assets.length === 0 ? (
+        <EmptyState title="No assets yet" hint="Upload logos, backgrounds, icons or reference posts." />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {assets.map((a) => (
+            <Panel key={a.id} className="group overflow-hidden">
+              <div className="relative grid h-28 place-items-center bg-black/30">
+                {/image|logo|background|icon|product|reference|social-post/.test(a.type) && a.url.startsWith('data:image') ? (
+                  <img src={a.url} alt={a.name} className="max-h-full max-w-full object-contain p-2" />
+                ) : (
+                  <span className="text-[11px] text-white/40">{a.type}</span>
+                )}
+                <button onClick={() => store.removeAsset(a.id)} className="absolute right-2 top-2 hidden rounded-md bg-black/70 p-1 text-white/70 group-hover:block hover:text-red-300"><Trash2 size={13} /></button>
+              </div>
+              <div className="p-2.5">
+                <p className="truncate text-[12px] text-white/80">{a.name}</p>
+                <Badge tone="muted">{a.type}</Badge>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Social ──
+function SocialTab({ brandId }: { brandId: string }) {
+  const store = useStore();
+  const socials = store.socialByBrand(brandId);
+  const [platform, setPlatform] = useState<SocialAccount['platform']>('instagram');
+  const [url, setUrl] = useState('');
+
+  const add = () => {
+    if (!url.trim()) return;
+    store.addSocialAccount(brandId, { platform, url: url.trim() });
+    setUrl('');
+  };
+
+  return (
+    <div>
+      <Panel className="mb-5 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <select value={platform} onChange={(e) => setPlatform(e.target.value as SocialAccount['platform'])} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+            {SOCIAL_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <div className="flex-1 min-w-[220px]"><TextInput placeholder="https://instagram.com/yourbrand" value={url} onChange={(e) => setUrl(e.target.value)} /></div>
+          <Button onClick={add}><Plus size={14} /> Add account</Button>
+        </div>
+      </Panel>
+
+      {socials.length === 0 ? (
+        <EmptyState title="No social accounts" hint="Add an account, then run a (stubbed) audit to get template-style suggestions." />
+      ) : (
+        <div className="space-y-3">
+          {socials.map((s) => (
+            <Panel key={s.id} className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Badge tone="accent">{s.platform}</Badge>
+                  <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 truncate text-[13px] text-white/70 hover:text-white">
+                    {s.url} <ExternalLink size={12} />
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="subtle" onClick={() => store.auditSocial(s.id)}><Wand2 size={14} /> {s.auditStatus === 'complete' ? 'Re-audit' : 'Audit content'}</Button>
+                  <button onClick={() => store.removeSocialAccount(s.id)} className="text-white/30 hover:text-red-300"><Trash2 size={14} /></button>
+                </div>
+              </div>
+              {s.auditStatus === 'complete' && s.auditSuggestions && (
+                <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">Suggested template styles (mock)</p>
+                  {s.auditSuggestions.map((sug, i) => (
+                    <div key={i} className="rounded-lg bg-white/[0.03] px-3 py-2">
+                      <p className="text-[13px] font-semibold text-white/85">{sug.title}</p>
+                      <p className="text-[12px] text-white/45">{sug.rationale}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

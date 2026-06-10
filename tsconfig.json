@@ -19,7 +19,8 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@carousel/*": ["./components/demos/carousel/*"]
+      "@carousel/*": ["./components/demos/carousel/*"],
+      "@engine/*": ["./components/demos/engine/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
