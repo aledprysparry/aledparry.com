@@ -14,7 +14,6 @@ import type {
   GeneratedGraphic,
   AssetType,
   PlatformId,
-  AuditSuggestion,
 } from '@engine/lib/model/types';
 import { getKind } from '@engine/lib/templates/registry';
 import {
@@ -68,7 +67,7 @@ export interface StoreApi extends StoreState {
   // social
   addSocialAccount: (brandId: string, s: { platform: SocialAccount['platform']; url: string }) => void;
   removeSocialAccount: (id: string) => void;
-  auditSocial: (id: string) => void;
+  updateSocialAudit: (id: string, patch: Partial<SocialAccount>) => void;
   socialByBrand: (brandId: string) => SocialAccount[];
   // template styles
   addTemplateStyle: (brandId: string, s: Omit<TemplateStyle, 'id' | 'brandId' | 'createdAt'>) => void;
@@ -88,12 +87,6 @@ export interface StoreApi extends StoreState {
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
-
-const MOCK_AUDIT: AuditSuggestion[] = [
-  { title: 'Bold cover + ranked list', rationale: 'Your top posts lead with a strong title card then a clean ranked list.', templateKind: 'quizbookbiz-leaderboard' },
-  { title: 'Consistent two-colour palette', rationale: 'Brand blue + gold recurs across your grid - lock it into the template style.' },
-  { title: 'Square + story variants', rationale: 'Stories outperform feed for you; generate a 9:16 variant of each post.' },
-];
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>(initialState);
@@ -155,8 +148,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('socialAccounts', (x) => x.filter((a) => a.id !== id));
         update('brands', (b) => b.map((br) => ({ ...br, socialAccounts: br.socialAccounts.filter((s) => s !== id) })));
       },
-      auditSocial: (id) => {
-        update('socialAccounts', (x) => x.map((a) => (a.id === id ? { ...a, auditStatus: 'complete', auditSuggestions: MOCK_AUDIT } : a)));
+      updateSocialAudit: (id, patch) => {
+        update('socialAccounts', (x) => x.map((a) => (a.id === id ? { ...a, ...patch } : a)));
       },
       socialByBrand: (brandId) => state.socialAccounts.filter((s) => s.brandId === brandId),
 

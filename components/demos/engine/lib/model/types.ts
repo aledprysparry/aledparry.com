@@ -60,6 +60,16 @@ export interface SocialAccount {
   url: string;
   auditStatus: AuditStatus;
   auditSuggestions?: AuditSuggestion[];
+  auditResult?: AuditResult;
+}
+
+/** Real analysis of a brand's uploaded reference posts. */
+export interface AuditResult {
+  count: number; // reference images analysed
+  palette: string[]; // dominant hex colours
+  theme: 'dark' | 'light';
+  aspects: { portrait: number; square: number; landscape: number };
+  dominantAspect: 'portrait' | 'square' | 'landscape';
 }
 
 export interface AuditSuggestion {
