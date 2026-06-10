@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import snapshot from "./momentwm-snapshot.json";
 
 interface Opp {
-  candidate: { eventTitle: string; sourceUrl: string; sourceName: string; confidence: number; imageUrl?: string };
+  candidate: { eventTitle: string; sourceUrl: string; sourceName: string; sourceType?: string; confidence: number; imageUrl?: string; entities?: { kind: string }[] };
   anniversary: { anniversaryType: string; windowLabel: string; occursOn: string | null; occursYear: number; isRound: boolean; milestoneYear: number };
   welshRelevance: { score: number; tags: string[] };
   editorial: { score: number };
@@ -306,10 +306,34 @@ export default function Momentwm() {
   const [view, setView] = useState<"heddiw" | "darganfod" | "newyddion" | "radar">("heddiw");
   const [creu, setCreu] = useState<Opp | null>(null);
   const moments = useMemo(() => {
-    return Array.from(data.opportunities).sort((a, b) => {
+    const ranked = Array.from(data.opportunities).sort((a, b) => {
       const ai = a.candidate.imageUrl ? 0 : 1; const bi = b.candidate.imageUrl ? 0 : 1;
       return ai !== bi ? ai - bi : b.editorial.score - a.editorial.score;
     });
+    // Keep Heddiw varied: round-robin across source types (events/places vs the
+    // ~40 DWB people vs the NLW/Welsh-language collections) so no single category
+    // floods the hero rotation. Each bucket stays image/score-ranked.
+    const buckets = new Map<string, Opp[]>();
+    for (const o of ranked) {
+      const k = o.candidate.sourceType || "other";
+      const arr = buckets.get(k);
+      if (arr) arr.push(o);
+      else buckets.set(k, [o]);
+    }
+    const queues = Array.from(buckets.values());
+    const out: Opp[] = [];
+    let added = true;
+    while (added) {
+      added = false;
+      for (const q of queues) {
+        const o = q.shift();
+        if (o) {
+          out.push(o);
+          added = true;
+        }
+      }
+    }
+    return out;
   }, []);
   return (
     <div className="mw-root">
