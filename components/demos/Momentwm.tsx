@@ -348,13 +348,23 @@ const CSS = `
 .mw-tag{font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid currentColor;opacity:.6;}
 .mw-sens{margin-top:6px;font-size:13px;line-height:1.5;padding:10px 14px;border-radius:10px;background:rgba(178,58,46,.2);max-width:60ch;}
 
-.mw-darganfod,.mw-radar{height:100%;overflow-y:auto;padding:64px 8vw 130px;}
+.mw-darganfod,.mw-radar{--gut:8vw;height:100%;overflow-x:hidden;overflow-y:auto;padding:64px var(--gut) 130px;}
 .mw-dg-h{font-family:var(--serif);font-weight:500;font-size:clamp(30px,5vw,50px);letter-spacing:-.02em;margin:0 0 6px;}
 .mw-dg-sub{color:var(--ink-soft);font-size:16px;margin:0 0 40px;}
 .mw-dg-section{margin-bottom:44px;}
 .mw-dg-section h3{font-family:var(--serif);font-size:22px;font-weight:500;margin:0 0 16px;}
-.mw-dg-row{display:flex;gap:16px;overflow-x:auto;padding-bottom:8px;}
-.mw-dg-card{flex:0 0 260px;cursor:pointer;background:#fff;border:1px solid var(--rule);border-radius:14px;overflow:hidden;transition:transform .2s var(--ease),box-shadow .2s var(--ease);}
+/* full-bleed scroller: cards align to the page gutter but scroll edge to edge,
+   with a right-edge fade + visible thin scrollbar so it's clear there's more */
+.mw-dg-row{display:flex;gap:16px;overflow-x:auto;margin:0 calc(-1 * var(--gut));padding:6px var(--gut) 14px;
+  scroll-snap-type:x proximity;scroll-padding-left:var(--gut);-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:var(--rule) transparent;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--gut),#000 calc(100% - 52px),transparent);
+  mask-image:linear-gradient(to right,transparent 0,#000 var(--gut),#000 calc(100% - 52px),transparent);}
+.mw-dg-row::-webkit-scrollbar{height:8px;}
+.mw-dg-row::-webkit-scrollbar-track{background:transparent;}
+.mw-dg-row::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+.mw-dg-row:hover::-webkit-scrollbar-thumb{background:var(--ink-faint);}
+.mw-dg-card{flex:0 0 260px;scroll-snap-align:start;cursor:pointer;background:#fff;border:1px solid var(--rule);border-radius:14px;overflow:hidden;transition:transform .2s var(--ease),box-shadow .2s var(--ease);}
 .mw-dg-card:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(40,30,10,.1);}
 .mw-dg-thumb{height:130px;background-size:cover;background-position:center;background-color:var(--paper-2);}
 .mw-dg-thumb.none{background:linear-gradient(135deg,var(--paper-2),#e8ddc9);}
@@ -424,5 +434,5 @@ const CSS = `
 .mw-ny-title{font-family:var(--serif);font-size:clamp(18px,2.2vw,22px);line-height:1.28;letter-spacing:-.01em;transition:color .18s var(--ease);}
 .mw-ny-empty{padding:40px 0;color:var(--ink-soft);font-size:16px;}
 .mw-ny-foot{margin-top:26px;font-size:12px;color:var(--ink-faint);line-height:1.55;max-width:60ch;}
-@media (max-width:680px){.mw-hd-body{padding:0 6vw 120px;}.mw-darganfod,.mw-radar,.mw-newyddion{padding:48px 6vw 130px;}}
+@media (max-width:680px){.mw-hd-body{padding:0 6vw 120px;}.mw-darganfod,.mw-radar{--gut:6vw;}.mw-darganfod,.mw-radar,.mw-newyddion{padding:48px 6vw 130px;}}
 `;
