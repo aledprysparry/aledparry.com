@@ -9,7 +9,7 @@
    (./momentwm-snapshot.json) from the standalone app. Scoped
    styling (.mw-root) so it never touches the rest of the site.
    ============================================================ */
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import snapshot from "./momentwm-snapshot.json";
 
 interface Opp {
@@ -115,27 +115,61 @@ function DarganfodView({ onOpen }: { onOpen: (o: Opp) => void }) {
 
 /* ── Newyddion (live press surface) ─────────────────────────────────────── */
 function NewyddionView() {
-  const news = data.news ?? [];
+  const [news, setNews] = useState<NewsItem[]>(data.news ?? []);
+  const [loading, setLoading] = useState(false);
+  const [stamp, setStamp] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/momentwm/news", { cache: "no-store" });
+      if (res.ok) {
+        const j = (await res.json()) as { news?: NewsItem[] };
+        if (Array.isArray(j.news) && j.news.length) {
+          setNews(j.news);
+          const d = new Date();
+          setStamp(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+        }
+      }
+    } catch {
+      // keep whatever we already have (bundled snapshot or last good fetch)
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Live on open: pull the freshest headlines as soon as the tab is shown.
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   const when = (iso: string | null) => {
     if (!iso) return "";
     const day = iso.slice(0, 10);
     return day === data.today ? "Heddiw" : welshDate(day);
   };
-  const sources = useMemo(() => Array.from(new Set(news.map((n) => n.source))), []);
+  const sources = useMemo(() => Array.from(new Set(news.map((n) => n.source))), [news]);
+
   return (
     <div className="mw-newyddion">
       <header className="mw-ny-head">
         <div className="mw-ny-kicker">Yn fyw o&apos;r wasg Gymreig</div>
         <h1 className="mw-dg-h">Newyddion</h1>
         <p className="mw-ny-sub">Beth mae Cymru&apos;n ei drafod heddiw. Stori heddiw yw archif yfory &middot; bydd y radar yn dal y penblwyddi sy&apos;n tyfu o&apos;r straeon hyn.</p>
+        <div className="mw-ny-bar">
+          <button className="mw-ny-refresh" onClick={() => void load()} disabled={loading} aria-label="Adnewyddu&apos;r newyddion">
+            <span className={loading ? "mw-ny-spin" : ""}>&#8635;</span> {loading ? "Yn nôl…" : "Adnewyddu"}
+          </button>
+          {stamp && <span className="mw-ny-stamp">Diweddarwyd am {stamp}</span>}
+        </div>
         {sources.length > 0 && <div className="mw-ny-srcs">{sources.map((s) => <span key={s} className="mw-ny-srctag">{s}</span>)}</div>}
       </header>
       {news.length === 0 ? (
-        <div className="mw-ny-empty"><p>Dim penawdau wedi&apos;u nôl eto.</p></div>
+        <div className="mw-ny-empty"><p>{loading ? "Wrthi'n nôl y penawdau diweddaraf…" : "Dim penawdau wedi'u nôl eto."}</p></div>
       ) : (
-        <ol className="mw-ny-list">
+        <ol className="mw-ny-list" style={{ opacity: loading ? 0.55 : 1, transition: "opacity .2s ease" }}>
           {news.map((n, i) => (
-            <li key={i} className="mw-ny-item">
+            <li key={`${n.link}-${i}`} className="mw-ny-item">
               <a className="mw-ny-link" href={n.link} target="_blank" rel="noreferrer">
                 <div className="mw-ny-meta"><span className="mw-ny-src">{n.source}</span>{when(n.dateISO) && <span className="mw-ny-date">{when(n.dateISO)}</span>}</div>
                 <div className="mw-ny-title">{n.title}</div>
@@ -369,7 +403,14 @@ const CSS = `
 .mw-newyddion{height:100%;overflow-y:auto;padding:64px 8vw 130px;max-width:880px;margin:0 auto;}
 .mw-ny-head{margin-bottom:30px;}
 .mw-ny-kicker{font-size:12px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--red);margin-bottom:12px;}
-.mw-ny-sub{color:var(--ink-soft);font-size:16px;line-height:1.55;margin:8px 0 16px;max-width:56ch;}
+.mw-ny-sub{color:var(--ink-soft);font-size:16px;line-height:1.55;margin:8px 0 14px;max-width:56ch;}
+.mw-ny-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;}
+.mw-ny-refresh{font-family:var(--sans);font-size:13px;font-weight:500;padding:7px 14px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:border-color .18s var(--ease),opacity .18s var(--ease);}
+.mw-ny-refresh:hover:not(:disabled){border-color:var(--ink);}
+.mw-ny-refresh:disabled{opacity:.55;cursor:default;}
+.mw-ny-spin{display:inline-block;animation:mwspin .8s linear infinite;}
+@keyframes mwspin{to{transform:rotate(360deg);}}
+.mw-ny-stamp{font-size:12px;color:var(--ink-faint);}
 .mw-ny-srcs{display:flex;flex-wrap:wrap;gap:7px;}
 .mw-ny-srctag{font-size:11px;letter-spacing:.04em;color:var(--ink-faint);border:1px solid var(--rule);border-radius:999px;padding:3px 10px;}
 .mw-ny-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule);}
