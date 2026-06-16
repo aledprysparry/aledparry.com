@@ -12,6 +12,7 @@ import type {
   TemplateStyle,
   Template,
   GeneratedGraphic,
+  GraphicElement,
   AssetType,
   PlatformId,
 } from '@engine/lib/model/types';
@@ -74,7 +75,7 @@ export interface StoreApi extends StoreState {
   addTemplateStyle: (brandId: string, s: Omit<TemplateStyle, 'id' | 'brandId' | 'createdAt'>) => void;
   stylesByBrand: (brandId: string) => TemplateStyle[];
   // templates
-  createTemplate: (brandId: string, kindId: string, name?: string) => Template | undefined;
+  createTemplate: (brandId: string, kindId: string, name?: string, opts?: { styleId?: string; seedElements?: GraphicElement[] }) => Template | undefined;
   deleteTemplate: (id: string) => void;
   templatesByBrand: (brandId: string) => Template[];
   getTemplate: (id: string) => Template | undefined;
@@ -173,10 +174,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       stylesByBrand: (brandId) => state.templateStyles.filter((s) => s.brandId === brandId),
 
       // ── templates ──
-      createTemplate: (brandId, kindId, name) => {
+      createTemplate: (brandId, kindId, name, opts) => {
         const kind = getKind(kindId);
         if (!kind) return undefined;
-        const tpl: Template = { id: newId('tpl'), brandId, name: name || kind.name, type: kind.type, kind: kind.id, supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions, createdAt: now() };
+        const tpl: Template = { id: newId('tpl'), brandId, name: name || kind.name, type: kind.type, kind: kind.id, supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions, styleId: opts?.styleId, seedElements: opts?.seedElements, createdAt: now() };
         update('templates', (x) => [...x, tpl]);
         return tpl;
       },
@@ -200,9 +201,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           createdAt: t,
           updatedAt: t,
         };
+        // Generated templates bake their starter layout into seedElements;
+        // clone with fresh ids so each graphic owns its elements.
+        const seed = tpl.seedElements?.length
+          ? tpl.seedElements.map((el) => ({ ...el, id: newId('el') }))
+          : kind.defaultElements?.(brand?.colours) ?? [];
         const g: GeneratedGraphic =
           kind.editor === 'freeform'
-            ? { ...base, slides: [{ id: newId('slide'), order: 0, elements: kind.defaultElements?.(brand?.colours) ?? [] }] }
+            ? { ...base, slides: [{ id: newId('slide'), order: 0, elements: seed }] }
             : { ...base, inputs: { rawText: kind.sampleData ?? '', copy: { ...(kind.defaultCopy ?? {}) } } };
         update('graphics', (x) => [g, ...x]);
         return g;

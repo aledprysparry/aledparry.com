@@ -106,6 +106,9 @@ export interface Template {
   dimensions: { width: number; height: number };
   layout?: Record<string, unknown>;
   safeAreaRules?: Record<string, unknown>;
+  /** Freeform templates generated from a style bake their starter
+   * elements here; new graphics clone these instead of the kind default. */
+  seedElements?: GraphicElement[];
   createdAt: ISODate;
 }
 
