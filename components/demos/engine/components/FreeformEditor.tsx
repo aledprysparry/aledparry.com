@@ -4,6 +4,7 @@ import { ArrowLeft, Type, Square, Download, ShieldCheck, Trash2, ChevronUp, Chev
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button } from '@engine/components/ui';
 import Stage from '@engine/components/Stage';
+import AiPanel from '@engine/components/AiPanel';
 import { makeText, makeShape, makeImage, reorder } from '@engine/lib/freeform/elements';
 import { exportElements } from '@engine/lib/freeform/renderElements';
 import { registerFontAssets, fontAssetFamilies, fontFamilyFor } from '@engine/lib/freeform/fonts';
@@ -64,6 +65,9 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
     const w = isLogo ? 0.3 : 0.45;
     addEl(makeImage(payload.assetId, payload.url, isLogo ? 'logo' : 'image', { position: { x: clamp01(x - w / 2), y: clamp01(y - w / 2) }, size: { width: w, height: w } }));
   };
+
+  const setElementContent = (id: string, text: string) => update(elements.map((e) => (e.id === id ? { ...e, content: text } : e)));
+  const textElements = elements.filter((e) => e.type === 'text').map((e) => ({ id: e.id, content: e.content ?? '' }));
 
   const onUploadAsset = async (file?: File) => {
     if (!file) return;
@@ -127,6 +131,13 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
 
         {/* assets + inspector */}
         <div className="flex flex-col gap-4">
+          <AiPanel
+            brand={brand}
+            platform={preset.name}
+            textElements={textElements}
+            onApply={setElementContent}
+            onAddText={(t) => addEl(makeText(t))}
+          />
           <AssetPanel
             assets={assets}
             onPlace={(a) => placeAsset({ assetId: a.id, type: a.type, url: a.url })}
