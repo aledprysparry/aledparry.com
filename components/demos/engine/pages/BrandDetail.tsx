@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Plus, Trash2, ImagePlus, Sparkles, Copy, ExternalLink, ArrowLeft, Wand2,
@@ -405,6 +405,81 @@ function AssetsTab({ brandId }: { brandId: string }) {
 }
 
 // ── Social ──
+// ── Live Instagram (beta) ── pulls real posts ranked by engagement via
+// the Meta Graph API. Dormant until a Meta app is configured (env vars +
+// META_SETUP.md); degrades to a clear "needs setup" state otherwise.
+interface LivePost { id: string; caption: string; mediaUrl: string; permalink: string; likes: number; comments: number; engagement: number }
+
+function LiveInstagram() {
+  const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'notconf' | 'notconn' | 'err'>('idle');
+  const [posts, setPosts] = useState<LivePost[]>([]);
+  const [igStatus, setIgStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get('ig');
+    if (s) setIgStatus(s);
+  }, []);
+
+  const pull = async () => {
+    setState('loading');
+    try {
+      const res = await fetch('/api/social/instagram/insights');
+      if (res.status === 503) return setState('notconf');
+      if (res.status === 401) return setState('notconn');
+      if (!res.ok) return setState('err');
+      const data = await res.json();
+      setPosts(data.posts || []);
+      setState('ok');
+    } catch {
+      setState('err');
+    }
+  };
+
+  const connectHref = `/api/social/instagram/connect?return=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/app/carousel')}`;
+
+  return (
+    <Panel className="mb-5 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="inline-flex items-center gap-2 text-[14px] font-bold"><Wand2 size={15} className="text-indigo-300" /> Live Instagram <Badge tone="accent">beta</Badge></p>
+          <p className="mt-0.5 text-[12px] text-white/45">Connect a business account to pull recent posts ranked by engagement - "what performed well".</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <a href={connectHref} className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10">Connect Instagram</a>
+          <Button variant="subtle" onClick={pull} disabled={state === 'loading'}>{state === 'loading' ? 'Pulling…' : 'Pull recent posts'}</Button>
+        </div>
+      </div>
+
+      {igStatus === 'connected' && <p className="mt-3 text-[12px] text-[#4ade80]">✓ Account connected. Pull your recent posts.</p>}
+      {igStatus && igStatus !== 'connected' && <p className="mt-3 text-[12px] text-[#f87171]">Connect failed ({igStatus}).</p>}
+      {state === 'notconf' && <p className="mt-3 text-[12px] text-white/55">Not configured yet - this needs a Meta app (see <span className="text-white/80">META_SETUP.md</span>). The upload-based audit + style generator above work without it.</p>}
+      {state === 'notconn' && <p className="mt-3 text-[12px] text-white/55">Not connected - hit "Connect Instagram" first.</p>}
+      {state === 'err' && <p className="mt-3 text-[12px] text-[#f87171]">Could not pull posts - try again.</p>}
+
+      {state === 'ok' && (
+        posts.length === 0 ? (
+          <p className="mt-3 text-[12px] text-white/45">No posts returned for this account.</p>
+        ) : (
+          <div className="mt-4">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-white/40">Top performers</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {posts.slice(0, 8).map((p, i) => (
+                <a key={p.id} href={p.permalink} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                  <div className="relative aspect-square">
+                    {p.mediaUrl && <img src={p.mediaUrl} alt="" className="h-full w-full object-cover" />}
+                    {i < 3 && <span className="absolute left-2 top-2 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[10px] font-bold">#{i + 1}</span>}
+                  </div>
+                  <div className="px-2 py-1.5 text-[11px] text-white/60">♥ {p.likes.toLocaleString()} · 💬 {p.comments.toLocaleString()}</div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )
+      )}
+    </Panel>
+  );
+}
+
 function SocialTab({ brandId }: { brandId: string }) {
   const store = useStore();
   const socials = store.socialByBrand(brandId);
@@ -448,6 +523,7 @@ function SocialTab({ brandId }: { brandId: string }) {
 
   return (
     <div>
+      <LiveInstagram />
       <Panel className="mb-4 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <select value={platform} onChange={(e) => setPlatform(e.target.value as SocialAccount['platform'])} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
