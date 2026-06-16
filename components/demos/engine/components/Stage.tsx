@@ -9,6 +9,7 @@ interface Props {
   onSelect: (id: string | null) => void;
   onChange: (next: GraphicElement[]) => void; // live (during drag)
   onCommit: () => void; // persist (drag end / edit end)
+  onDropAsset?: (payload: { assetId: string; type: string; url: string }, x: number, y: number) => void;
   showSafe?: boolean;
   safeInsets?: { top: string; right: string; bottom: string; left: string };
 }
@@ -22,7 +23,7 @@ type DragState = {
   startSize: { width: number; height: number };
 };
 
-export default function Stage({ elements, width, height, selectedId, onSelect, onChange, onCommit, showSafe, safeInsets }: Props) {
+export default function Stage({ elements, width, height, selectedId, onSelect, onChange, onCommit, onDropAsset, showSafe, safeInsets }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,10 +66,27 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
     drag.current = { id: el.id, mode, startX: e.clientX, startY: e.clientY, startPos: { ...el.position }, startSize: { ...el.size } };
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const raw = e.dataTransfer.getData('application/x-asset');
+    const rect = ref.current?.getBoundingClientRect();
+    if (!raw || !rect || !onDropAsset) return;
+    try {
+      const payload = JSON.parse(raw);
+      const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+      const y = clamp((e.clientY - rect.top) / rect.height, 0, 1);
+      onDropAsset(payload, x, y);
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
     <div
       ref={ref}
       onPointerDown={() => onSelect(null)}
+      onDragOver={(e) => { if (e.dataTransfer.types.includes('application/x-asset')) e.preventDefault(); }}
+      onDrop={handleDrop}
       className="relative w-full select-none overflow-hidden rounded-xl border border-white/10 shadow-2xl shadow-black/50"
       style={{ aspectRatio: `${width} / ${height}` }}
     >
@@ -83,7 +101,10 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
           height: el.type === 'background' ? '100%' : `${el.size.height * 100}%`,
         };
         if (el.type === 'background') {
-          return <div key={el.id} style={{ ...box, left: 0, top: 0, background: (s.fill as string) ?? '#0c1322' }} onPointerDown={(e) => { e.stopPropagation(); onSelect(el.id); }} />;
+          const bgStyle: React.CSSProperties = el.content
+            ? { ...box, left: 0, top: 0, backgroundImage: `url(${el.content})`, backgroundSize: ((s.fit as string) === 'contain' ? 'contain' : 'cover'), backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: (s.fill as string) ?? '#0c1322' }
+            : { ...box, left: 0, top: 0, background: (s.fill as string) ?? '#0c1322' };
+          return <div key={el.id} style={bgStyle} onPointerDown={(e) => { e.stopPropagation(); onSelect(el.id); }} />;
         }
         const common = 'absolute cursor-move';
         const ring = selected ? 'outline outline-2 outline-indigo-400' : 'hover:outline hover:outline-1 hover:outline-white/30';

@@ -25,7 +25,9 @@ export type AssetType =
   | 'icon'
   | 'product'
   | 'reference'
-  | 'social-post';
+  | 'social-post'
+  | 'gif'
+  | 'image';
 
 export type TemplateType = 'carousel' | 'still' | 'sequence' | 'story-cover';
 

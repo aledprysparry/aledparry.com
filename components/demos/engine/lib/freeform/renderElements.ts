@@ -26,6 +26,10 @@ export async function drawElements(r: CanvasRenderer, elements: GraphicElement[]
     const s = (el.style ?? {}) as Record<string, unknown>;
     if (el.type === 'background') {
       r.drawBackground((s.fill as string) ?? '#0c1322');
+      if (el.content) {
+        const img = await loadImage(el.content);
+        if (img) r.drawImage(img, { x: 0, y: 0, width: 1, height: 1, fit: ((s.fit as 'cover' | 'contain') ?? 'cover') });
+      }
     } else if (el.type === 'shape') {
       r.drawRect({
         x: el.position.x, y: el.position.y, width: el.size.width, height: el.size.height,

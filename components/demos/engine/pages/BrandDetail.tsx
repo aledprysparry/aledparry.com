@@ -22,7 +22,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'social', label: 'Social' },
 ];
 
-const ASSET_TYPES: AssetType[] = ['logo', 'background', 'icon', 'product', 'reference', 'social-post'];
+const ASSET_TYPES: AssetType[] = ['logo', 'background', 'font', 'gif', 'image', 'icon', 'product', 'reference', 'social-post'];
 const SOCIAL_PLATFORMS: SocialAccount['platform'][] = ['instagram', 'tiktok', 'facebook', 'linkedin', 'x'];
 
 export default function BrandDetail() {
@@ -83,6 +83,10 @@ export default function BrandDetail() {
       {tab === 'graphics' && <GraphicsTab brandId={brandId} />}
       {tab === 'assets' && <AssetsTab brandId={brandId} />}
       {tab === 'social' && <SocialTab brandId={brandId} />}
+
+      <div className="mt-10 flex justify-center border-t border-white/10 pt-8">
+        <Button onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> Create graphic</Button>
+      </div>
     </div>
   );
 }
@@ -598,6 +602,10 @@ function SocialTab({ brandId }: { brandId: string }) {
                               <p className="text-[12px] text-white/45">{sug.rationale}</p>
                             </div>
                           ))}
+                        </div>
+                        <div className="flex items-center gap-2 border-t border-white/10 pt-3">
+                          <Button onClick={() => store.updateBrand(brandId, { colours: r.palette })}><Sparkles size={14} /> Update brand to match this account</Button>
+                          <span className="text-[12px] text-white/40">Applies the extracted palette to the brand identity.</span>
                         </div>
                       </>
                     )}
