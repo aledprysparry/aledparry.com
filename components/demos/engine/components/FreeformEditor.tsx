@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Type, Square, ImageIcon, Download, ShieldCheck, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Type, Square, Download, ShieldCheck, Trash2, ChevronUp, ChevronDown, ImagePlus } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button } from '@engine/components/ui';
 import Stage from '@engine/components/Stage';
 import { makeText, makeShape, makeImage, reorder } from '@engine/lib/freeform/elements';
 import { exportElements } from '@engine/lib/freeform/renderElements';
+import { registerFontAssets, fontAssetFamilies, fontFamilyFor } from '@engine/lib/freeform/fonts';
+import { fileToStoredDataURL } from '@engine/lib/util/imageScale';
 import { platformToRatio } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
-import type { GeneratedGraphic, GraphicElement, PlatformId } from '@engine/lib/model/types';
+import type { AssetType, BrandAsset, GeneratedGraphic, GraphicElement, PlatformId } from '@engine/lib/model/types';
 
 const FONTS = ['Inter', 'Bitter'];
 
@@ -16,7 +18,7 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
   const store = useStore();
   const brand = store.getBrand(graphic.brandId);
   const assets = store.assetsByBrand(graphic.brandId);
-  const fontOptions = useMemo(() => Array.from(new Set([...(brand?.fonts ?? []), ...FONTS])), [brand]);
+  const fontOptions = useMemo(() => Array.from(new Set([...fontAssetFamilies(assets), ...(brand?.fonts ?? []), ...FONTS])), [assets, brand]);
 
   const [elements, setElements] = useState<GraphicElement[]>(graphic.slides?.[0]?.elements ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -35,6 +37,8 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
 
   // persist when selection-affecting structural ops happen (add/delete/reorder handled inline)
   useEffect(() => { setElements(graphic.slides?.[0]?.elements ?? []); /* eslint-disable-next-line */ }, [graphic.id]);
+  // register uploaded brand fonts so text elements can use + export them
+  useEffect(() => { registerFontAssets(assets).then(() => setElements((e) => [...e])); /* eslint-disable-next-line */ }, [assets]);
 
   const selected = elements.find((e) => e.id === selectedId) || null;
 
@@ -45,6 +49,31 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
   const patchEl = (patch: Partial<GraphicElement>) =>
     selected && update(elements.map((e) => (e.id === selected.id ? { ...e, ...patch } : e)));
   const del = () => { if (selected) { update(elements.filter((e) => e.id !== selected.id)); setSelectedId(null); } };
+
+  const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+
+  const setBackgroundImage = (url: string) => {
+    const bg = elements.find((e) => e.type === 'background');
+    if (bg) update(elements.map((e) => (e.id === bg.id ? { ...e, content: url, style: { ...e.style, fit: 'cover' } } : e)));
+    else update([{ id: `el_${Math.random().toString(36).slice(2)}`, type: 'background', position: { x: 0, y: 0 }, size: { width: 1, height: 1 }, content: url, style: { fit: 'cover', fill: '#0c1322' } }, ...elements]);
+  };
+
+  const placeAsset = (payload: { assetId: string; type: string; url: string }, x = 0.3, y = 0.3) => {
+    if (payload.type === 'background') return setBackgroundImage(payload.url);
+    const isLogo = payload.type === 'logo';
+    const w = isLogo ? 0.3 : 0.45;
+    addEl(makeImage(payload.assetId, payload.url, isLogo ? 'logo' : 'image', { position: { x: clamp01(x - w / 2), y: clamp01(y - w / 2) }, size: { width: w, height: w } }));
+  };
+
+  const onUploadAsset = async (file?: File) => {
+    if (!file) return;
+    const type: AssetType = file.type === 'image/gif' ? 'gif'
+      : file.type.startsWith('image/') ? 'image'
+      : (file.type.includes('font') || /\.(woff2?|ttf|otf)$/i.test(file.name)) ? 'font'
+      : 'image';
+    const url = await fileToStoredDataURL(file, 1200);
+    store.addAsset(graphic.brandId, { type, name: file.name, url });
+  };
 
   const safeInsets = {
     top: `${(preset.safeArea.top / preset.height) * 100}%`,
@@ -85,27 +114,25 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
           <div className="mb-3 flex flex-wrap gap-2">
             <Button variant="subtle" onClick={() => addEl(makeText('New text'))}><Type size={14} /> Text</Button>
             <Button variant="subtle" onClick={() => addEl(makeShape())}><Square size={14} /> Shape</Button>
-            <select
-              onChange={(e) => {
-                const a = assets.find((x) => x.id === e.target.value);
-                if (a) addEl(makeImage(a.id, a.url, a.type === 'logo' ? 'logo' : 'image'));
-                e.target.value = '';
-              }}
-              className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none"
-              defaultValue=""
-            >
-              <option value="" disabled>+ Image / logo from assets</option>
-              {assets.filter((a) => a.url.startsWith('data:image')).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-            {assets.length === 0 && <span className="self-center text-[12px] text-white/35 inline-flex items-center gap-1"><ImageIcon size={13} /> Upload assets in the brand to place them</span>}
+            <label className="cursor-pointer">
+              <input type="file" accept="image/*,.woff,.woff2,.ttf,.otf" className="hidden" onChange={(e) => onUploadAsset(e.target.files?.[0])} />
+              <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10"><ImagePlus size={14} /> Upload asset</span>
+            </label>
           </div>
           <div className="mx-auto" style={{ maxWidth: ratio === 'landscape' ? 720 : ratio === 'story' ? 380 : 520 }}>
-            <Stage elements={elements} width={dims.w} height={dims.h} selectedId={selectedId} onSelect={setSelectedId} onChange={setElements} onCommit={() => commit()} showSafe={showSafe} safeInsets={safeInsets} />
+            <Stage elements={elements} width={dims.w} height={dims.h} selectedId={selectedId} onSelect={setSelectedId} onChange={setElements} onCommit={() => commit()} onDropAsset={placeAsset} showSafe={showSafe} safeInsets={safeInsets} />
           </div>
-          <p className="mt-3 text-center text-[12px] text-white/35">Click to select · drag to move · corner to resize · double-click text to edit</p>
+          <p className="mt-3 text-center text-[12px] text-white/35">Drag assets onto the stage · drag to move · corner to resize · double-click text to edit</p>
         </div>
 
-        {/* inspector */}
+        {/* assets + inspector */}
+        <div className="flex flex-col gap-4">
+          <AssetPanel
+            assets={assets}
+            onPlace={(a) => placeAsset({ assetId: a.id, type: a.type, url: a.url })}
+            onSetBg={(a) => setBackgroundImage(a.url)}
+            onApplyFont={(a) => selected?.type === 'text' && patchStyle({ fontFamily: fontFamilyFor(a) })}
+          />
         <div className="rounded-2xl border border-white/10 bg-[#141d30] p-4">
           {!selected ? (
             <p className="text-[13px] text-white/45">Select an element to edit its properties, or add one from the toolbar.</p>
@@ -183,7 +210,61 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
             </div>
           )}
         </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+// ── Asset panel: grouped, draggable assets you drop onto the stage ──
+function AssetPanel({ assets, onPlace, onSetBg, onApplyFont }: {
+  assets: BrandAsset[];
+  onPlace: (a: BrandAsset) => void;
+  onSetBg: (a: BrandAsset) => void;
+  onApplyFont: (a: BrandAsset) => void;
+}) {
+  const imgOf = (types: AssetType[]) => assets.filter((a) => types.includes(a.type) && a.url.startsWith('data:'));
+  const logos = imgOf(['logo']);
+  const backgrounds = imgOf(['background']);
+  const others = imgOf(['image', 'gif', 'icon', 'product', 'reference', 'social-post']);
+  const fonts = assets.filter((a) => a.type === 'font');
+
+  const Thumb = ({ a, onClick }: { a: BrandAsset; onClick: () => void }) => (
+    <button
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData('application/x-asset', JSON.stringify({ assetId: a.id, type: a.type, url: a.url }))}
+      onClick={onClick}
+      title={a.name}
+      className="group relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-black/30 hover:border-indigo-400/60"
+    >
+      <img src={a.url} alt={a.name} className="h-full w-full object-contain p-1" draggable={false} />
+    </button>
+  );
+
+  const Group = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-white/40">{label}</p>
+      {children}
+    </div>
+  );
+
+  if (assets.length === 0) {
+    return <div className="rounded-2xl border border-white/10 bg-[#141d30] p-4 text-[12px] text-white/45">Upload logos, backgrounds, images or GIFs (button above, or the brand Assets tab), then drag them onto the stage.</div>;
+  }
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-[#141d30] p-4">
+      <p className="text-[12px] font-bold uppercase tracking-wide text-white/55">Assets <span className="font-normal text-white/35">· drag onto stage</span></p>
+      {logos.length > 0 && <Group label="Logos"><div className="grid grid-cols-4 gap-2">{logos.map((a) => <Thumb key={a.id} a={a} onClick={() => onPlace(a)} />)}</div></Group>}
+      {backgrounds.length > 0 && <Group label="Backgrounds · click to apply"><div className="grid grid-cols-4 gap-2">{backgrounds.map((a) => <Thumb key={a.id} a={a} onClick={() => onSetBg(a)} />)}</div></Group>}
+      {others.length > 0 && <Group label="Images & GIFs"><div className="grid grid-cols-4 gap-2">{others.map((a) => <Thumb key={a.id} a={a} onClick={() => onPlace(a)} />)}</div></Group>}
+      {fonts.length > 0 && (
+        <Group label="Fonts · click to apply to selected text">
+          <div className="flex flex-wrap gap-1.5">
+            {fonts.map((a) => <button key={a.id} onClick={() => onApplyFont(a)} className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[12px] text-white/80 hover:border-indigo-400/60" style={{ fontFamily: `${fontFamilyFor(a)}, sans-serif` }}>{fontFamilyFor(a)}</button>)}
+          </div>
+        </Group>
+      )}
     </div>
   );
 }

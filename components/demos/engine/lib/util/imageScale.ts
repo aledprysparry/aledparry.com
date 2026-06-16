@@ -8,7 +8,9 @@ export function fileToStoredDataURL(file: File, maxDim = 1400, quality = 0.82): 
     reader.onerror = () => reject(new Error('read failed'));
     reader.onload = () => {
       const src = String(reader.result);
-      if (!file.type.startsWith('image/')) return resolve(src); // fonts etc.
+      // Fonts (non-image) and GIFs pass through untouched - canvas
+      // re-encoding would strip GIF animation.
+      if (!file.type.startsWith('image/') || file.type === 'image/gif') return resolve(src);
       const img = new Image();
       img.onload = () => {
         const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
