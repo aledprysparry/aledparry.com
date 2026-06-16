@@ -4,7 +4,7 @@
 // to Supabase later, reimplement the action bodies against an async
 // repository - the component API (useStore) stays identical.
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
   Brand,
   BrandAsset,
@@ -14,7 +14,6 @@ import type {
   GeneratedGraphic,
   AssetType,
   PlatformId,
-  AuditSuggestion,
 } from '@engine/lib/model/types';
 import { getKind } from '@engine/lib/templates/registry';
 import {
@@ -27,6 +26,7 @@ import {
   type CollectionName,
 } from './persist';
 import { buildSeed } from './seed';
+import { loadAssetsIDB, saveAssetsIDB } from './assetStore';
 
 interface StoreState {
   brands: Brand[];
@@ -47,7 +47,7 @@ function initialState(): StoreState {
   }
   return {
     brands: loadCollection('brands'),
-    assets: loadCollection('assets'),
+    assets: [], // hydrated from IndexedDB on mount (see StoreProvider)
     socialAccounts: loadCollection('socialAccounts'),
     templateStyles: loadCollection('templateStyles'),
     templates: loadCollection('templates'),
@@ -68,7 +68,7 @@ export interface StoreApi extends StoreState {
   // social
   addSocialAccount: (brandId: string, s: { platform: SocialAccount['platform']; url: string }) => void;
   removeSocialAccount: (id: string) => void;
-  auditSocial: (id: string) => void;
+  updateSocialAudit: (id: string, patch: Partial<SocialAccount>) => void;
   socialByBrand: (brandId: string) => SocialAccount[];
   // template styles
   addTemplateStyle: (brandId: string, s: Omit<TemplateStyle, 'id' | 'brandId' | 'createdAt'>) => void;
@@ -89,20 +89,25 @@ export interface StoreApi extends StoreState {
 
 const StoreContext = createContext<StoreApi | null>(null);
 
-const MOCK_AUDIT: AuditSuggestion[] = [
-  { title: 'Bold cover + ranked list', rationale: 'Your top posts lead with a strong title card then a clean ranked list.', templateKind: 'quizbookbiz-leaderboard' },
-  { title: 'Consistent two-colour palette', rationale: 'Brand blue + gold recurs across your grid - lock it into the template style.' },
-  { title: 'Square + story variants', rationale: 'Stories outperform feed for you; generate a 9:16 variant of each post.' },
-];
-
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>(initialState);
+
+  // Assets (image data URLs) live in IndexedDB, not localStorage (which
+  // caps ~5MB and silently drops uploads). Hydrate them once on mount.
+  useEffect(() => {
+    let alive = true;
+    loadAssetsIDB().then((assets) => {
+      if (alive && assets.length) setState((s) => (s.assets.length ? s : { ...s, assets }));
+    });
+    return () => { alive = false; };
+  }, []);
 
   const update = useCallback(
     <K extends CollectionName>(name: K, updater: (items: StoreState[K]) => StoreState[K]) => {
       setState((prev) => {
         const nextItems = updater(prev[name]);
-        saveCollection(name, nextItems);
+        if (name === 'assets') saveAssetsIDB(nextItems as BrandAsset[]);
+        else saveCollection(name, nextItems);
         return { ...prev, [name]: nextItems } as StoreState;
       });
     },
@@ -155,8 +160,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('socialAccounts', (x) => x.filter((a) => a.id !== id));
         update('brands', (b) => b.map((br) => ({ ...br, socialAccounts: br.socialAccounts.filter((s) => s !== id) })));
       },
-      auditSocial: (id) => {
-        update('socialAccounts', (x) => x.map((a) => (a.id === id ? { ...a, auditStatus: 'complete', auditSuggestions: MOCK_AUDIT } : a)));
+      updateSocialAudit: (id, patch) => {
+        update('socialAccounts', (x) => x.map((a) => (a.id === id ? { ...a, ...patch } : a)));
       },
       socialByBrand: (brandId) => state.socialAccounts.filter((s) => s.brandId === brandId),
 

@@ -7,6 +7,8 @@ import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button, Panel, Badge, TextInput, EmptyState } from '@engine/components/ui';
 import { TEMPLATE_KIND_LIST, getKind } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
+import { analyseImages, deriveSuggestions } from '@engine/lib/audit/analyseImages';
+import { fileToStoredDataURL } from '@engine/lib/util/imageScale';
 import type { AssetType, SocialAccount } from '@engine/lib/model/types';
 
 type Tab = 'overview' | 'templates' | 'graphics' | 'assets' | 'social';
@@ -217,11 +219,10 @@ function AssetsTab({ brandId }: { brandId: string }) {
   const assets = store.assetsByBrand(brandId);
   const [type, setType] = useState<AssetType>('logo');
 
-  const onFile = (file: File | undefined) => {
+  const onFile = async (file: File | undefined) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => store.addAsset(brandId, { type, name: file.name, url: String(reader.result) });
-    reader.readAsDataURL(file);
+    const url = await fileToStoredDataURL(file, type === 'logo' ? 512 : 1400);
+    store.addAsset(brandId, { type, name: file.name, url });
   };
 
   return (
@@ -271,6 +272,14 @@ function SocialTab({ brandId }: { brandId: string }) {
   const socials = store.socialByBrand(brandId);
   const [platform, setPlatform] = useState<SocialAccount['platform']>('instagram');
   const [url, setUrl] = useState('');
+  const [auditing, setAuditing] = useState<string | null>(null);
+
+  // The realistic "real audit": analyse the reference posts uploaded for
+  // this brand (live-account fetching isn't possible - login walls/ToS).
+  const refImages = store
+    .assetsByBrand(brandId)
+    .filter((a) => ['reference', 'social-post', 'product'].includes(a.type) && a.url.startsWith('data:image'))
+    .map((a) => a.url);
 
   const add = () => {
     if (!url.trim()) return;
@@ -278,9 +287,30 @@ function SocialTab({ brandId }: { brandId: string }) {
     setUrl('');
   };
 
+  const onPosts = async (files: FileList | null) => {
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      const url = await fileToStoredDataURL(file, 1200);
+      store.addAsset(brandId, { type: 'social-post', name: file.name, url });
+    }
+  };
+
+  const runAudit = async (id: string) => {
+    setAuditing(id);
+    store.updateSocialAudit(id, { auditStatus: 'pending' });
+    try {
+      const result = await analyseImages(refImages);
+      store.updateSocialAudit(id, { auditStatus: 'complete', auditResult: result, auditSuggestions: deriveSuggestions(result) });
+    } catch {
+      store.updateSocialAudit(id, { auditStatus: 'failed' });
+    } finally {
+      setAuditing(null);
+    }
+  };
+
   return (
     <div>
-      <Panel className="mb-5 p-4">
+      <Panel className="mb-4 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <select value={platform} onChange={(e) => setPlatform(e.target.value as SocialAccount['platform'])} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
             {SOCIAL_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -290,37 +320,79 @@ function SocialTab({ brandId }: { brandId: string }) {
         </div>
       </Panel>
 
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+        <p className="text-[12px] text-white/45">
+          Audits analyse the <span className="text-white/70">reference posts you upload</span> for this brand ({refImages.length} ready) - live-account scraping isn&apos;t available.
+        </p>
+        <label className="cursor-pointer">
+          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPosts(e.target.files)} />
+          <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10"><ImagePlus size={14} /> Add post images</span>
+        </label>
+      </div>
+
       {socials.length === 0 ? (
-        <EmptyState title="No social accounts" hint="Add an account, then run a (stubbed) audit to get template-style suggestions." />
+        <EmptyState title="No social accounts" hint="Add an account, upload a few of its posts, then audit to extract the real palette + formats." />
       ) : (
         <div className="space-y-3">
-          {socials.map((s) => (
-            <Panel key={s.id} className="p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Badge tone="accent">{s.platform}</Badge>
-                  <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 truncate text-[13px] text-white/70 hover:text-white">
-                    {s.url} <ExternalLink size={12} />
-                  </a>
+          {socials.map((s) => {
+            const busy = auditing === s.id || s.auditStatus === 'pending';
+            const r = s.auditResult;
+            return (
+              <Panel key={s.id} className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Badge tone="accent">{s.platform}</Badge>
+                    <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 truncate text-[13px] text-white/70 hover:text-white">
+                      {s.url} <ExternalLink size={12} />
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="subtle" disabled={busy} onClick={() => runAudit(s.id)}>
+                      <Wand2 size={14} /> {busy ? 'Analysing…' : s.auditStatus === 'complete' ? 'Re-audit' : 'Audit posts'}
+                    </Button>
+                    <button onClick={() => store.removeSocialAccount(s.id)} className="text-white/30 hover:text-red-300"><Trash2 size={14} /></button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="subtle" onClick={() => store.auditSocial(s.id)}><Wand2 size={14} /> {s.auditStatus === 'complete' ? 'Re-audit' : 'Audit content'}</Button>
-                  <button onClick={() => store.removeSocialAccount(s.id)} className="text-white/30 hover:text-red-300"><Trash2 size={14} /></button>
-                </div>
-              </div>
-              {s.auditStatus === 'complete' && s.auditSuggestions && (
-                <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">Suggested template styles (mock)</p>
-                  {s.auditSuggestions.map((sug, i) => (
-                    <div key={i} className="rounded-lg bg-white/[0.03] px-3 py-2">
-                      <p className="text-[13px] font-semibold text-white/85">{sug.title}</p>
-                      <p className="text-[12px] text-white/45">{sug.rationale}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Panel>
-          ))}
+
+                {s.auditStatus === 'complete' && r && (
+                  <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
+                    {r.count === 0 ? (
+                      <p className="text-[12px] text-white/45">No reference posts to analyse yet - add some post images above, then re-audit.</p>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-center gap-4">
+                          <div>
+                            <p className="text-[11px] uppercase tracking-wide text-white/40">Palette ({r.count} post{r.count === 1 ? '' : 's'})</p>
+                            <div className="mt-1 flex gap-1.5">
+                              {r.palette.map((c, i) => <span key={i} className="h-6 w-6 rounded-md border border-white/15" style={{ background: c }} title={c} />)}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[11px] uppercase tracking-wide text-white/40">Theme</p>
+                            <p className="mt-1 text-[13px] capitalize text-white/80">{r.theme}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] uppercase tracking-wide text-white/40">Format mix</p>
+                            <p className="mt-1 text-[13px] text-white/80">{r.aspects.portrait}P · {r.aspects.square}Sq · {r.aspects.landscape}L</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">Suggestions</p>
+                          {s.auditSuggestions?.map((sug, i) => (
+                            <div key={i} className="rounded-lg bg-white/[0.03] px-3 py-2">
+                              <p className="text-[13px] font-semibold text-white/85">{sug.title}</p>
+                              <p className="text-[12px] text-white/45">{sug.rationale}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {s.auditStatus === 'failed' && <p className="mt-3 border-t border-white/10 pt-3 text-[12px] text-red-300">Audit failed - try again.</p>}
+              </Panel>
+            );
+          })}
         </div>
       )}
     </div>
