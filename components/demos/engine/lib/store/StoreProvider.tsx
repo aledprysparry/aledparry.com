@@ -28,6 +28,8 @@ import {
 } from './persist';
 import { buildSeed } from './seed';
 import { loadAssetsIDB, saveAssetsIDB } from './assetStore';
+import { supabaseConfigured } from './supabaseClient';
+import { loadAllFromSupabase, syncCollectionToSupabase } from './supabaseSync';
 
 interface StoreState {
   brands: Brand[];
@@ -93,13 +95,20 @@ const StoreContext = createContext<StoreApi | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>(initialState);
 
-  // Assets (image data URLs) live in IndexedDB, not localStorage (which
-  // caps ~5MB and silently drops uploads). Hydrate them once on mount.
+  // When Supabase is configured it is the source of truth (shareable,
+  // cross-device): load all collections on mount. Otherwise stay
+  // local-first and hydrate assets from IndexedDB.
   useEffect(() => {
     let alive = true;
-    loadAssetsIDB().then((assets) => {
-      if (alive && assets.length) setState((s) => (s.assets.length ? s : { ...s, assets }));
-    });
+    if (supabaseConfigured()) {
+      loadAllFromSupabase().then((data) => {
+        if (alive && data) setState((s) => ({ ...s, ...data } as StoreState));
+      });
+    } else {
+      loadAssetsIDB().then((assets) => {
+        if (alive && assets.length) setState((s) => (s.assets.length ? s : { ...s, assets }));
+      });
+    }
     return () => { alive = false; };
   }, []);
 
@@ -107,8 +116,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     <K extends CollectionName>(name: K, updater: (items: StoreState[K]) => StoreState[K]) => {
       setState((prev) => {
         const nextItems = updater(prev[name]);
+        // local cache (offline-friendly) ...
         if (name === 'assets') saveAssetsIDB(nextItems as BrandAsset[]);
         else saveCollection(name, nextItems);
+        // ... + mirror to Supabase when configured
+        if (supabaseConfigured()) syncCollectionToSupabase(name, nextItems as { id: string }[]);
         return { ...prev, [name]: nextItems } as StoreState;
       });
     },
