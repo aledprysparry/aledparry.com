@@ -4,7 +4,7 @@
 // to Supabase later, reimplement the action bodies against an async
 // repository - the component API (useStore) stays identical.
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
   Brand,
   BrandAsset,
@@ -26,6 +26,7 @@ import {
   type CollectionName,
 } from './persist';
 import { buildSeed } from './seed';
+import { loadAssetsIDB, saveAssetsIDB } from './assetStore';
 
 interface StoreState {
   brands: Brand[];
@@ -46,7 +47,7 @@ function initialState(): StoreState {
   }
   return {
     brands: loadCollection('brands'),
-    assets: loadCollection('assets'),
+    assets: [], // hydrated from IndexedDB on mount (see StoreProvider)
     socialAccounts: loadCollection('socialAccounts'),
     templateStyles: loadCollection('templateStyles'),
     templates: loadCollection('templates'),
@@ -91,11 +92,22 @@ const StoreContext = createContext<StoreApi | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>(initialState);
 
+  // Assets (image data URLs) live in IndexedDB, not localStorage (which
+  // caps ~5MB and silently drops uploads). Hydrate them once on mount.
+  useEffect(() => {
+    let alive = true;
+    loadAssetsIDB().then((assets) => {
+      if (alive && assets.length) setState((s) => (s.assets.length ? s : { ...s, assets }));
+    });
+    return () => { alive = false; };
+  }, []);
+
   const update = useCallback(
     <K extends CollectionName>(name: K, updater: (items: StoreState[K]) => StoreState[K]) => {
       setState((prev) => {
         const nextItems = updater(prev[name]);
-        saveCollection(name, nextItems);
+        if (name === 'assets') saveAssetsIDB(nextItems as BrandAsset[]);
+        else saveCollection(name, nextItems);
         return { ...prev, [name]: nextItems } as StoreState;
       });
     },

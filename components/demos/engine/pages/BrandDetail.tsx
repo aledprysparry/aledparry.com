@@ -8,6 +8,7 @@ import { Button, Panel, Badge, TextInput, EmptyState } from '@engine/components/
 import { TEMPLATE_KIND_LIST, getKind } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { analyseImages, deriveSuggestions } from '@engine/lib/audit/analyseImages';
+import { fileToStoredDataURL } from '@engine/lib/util/imageScale';
 import type { AssetType, SocialAccount } from '@engine/lib/model/types';
 
 type Tab = 'overview' | 'templates' | 'graphics' | 'assets' | 'social';
@@ -218,11 +219,10 @@ function AssetsTab({ brandId }: { brandId: string }) {
   const assets = store.assetsByBrand(brandId);
   const [type, setType] = useState<AssetType>('logo');
 
-  const onFile = (file: File | undefined) => {
+  const onFile = async (file: File | undefined) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => store.addAsset(brandId, { type, name: file.name, url: String(reader.result) });
-    reader.readAsDataURL(file);
+    const url = await fileToStoredDataURL(file, type === 'logo' ? 512 : 1400);
+    store.addAsset(brandId, { type, name: file.name, url });
   };
 
   return (
@@ -287,13 +287,12 @@ function SocialTab({ brandId }: { brandId: string }) {
     setUrl('');
   };
 
-  const onPosts = (files: FileList | null) => {
+  const onPosts = async (files: FileList | null) => {
     if (!files) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => store.addAsset(brandId, { type: 'social-post', name: file.name, url: String(reader.result) });
-      reader.readAsDataURL(file);
-    });
+    for (const file of Array.from(files)) {
+      const url = await fileToStoredDataURL(file, 1200);
+      store.addAsset(brandId, { type: 'social-post', name: file.name, url });
+    }
   };
 
   const runAudit = async (id: string) => {
