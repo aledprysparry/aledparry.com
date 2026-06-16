@@ -9,7 +9,9 @@ import { TEMPLATE_KIND_LIST, getKind } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { analyseImages, deriveSuggestions } from '@engine/lib/audit/analyseImages';
 import { fileToStoredDataURL } from '@engine/lib/util/imageScale';
-import type { AssetType, SocialAccount } from '@engine/lib/model/types';
+import { LAYOUTS, type GenStyle } from '@engine/lib/freeform/layouts';
+import ElementPreview from '@engine/components/ElementPreview';
+import type { AssetType, SocialAccount, GraphicElement } from '@engine/lib/model/types';
 
 type Tab = 'overview' | 'templates' | 'graphics' | 'assets' | 'social';
 const TABS: { id: Tab; label: string }[] = [
@@ -138,6 +140,141 @@ function OverviewTab({ brandId }: { brandId: string }) {
   );
 }
 
+// ── Template Style Generator ──
+function StyleGenerator({ brandId }: { brandId: string }) {
+  const store = useStore();
+  const brand = store.getBrand(brandId)!;
+  const refImages = store
+    .assetsByBrand(brandId)
+    .filter((a) => ['reference', 'social-post', 'product'].includes(a.type) && a.url.startsWith('data:image'))
+    .map((a) => a.url);
+  const fonts = Array.from(new Set([...(brand.fonts ?? []), 'Inter', 'Bitter']));
+
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [style, setStyle] = useState<GenStyle | null>(null);
+  const [layoutId, setLayoutId] = useState('cover');
+  const [name, setName] = useState('Generated style');
+
+  const onRefs = async (files: FileList | null) => {
+    if (!files) return;
+    for (const f of Array.from(files)) {
+      const url = await fileToStoredDataURL(f, 1200);
+      store.addAsset(brandId, { type: 'reference', name: f.name, url });
+    }
+  };
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const r = await analyseImages(refImages);
+      setStyle({
+        palette: r.palette.length ? r.palette : brand.colours,
+        theme: r.theme,
+        heading: brand.fonts[0] || 'Bitter',
+        body: brand.fonts[1] || 'Inter',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const elementsFor = (s: GenStyle, id: string) => (LAYOUTS.find((l) => l.id === id) ?? LAYOUTS[0]).build(s);
+
+  const save = (applyToBrand: boolean) => {
+    if (!style) return;
+    store.addTemplateStyle(brandId, {
+      name,
+      colours: style.palette,
+      typography: { heading: style.heading, body: style.body },
+      spacing: {},
+      logoRules: {},
+      layoutPatterns: { layout: layoutId },
+      visualTone: style.theme,
+    });
+    store.createTemplate(brandId, 'freeform-post', name, { seedElements: elementsFor(style, layoutId) });
+    if (applyToBrand) store.updateBrand(brandId, { colours: style.palette });
+    setStyle(null);
+    setOpen(false);
+  };
+
+  return (
+    <Panel className="mb-4 p-4">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
+        <span className="inline-flex items-center gap-2 text-[14px] font-bold"><Wand2 size={15} className="text-indigo-300" /> Generate a template from your posts</span>
+        <span className="text-[12px] text-white/40">{open ? 'Hide' : 'Open'}</span>
+      </button>
+
+      {open && (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
+            <p className="text-[12px] text-white/45">{refImages.length} reference post{refImages.length === 1 ? '' : 's'} ready. We extract the palette + theme from these.</p>
+            <div className="flex items-center gap-2">
+              <label className="cursor-pointer">
+                <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onRefs(e.target.files)} />
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10"><ImagePlus size={14} /> Add posts</span>
+              </label>
+              <Button onClick={generate} disabled={busy || refImages.length === 0}><Wand2 size={14} /> {busy ? 'Analysing…' : 'Analyse & generate'}</Button>
+            </div>
+          </div>
+
+          {style && (
+            <div className="grid gap-5 md:grid-cols-[260px_1fr]">
+              {/* controls */}
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-1.5 text-[11px] uppercase tracking-wide text-white/40">Palette</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {style.palette.map((c, i) => (
+                      <span key={i} className="group relative">
+                        <input type="color" value={c.startsWith('#') ? c : '#888888'} onChange={(e) => setStyle({ ...style, palette: style.palette.map((x, j) => (j === i ? e.target.value : x)) })} className="h-7 w-7 rounded bg-transparent" />
+                      </span>
+                    ))}
+                    <button onClick={() => setStyle({ ...style, palette: [...style.palette, '#6366f1'] })} className="grid h-7 w-7 place-items-center rounded border border-white/15 text-white/50"><Plus size={13} /></button>
+                  </div>
+                </div>
+                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">Theme</span>
+                  <div className="flex gap-1">
+                    {(['dark', 'light'] as const).map((t) => (
+                      <button key={t} onClick={() => setStyle({ ...style, theme: t })} className={`flex-1 rounded-lg border px-2 py-1.5 text-[12px] capitalize ${style.theme === t ? 'border-indigo-400/70 bg-indigo-500/10 text-white' : 'border-white/10 text-white/60'}`}>{t}</button>
+                    ))}
+                  </div>
+                </label>
+                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">Heading font</span>
+                  <select value={style.heading} onChange={(e) => setStyle({ ...style, heading: e.target.value })} className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[13px] text-white/90 focus:outline-none">{fonts.map((f) => <option key={f} value={f}>{f}</option>)}</select>
+                </label>
+                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">Body font</span>
+                  <select value={style.body} onChange={(e) => setStyle({ ...style, body: e.target.value })} className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[13px] text-white/90 focus:outline-none">{fonts.map((f) => <option key={f} value={f}>{f}</option>)}</select>
+                </label>
+                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">Template name</span>
+                  <TextInput value={name} onChange={(e) => setName(e.target.value)} />
+                </label>
+                <div className="flex flex-col gap-2 pt-1">
+                  <Button onClick={() => save(false)}><Sparkles size={14} /> Save as template</Button>
+                  <Button variant="subtle" onClick={() => save(true)}>Save + apply palette to brand</Button>
+                </div>
+              </div>
+
+              {/* layout variant previews */}
+              <div>
+                <p className="mb-2 text-[11px] uppercase tracking-wide text-white/40">Layout (pick one)</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {LAYOUTS.map((l) => (
+                    <button key={l.id} onClick={() => setLayoutId(l.id)} className={`overflow-hidden rounded-xl border text-left transition-colors ${layoutId === l.id ? 'border-indigo-400/70 ring-1 ring-indigo-400/40' : 'border-white/10 hover:border-white/25'}`}>
+                      <ElementPreview elements={elementsFor(style, l.id)} />
+                      <div className="px-2 py-1.5 text-[12px] font-semibold text-white/80">{l.name}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 // ── Templates ──
 function TemplatesTab({ brandId }: { brandId: string }) {
   const store = useStore();
@@ -146,6 +283,7 @@ function TemplatesTab({ brandId }: { brandId: string }) {
 
   return (
     <div>
+      <StyleGenerator brandId={brandId} />
       <div className="mb-4 flex flex-wrap gap-2">
         {TEMPLATE_KIND_LIST.map((k) => (
           <Button key={k.id} variant="subtle" onClick={() => store.createTemplate(brandId, k.id)}>
