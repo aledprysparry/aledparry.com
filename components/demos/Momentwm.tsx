@@ -186,12 +186,58 @@ function NewyddionView() {
 /* ── Radar (compact power-view) ─────────────────────────────────────────── */
 function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
   const [q, setQ] = useState("");
-  const [min, setMin] = useState(45);
+  const [min, setMin] = useState(0);
+  const [win, setWin] = useState<"all" | "week" | "month" | "quarter" | "year">("all");
+  const [type, setType] = useState<"all" | "wikidata" | "dwb" | "welsh-collection">("all");
+  const [roundOnly, setRoundOnly] = useState(false);
   const [rf, setRf] = useState<{ state: "idle" | "busy" | "ok" | "err"; msg: string }>({ state: "idle", msg: "" });
+
+  const todayMs = Date.now();
+  const thisYear = new Date().getFullYear();
+  const daysUntil = (o: Opp): number | null =>
+    o.anniversary.occursOn ? Math.round((new Date(o.anniversary.occursOn + "T00:00:00").getTime() - todayMs) / 86400000) : null;
+  const WIN_DAYS: Record<string, number> = { week: 7, month: 31, quarter: 92 };
+
   const shown = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return data.opportunities.filter((o) => o.editorial.score >= min && (!query || o.candidate.eventTitle.toLowerCase().includes(query)));
-  }, [q, min]);
+    const inWindow = (o: Opp) => {
+      if (win === "all") return true;
+      if (win === "year") return o.anniversary.occursYear === thisYear;
+      const d = daysUntil(o);
+      return d !== null && d >= -3 && d <= WIN_DAYS[win]; // dated windows: day-precision only
+    };
+    const list = data.opportunities.filter(
+      (o) =>
+        o.editorial.score >= min &&
+        (!query || o.candidate.eventTitle.toLowerCase().includes(query)) &&
+        (type === "all" || o.candidate.sourceType === type) &&
+        (!roundOnly || o.anniversary.isRound) &&
+        inWindow(o),
+    );
+    // When planning a window, sort chronologically (soonest first); else by score.
+    return [...list].sort((a, b) => {
+      if (win !== "all") {
+        const oa = daysUntil(a) ?? 1e9;
+        const ob = daysUntil(b) ?? 1e9;
+        if (oa !== ob) return oa - ob;
+      }
+      return b.editorial.score - a.editorial.score;
+    });
+  }, [q, min, win, type, roundOnly]);
+
+  const WINDOWS: { k: typeof win; label: string }[] = [
+    { k: "week", label: "Wythnos" },
+    { k: "month", label: "Mis" },
+    { k: "quarter", label: "Chwarter" },
+    { k: "year", label: "Eleni" },
+    { k: "all", label: "Popeth" },
+  ];
+  const TYPES: { k: typeof type; label: string }[] = [
+    { k: "all", label: "Pawb" },
+    { k: "wikidata", label: "Digwyddiadau" },
+    { k: "dwb", label: "Pobl" },
+    { k: "welsh-collection", label: "Casgliadau" },
+  ];
 
   const doRefresh = async () => {
     if (rf.state === "busy") return;
@@ -212,12 +258,18 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
       <div className="mw-radar-bar">
         <h1 className="mw-dg-h" style={{ fontSize: 34 }}>Radar</h1>
         <input className="mw-search" placeholder="Chwilio..." value={q} onChange={(e) => setQ(e.target.value)} />
-        <label className="mw-minl">Sgôr &ge; {min}<input type="range" min={0} max={100} step={5} value={min} onChange={(e) => setMin(Number(e.target.value))} /></label>
         <span className="mw-count">{shown.length} stori</span>
         <button className="mw-refresh-data" onClick={doRefresh} disabled={rf.state === "busy"} title="Ailgynhyrchu'r holl ddata gyda Claude (~30 munud)">
           {rf.state === "busy" ? "Wrthi…" : "⟳ Ailgynhyrchu"}
         </button>
       </div>
+      <div className="mw-radar-filters">
+        <div className="mw-fg"><span className="mw-fg-label">Pryd</span>{WINDOWS.map((w) => <button key={w.k} className={`mw-seg ${win === w.k ? "on" : ""}`} onClick={() => setWin(w.k)}>{w.label}</button>)}</div>
+        <div className="mw-fg"><span className="mw-fg-label">Beth</span>{TYPES.map((t) => <button key={t.k} className={`mw-seg ${type === t.k ? "on" : ""}`} onClick={() => setType(t.k)}>{t.label}</button>)}</div>
+        <button className={`mw-seg ${roundOnly ? "on" : ""}`} onClick={() => setRoundOnly((v) => !v)} title="Cerrig milltir mawr yn unig (25, 50, 100 oed...)">★ Cerrig milltir</button>
+        <label className="mw-minl">Sgôr &ge; {min}<input type="range" min={0} max={100} step={5} value={min} onChange={(e) => setMin(Number(e.target.value))} /></label>
+      </div>
+      {win !== "all" && shown.length === 0 && <p className="mw-rf-msg">Dim byd yn y ffenest yna eto. Mae penblwyddi heb ddyddiad pendant i&apos;w gweld o dan &lsquo;Eleni&rsquo; neu &lsquo;Popeth&rsquo;.</p>}
       {rf.msg && <p className={`mw-rf-msg ${rf.state}`}>{rf.msg}</p>}
       <div className="mw-radar-grid">
         {shown.map((o, i) => {
@@ -419,7 +471,13 @@ const CSS = `
 .mw-dg-theme{font-size:13px;padding:7px 14px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink-soft);cursor:pointer;transition:all .18s var(--ease);}
 .mw-dg-theme:hover,.mw-dg-theme.on{border-color:var(--ink);color:var(--ink);}
 
-.mw-radar-bar{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:28px;}
+.mw-radar-bar{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px;}
+.mw-radar-filters{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:26px;}
+.mw-fg{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.mw-fg-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin-right:3px;}
+.mw-seg{font-family:var(--sans);font-size:12px;font-weight:500;padding:5px 11px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink-soft);cursor:pointer;transition:border-color .16s var(--ease),background .16s var(--ease),color .16s var(--ease);}
+.mw-seg:hover{border-color:var(--ink-soft);color:var(--ink);}
+.mw-seg.on{background:var(--ink);color:var(--paper);border-color:var(--ink);}
 .mw-search{padding:9px 14px;font-size:14px;background:#fff;border:1px solid var(--rule);border-radius:999px;color:var(--ink);min-width:200px;}
 .mw-search:focus{outline:none;border-color:var(--ink-soft);}
 .mw-minl{font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:10px;}
