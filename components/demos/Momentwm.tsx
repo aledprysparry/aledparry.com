@@ -9,7 +9,7 @@
    (./momentwm-snapshot.json) from the standalone app. Scoped
    styling (.mw-root) so it never touches the rest of the site.
    ============================================================ */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import snapshot from "./momentwm-snapshot.json";
 
 interface Opp {
@@ -47,6 +47,28 @@ function agoWelsh(milestone: number) {
 }
 function welshWhen(occursOn: string | null, occursYear: number) { return occursOn ? welshDate(occursOn) : `yn ${occursYear}`; }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/* ── shared saves / tags (Vercel Blob via /api/momentwm/saves) ───────────── */
+interface SaveRec { id: string; saved: boolean; status: string | null; by: string | null; title: string; sourceUrl: string; occursYear: number; updatedAt: string }
+const STATUSES = [
+  { k: "dan-sylw", label: "Dan sylw" },
+  { k: "wedi-hawlio", label: "Wedi'i hawlio" },
+  { k: "wedi-gwneud", label: "Wedi'i wneud" },
+];
+const statusLabel = (k: string | null | undefined) => STATUSES.find((s) => s.k === k)?.label ?? "";
+function oppKey(o: Opp): string {
+  const raw = `${o.candidate.sourceUrl}|${o.anniversary.occursYear}|${o.anniversary.milestoneYear}`;
+  let h = 5381;
+  for (let i = 0; i < raw.length; i++) h = ((h << 5) + h + raw.charCodeAt(i)) >>> 0;
+  return `${o.anniversary.occursYear}-${o.anniversary.milestoneYear}-${h.toString(36)}`;
+}
+const SavesCtx = createContext<{
+  saves: Record<string, SaveRec>;
+  mutate: (o: Opp, patch: Partial<SaveRec>) => void;
+  name: string;
+  setName: (n: string) => void;
+}>({ saves: {}, mutate: () => {}, name: "", setName: () => {} });
+const useSaves = () => useContext(SavesCtx);
 
 /* ── Heddiw ─────────────────────────────────────────────────────────────── */
 function HeddiwView({ moments, onCreu }: { moments: Opp[]; onCreu: (o: Opp) => void }) {
@@ -190,6 +212,8 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
   const [win, setWin] = useState<"all" | "week" | "month" | "quarter" | "year">("all");
   const [type, setType] = useState<"all" | "wikidata" | "dwb" | "welsh-collection">("all");
   const [roundOnly, setRoundOnly] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const { saves, mutate } = useSaves();
   const [rf, setRf] = useState<{ state: "idle" | "busy" | "ok" | "err"; msg: string }>({ state: "idle", msg: "" });
 
   const todayMs = Date.now();
@@ -212,6 +236,7 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
         (!query || o.candidate.eventTitle.toLowerCase().includes(query)) &&
         (type === "all" || o.candidate.sourceType === type) &&
         (!roundOnly || o.anniversary.isRound) &&
+        (!savedOnly || saves[oppKey(o)]?.saved) &&
         inWindow(o),
     );
     // When planning a window, sort chronologically (soonest first); else by score.
@@ -223,7 +248,7 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
       }
       return b.editorial.score - a.editorial.score;
     });
-  }, [q, min, win, type, roundOnly]);
+  }, [q, min, win, type, roundOnly, savedOnly, saves]);
 
   const WINDOWS: { k: typeof win; label: string }[] = [
     { k: "week", label: "Wythnos" },
@@ -267,6 +292,7 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
         <div className="mw-fg"><span className="mw-fg-label">Pryd</span>{WINDOWS.map((w) => <button key={w.k} className={`mw-seg ${win === w.k ? "on" : ""}`} onClick={() => setWin(w.k)}>{w.label}</button>)}</div>
         <div className="mw-fg"><span className="mw-fg-label">Beth</span>{TYPES.map((t) => <button key={t.k} className={`mw-seg ${type === t.k ? "on" : ""}`} onClick={() => setType(t.k)}>{t.label}</button>)}</div>
         <button className={`mw-seg ${roundOnly ? "on" : ""}`} onClick={() => setRoundOnly((v) => !v)} title="Cerrig milltir mawr yn unig (25, 50, 100 oed...)">★ Cerrig milltir</button>
+        <button className={`mw-seg ${savedOnly ? "on" : ""}`} onClick={() => setSavedOnly((v) => !v)} title="Dim ond y rhai sydd wedi'u cadw">☆ Wedi'u cadw</button>
         <label className="mw-minl">Sgôr &ge; {min}<input type="range" min={0} max={100} step={5} value={min} onChange={(e) => setMin(Number(e.target.value))} /></label>
       </div>
       {win !== "all" && shown.length === 0 && <p className="mw-rf-msg">Dim byd yn y ffenest yna eto. Mae penblwyddi heb ddyddiad pendant i&apos;w gweld o dan &lsquo;Eleni&rsquo; neu &lsquo;Popeth&rsquo;.</p>}
@@ -274,14 +300,19 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
       <div className="mw-radar-grid">
         {shown.map((o, i) => {
           const sev = o.sensitivity.severity;
+          const rec = saves[oppKey(o)];
           return (
-            <div key={i} className={`mw-rc ${sev === "high" ? "sens" : ""}`} onClick={() => onOpen(o)}>
+            <div key={i} className={`mw-rc ${sev === "high" ? "sens" : ""} ${rec?.saved ? "saved" : ""}`} onClick={() => onOpen(o)}>
               <div className="mw-rc-top">
                 <span className="mw-rc-badge">{o.anniversary.isRound ? "★ " : ""}{o.anniversary.anniversaryType}</span>
-                <span className="mw-rc-score">{o.editorial.score}</span>
+                <span className="mw-rc-right">
+                  <button className={`mw-rc-star ${rec?.saved ? "on" : ""}`} title={rec?.saved ? "Tynnu o'r rhai wedi'u cadw" : "Cadw"} onClick={(e) => { e.stopPropagation(); mutate(o, { saved: !rec?.saved }); }}>{rec?.saved ? "★" : "☆"}</button>
+                  <span className="mw-rc-score">{o.editorial.score}</span>
+                </span>
               </div>
               <div className="mw-rc-when">{welshWhen(o.anniversary.occursOn, o.anniversary.occursYear)}</div>
               <div className="mw-rc-title">{o.candidate.eventTitle}</div>
+              {rec?.status && <div className="mw-rc-statusbadge">{statusLabel(rec.status)}{rec.by ? ` · ${rec.by}` : ""}</div>}
               <div className="mw-rc-uses">{o.suggestedUse.slice(0, 4).map((u) => <span key={u} className="mw-rc-use">{u}</span>)}</div>
             </div>
           );
@@ -294,6 +325,10 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
 /* ── Creu ───────────────────────────────────────────────────────────────── */
 function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
   const d = opp.drafts;
+  const { saves, mutate, name, setName } = useSaves();
+  const rec = saves[oppKey(opp)];
+  const saved = !!rec?.saved;
+  const status = rec?.status ?? null;
   const [copied, setCopied] = useState<string | null>(null);
   const copy = async (key: string, text: string) => {
     let ok = false;
@@ -343,6 +378,14 @@ function CreuSheet({ opp, onClose }: { opp: Opp; onClose: () => void }) {
           <div><div className="mw-creu-k">Creu</div><h2>{opp.candidate.eventTitle}</h2></div>
           <button className="mw-creu-x" onClick={onClose} aria-label="Cau">&times;</button>
         </div>
+        <div className="mw-save-row">
+          <button className={`mw-save-star ${saved ? "on" : ""}`} onClick={() => mutate(opp, { saved: !saved })}>{saved ? "★ Wedi'i gadw" : "☆ Cadw"}</button>
+          {STATUSES.map((s) => (
+            <button key={s.k} className={`mw-seg ${status === s.k ? "on" : ""}`} onClick={() => mutate(opp, { status: status === s.k ? null : s.k, saved: true })}>{s.label}</button>
+          ))}
+          <input className="mw-name" placeholder="Ti…" value={name} onChange={(e) => setName(e.target.value)} title="Dy enw (yn lleol) — yn ymddangos ar eitemau rwyt yn eu hawlio" />
+          {rec?.status && rec?.by && <span className="mw-save-by">gan {rec.by}</span>}
+        </div>
         {d?.brief && <div className="mw-cr-block"><div className="mw-cr-k">Pam nawr</div><p className="meta">{d.brief.whyNow}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("brief", summary.brief())}>{label("brief")}</button></div></div>}
         {d?.quiz && <div className="mw-cr-block"><div className="mw-cr-k">Cwis Bob Dydd</div><p>{d.quiz.questionCy}</p><p className="meta">Ateb: {d.quiz.answer}</p><div className="mw-cr-actions"><button className="mw-cr-btn primary" onClick={() => copy("quiz", summary.quiz())}>{label("quiz")}</button></div></div>}
         {d?.heno && <div className="mw-cr-block"><div className="mw-cr-k">Heno</div><p>{d.heno.hookCy}</p><p className="meta">{d.heno.treatmentCy}</p><div className="mw-cr-actions"><button className="mw-cr-btn" onClick={() => copy("heno", summary.heno())}>{label("heno")}</button></div></div>}
@@ -387,21 +430,54 @@ export default function Momentwm() {
     }
     return out;
   }, []);
+
+  // Shared saves/tags (Vercel Blob): load once, mutate optimistically + POST.
+  const [saves, setSaves] = useState<Record<string, SaveRec>>({});
+  const [name, setNameState] = useState("");
+  useEffect(() => {
+    try { setNameState(localStorage.getItem("mw_name") || ""); } catch { /* ignore */ }
+    fetch("/api/momentwm/saves")
+      .then((r) => r.json())
+      .then((j) => { if (j?.saves) setSaves(j.saves); })
+      .catch(() => {});
+  }, []);
+  const setName = (n: string) => { setNameState(n); try { localStorage.setItem("mw_name", n); } catch { /* ignore */ } };
+  const mutate = useCallback((o: Opp, patch: Partial<SaveRec>) => {
+    const id = oppKey(o);
+    setSaves((prev) => {
+      const cur: SaveRec = prev[id] || { id, saved: false, status: null, by: null, title: o.candidate.eventTitle, sourceUrl: o.candidate.sourceUrl, occursYear: o.anniversary.occursYear, updatedAt: "" };
+      const next: SaveRec = {
+        ...cur, ...patch, id,
+        title: o.candidate.eventTitle, sourceUrl: o.candidate.sourceUrl, occursYear: o.anniversary.occursYear,
+        by: patch.by !== undefined ? patch.by : (name || cur.by),
+        updatedAt: new Date().toISOString(),
+      };
+      if (!next.saved && !next.status) {
+        void fetch(`/api/momentwm/saves?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+      } else {
+        void fetch("/api/momentwm/saves", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next) }).catch(() => {});
+      }
+      return { ...prev, [id]: next };
+    });
+  }, [name]);
+
   return (
-    <div className="mw-root">
-      <style>{CSS}</style>
-      {view === "heddiw" && <HeddiwView moments={moments} onCreu={setCreu} />}
-      {view === "darganfod" && <DarganfodView onOpen={setCreu} />}
-      {view === "newyddion" && <NewyddionView />}
-      {view === "radar" && <RadarView onOpen={setCreu} />}
-      <nav className="mw-nav">
-        <button className={view === "heddiw" ? "on" : ""} onClick={() => setView("heddiw")}>Heddiw</button>
-        <button className={view === "darganfod" ? "on" : ""} onClick={() => setView("darganfod")}>Darganfod</button>
-        <button className={view === "newyddion" ? "on" : ""} onClick={() => setView("newyddion")}>Newyddion</button>
-        <button className={view === "radar" ? "on" : ""} onClick={() => setView("radar")}>Radar</button>
-      </nav>
-      {creu && <CreuSheet opp={creu} onClose={() => setCreu(null)} />}
-    </div>
+    <SavesCtx.Provider value={{ saves, mutate, name, setName }}>
+      <div className="mw-root">
+        <style>{CSS}</style>
+        {view === "heddiw" && <HeddiwView moments={moments} onCreu={setCreu} />}
+        {view === "darganfod" && <DarganfodView onOpen={setCreu} />}
+        {view === "newyddion" && <NewyddionView />}
+        {view === "radar" && <RadarView onOpen={setCreu} />}
+        <nav className="mw-nav">
+          <button className={view === "heddiw" ? "on" : ""} onClick={() => setView("heddiw")}>Heddiw</button>
+          <button className={view === "darganfod" ? "on" : ""} onClick={() => setView("darganfod")}>Darganfod</button>
+          <button className={view === "newyddion" ? "on" : ""} onClick={() => setView("newyddion")}>Newyddion</button>
+          <button className={view === "radar" ? "on" : ""} onClick={() => setView("radar")}>Radar</button>
+        </nav>
+        {creu && <CreuSheet opp={creu} onClose={() => setCreu(null)} />}
+      </div>
+    </SavesCtx.Provider>
   );
 }
 
@@ -501,6 +577,19 @@ const CSS = `
 .mw-rc-title{font-family:var(--serif);font-size:18px;line-height:1.2;}
 .mw-rc-uses{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;}
 .mw-rc-use{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--paper-2);color:var(--ink-soft);}
+.mw-rc.saved{border-color:#d8b24a;box-shadow:0 0 0 1px #e7c873 inset;}
+.mw-rc-right{display:flex;align-items:center;gap:8px;}
+.mw-rc-star{background:none;border:none;font-size:16px;line-height:1;cursor:pointer;color:var(--ink-faint);padding:0;}
+.mw-rc-star:hover{color:#c79a1f;}
+.mw-rc-star.on{color:#c79a1f;}
+.mw-rc-statusbadge{font-size:11px;font-weight:600;color:#2f6b66;letter-spacing:.02em;}
+.mw-save-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 18px;padding-bottom:16px;border-bottom:1px solid var(--rule);}
+.mw-save-star{font-family:var(--sans);font-size:13px;font-weight:600;padding:6px 14px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink);cursor:pointer;transition:all .16s var(--ease);}
+.mw-save-star:hover{border-color:#c79a1f;}
+.mw-save-star.on{background:#f6e8c2;border-color:#d8b24a;color:#6b520f;}
+.mw-name{font-family:var(--sans);font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--rule);background:#fff;color:var(--ink);width:84px;}
+.mw-name:focus{outline:none;border-color:var(--ink-soft);}
+.mw-save-by{font-size:12px;color:var(--ink-faint);}
 
 .mw-creu-back{position:fixed;inset:0;z-index:50;background:rgba(20,16,10,.45);backdrop-filter:blur(3px);animation:mwfade .25s var(--ease) both;display:flex;align-items:flex-end;justify-content:center;}
 .mw-creu{width:100%;max-width:680px;max-height:88%;overflow-y:auto;background:var(--paper);border-radius:22px 22px 0 0;padding:28px 32px 40px;animation:mwrise .35s var(--ease) both;}
