@@ -38,6 +38,8 @@ export interface TextOptions {
   baseline?: CanvasTextBaseline;
   font?: string;
   maxWidth?: number; // fraction of width - text wraps/scales to fit
+  /** Tracking as a fraction of width (negative = tighter). Reset per call. */
+  letterSpacing?: number;
 }
 
 export interface ImageOptions {
@@ -149,6 +151,7 @@ export class CanvasRenderer {
     this.ctx.textAlign = opts.align ?? 'left';
     this.ctx.textBaseline = opts.baseline ?? 'top';
     this.ctx.font = `${weight} ${fontSize}px ${font}`;
+    this.ctx.letterSpacing = opts.letterSpacing ? `${opts.letterSpacing * this.W}px` : '0px';
 
     if (maxPx) {
       // Auto-shrink to fit
@@ -160,6 +163,7 @@ export class CanvasRenderer {
     }
 
     this.ctx.fillText(text, x, y, maxPx);
+    this.ctx.letterSpacing = '0px';
   }
 
   /**
@@ -182,6 +186,7 @@ export class CanvasRenderer {
     this.ctx.textAlign = opts.align ?? 'left';
     this.ctx.textBaseline = opts.baseline ?? 'top';
     this.ctx.font = `${weight} ${fontSize}px ${font}`;
+    this.ctx.letterSpacing = opts.letterSpacing ? `${opts.letterSpacing * this.W}px` : '0px';
 
     const words = text.split(' ');
     let line = '';
@@ -202,6 +207,7 @@ export class CanvasRenderer {
       y += lineHeight;
     }
 
+    this.ctx.letterSpacing = '0px';
     return (y - startY) / this.H;
   }
 

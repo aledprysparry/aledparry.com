@@ -1,20 +1,13 @@
 // Canvas draws with whatever font is loaded at draw time. Web fonts
-// load lazily on first use, so we explicitly load the weights the
-// templates use and only then draw - otherwise the first paint (and a
-// too-early export) falls back to a system font.
-
-let ready: Promise<void> | null = null;
+// load lazily on first use, so we explicitly preload the families the
+// templates use (and the brand images) before drawing - otherwise the
+// first paint (and a too-early export) falls back to a system font.
+//
+// The actual loading lives in brandAssets.ensureAssets (fonts + images);
+// ensureFonts stays as the name both the preview canvas and the export
+// pipeline already call.
+import { ensureAssets } from './brandAssets';
 
 export function ensureFonts(): Promise<void> {
-  if (ready) return ready;
-  ready = (async () => {
-    if (!('fonts' in document)) return;
-    const specs = [
-      '400 40px Inter', '500 40px Inter', '600 40px Inter', '700 40px Inter', '800 40px Inter', '900 40px Inter',
-      '700 40px Bitter', '800 40px Bitter',
-    ];
-    await Promise.all(specs.map((s) => document.fonts.load(s).catch(() => undefined)));
-    await document.fonts.ready;
-  })();
-  return ready;
+  return ensureAssets();
 }
