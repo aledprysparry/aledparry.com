@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import type { CarouselCopy } from '@engine/lib/carousel/types';
 
-const FIELDS: { key: keyof CarouselCopy; label: string }[] = [
+export type CopyField = { key: string; label: string };
+
+const DEFAULT_FIELDS: CopyField[] = [
   { key: 'brandLine', label: 'Brand' },
   { key: 'weekLabel', label: 'Wythnos / dyddiad' },
   { key: 'coverKicker', label: 'Clawr - is-bennawd' },
@@ -21,12 +22,14 @@ const FIELDS: { key: keyof CarouselCopy; label: string }[] = [
 ];
 
 interface Props {
-  copy: CarouselCopy;
-  onChange: (key: keyof CarouselCopy, value: string) => void;
+  copy: Record<string, string | undefined>;
+  onChange: (key: string, value: string) => void;
+  fields?: CopyField[];
 }
 
-export default function CopyEditor({ copy, onChange }: Props) {
+export default function CopyEditor({ copy, onChange, fields }: Props) {
   const [open, setOpen] = useState(false);
+  const FIELDS = fields ?? DEFAULT_FIELDS;
   return (
     <div>
       <button
@@ -42,7 +45,7 @@ export default function CopyEditor({ copy, onChange }: Props) {
             <label key={f.key} className="flex flex-col gap-1">
               <span className="text-[11px] uppercase tracking-wide text-white/40">{f.label}</span>
               <input
-                value={copy[f.key]}
+                value={copy[f.key] ?? ''}
                 onChange={(e) => onChange(f.key, e.target.value)}
                 className="rounded-lg bg-black/30 border border-white/10 focus:border-[#fecf0a]/60 focus:outline-none px-3 py-2 text-[13px] text-white/90"
               />

@@ -10,6 +10,7 @@ import type { RatioKey } from '@engine/lib/canvas/CanvasRenderer';
 import type { SlideDef } from '@engine/lib/carousel/types';
 import { SLIDES, DEFAULT_COPY } from '@engine/lib/carousel/template';
 import { parseLeaderboardText, SAMPLE_CSV, type ParseResult } from '@engine/lib/carousel/parseLeaderboard';
+import { SCOREBOARD_SLIDES, SCOREBOARD_COPY, SCOREBOARD_SAMPLE } from '@engine/lib/carousel/scoreboard';
 import { defaultPostElements } from '@engine/lib/freeform/elements';
 
 export interface TemplateKind {
@@ -24,6 +25,8 @@ export interface TemplateKind {
   // carousel kinds:
   slides?: SlideDef[];
   defaultCopy?: Record<string, string>;
+  /** Which copy fields the editor shows (defaults to the carousel set). */
+  copyFields?: { key: string; label: string }[];
   sampleData?: string;
   dataHint?: string;
   parse?: (text: string) => ParseResult;
@@ -45,6 +48,25 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     defaultCopy: DEFAULT_COPY as unknown as Record<string, string>,
     sampleData: SAMPLE_CSV,
     dataHint: 'rank, name, score (optional: team, movement like +2 / -1 / 0)',
+    parse: parseLeaderboardText,
+  },
+  'cwis-weekly-scoreboard': {
+    id: 'cwis-weekly-scoreboard',
+    name: 'Weekly Scoreboard',
+    type: 'still',
+    editor: 'carousel',
+    description:
+      'Branded "Last week\'s leaderboard" still: gold/silver/bronze top 3 (Welsh ordinals) + places 4-10, from pasted/CSV/XLSX data.',
+    supportedPlatforms: ['instagram-feed', 'instagram-carousel', 'facebook', 'linkedin'],
+    dimensions: { width: 1080, height: 1350 },
+    slides: SCOREBOARD_SLIDES,
+    defaultCopy: SCOREBOARD_COPY,
+    copyFields: [
+      { key: 'title', label: 'Title' },
+      { key: 'dateRange', label: 'Date range' },
+    ],
+    sampleData: SCOREBOARD_SAMPLE,
+    dataHint: 'rank, name, score (decimals ok, e.g. 61.33)',
     parse: parseLeaderboardText,
   },
   'freeform-post': {

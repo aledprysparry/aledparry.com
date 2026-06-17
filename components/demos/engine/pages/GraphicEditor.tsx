@@ -45,7 +45,7 @@ export default function GraphicEditor() {
 
   const setInputs = (patch: Record<string, unknown>) =>
     store.updateGraphic(graphic.id, { inputs: { ...graphic.inputs, ...patch } });
-  const setCopyField = (k: keyof CarouselCopy, v: string) =>
+  const setCopyField = (k: string, v: string) =>
     setInputs({ copy: { ...copy, [k]: v } });
 
   const downloadSlide = async (i: number) => {
@@ -102,7 +102,7 @@ export default function GraphicEditor() {
           <Panel className="p-5">
             <DataInput value={rawText} onChange={(t) => setInputs({ rawText: t })} warnings={warnings} error={error} rowCount={rows.length} onLoadSample={() => setInputs({ rawText: kind.sampleData })} />
           </Panel>
-          <Panel className="p-5"><CopyEditor copy={copy} onChange={setCopyField} /></Panel>
+          <Panel className="p-5"><CopyEditor copy={copy as unknown as Record<string, string | undefined>} onChange={setCopyField} fields={kind.copyFields} /></Panel>
         </div>
 
         <div className="flex flex-col gap-4">

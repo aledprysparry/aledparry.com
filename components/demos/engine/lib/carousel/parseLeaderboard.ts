@@ -68,6 +68,13 @@ function cleanInt(raw: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+// Scores may be decimals (e.g. 61.33) - keep the point.
+function cleanNum(raw: string | undefined): number | null {
+  if (raw == null) return null;
+  const n = parseFloat(String(raw).replace(/[^\d.-]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
 export interface ParseResult {
   rows: LeaderboardRow[];
   warnings: string[];
@@ -101,7 +108,7 @@ export function parseLeaderboardText(text: string): ParseResult {
     autoRank++;
     const rank = cleanInt(cols.rank != null ? cells[cols.rank] : '') ?? autoRank;
     const name = (cols.name != null ? cells[cols.name] : '') || '';
-    const score = cleanInt(cols.score != null ? cells[cols.score] : '');
+    const score = cleanNum(cols.score != null ? cells[cols.score] : '');
     const team = (cols.team != null ? cells[cols.team] : '') || '';
     const movement = parseMovement(cols.movement != null ? cells[cols.movement] : '');
     if (!name && score == null) continue;

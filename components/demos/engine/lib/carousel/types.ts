@@ -29,6 +29,9 @@ export interface CarouselCopy {
   ctaAction: string;
   ctaLink: string;
   footer: string;
+  // Weekly Scoreboard kind:
+  title?: string;
+  dateRange?: string;
 }
 
 export interface SlideProps {
