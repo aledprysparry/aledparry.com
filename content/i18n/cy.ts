@@ -12,7 +12,7 @@ export const cy: SiteContent = {
     services: "Gwasanaethau",
     about: "Amdanaf",
     contact: "Cysylltu",
-    languageToggle: "EN",
+    languageToggle: "English",
   },
   home: {
     hero: {

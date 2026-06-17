@@ -12,7 +12,7 @@ export const en: SiteContent = {
     services: "Services",
     about: "About",
     contact: "Contact",
-    languageToggle: "CY",
+    languageToggle: "Cymraeg",
   },
   home: {
     hero: {

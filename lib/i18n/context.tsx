@@ -31,11 +31,30 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem("lang") as Locale | null;
-    if (stored && (stored === "en" || stored === "cy")) {
+    if (stored === "en" || stored === "cy") {
+      // Explicit, remembered choice always wins.
       setLocaleState(stored);
+    } else if (typeof navigator !== "undefined") {
+      // First visit with no stored choice: follow the browser locale so the
+      // Welsh option is offered proactively (WLC guidance §6 / §6.2). Not
+      // persisted — only an explicit toggle is remembered for future sessions.
+      const prefs = navigator.languages?.length
+        ? navigator.languages
+        : [navigator.language];
+      if (prefs.some((l) => l?.toLowerCase().startsWith("cy"))) {
+        setLocaleState("cy");
+      }
     }
     setMounted(true);
   }, []);
+
+  // Keep the document language in sync so assistive tech and search engines
+  // read each page in the displayed language (WCAG 3.1.1 / SEO).
+  useEffect(() => {
+    if (mounted) {
+      document.documentElement.lang = locale;
+    }
+  }, [locale, mounted]);
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
