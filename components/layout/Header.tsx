@@ -80,33 +80,36 @@ export function Header() {
               <LanguageToggle />
             </div>
 
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2 text-stone-700 relative z-50"
-              aria-label="Toggle menu"
-            >
-              <div className="w-6 h-5 relative flex flex-col justify-between">
-                <span
-                  className={clsx(
-                    "block h-[1.5px] w-full bg-current transition-all duration-300 origin-center",
-                    menuOpen && "rotate-45 translate-y-[7px]"
-                  )}
-                />
-                <span
-                  className={clsx(
-                    "block h-[1.5px] w-full bg-current transition-all duration-200",
-                    menuOpen && "opacity-0 scale-x-0"
-                  )}
-                />
-                <span
-                  className={clsx(
-                    "block h-[1.5px] w-full bg-current transition-all duration-300 origin-center",
-                    menuOpen && "-rotate-45 -translate-y-[7px]"
-                  )}
-                />
-              </div>
-            </button>
+            {/* Mobile: keep the language toggle visible top-right (WLC §6), beside the menu button */}
+            <div className="flex items-center gap-1 md:hidden">
+              <LanguageToggle />
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-2 text-stone-700 relative z-50"
+                aria-label="Toggle menu"
+              >
+                <div className="w-6 h-5 relative flex flex-col justify-between">
+                  <span
+                    className={clsx(
+                      "block h-[1.5px] w-full bg-current transition-all duration-300 origin-center",
+                      menuOpen && "rotate-45 translate-y-[7px]"
+                    )}
+                  />
+                  <span
+                    className={clsx(
+                      "block h-[1.5px] w-full bg-current transition-all duration-200",
+                      menuOpen && "opacity-0 scale-x-0"
+                    )}
+                  />
+                  <span
+                    className={clsx(
+                      "block h-[1.5px] w-full bg-current transition-all duration-300 origin-center",
+                      menuOpen && "-rotate-45 -translate-y-[7px]"
+                    )}
+                  />
+                </div>
+              </button>
+            </div>
           </nav>
         </Container>
       </header>
@@ -139,15 +142,6 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-          <div
-            className={clsx(
-              "transition-all duration-500 mt-4",
-              menuOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-            )}
-            style={{ transitionDelay: menuOpen ? "420ms" : "0ms" }}
-          >
-            <LanguageToggle />
-          </div>
         </div>
       </div>
     </>
