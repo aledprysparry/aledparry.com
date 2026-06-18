@@ -60,7 +60,7 @@ const scoreboardSlide: SlideDef = {
   draw(r: CanvasRenderer, { rows, copy }: SlideProps) {
     r.clear();
     paintHalftoneBg(r);
-    paintLogo(r);
+    paintLogo(r, { heightFrac: 0.165, topFrac: 0.05, rightFrac: 0.93 });
 
     const title = (copy.title as string) || "LAST WEEK'S LEADERBOARD";
     const dateRange = (copy.dateRange as string) || '';
@@ -74,10 +74,10 @@ const scoreboardSlide: SlideDef = {
     const list = rows.slice(0, 10);
     const left = 0.1;
     const right = 0.9;
-    const startY = 0.366;
-    const pillH = 0.056;
-    const pillGap = 0.015;
-    const rowH = 0.042;
+    const startY = 0.335;
+    const pillH = 0.052;
+    const pillGap = 0.014;
+    const rowH = 0.04;
 
     list.forEach((row: LeaderboardRow, i) => {
       const isPill = i < 3;
@@ -103,7 +103,7 @@ const scoreboardSlide: SlideDef = {
       const textColor = isPill ? INK : WHITE;
       const locColor = isPill ? 'rgba(30,21,86,0.55)' : 'rgba(255,255,255,0.55)';
       rankWithOrdinal(r, left + 0.045, yc, row.rank, isPill ? 0.05 : 0.04, textColor, !isPill);
-      drawNameLoc(r, left + 0.135, yc, row.name, row.location, isPill ? 0.043 : 0.038, textColor, isPill ? '800' : '700', locColor);
+      drawNameLoc(r, left + 0.11, yc, row.name, row.location, isPill ? 0.043 : 0.038, textColor, isPill ? '800' : '700', locColor);
       r.drawText(fmtScore(row.score), { x: right - 0.03, y: yc, size: isPill ? 0.044 : 0.038, color: textColor, weight: isPill ? '900' : '800', align: 'right', baseline: 'middle', font: DISPLAY });
     });
   },
