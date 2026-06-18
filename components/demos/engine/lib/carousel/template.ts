@@ -37,8 +37,8 @@ export const DEFAULT_COPY: CarouselCopy = {
   scoreUnit: 'pwynt',
   winnerKicker: 'ENILLYDD YR WYTHNOS',
   winnerSubtitle: 'ar frig y sgorfwrdd',
-  ctaHeadline: "Ti'n meddwl alli di guro'r 10 uchaf?",
-  ctaSub: 'Cwis newydd bob dydd.',
+  ctaHeadline: "Alli di guro'r 10 uchaf?",
+  ctaSub: 'Dy enw di ar y rhestr wythnos nesa?',
   ctaAction: 'Chwarae nawr',
   ctaLink: '@cwisbobdydd',
   footer: 'Cwis Bob Dydd',
@@ -203,15 +203,23 @@ const ctaSlide: SlideDef = {
     r.clear();
     paintHalftoneBg(r);
     paintLogo(r, { heightFrac: 0.11, topFrac: 0.05, rightFrac: 0.94 });
+
+    // challenge headline - the hook, dominant
     r.drawTextWrapped(copy.ctaHeadline, {
-      x: 0.06, y: 0.30, size: 0.07, color: BRAND_WHITE, weight: '900',
-      maxWidth: 0.88, lineHeight: 0.08, font: SERIF_FONT, letterSpacing: TRACK_TITLE,
+      x: 0.06, y: 0.24, size: 0.088, color: BRAND_WHITE, weight: '900',
+      maxWidth: 0.9, lineHeight: 0.09, font: SERIF_FONT,
     });
-    r.drawText(copy.ctaSub, { x: 0.06, y: 0.56, size: 0.036, color: MUTED, weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.88 });
-    // action button
-    r.drawRect({ x: 0.06, y: 0.62, width: 0.5, height: 0.085, color: BRAND_YELLOW, radius: 0.042 });
-    r.drawText(`${copy.ctaAction} →`, { x: 0.11, y: 0.662, size: 0.04, color: BRAND_BLUE, weight: '800', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.4 });
-    r.drawText(copy.ctaLink, { x: 0.06, y: 0.76, size: 0.038, color: BRAND_YELLOW, weight: '700', baseline: 'middle', font: DEFAULT_FONT });
+    // aspiration tie-back to the leaderboard they just saw
+    r.drawText(copy.ctaSub, { x: 0.06, y: 0.55, size: 0.04, color: 'rgba(255,255,255,0.82)', weight: '600', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.88 });
+
+    // hero CTA - big, full-width gold button (the conversion)
+    const bY = 0.63, bH = 0.105;
+    r.drawRect({ x: 0.06, y: bY, width: 0.88, height: bH, color: BRAND_YELLOW, radius: bH / 2 });
+    r.drawText(`${copy.ctaAction} →`, { x: 0.5, y: bY + bH / 2, size: 0.05, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.8 });
+
+    // handle + daily-quiz frequency line under the button
+    r.drawText(copy.ctaLink, { x: 0.06, y: 0.79, size: 0.04, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT });
+    r.drawText('Cwis newydd bob dydd', { x: 0.06, y: 0.835, size: 0.03, color: 'rgba(255,255,255,0.6)', weight: '600', baseline: 'middle', font: DEFAULT_FONT });
     drawFooter(r, copy, { rows: [], copy, slideCount, index });
   },
 };
