@@ -1,23 +1,21 @@
 # Digitalt (display font)
 
 Digitalt is the chunky display face used for the Cwis Bob Dydd numerals and
-headings (the "7/10", "CWIS BOB DYDD"). It is a **commercial font**
-(Mostardesign) — it is not bundled here and can't be fetched automatically
-for licensing reasons.
+headings (the big scores, the "LAST WEEK'S LEADERBOARD" title).
 
-To activate it:
+It is **open source** — by gluk ([glukfonts.pl](https://www.glukfonts.pl/font.php?font=Digitalt)),
+released under the **SIL Open Font License 1.1** (see `OFL.txt`). So it's
+bundled here directly:
 
-1. Convert/obtain a **web** build of the weight you licensed and name it:
+```
+digitalt.woff2   ← self-hosted, registered via FontFace in brandAssets.ts
+OFL.txt          ← the licence (must accompany the font)
+```
 
-   ```
-   public/app/fonts/digitalt/digitalt.woff2
-   ```
+`ensureAssets()` loads it, and the templates draw with the stack
+`Digitalt, Rubik, …` — so the display text renders in real Digitalt, with
+self-hosted Rubik as the fallback if the file is ever missing.
 
-   (woff2 is what `brandAssets.ts` loads. A heavy/black weight matches the
-   brand best.)
-
-2. That's it — `ensureAssets()` registers it via `FontFace` and the Weekly
-   Scoreboard uses it for the title, rank numbers and scores.
-
-Until the file is present, display text falls back to **Rubik** at weight 900
-(self-hosted under `../rubik/`), which is a close visual match.
+To update it: download the latest from glukfonts.pl, convert the TTF to
+woff2 (`fonttools`: `TTFont('Digitalt.ttf').save('digitalt.woff2')` with
+`flavor='woff2'`), and replace `digitalt.woff2`.
