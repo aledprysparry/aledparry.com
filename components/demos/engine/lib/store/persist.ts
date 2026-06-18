@@ -13,6 +13,7 @@ export const COLLECTIONS = [
   'templateStyles',
   'templates',
   'graphics',
+  'folders',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
@@ -55,4 +56,25 @@ export function newId(prefix = 'id'): string {
 
 export function now(): string {
   return new Date().toISOString();
+}
+
+/** UI language choice, persisted so it survives reloads. */
+export function loadLang(): 'en' | 'cy' {
+  if (typeof localStorage === 'undefined') return 'en';
+  return localStorage.getItem(`${NS}.lang`) === 'cy' ? 'cy' : 'en';
+}
+export function saveLang(lang: 'en' | 'cy'): void {
+  if (typeof localStorage !== 'undefined') localStorage.setItem(`${NS}.lang`, lang);
+}
+
+/**
+ * Snapshot every collection for a "back up / export" download. Assets live
+ * in IndexedDB (not localStorage), so the caller passes them in.
+ */
+export function exportSnapshot(extra: Record<string, unknown[]> = {}): string {
+  const data: Record<string, unknown> = { version: NS, exportedAt: now() };
+  for (const name of COLLECTIONS) {
+    data[name] = name in extra ? extra[name] : loadCollection(name);
+  }
+  return JSON.stringify(data, null, 2);
 }

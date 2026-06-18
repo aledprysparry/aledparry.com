@@ -1,26 +1,17 @@
 // ═══ Cwis Bob Dydd "Weekly Scoreboard" template ═══
-// A single 1080x1350 still that reproduces the branded leaderboard
-// asset: royal-indigo halftone background, the Cwis Bob Dydd logo,
-// gold/silver/bronze pills for places 1-3 (with Welsh ordinals
-// AF/IL/YDD) and plain rows 4-10. Driven by the same parsed leaderboard
-// rows as the carousel.
-//
-// Real brand art (logo + halftone backgrounds) and the Digitalt display
-// face load from /public/app/cwis + /public/app/fonts when present; until
-// they are dropped in, the renderer falls back to a synthetic halftone
-// background, a gold text wordmark, and Rubik's heaviest weight. Rubik is
-// tracked tight (negative letter-spacing) to approximate Digitalt's
-// condensed, chunky display proportions.
+// A single 1080x1350 still: royal-indigo halftone background, the Cwis Bob
+// Dydd logo, gold/silver/bronze pills for places 1-3 (with Welsh ordinals
+// AF/IL/YDD) and plain rows 4-10. Each row shows rank, name, an optional
+// location/postcode, and the score. Shared brand paint (fonts, palette,
+// background, logo, shadows) lives in brandPaint so every template matches.
 
 import type { CanvasRenderer } from '@engine/lib/canvas/CanvasRenderer';
-import { brandImage } from './brandAssets';
+import {
+  INK, GOLD, WHITE, BODY, DISPLAY, TRACK_TITLE, TRACK_DISPLAY,
+  setShadow, clearShadow, paintHalftoneBg, paintLogo, fmtScore,
+} from './brandPaint';
 import type { LeaderboardRow, SlideDef, SlideProps } from './types';
 
-const PURPLE_TOP = '#4b2fd6'; // royal indigo, matched to the brand halftone art
-const PURPLE_BOT = '#2f1aa6';
-const INK = '#1e1556'; // dark indigo text on the coloured pills
-const GOLD = '#ffd60a'; // bright title/number yellow
-const WHITE = '#ffffff';
 const PILL = [
   { from: '#ffd84a', to: '#f4a81c' }, // 1 - gold
   { from: '#eef2fb', to: '#cdd7ea' }, // 2 - silver
@@ -28,90 +19,11 @@ const PILL = [
 ];
 const ORDINAL = ['AF', 'IL', 'YDD'];
 
-const BODY = 'Rubik, Inter, sans-serif';
-// Display stack: the canvas falls back per the font list, so Digitalt is
-// used once its woff2 is dropped in, and Rubik (heaviest weight) until then.
-const DISPLAY = 'Digitalt, Rubik, Inter, sans-serif';
-// Tracking (fraction of width). Digitalt is condensed; tighten Rubik to suit.
-const TRACK_TITLE = -0.006;
-const TRACK_DISPLAY = -0.003;
-
-function fmtScore(n: number | null): string {
-  if (n == null) return '';
-  return Number.isInteger(n) ? n.toLocaleString('en-GB') : n.toFixed(2);
-}
-
-function setShadow(r: CanvasRenderer, color: string, blur: number, dy: number, dx = 0) {
-  const ctx = r.context;
-  ctx.shadowColor = color;
-  ctx.shadowBlur = blur * r.W;
-  ctx.shadowOffsetX = dx * r.W;
-  ctx.shadowOffsetY = dy * r.H;
-}
-function clearShadow(r: CanvasRenderer) {
-  const ctx = r.context;
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = ctx.shadowOffsetX = ctx.shadowOffsetY = 0;
-}
-
-function background(r: CanvasRenderer) {
-  const bg = brandImage('bgPurple');
-  if (bg) {
-    r.drawImage(bg, { x: 0, y: 0, width: 1, height: 1, fit: 'cover' });
-    return;
-  }
-  // Synthetic fallback: royal-indigo gradient + faint halftone dots.
-  const ctx = r.context;
-  const g = ctx.createLinearGradient(0, 0, 0, r.H);
-  g.addColorStop(0, PURPLE_TOP);
-  g.addColorStop(1, PURPLE_BOT);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, r.W, r.H);
-  ctx.save();
-  ctx.fillStyle = '#ffffff';
-  const step = r.W * 0.034;
-  const rad = r.W * 0.006;
-  for (let y = step / 2; y < r.H; y += step) {
-    for (let x = step / 2; x < r.W; x += step) {
-      ctx.globalAlpha = 0.045;
-      ctx.beginPath();
-      ctx.arc(x, y, rad, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.restore();
-}
-
-// Anchor the logo by its top-right corner, preserving pixel aspect.
-function brandLogo(r: CanvasRenderer) {
-  const logo = brandImage('logo');
-  if (logo && logo.naturalWidth > 0) {
-    const heightFrac = 0.135;
-    const rightFrac = 0.9;
-    const topFrac = 0.075;
-    const aspect = logo.naturalWidth / logo.naturalHeight;
-    const widthFrac = heightFrac * (r.H / r.W) * aspect;
-    r.drawImage(logo, {
-      x: rightFrac - widthFrac,
-      y: topFrac,
-      width: widthFrac,
-      height: heightFrac,
-      fit: 'contain',
-    });
-    return;
-  }
-  // Text stand-in for the logo until the real PNG is dropped in.
-  r.drawText('CWIS', { x: 0.9, y: 0.105, size: 0.06, color: GOLD, weight: '900', align: 'right', baseline: 'middle', font: DISPLAY, letterSpacing: TRACK_DISPLAY });
-  r.drawText('BOB DYDD', { x: 0.9, y: 0.155, size: 0.044, color: GOLD, weight: '900', align: 'right', baseline: 'middle', font: DISPLAY, letterSpacing: TRACK_DISPLAY });
-  r.drawText('S4C', { x: 0.9, y: 0.19, size: 0.02, color: 'rgba(255,255,255,0.7)', weight: '700', align: 'right', baseline: 'middle', font: BODY });
-}
-
 function rankWithOrdinal(r: CanvasRenderer, x: number, yc: number, rank: number, sizeFrac: number, color: string, pop: boolean) {
   const ctx = r.context;
   const px = x * r.W;
   const py = yc * r.H;
   const fs = sizeFrac * r.W;
-  // White row numbers get a dark edge for the brand's "sticker" pop.
   if (pop) setShadow(r, 'rgba(20,8,60,0.55)', 0, 0.004);
   ctx.fillStyle = color;
   ctx.textAlign = 'left';
@@ -130,18 +42,29 @@ function rankWithOrdinal(r: CanvasRenderer, x: number, yc: number, rank: number,
   if (pop) clearShadow(r);
 }
 
+// Name, with an optional location/postcode set smaller + muted just after it.
+function drawNameLoc(r: CanvasRenderer, x: number, yc: number, name: string, location: string, size: number, color: string, weight: string, locColor: string) {
+  const nameCap = location ? 0.36 : 0.5;
+  r.drawText(name || '-', { x, y: yc, size, color, weight, baseline: 'middle', font: BODY, maxWidth: nameCap, letterSpacing: -0.0015 });
+  if (location) {
+    const ctx = r.context;
+    ctx.font = `${weight} ${size * r.W}px ${BODY}`;
+    const nameW = Math.min(ctx.measureText(name || '-').width, nameCap * r.W);
+    r.drawText(location, { x: x + nameW / r.W + 0.014, y: yc, size: size * 0.74, color: locColor, weight: '600', baseline: 'middle', font: BODY, maxWidth: 0.16 });
+  }
+}
+
 const scoreboardSlide: SlideDef = {
   id: 'scoreboard',
   label: 'Weekly Scoreboard',
   draw(r: CanvasRenderer, { rows, copy }: SlideProps) {
     r.clear();
-    background(r);
-    brandLogo(r);
+    paintHalftoneBg(r);
+    paintLogo(r);
 
     const title = (copy.title as string) || "LAST WEEK'S LEADERBOARD";
     const dateRange = (copy.dateRange as string) || '';
 
-    // Title: big, heavy, tightly tracked, with a dark drop shadow for depth.
     setShadow(r, 'rgba(22,9,66,0.5)', 0.004, 0.007, 0.0015);
     r.drawTextWrapped(title, { x: 0.1, y: 0.115, size: 0.084, color: GOLD, weight: '900', font: DISPLAY, maxWidth: 0.56, lineHeight: 0.082, baseline: 'top', letterSpacing: TRACK_TITLE });
     clearShadow(r);
@@ -151,7 +74,7 @@ const scoreboardSlide: SlideDef = {
     const list = rows.slice(0, 10);
     const left = 0.1;
     const right = 0.9;
-    const startY = 0.366; // top of pill 1
+    const startY = 0.366;
     const pillH = 0.056;
     const pillGap = 0.015;
     const rowH = 0.042;
@@ -166,7 +89,6 @@ const scoreboardSlide: SlideDef = {
         const ctx = r.context;
         const py = (yc - pillH / 2) * r.H;
         const ph = pillH * r.H;
-        // Soft drop shadow under the pill.
         setShadow(r, 'rgba(8,3,34,0.38)', 0.014, 0.006);
         const grad = ctx.createLinearGradient(0, py, 0, py + ph);
         grad.addColorStop(0, PILL[i].from);
@@ -179,9 +101,9 @@ const scoreboardSlide: SlideDef = {
       }
 
       const textColor = isPill ? INK : WHITE;
+      const locColor = isPill ? 'rgba(30,21,86,0.55)' : 'rgba(255,255,255,0.55)';
       rankWithOrdinal(r, left + 0.045, yc, row.rank, isPill ? 0.05 : 0.04, textColor, !isPill);
-      r.drawText(row.name || '-', { x: left + 0.135, y: yc, size: isPill ? 0.043 : 0.038, color: textColor, weight: isPill ? '800' : '700', baseline: 'middle', font: BODY, maxWidth: 0.5, letterSpacing: -0.0015 });
-      // No negative tracking on scores - it crushes the decimal point.
+      drawNameLoc(r, left + 0.135, yc, row.name, row.location, isPill ? 0.043 : 0.038, textColor, isPill ? '800' : '700', locColor);
       r.drawText(fmtScore(row.score), { x: right - 0.03, y: yc, size: isPill ? 0.044 : 0.038, color: textColor, weight: isPill ? '900' : '800', align: 'right', baseline: 'middle', font: DISPLAY });
     });
   },
@@ -194,14 +116,14 @@ export const SCOREBOARD_COPY: Record<string, string> = {
   dateRange: '11.02.24 - 18.02.24',
 };
 
-export const SCOREBOARD_SAMPLE = `safle,enw,sgor
-1,Côrdydd,61.33
-2,Y GYM GYM,56.73
-3,Cochion De Cymru / S W Reds,55.07
-4,Newid fi,54.10
-5,Newid fi,52.88
-6,Newid fi,51.40
-7,Newid fi,49.95
-8,Newid fi,48.20
-9,Newid fi,46.71
-10,Newid fi,45.03`;
+// Real Cwis Bob Dydd shape: position, username (location/postcode), score.
+export const SCOREBOARD_SAMPLE = `1: Dylan Llyr (LL55) 529.99
+2: GaryP (LL58) 523.50
+3: EleanorT (BS9) 522.99
+4: iolo77 (CF5) 512.94
+5: HuwT (LL77) 501.08
+6: melfync (LL30) 488.88
+7: EmyrE (LL61) 476.18
+8: Siwan Mair (LL54) 471.31
+9: Guto E (SA41) 467.02
+10: Gwilym Dwyfor (LL54) 466.99`;

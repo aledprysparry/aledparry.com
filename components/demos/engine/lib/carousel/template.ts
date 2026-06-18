@@ -14,6 +14,7 @@ import {
   DEFAULT_FONT,
   SERIF_FONT,
 } from '@engine/lib/canvas/brandTokens';
+import { paintHalftoneBg, paintLogo, TRACK_TITLE, TRACK_DISPLAY } from './brandPaint';
 import { rowsInRange } from './parseLeaderboard';
 import type { CarouselCopy, LeaderboardRow, SlideDef, SlideProps } from './types';
 
@@ -59,7 +60,8 @@ function medalColour(rank: number): string {
   return 'rgba(255,255,255,0.14)';
 }
 
-const fmtScore = (n: number | null) => (n == null ? '-' : n.toLocaleString('en-GB'));
+const fmtScore = (n: number | null) =>
+  n == null ? '-' : Number.isInteger(n) ? n.toLocaleString('en-GB') : n.toFixed(2);
 
 function drawDots(r: CanvasRenderer, count: number, active: number) {
   const gap = 0.03;
@@ -95,16 +97,15 @@ const coverSlide: SlideDef = {
   label: 'Cover',
   draw(r, { copy, slideCount, index }) {
     r.clear();
-    r.drawBackground(BRAND_BLUE);
-    // brand line top
-    r.drawText(copy.brandLine, { x: 0.06, y: 0.07, size: 0.03, color: BRAND_YELLOW, weight: '700', baseline: 'middle', font: DEFAULT_FONT });
-    fillCircle(r, 0.045, 0.07, 0.008, BRAND_YELLOW);
+    paintHalftoneBg(r);
+    // brand logo top-right (real PNG or gold wordmark)
+    paintLogo(r, { heightFrac: 0.1, topFrac: 0.05 });
     // kicker
-    r.drawText(copy.coverKicker, { x: 0.06, y: 0.40, size: 0.05, color: BRAND_YELLOW, weight: '700', baseline: 'middle', font: DEFAULT_FONT });
+    r.drawText(copy.coverKicker, { x: 0.06, y: 0.40, size: 0.05, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
     // big title (wraps + auto-fits)
     r.drawTextWrapped(copy.coverTitle, {
-      x: 0.06, y: 0.46, size: 0.108, color: BRAND_WHITE, weight: '800',
-      maxWidth: 0.88, lineHeight: 0.115, font: SERIF_FONT,
+      x: 0.06, y: 0.46, size: 0.108, color: BRAND_WHITE, weight: '900',
+      maxWidth: 0.88, lineHeight: 0.108, font: SERIF_FONT, letterSpacing: TRACK_TITLE,
     });
     // accent rule
     r.drawRect({ x: 0.06, y: 0.70, width: 0.16, height: 0.012, color: BRAND_YELLOW, radius: 0.006 });
@@ -127,9 +128,10 @@ function makeListSlide(id: string, label: string, range: [number, number]): Slid
     range,
     draw(r, { rows, copy, slideCount, index }) {
       r.clear();
-      r.drawBackground(BRAND_BLUE);
-      r.drawText(copy.listTitle, { x: 0.06, y: 0.085, size: 0.034, color: BRAND_YELLOW, weight: '700', baseline: 'middle', font: DEFAULT_FONT });
-      r.drawText(label, { x: 0.06, y: 0.15, size: 0.072, color: BRAND_WHITE, weight: '800', baseline: 'middle', font: SERIF_FONT });
+      paintHalftoneBg(r);
+      paintLogo(r, { heightFrac: 0.075, topFrac: 0.05 });
+      r.drawText(copy.listTitle, { x: 0.06, y: 0.085, size: 0.034, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
+      r.drawText(label, { x: 0.06, y: 0.15, size: 0.072, color: BRAND_WHITE, weight: '900', baseline: 'middle', font: SERIF_FONT, letterSpacing: TRACK_TITLE });
       r.drawRect({ x: 0.06, y: 0.195, width: 0.12, height: 0.01, color: BRAND_YELLOW, radius: 0.005 });
 
       const scoped = rowsInRange(rows, range);
@@ -144,11 +146,11 @@ function makeListSlide(id: string, label: string, range: [number, number]): Slid
         // rank badge
         fillCircle(r, 0.135, cy, 0.046, medalColour(row.rank));
         r.drawText(String(row.rank), { x: 0.135, y: cy, size: 0.046, color: row.rank <= 3 ? BRAND_BLUE : BRAND_WHITE, weight: '800', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
-        // name + team
-        const hasTeam = !!row.team;
-        r.drawText(row.name || '-', { x: 0.215, y: hasTeam ? cy - 0.018 : cy, size: 0.042, color: BRAND_WHITE, weight: '700', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.42 });
-        if (hasTeam) {
-          r.drawText(row.team, { x: 0.215, y: cy + 0.026, size: 0.026, color: MUTED, weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.42 });
+        // name + sub (location/postcode, falling back to team)
+        const sub = row.location || row.team;
+        r.drawText(row.name || '-', { x: 0.215, y: sub ? cy - 0.018 : cy, size: 0.042, color: BRAND_WHITE, weight: '800', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.42 });
+        if (sub) {
+          r.drawText(sub, { x: 0.215, y: cy + 0.026, size: 0.026, color: MUTED, weight: '600', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.42 });
         }
         // movement + score
         drawMovement(r, row.movement, 0.70, cy);
@@ -169,14 +171,16 @@ const winnerSlide: SlideDef = {
   id: 'winner',
   label: 'Enillydd',
   draw(r, { rows, copy, slideCount, index }) {
-    const w = rows.find((x) => x.rank === 1) ?? rows[0] ?? { name: '-', score: null, team: '', rank: 1, movement: null };
+    const w = rows.find((x) => x.rank === 1) ?? rows[0] ?? { name: '-', score: null, team: '', location: '', rank: 1, movement: null };
     r.clear();
-    r.drawBackground(BRAND_BLUE);
-    r.drawText(copy.winnerKicker, { x: 0.5, y: 0.16, size: 0.04, color: BRAND_YELLOW, weight: '700', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
+    paintHalftoneBg(r);
+    paintLogo(r, { heightFrac: 0.07, topFrac: 0.05 });
+    r.drawText(copy.winnerKicker, { x: 0.5, y: 0.16, size: 0.04, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
     r.drawText('🏆', { x: 0.5, y: 0.31, size: 0.17, align: 'center', baseline: 'middle', font: DEFAULT_FONT });
-    r.drawText(w.name || '-', { x: 0.5, y: 0.52, size: 0.088, color: BRAND_WHITE, weight: '800', align: 'center', baseline: 'middle', font: SERIF_FONT, maxWidth: 0.86 });
-    if (w.team) {
-      r.drawText(w.team, { x: 0.5, y: 0.58, size: 0.032, color: MUTED, weight: '500', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
+    r.drawText(w.name || '-', { x: 0.5, y: 0.52, size: 0.088, color: BRAND_WHITE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT, maxWidth: 0.86, letterSpacing: TRACK_TITLE });
+    {
+      const wsub = w.location || w.team;
+      if (wsub) r.drawText(wsub, { x: 0.5, y: 0.58, size: 0.032, color: MUTED, weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
     }
     r.drawText(fmtScore(w.score), { x: 0.5, y: 0.71, size: 0.19, color: BRAND_YELLOW, weight: '800', align: 'center', baseline: 'middle', font: SERIF_FONT });
     r.drawText(`${copy.scoreUnit} ${copy.winnerSubtitle}`, { x: 0.5, y: 0.80, size: 0.034, color: MUTED, weight: '500', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
@@ -193,10 +197,11 @@ const ctaSlide: SlideDef = {
   label: 'Galwad i weithredu',
   draw(r, { copy, slideCount, index }) {
     r.clear();
-    r.drawBackground(BRAND_BLUE);
+    paintHalftoneBg(r);
+    paintLogo(r, { heightFrac: 0.075, topFrac: 0.05 });
     r.drawTextWrapped(copy.ctaHeadline, {
-      x: 0.06, y: 0.30, size: 0.07, color: BRAND_WHITE, weight: '800',
-      maxWidth: 0.88, lineHeight: 0.082, font: SERIF_FONT,
+      x: 0.06, y: 0.30, size: 0.07, color: BRAND_WHITE, weight: '900',
+      maxWidth: 0.88, lineHeight: 0.08, font: SERIF_FONT, letterSpacing: TRACK_TITLE,
     });
     r.drawText(copy.ctaSub, { x: 0.06, y: 0.56, size: 0.036, color: MUTED, weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.88 });
     // action button

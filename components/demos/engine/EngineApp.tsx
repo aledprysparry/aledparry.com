@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { StoreProvider } from '@engine/lib/store/StoreProvider';
+import { I18nProvider } from '@engine/lib/i18n/I18nProvider';
+import { OverlayProvider } from '@engine/components/primitives';
 import AppShell from '@engine/components/AppShell';
 import Dashboard from '@engine/pages/Dashboard';
 import BrandDetail from '@engine/pages/BrandDetail';
@@ -27,17 +29,21 @@ export default function EngineApp() {
 
   return (
     <BrowserRouter basename="/app/carousel">
-      <StoreProvider>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route index element={<Dashboard />} />
-            <Route path="brands/:brandId" element={<BrandDetail />} />
-            <Route path="brands/:brandId/create" element={<CreateGraphic />} />
-            <Route path="graphics/:graphicId" element={<GraphicEditor />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </StoreProvider>
+      <I18nProvider>
+        <StoreProvider>
+          <OverlayProvider>
+            <Routes>
+              <Route element={<AppShell />}>
+                <Route index element={<Dashboard />} />
+                <Route path="brands/:brandId" element={<BrandDetail />} />
+                <Route path="brands/:brandId/create" element={<CreateGraphic />} />
+                <Route path="graphics/:graphicId" element={<GraphicEditor />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </OverlayProvider>
+        </StoreProvider>
+      </I18nProvider>
     </BrowserRouter>
   );
 }

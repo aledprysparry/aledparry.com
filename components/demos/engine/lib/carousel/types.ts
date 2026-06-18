@@ -10,6 +10,8 @@ export interface LeaderboardRow {
   name: string;
   score: number | null;
   team: string;
+  /** Optional location / postcode shown beside the name (e.g. "LL55"). */
+  location: string;
   movement: Movement | null;
 }
 

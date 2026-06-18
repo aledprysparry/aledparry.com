@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Check } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
+import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
 import { getKind } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
@@ -12,8 +13,10 @@ export default function CreateGraphic() {
   const [params] = useSearchParams();
   const store = useStore();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const brand = store.getBrand(brandId);
   const templates = store.templatesByBrand(brandId);
+  const folders = store.foldersByBrand(brandId);
 
   const [templateId, setTemplateId] = useState<string>(params.get('template') || templates[0]?.id || '');
   const template = templates.find((t) => t.id === templateId);
@@ -24,12 +27,13 @@ export default function CreateGraphic() {
     [template],
   );
   const [platform, setPlatform] = useState<PlatformId>(platforms[0] || 'instagram-carousel');
+  const [folderId, setFolderId] = useState<string>(params.get('folder') || '');
 
-  if (!brand) return <div className="mx-auto max-w-3xl px-8 py-10"><EmptyState title="Brand not found" /></div>;
+  if (!brand) return <div className="mx-auto max-w-3xl px-8 py-10"><EmptyState title={t('brand.notFound')} /></div>;
 
   const create = () => {
     if (!template) return;
-    const g = store.createGraphic(brandId, template.id, { platform });
+    const g = store.createGraphic(brandId, template.id, { platform, folderId: folderId || undefined });
     if (g) navigate(`/graphics/${g.id}`);
   };
 
@@ -38,15 +42,15 @@ export default function CreateGraphic() {
       <Link to={`/brands/${brandId}`} className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white">
         <ArrowLeft size={14} /> {brand.name}
       </Link>
-      <h1 className="font-serif text-[26px] font-extrabold tracking-tight" style={{ fontFamily: 'Bitter, serif' }}>Create graphic</h1>
-      <p className="mt-1 text-[13px] text-white/45">Choose a template and target platform. You can edit everything next.</p>
+      <h1 className="font-serif text-[26px] font-extrabold tracking-tight" style={{ fontFamily: 'Bitter, serif' }}>{t('create.title')}</h1>
+      <p className="mt-1 text-[13px] text-white/45">{t('create.subtitle')}</p>
 
       {templates.length === 0 ? (
-        <div className="mt-6"><EmptyState title="No templates in this brand" hint="Add one from the Templates tab first." action={<Link to={`/brands/${brandId}`}><Button variant="subtle">Go to brand</Button></Link>} /></div>
+        <div className="mt-6"><EmptyState title={t('create.noTemplates')} hint={t('create.noTemplatesHint')} action={<Link to={`/brands/${brandId}`}><Button variant="subtle">{t('create.goToBrand')}</Button></Link>} /></div>
       ) : (
         <>
           <section className="mt-7">
-            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-white/45">Template</h2>
+            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-white/45">{t('create.template')}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {templates.map((t) => {
                 const active = t.id === templateId;
@@ -66,7 +70,7 @@ export default function CreateGraphic() {
           </section>
 
           <section className="mt-7">
-            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-white/45">Platform</h2>
+            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-white/45">{t('create.platform')}</h2>
             <div className="flex flex-wrap gap-2">
               {platforms.map((p) => {
                 const preset = PLATFORM_PRESETS[p];
@@ -83,11 +87,21 @@ export default function CreateGraphic() {
                 );
               })}
             </div>
-            {kind && <p className="mt-3 text-[12px] text-white/40">Seeds with sample {kind.type} content - edit on the next screen.</p>}
+            {kind && <p className="mt-3 text-[12px] text-white/40">{t('create.seedNote', { type: kind.type })}</p>}
           </section>
 
+          {folders.length > 0 && (
+            <section className="mt-7">
+              <h2 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-white/45">{t('create.folder')}</h2>
+              <select value={folderId} onChange={(e) => setFolderId(e.target.value)} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+                <option value="">{t('create.noFolder')}</option>
+                {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            </section>
+          )}
+
           <div className="mt-8">
-            <Button onClick={create} disabled={!template}><Sparkles size={15} /> Create &amp; edit</Button>
+            <Button onClick={create} disabled={!template}><Sparkles size={15} /> {t('create.cta')}</Button>
           </div>
         </>
       )}

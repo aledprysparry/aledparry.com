@@ -26,7 +26,7 @@ function splitCells(line: string): string[] {
   return out.map((c) => c.trim());
 }
 
-const HEADER_HINTS = ['rank', 'position', 'pos', 'safle', 'name', 'enw', 'player', 'score', 'sgor', 'points', 'pwynt', 'team', 'tîm', 'tim', 'move', 'movement', 'change'];
+const HEADER_HINTS = ['rank', 'position', 'pos', 'safle', 'name', 'enw', 'player', 'username', 'user', 'score', 'sgor', 'points', 'pwynt', 'team', 'tîm', 'tim', 'location', 'lleoliad', 'postcode', 'côd post', 'cod post', 'ardal', 'area', 'move', 'movement', 'change'];
 
 function looksLikeHeader(cells: string[]): boolean {
   const joined = cells.join(' ').toLowerCase();
@@ -35,19 +35,33 @@ function looksLikeHeader(cells: string[]): boolean {
   return hasHint && !firstIsNumber;
 }
 
-interface ColMap { rank?: number; name?: number; score?: number; team?: number; movement?: number; }
+interface ColMap { rank?: number; name?: number; score?: number; team?: number; location?: number; movement?: number; }
 
 function buildColumnMap(headerCells: string[]): ColMap {
   const map: ColMap = {};
   headerCells.forEach((raw, idx) => {
     const h = raw.toLowerCase().trim();
     if (/(rank|position|pos|safle)/.test(h)) map.rank = idx;
-    else if (/(name|enw|player)/.test(h)) map.name = idx;
+    else if (/(name|enw|player|user)/.test(h)) map.name = idx;
     else if (/(score|sgor|points|pwynt|pts)/.test(h)) map.score = idx;
+    else if (/(location|lleoliad|postcode|côd|cod|ardal|area)/.test(h)) map.location = idx;
     else if (/(team|tîm|tim|company|club)/.test(h)) map.team = idx;
     else if (/(move|change|delta|trend)/.test(h)) map.movement = idx;
   });
   return map;
+}
+
+// Freeform "list" paste: `1: Dylan Llyr (LL55) 529.99` / `1. Name 500` /
+// `1 Name (CF5) 512` - rank, then name, optional (location), score at end.
+function parseFreeformLine(line: string): { rank: number | null; name: string; location: string; score: number | null } | null {
+  const m = line.match(/^\s*(\d+)\s*[:.)\-]?\s+(.*\S)\s+([£$]?[\d][\d.,]*)\s*$/);
+  if (!m) return null;
+  const rank = parseInt(m[1], 10);
+  let rest = m[2].trim();
+  let location = '';
+  const locM = rest.match(/\(([^)]*)\)\s*$/);
+  if (locM) { location = locM[1].trim(); rest = rest.slice(0, rest.length - locM[0].length).trim(); }
+  return { rank: Number.isFinite(rank) ? rank : null, name: rest, location, score: cleanNum(m[3]) };
 }
 
 function parseMovement(raw: string | undefined): Movement | null {
@@ -106,13 +120,24 @@ export function parseLeaderboardText(text: string): ParseResult {
   for (let i = startIdx; i < lines.length; i++) {
     const cells = splitCells(lines[i]);
     autoRank++;
+
+    // No delimiters on this line - try the freeform "1: Name (LOC) score" shape.
+    if (cells.length <= 1) {
+      const ff = parseFreeformLine(lines[i]);
+      if (ff && (ff.name || ff.score != null)) {
+        rows.push({ rank: ff.rank ?? autoRank, name: ff.name.trim(), score: ff.score, team: '', location: ff.location.trim(), movement: null });
+        continue;
+      }
+    }
+
     const rank = cleanInt(cols.rank != null ? cells[cols.rank] : '') ?? autoRank;
     const name = (cols.name != null ? cells[cols.name] : '') || '';
     const score = cleanNum(cols.score != null ? cells[cols.score] : '');
     const team = (cols.team != null ? cells[cols.team] : '') || '';
+    const location = (cols.location != null ? cells[cols.location] : '') || '';
     const movement = parseMovement(cols.movement != null ? cells[cols.movement] : '');
     if (!name && score == null) continue;
-    rows.push({ rank, name: name.trim(), score, team: team.trim(), movement });
+    rows.push({ rank, name: name.trim(), score, team: team.trim(), location: location.trim(), movement });
   }
 
   if (rows.length === 0) {
@@ -151,14 +176,15 @@ export function rowsInRange(rows: LeaderboardRow[], range?: [number, number]): L
   return rows.filter((r) => r.rank >= from && r.rank <= to);
 }
 
-export const SAMPLE_CSV = `safle,enw,sgor,tîm,symud
-1,Aled Parry,985,Tîm Gwynedd,+2
-2,Sioned Jones,942,Tîm Caerdydd,-1
-3,Rhys Williams,910,Tîm Abertawe,0
-4,Megan Hughes,888,Tîm Gwynedd,+1
-5,Dafydd Evans,861,Tîm Wrecsam,+3
-6,Catrin Pugh,840,Tîm Caerdydd,-2
-7,Iwan Davies,815,Tîm Bangor,0
-8,Lowri Morgan,792,Tîm Abertawe,+4
-9,Geraint Lloyd,770,Tîm Wrecsam,-1
-10,Elin Roberts,748,Tîm Bangor,+1`;
+// Real Cwis Bob Dydd shape: position, username (location/postcode), score.
+// Paste this freeform list straight in, or use CSV with a location column.
+export const SAMPLE_CSV = `1: Dylan Llyr (LL55) 529.99
+2: GaryP (LL58) 523.50
+3: EleanorT (BS9) 522.99
+4: iolo77 (CF5) 512.94
+5: HuwT (LL77) 501.08
+6: melfync (LL30) 488.88
+7: EmyrE (LL61) 476.18
+8: Siwan Mair (LL54) 471.31
+9: Guto E (SA41) 467.02
+10: Gwilym Dwyfor (LL54) 466.99`;
