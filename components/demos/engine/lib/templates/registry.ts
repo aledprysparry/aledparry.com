@@ -7,6 +7,7 @@
 
 import type { PlatformId, TemplateType, GraphicElement } from '@engine/lib/model/types';
 import type { RatioKey } from '@engine/lib/canvas/CanvasRenderer';
+import type { StringKey } from '@engine/lib/i18n/strings';
 import type { SlideDef } from '@engine/lib/carousel/types';
 import { SLIDES, DEFAULT_COPY } from '@engine/lib/carousel/template';
 import { parseLeaderboardText, SAMPLE_CSV, type ParseResult } from '@engine/lib/carousel/parseLeaderboard';
@@ -25,8 +26,9 @@ export interface TemplateKind {
   // carousel kinds:
   slides?: SlideDef[];
   defaultCopy?: Record<string, string>;
-  /** Which copy fields the editor shows (defaults to the carousel set). */
-  copyFields?: { key: string; label: string }[];
+  /** Which copy fields the editor shows (defaults to the carousel set).
+   *  labelKey points at an i18n string so the label is bilingual. */
+  copyFields?: { key: string; label: string; labelKey?: StringKey }[];
   sampleData?: string;
   dataHint?: string;
   parse?: (text: string) => ParseResult;
@@ -62,8 +64,8 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     slides: SCOREBOARD_SLIDES,
     defaultCopy: SCOREBOARD_COPY,
     copyFields: [
-      { key: 'title', label: 'Title' },
-      { key: 'dateRange', label: 'Date range' },
+      { key: 'title', label: 'Title', labelKey: 'copy.field.title' },
+      { key: 'dateRange', label: 'Date range', labelKey: 'copy.field.dateRange' },
     ],
     sampleData: SCOREBOARD_SAMPLE,
     dataHint: 'rank, name, score (decimals ok, e.g. 61.33)',

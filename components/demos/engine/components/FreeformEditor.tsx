@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Type, Square, Download, ShieldCheck, Trash2, ChevronUp, ChevronDown, ImagePlus } from 'lucide-react';
+import { ArrowLeft, Type, Square, Download, ShieldCheck, Trash2, ChevronUp, ChevronDown, ImagePlus, Pencil } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
+import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button } from '@engine/components/ui';
 import Stage from '@engine/components/Stage';
 import AiPanel from '@engine/components/AiPanel';
@@ -17,6 +18,7 @@ const FONTS = ['Inter', 'Bitter'];
 
 export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic }) {
   const store = useStore();
+  const { t } = useI18n();
   const brand = store.getBrand(graphic.brandId);
   const assets = store.assetsByBrand(graphic.brandId);
   const fontOptions = useMemo(() => Array.from(new Set([...fontAssetFamilies(assets), ...(brand?.fonts ?? []), ...FONTS])), [assets, brand]);
@@ -96,19 +98,22 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
 
   return (
     <div className="mx-auto max-w-[1320px] px-8 py-8">
-      <Link to={`/brands/${graphic.brandId}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white"><ArrowLeft size={14} /> Back to brand</Link>
+      <Link to={`/brands/${graphic.brandId}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white"><ArrowLeft size={14} /> {t('editor.backToBrand')}</Link>
 
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <input value={graphic.name} onChange={(e) => store.updateGraphic(graphic.id, { name: e.target.value })} className="bg-transparent text-[22px] font-extrabold tracking-tight focus:outline-none" style={{ fontFamily: 'Bitter, serif' }} />
+        <label className="group inline-flex items-center gap-2 rounded-lg px-1 -mx-1 hover:bg-white/5 focus-within:bg-white/5" title={t('editor.renameHint')}>
+          <input value={graphic.name} onChange={(e) => store.updateGraphic(graphic.id, { name: e.target.value })} aria-label={t('common.rename')} className="bg-transparent text-[22px] font-extrabold tracking-tight focus:outline-none" style={{ fontFamily: 'Bitter, serif' }} />
+          <Pencil size={15} className="text-white/30 transition-colors group-hover:text-white/60" />
+        </label>
         <div className="flex items-center gap-3">
           <select value={platform} onChange={(e) => store.updateGraphic(graphic.id, { platformPresetId: e.target.value as PlatformId })} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
             {(Object.keys(PLATFORM_PRESETS) as PlatformId[]).map((p) => <option key={p} value={p}>{PLATFORM_PRESETS[p].name}</option>)}
           </select>
-          <button onClick={() => setShowSafe((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold ${showSafe ? 'bg-indigo-500/20 text-indigo-200' : 'text-white/50 hover:bg-white/5'}`}><ShieldCheck size={14} /> Safe</button>
+          <button onClick={() => setShowSafe((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold ${showSafe ? 'bg-indigo-500/20 text-indigo-200' : 'text-white/50 hover:bg-white/5'}`}><ShieldCheck size={14} /> {t('editor.safeAreas')}</button>
           <div className="inline-flex overflow-hidden rounded-lg border border-white/10">
             {['image/png', 'image/jpeg'].map((m) => <button key={m} onClick={() => setFormat(m)} className={`px-3 py-1.5 text-[13px] font-semibold ${format === m ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}>{m === 'image/png' ? 'PNG' : 'JPEG'}</button>)}
           </div>
-          <Button onClick={doExport} disabled={exporting}><Download size={15} /> {exporting ? 'Exporting…' : 'Export'}</Button>
+          <Button onClick={doExport} disabled={exporting}><Download size={15} /> {exporting ? t('editor.exporting') : t('editor.exportImage')}</Button>
         </div>
       </header>
 
@@ -116,17 +121,17 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
         {/* stage */}
         <div>
           <div className="mb-3 flex flex-wrap gap-2">
-            <Button variant="subtle" onClick={() => addEl(makeText('New text'))}><Type size={14} /> Text</Button>
-            <Button variant="subtle" onClick={() => addEl(makeShape())}><Square size={14} /> Shape</Button>
+            <Button variant="subtle" onClick={() => addEl(makeText('New text'))}><Type size={14} /> {t('ff.text')}</Button>
+            <Button variant="subtle" onClick={() => addEl(makeShape())}><Square size={14} /> {t('ff.shape')}</Button>
             <label className="cursor-pointer">
               <input type="file" accept="image/*,.woff,.woff2,.ttf,.otf" className="hidden" onChange={(e) => onUploadAsset(e.target.files?.[0])} />
-              <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10"><ImagePlus size={14} /> Upload asset</span>
+              <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10"><ImagePlus size={14} /> {t('ff.uploadAsset')}</span>
             </label>
           </div>
           <div className="mx-auto" style={{ maxWidth: ratio === 'landscape' ? 720 : ratio === 'story' ? 380 : 520 }}>
             <Stage elements={elements} width={dims.w} height={dims.h} selectedId={selectedId} onSelect={setSelectedId} onChange={setElements} onCommit={() => commit()} onDropAsset={placeAsset} showSafe={showSafe} safeInsets={safeInsets} />
           </div>
-          <p className="mt-3 text-center text-[12px] text-white/35">Drag assets onto the stage · drag to move · corner to resize · double-click text to edit</p>
+          <p className="mt-3 text-center text-[12px] text-white/35">{t('ff.dragHint')}</p>
         </div>
 
         {/* assets + inspector */}
@@ -146,60 +151,60 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
           />
         <div className="rounded-2xl border border-white/10 bg-[#141d30] p-4">
           {!selected ? (
-            <p className="text-[13px] text-white/45">Select an element to edit its properties, or add one from the toolbar.</p>
+            <p className="text-[13px] text-white/45">{t('ff.selectPrompt')}</p>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-bold uppercase tracking-wide text-white/55">{selected.type}</span>
                 <div className="flex gap-1">
-                  <button onClick={() => update(reorder(elements, selected.id, 1))} className="text-white/40 hover:text-white" title="Bring forward"><ChevronUp size={16} /></button>
-                  <button onClick={() => update(reorder(elements, selected.id, -1))} className="text-white/40 hover:text-white" title="Send back"><ChevronDown size={16} /></button>
-                  <button onClick={del} className="text-white/40 hover:text-red-300" title="Delete"><Trash2 size={15} /></button>
+                  <button onClick={() => update(reorder(elements, selected.id, 1))} className="text-white/40 hover:text-white" title={t('ff.bringForward')}><ChevronUp size={16} /></button>
+                  <button onClick={() => update(reorder(elements, selected.id, -1))} className="text-white/40 hover:text-white" title={t('ff.sendBack')}><ChevronDown size={16} /></button>
+                  <button onClick={del} className="text-white/40 hover:text-red-300" title={t('common.delete')}><Trash2 size={15} /></button>
                 </div>
               </div>
 
               {selected.type === 'text' && (
                 <>
                   <textarea value={selected.content ?? ''} onChange={(e) => patchEl({ content: e.target.value })} className="w-full h-20 resize-y rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none" />
-                  <Field label="Font">
+                  <Field label={t('ff.font')}>
                     <select value={(sStyle.fontFamily as string) ?? 'Inter'} onChange={(e) => patchStyle({ fontFamily: e.target.value })} className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[13px] text-white/90 focus:outline-none">
                       {fontOptions.map((f) => <option key={f} value={f}>{f}</option>)}
                     </select>
                   </Field>
-                  <Field label={`Size ${Math.round(((sStyle.fontSize as number) ?? 0.05) * 1000) / 10}`}>
+                  <Field label={`${t('ff.size')} ${Math.round(((sStyle.fontSize as number) ?? 0.05) * 1000) / 10}`}>
                     <input type="range" min={20} max={160} value={Math.round(((sStyle.fontSize as number) ?? 0.05) * 1000)} onChange={(e) => patchStyle({ fontSize: Number(e.target.value) / 1000 })} className="w-full" />
                   </Field>
-                  <Field label="Weight">
+                  <Field label={t('ff.weight')}>
                     <select value={(sStyle.fontWeight as string) ?? '700'} onChange={(e) => patchStyle({ fontWeight: e.target.value })} className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[13px] text-white/90 focus:outline-none">
                       {['400', '500', '600', '700', '800', '900'].map((w) => <option key={w} value={w}>{w}</option>)}
                     </select>
                   </Field>
-                  <Field label="Align">
+                  <Field label={t('ff.align')}>
                     <div className="flex gap-1">
                       {(['left', 'center', 'right'] as const).map((a) => (
                         <button key={a} onClick={() => patchStyle({ align: a })} className={`flex-1 rounded-lg border px-2 py-1.5 text-[12px] capitalize ${(sStyle.align ?? 'left') === a ? 'border-indigo-400/70 bg-indigo-500/10 text-white' : 'border-white/10 text-white/60'}`}>{a}</button>
                       ))}
                     </div>
                   </Field>
-                  <Field label="Colour"><ColourInput value={(sStyle.color as string) ?? '#ffffff'} onChange={(c) => patchStyle({ color: c })} /></Field>
+                  <Field label={t('ff.colour')}><ColourInput value={(sStyle.color as string) ?? '#ffffff'} onChange={(c) => patchStyle({ color: c })} /></Field>
                 </>
               )}
 
               {selected.type === 'shape' && (
                 <>
-                  <Field label="Fill"><ColourInput value={(sStyle.fill as string) ?? '#6366f1'} onChange={(c) => patchStyle({ fill: c })} /></Field>
-                  <Field label={`Corner ${Math.round(((sStyle.radius as number) ?? 0) * 100)}`}>
+                  <Field label={t('ff.fill')}><ColourInput value={(sStyle.fill as string) ?? '#6366f1'} onChange={(c) => patchStyle({ fill: c })} /></Field>
+                  <Field label={`${t('ff.corner')} ${Math.round(((sStyle.radius as number) ?? 0) * 100)}`}>
                     <input type="range" min={0} max={20} value={Math.round(((sStyle.radius as number) ?? 0) * 100)} onChange={(e) => patchStyle({ radius: Number(e.target.value) / 100 })} className="w-full" />
                   </Field>
                 </>
               )}
 
               {selected.type === 'background' && (
-                <Field label="Background"><ColourInput value={(sStyle.fill as string) ?? '#0c1322'} onChange={(c) => patchStyle({ fill: c })} /></Field>
+                <Field label={t('ff.background')}><ColourInput value={(sStyle.fill as string) ?? '#0c1322'} onChange={(c) => patchStyle({ fill: c })} /></Field>
               )}
 
               {(selected.type === 'image' || selected.type === 'logo') && (
-                <Field label="Fit">
+                <Field label={t('ff.fit')}>
                   <div className="flex gap-1">
                     {(['contain', 'cover'] as const).map((f) => (
                       <button key={f} onClick={() => patchStyle({ fit: f })} className={`flex-1 rounded-lg border px-2 py-1.5 text-[12px] capitalize ${(sStyle.fit ?? 'contain') === f ? 'border-indigo-400/70 bg-indigo-500/10 text-white' : 'border-white/10 text-white/60'}`}>{f}</button>
@@ -210,7 +215,7 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
 
               {brand && brand.colours.length > 0 && (
                 <div>
-                  <p className="mb-1.5 text-[11px] uppercase tracking-wide text-white/40">Brand colours</p>
+                  <p className="mb-1.5 text-[11px] uppercase tracking-wide text-white/40">{t('ff.brandColours')}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {brand.colours.map((c, i) => (
                       <button key={i} onClick={() => patchStyle(selected.type === 'text' ? { color: c } : { fill: c })} className="h-6 w-6 rounded-full border border-white/15" style={{ background: c }} title={c} />
@@ -234,6 +239,7 @@ function AssetPanel({ assets, onPlace, onSetBg, onApplyFont }: {
   onSetBg: (a: BrandAsset) => void;
   onApplyFont: (a: BrandAsset) => void;
 }) {
+  const { t } = useI18n();
   const imgOf = (types: AssetType[]) => assets.filter((a) => types.includes(a.type) && a.url.startsWith('data:'));
   const logos = imgOf(['logo']);
   const backgrounds = imgOf(['background']);
@@ -260,17 +266,17 @@ function AssetPanel({ assets, onPlace, onSetBg, onApplyFont }: {
   );
 
   if (assets.length === 0) {
-    return <div className="rounded-2xl border border-white/10 bg-[#141d30] p-4 text-[12px] text-white/45">Upload logos, backgrounds, images or GIFs (button above, or the brand Assets tab), then drag them onto the stage.</div>;
+    return <div className="rounded-2xl border border-white/10 bg-[#141d30] p-4 text-[12px] text-white/45">{t('ff.assetsEmpty')}</div>;
   }
 
   return (
     <div className="space-y-3 rounded-2xl border border-white/10 bg-[#141d30] p-4">
-      <p className="text-[12px] font-bold uppercase tracking-wide text-white/55">Assets <span className="font-normal text-white/35">· drag onto stage</span></p>
-      {logos.length > 0 && <Group label="Logos"><div className="grid grid-cols-4 gap-2">{logos.map((a) => <Thumb key={a.id} a={a} onClick={() => onPlace(a)} />)}</div></Group>}
-      {backgrounds.length > 0 && <Group label="Backgrounds · click to apply"><div className="grid grid-cols-4 gap-2">{backgrounds.map((a) => <Thumb key={a.id} a={a} onClick={() => onSetBg(a)} />)}</div></Group>}
-      {others.length > 0 && <Group label="Images & GIFs"><div className="grid grid-cols-4 gap-2">{others.map((a) => <Thumb key={a.id} a={a} onClick={() => onPlace(a)} />)}</div></Group>}
+      <p className="text-[12px] font-bold uppercase tracking-wide text-white/55">{t('ff.assets')} <span className="font-normal text-white/35">· {t('ff.dragOntoStage')}</span></p>
+      {logos.length > 0 && <Group label={t('ff.logos')}><div className="grid grid-cols-4 gap-2">{logos.map((a) => <Thumb key={a.id} a={a} onClick={() => onPlace(a)} />)}</div></Group>}
+      {backgrounds.length > 0 && <Group label={t('ff.backgroundsApply')}><div className="grid grid-cols-4 gap-2">{backgrounds.map((a) => <Thumb key={a.id} a={a} onClick={() => onSetBg(a)} />)}</div></Group>}
+      {others.length > 0 && <Group label={t('ff.imagesGifs')}><div className="grid grid-cols-4 gap-2">{others.map((a) => <Thumb key={a.id} a={a} onClick={() => onPlace(a)} />)}</div></Group>}
       {fonts.length > 0 && (
-        <Group label="Fonts · click to apply to selected text">
+        <Group label={t('ff.fontsApply')}>
           <div className="flex flex-wrap gap-1.5">
             {fonts.map((a) => <button key={a.id} onClick={() => onApplyFont(a)} className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[12px] text-white/80 hover:border-indigo-400/60" style={{ fontFamily: `${fontFamilyFor(a)}, sans-serif` }}>{fontFamilyFor(a)}</button>)}
           </div>

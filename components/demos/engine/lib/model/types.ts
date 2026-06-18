@@ -93,6 +93,14 @@ export interface TemplateStyle {
   createdAt: ISODate;
 }
 
+/** A user-created grouping of graphics within a brand. */
+export interface Folder {
+  id: ID;
+  brandId: ID;
+  name: string;
+  createdAt: ISODate;
+}
+
 export interface Template {
   id: ID;
   brandId: ID;
@@ -135,6 +143,8 @@ export interface GeneratedGraphic {
   brandId: ID;
   templateId: ID;
   platformPresetId?: PlatformId;
+  /** Optional folder this graphic belongs to (null/undefined = Unfiled). */
+  folderId?: ID;
   name: string;
   /**
    * Template-kind-driven graphics (the carousel POC) store their inputs

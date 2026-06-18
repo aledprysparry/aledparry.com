@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Upload, FileSpreadsheet, Check } from 'lucide-react';
 import { fileToText } from '@engine/lib/carousel/parseLeaderboard';
+import { useI18n } from '@engine/lib/i18n/I18nProvider';
 
 interface Props {
   value: string;
@@ -13,6 +14,7 @@ interface Props {
 
 export default function DataInput({ value, onChange, warnings, error, rowCount, onLoadSample }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const { t } = useI18n();
 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
@@ -27,7 +29,7 @@ export default function DataInput({ value, onChange, warnings, error, rowCount, 
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <label className="text-[12px] font-semibold tracking-wide uppercase text-white/55">
-          Data'r sgorfwrdd
+          {t('data.label')}
         </label>
         <div className="flex items-center gap-1">
           <input
@@ -41,13 +43,13 @@ export default function DataInput({ value, onChange, warnings, error, rowCount, 
             onClick={() => fileRef.current?.click()}
             className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/70 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
           >
-            <Upload size={13} /> CSV / XLSX
+            <Upload size={13} /> {t('data.csv')}
           </button>
           <button
             onClick={onLoadSample}
             className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/70 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
           >
-            <FileSpreadsheet size={13} /> Sampl
+            <FileSpreadsheet size={13} /> {t('data.sample')}
           </button>
         </div>
       </div>
@@ -56,13 +58,11 @@ export default function DataInput({ value, onChange, warnings, error, rowCount, 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
-        placeholder={'Gludwch o daenlen, neu deipiwch:\nsafle,enw,sgor\n1,Aled Parry,985\n2,Sioned Jones,942'}
+        placeholder={t('data.placeholder')}
         className="w-full h-56 resize-y rounded-xl bg-black/30 border border-white/10 focus:border-[#fecf0a]/60 focus:outline-none px-4 py-3 font-mono text-[13px] leading-relaxed text-white/90 placeholder:text-white/25"
       />
 
-      <p className="text-[12px] text-white/40">
-        CSV, XLSX neu ludo o daenlen. Colofnau: <span className="text-white/70">safle, enw, sgor</span> (dewisol: tîm, symud fel <span className="text-white/70">+2 / -1 / 0</span>).
-      </p>
+      <p className="text-[12px] text-white/40">{t('data.hint', { cols: t('data.cols') })}</p>
 
       {error && (
         <div className="rounded-lg border border-[#f87171]/40 bg-[#f87171]/10 px-4 py-2.5 text-[13px] text-[#fca5a5]">
@@ -76,7 +76,7 @@ export default function DataInput({ value, onChange, warnings, error, rowCount, 
       )}
       {!error && (
         <div className="inline-flex items-center gap-1.5 text-[12px] text-[#4ade80]">
-          <Check size={13} /> {rowCount} chwaraewr yn barod
+          <Check size={13} /> {t('data.ready', { n: rowCount })}
         </div>
       )}
     </div>

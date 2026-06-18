@@ -13,6 +13,7 @@ import type {
   Template,
   GeneratedGraphic,
   GraphicElement,
+  Folder,
   AssetType,
   PlatformId,
 } from '@engine/lib/model/types';
@@ -24,6 +25,7 @@ import {
   markSeeded,
   newId,
   now,
+  exportSnapshot,
   type CollectionName,
 } from './persist';
 import { buildSeed } from './seed';
@@ -38,6 +40,7 @@ interface StoreState {
   templateStyles: TemplateStyle[];
   templates: Template[];
   graphics: GeneratedGraphic[];
+  folders: Folder[];
 }
 
 function initialState(): StoreState {
@@ -46,7 +49,7 @@ function initialState(): StoreState {
     saveCollection('brands', seed.brands);
     saveCollection('templates', seed.templates);
     markSeeded();
-    return { brands: seed.brands, templates: seed.templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [] };
+    return { brands: seed.brands, templates: seed.templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], folders: [] };
   }
   return {
     brands: loadCollection('brands'),
@@ -55,7 +58,16 @@ function initialState(): StoreState {
     templateStyles: loadCollection('templateStyles'),
     templates: loadCollection('templates'),
     graphics: loadCollection('graphics'),
+    folders: loadCollection('folders'),
   };
+}
+
+/** Make `base` unique against an existing set of names (appends " (2)", " (3)"...). */
+function uniqueName(base: string, existing: string[]): string {
+  if (!existing.includes(base)) return base;
+  let n = 2;
+  while (existing.includes(`${base} (${n})`)) n++;
+  return `${base} (${n})`;
 }
 
 export interface StoreApi extends StoreState {
@@ -66,6 +78,7 @@ export interface StoreApi extends StoreState {
   getBrand: (id: string) => Brand | undefined;
   // assets
   addAsset: (brandId: string, a: { type: AssetType; name: string; url: string }) => BrandAsset;
+  renameAsset: (id: string, name: string) => void;
   removeAsset: (id: string) => void;
   assetsByBrand: (brandId: string) => BrandAsset[];
   // social
@@ -78,16 +91,26 @@ export interface StoreApi extends StoreState {
   stylesByBrand: (brandId: string) => TemplateStyle[];
   // templates
   createTemplate: (brandId: string, kindId: string, name?: string, opts?: { styleId?: string; seedElements?: GraphicElement[] }) => Template | undefined;
+  renameTemplate: (id: string, name: string) => void;
   deleteTemplate: (id: string) => void;
   templatesByBrand: (brandId: string) => Template[];
   getTemplate: (id: string) => Template | undefined;
   // graphics
-  createGraphic: (brandId: string, templateId: string, opts?: { name?: string; platform?: PlatformId }) => GeneratedGraphic | undefined;
+  createGraphic: (brandId: string, templateId: string, opts?: { name?: string; platform?: PlatformId; folderId?: string }) => GeneratedGraphic | undefined;
   updateGraphic: (id: string, patch: Partial<GeneratedGraphic>) => void;
   deleteGraphic: (id: string) => void;
+  restoreGraphic: (g: GeneratedGraphic) => void; // re-insert after a delete (undo)
   duplicateGraphic: (id: string) => GeneratedGraphic | undefined;
+  moveGraphicToFolder: (id: string, folderId: string | null) => void;
   graphicsByBrand: (brandId: string) => GeneratedGraphic[];
   getGraphic: (id: string) => GeneratedGraphic | undefined;
+  // folders
+  createFolder: (brandId: string, name: string) => Folder;
+  renameFolder: (id: string, name: string) => void;
+  deleteFolder: (id: string) => void; // graphics inside become Unfiled
+  foldersByBrand: (brandId: string) => Folder[];
+  // backup
+  exportAll: () => string;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -147,6 +170,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('templateStyles', (s) => s.filter((x) => x.brandId !== id));
         update('templates', (tp) => tp.filter((x) => x.brandId !== id));
         update('graphics', (g) => g.filter((x) => x.brandId !== id));
+        update('folders', (f) => f.filter((x) => x.brandId !== id));
       },
       getBrand: (id) => state.brands.find((b) => b.id === id),
 
@@ -157,6 +181,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (a.type === 'logo') update('brands', (b) => b.map((br) => (br.id === brandId ? { ...br, logos: [...br.logos, asset.id], updatedAt: now() } : br)));
         return asset;
       },
+      renameAsset: (id, name) =>
+        update('assets', (x) => x.map((a) => (a.id === id ? { ...a, name: name.trim() || a.name } : a))),
       removeAsset: (id) => {
         update('assets', (x) => x.filter((a) => a.id !== id));
         update('brands', (b) => b.map((br) => ({ ...br, logos: br.logos.filter((l) => l !== id) })));
@@ -193,6 +219,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('templates', (x) => [...x, tpl]);
         return tpl;
       },
+      renameTemplate: (id, name) =>
+        update('templates', (x) => x.map((t) => (t.id === id ? { ...t, name: name.trim() || t.name } : t))),
       deleteTemplate: (id) => update('templates', (x) => x.filter((t) => t.id !== id)),
       templatesByBrand: (brandId) => state.templates.filter((t) => t.brandId === brandId),
       getTemplate: (id) => state.templates.find((t) => t.id === id),
@@ -204,12 +232,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!tpl || !kind) return undefined;
         const brand = state.brands.find((b) => b.id === brandId);
         const t = now();
+        const defaultName = `${kind.name} - ${new Date().toLocaleDateString('en-GB')}`;
+        const existingNames = state.graphics.filter((g) => g.brandId === brandId).map((g) => g.name);
         const base = {
           id: newId('gfx'),
           brandId,
           templateId,
           platformPresetId: opts?.platform ?? kind.supportedPlatforms[0] ?? 'instagram-carousel',
-          name: opts?.name || `${kind.name} - ${new Date().toLocaleDateString('en-GB')}`,
+          folderId: opts?.folderId,
+          name: opts?.name || uniqueName(defaultName, existingNames),
           createdAt: t,
           updatedAt: t,
         };
@@ -228,16 +259,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateGraphic: (id, patch) =>
         update('graphics', (x) => x.map((g) => (g.id === id ? { ...g, ...patch, updatedAt: now() } : g))),
       deleteGraphic: (id) => update('graphics', (x) => x.filter((g) => g.id !== id)),
+      restoreGraphic: (g) => update('graphics', (x) => (x.some((y) => y.id === g.id) ? x : [g, ...x])),
       duplicateGraphic: (id) => {
         const src = state.graphics.find((g) => g.id === id);
         if (!src) return undefined;
         const t = now();
-        const copy: GeneratedGraphic = { ...src, id: newId('gfx'), name: `${src.name} (copy)`, createdAt: t, updatedAt: t };
+        const existingNames = state.graphics.filter((g) => g.brandId === src.brandId).map((g) => g.name);
+        const copy: GeneratedGraphic = { ...src, id: newId('gfx'), name: uniqueName(`${src.name} (copy)`, existingNames), createdAt: t, updatedAt: t };
         update('graphics', (x) => [copy, ...x]);
         return copy;
       },
+      moveGraphicToFolder: (id, folderId) =>
+        update('graphics', (x) => x.map((g) => (g.id === id ? { ...g, folderId: folderId ?? undefined, updatedAt: now() } : g))),
       graphicsByBrand: (brandId) => state.graphics.filter((g) => g.brandId === brandId),
       getGraphic: (id) => state.graphics.find((g) => g.id === id),
+
+      // ── folders ──
+      createFolder: (brandId, name) => {
+        const existing = state.folders.filter((f) => f.brandId === brandId).map((f) => f.name);
+        const folder: Folder = { id: newId('folder'), brandId, name: uniqueName(name.trim() || 'New folder', existing), createdAt: now() };
+        update('folders', (f) => [...f, folder]);
+        return folder;
+      },
+      renameFolder: (id, name) =>
+        update('folders', (f) => f.map((x) => (x.id === id ? { ...x, name: name.trim() || x.name } : x))),
+      deleteFolder: (id) => {
+        update('folders', (f) => f.filter((x) => x.id !== id));
+        update('graphics', (g) => g.map((x) => (x.folderId === id ? { ...x, folderId: undefined } : x)));
+      },
+      foldersByBrand: (brandId) => state.folders.filter((f) => f.brandId === brandId),
+
+      // ── backup ──
+      exportAll: () => exportSnapshot({ assets: state.assets }),
     };
   }, [state, update]);
 

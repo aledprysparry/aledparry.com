@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useI18n } from '@engine/lib/i18n/I18nProvider';
+import type { StringKey } from '@engine/lib/i18n/strings';
 
-export type CopyField = { key: string; label: string };
+export type CopyField = { key: string; label: string; labelKey?: StringKey };
 
 const DEFAULT_FIELDS: CopyField[] = [
   { key: 'brandLine', label: 'Brand' },
@@ -29,6 +31,7 @@ interface Props {
 
 export default function CopyEditor({ copy, onChange, fields }: Props) {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
   const FIELDS = fields ?? DEFAULT_FIELDS;
   return (
     <div>
@@ -36,14 +39,14 @@ export default function CopyEditor({ copy, onChange, fields }: Props) {
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between text-[13px] font-semibold text-white/80"
       >
-        <span>Golygu testun</span>
+        <span>{t('copy.title')}</span>
         <ChevronDown size={16} className={`text-white/40 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="grid grid-cols-1 gap-3 mt-4">
           {FIELDS.map((f) => (
             <label key={f.key} className="flex flex-col gap-1">
-              <span className="text-[11px] uppercase tracking-wide text-white/40">{f.label}</span>
+              <span className="text-[11px] uppercase tracking-wide text-white/40">{f.labelKey ? t(f.labelKey) : f.label}</span>
               <input
                 value={copy[f.key] ?? ''}
                 onChange={(e) => onChange(f.key, e.target.value)}

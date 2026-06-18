@@ -14,6 +14,7 @@ const TABLE: Record<CollectionName, string> = {
   templateStyles: 'cg_template_styles',
   templates: 'cg_templates',
   graphics: 'cg_graphics',
+  folders: 'cg_folders',
 };
 
 interface HasId { id: string }

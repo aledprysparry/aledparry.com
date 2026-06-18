@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Download, ShieldCheck, Pencil } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
+import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
 import DataInput from '@engine/components/DataInput';
 import CopyEditor from '@engine/components/CopyEditor';
@@ -16,6 +17,7 @@ import type { PlatformId } from '@engine/lib/model/types';
 export default function GraphicEditor() {
   const { graphicId = '' } = useParams();
   const store = useStore();
+  const { t } = useI18n();
   const graphic = store.getGraphic(graphicId);
   const template = graphic && store.getTemplate(graphic.templateId);
   const kind = template && getKind(template.kind);
@@ -32,7 +34,7 @@ export default function GraphicEditor() {
   );
 
   if (!graphic || !template || !kind) {
-    return <div className="mx-auto max-w-3xl px-8 py-10"><EmptyState title="Graphic not found" action={<Link to="/"><Button variant="subtle">Dashboard</Button></Link>} /></div>;
+    return <div className="mx-auto max-w-3xl px-8 py-10"><EmptyState title={t('editor.notFound')} action={<Link to="/"><Button variant="subtle">{t('nav.dashboard')}</Button></Link>} /></div>;
   }
 
   // Free-form kinds use the in-place canvas editor instead of the carousel pipeline.
@@ -70,16 +72,20 @@ export default function GraphicEditor() {
   return (
     <div className="mx-auto max-w-[1320px] px-8 py-8">
       <Link to={`/brands/${graphic.brandId}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white">
-        <ArrowLeft size={14} /> Back to brand
+        <ArrowLeft size={14} /> {t('editor.backToBrand')}
       </Link>
 
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <input
-          value={graphic.name}
-          onChange={(e) => store.updateGraphic(graphic.id, { name: e.target.value })}
-          className="bg-transparent text-[22px] font-extrabold tracking-tight focus:outline-none"
-          style={{ fontFamily: 'Bitter, serif' }}
-        />
+        <label className="group inline-flex items-center gap-2 rounded-lg px-1 -mx-1 hover:bg-white/5 focus-within:bg-white/5" title={t('editor.renameHint')}>
+          <input
+            value={graphic.name}
+            onChange={(e) => store.updateGraphic(graphic.id, { name: e.target.value })}
+            aria-label={t('common.rename')}
+            className="bg-transparent text-[22px] font-extrabold tracking-tight focus:outline-none"
+            style={{ fontFamily: 'Bitter, serif' }}
+          />
+          <Pencil size={15} className="text-white/30 transition-colors group-hover:text-white/60" />
+        </label>
         <div className="flex items-center gap-3">
           <select
             value={platform}
@@ -93,7 +99,7 @@ export default function GraphicEditor() {
               <button key={m} onClick={() => setFormat(m)} className={`px-3 py-1.5 text-[13px] font-semibold ${format === m ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}>{m === 'image/png' ? 'PNG' : 'JPEG'}</button>
             ))}
           </div>
-          <Button onClick={downloadZip} disabled={busy != null || !!error}><Download size={15} /> {busy === 'zip' ? 'Building…' : 'Export ZIP'}</Button>
+          <Button onClick={downloadZip} disabled={busy != null || !!error}><Download size={15} /> {busy === 'zip' ? t('editor.building') : t('editor.export')}</Button>
         </div>
       </header>
 
@@ -109,7 +115,7 @@ export default function GraphicEditor() {
           <div className="flex items-center justify-between">
             <p className="text-[12px] text-white/40">{preset.name} · {preset.width}×{preset.height}{preset.notes ? ` · ${preset.notes}` : ''}</p>
             <button onClick={() => setShowSafe((s) => !s)} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold ${showSafe ? 'bg-indigo-500/20 text-indigo-200' : 'text-white/50 hover:bg-white/5'}`}>
-              <ShieldCheck size={14} /> Safe areas
+              <ShieldCheck size={14} /> {t('editor.safeAreas')}
             </button>
           </div>
           <Panel className="p-5">
@@ -124,7 +130,7 @@ export default function GraphicEditor() {
                     )}
                   </div>
                   <button onClick={() => downloadSlide(i)} disabled={busy != null} className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/10 disabled:opacity-50">
-                    {busy === i ? 'Exporting…' : 'Download'}
+                    {busy === i ? t('editor.exporting') : t('editor.download')}
                   </button>
                 </div>
               ))}
