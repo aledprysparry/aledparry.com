@@ -176,21 +176,51 @@ const winnerSlide: SlideDef = {
   label: 'Enillydd',
   draw(r, { rows, copy, slideCount, index }) {
     const w = rows.find((x) => x.rank === 1) ?? rows[0] ?? { name: '-', score: null, team: '', location: '', rank: 1, movement: null };
+    const ctx = r.context;
     r.clear();
     paintHalftoneBg(r);
     paintLogo(r, { heightFrac: 0.1, topFrac: 0.05, rightFrac: 0.94 });
-    r.drawText(copy.winnerKicker, { x: 0.5, y: 0.16, size: 0.04, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
-    r.drawText('🏆', { x: 0.5, y: 0.31, size: 0.17, align: 'center', baseline: 'middle', font: DEFAULT_FONT });
-    r.drawText(w.name || '-', { x: 0.5, y: 0.52, size: 0.088, color: BRAND_WHITE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT, maxWidth: 0.86, letterSpacing: TRACK_TITLE });
-    {
-      const wsub = w.location || w.team;
-      if (wsub) r.drawText(wsub, { x: 0.5, y: 0.58, size: 0.032, color: MUTED, weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
-    }
-    r.drawText(fmtScore(w.score), { x: 0.5, y: 0.71, size: 0.19, color: BRAND_YELLOW, weight: '800', align: 'center', baseline: 'middle', font: SERIF_FONT });
-    r.drawText(`${copy.scoreUnit} ${copy.winnerSubtitle}`, { x: 0.5, y: 0.80, size: 0.034, color: MUTED, weight: '500', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
+
+    // kicker
+    r.drawText(copy.winnerKicker, { x: 0.5, y: 0.115, size: 0.044, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
+
+    // ── champion spotlight card (contains the whole winner identity) ──
+    const cardX = 0.1, cardW = 0.8, cardY = 0.26, cardH = 0.53;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cardX * r.W, cardY * r.H, cardW * r.W, cardH * r.H, 0.05 * r.W);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fill();
+    ctx.lineWidth = Math.max(2, 0.0018 * r.W);
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.stroke();
+    ctx.restore();
+
+    // gold #1 medal badge straddling the card's top edge (ties to the leaderboard)
+    const dcx = 0.5 * r.W, dcy = cardY * r.H, dr = 0.088 * r.W;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(dcx, dcy, dr * 1.1, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+    const gg = ctx.createLinearGradient(0, dcy - dr, 0, dcy + dr);
+    gg.addColorStop(0, '#ffd84a'); gg.addColorStop(1, '#f4a81c');
+    ctx.beginPath(); ctx.arc(dcx, dcy, dr, 0, Math.PI * 2); ctx.fillStyle = gg; ctx.fill();
+    ctx.restore();
+    r.drawText('1', { x: 0.5, y: cardY, size: 0.092, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
+
+    // winner name (hero)
+    r.drawText(w.name || '-', { x: 0.5, y: 0.42, size: 0.074, color: BRAND_WHITE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT, maxWidth: 0.7 });
+    const wsub = w.location || w.team;
+    if (wsub) r.drawText(wsub, { x: 0.5, y: 0.485, size: 0.032, color: 'rgba(255,255,255,0.6)', weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
+
+    // gold divider
+    r.drawRect({ x: 0.42, y: 0.545, width: 0.16, height: 0.007, color: BRAND_YELLOW, radius: 0.004 });
+
+    // score (the achievement) + unit
+    r.drawText(fmtScore(w.score), { x: 0.5, y: 0.65, size: 0.135, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
+    r.drawText(`${copy.scoreUnit} ${copy.winnerSubtitle}`, { x: 0.5, y: 0.745, size: 0.032, color: 'rgba(255,255,255,0.6)', weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.7 });
+
     // bottom strip
-    r.drawRect({ x: 0, y: 0.91, width: 1, height: 0.09, color: BRAND_YELLOW });
-    r.drawText(copy.footer, { x: 0.5, y: 0.955, size: 0.04, color: BRAND_BLUE, weight: '800', align: 'center', baseline: 'middle', font: SERIF_FONT });
+    r.drawRect({ x: 0, y: 0.9, width: 1, height: 0.1, color: BRAND_YELLOW });
+    r.drawText(copy.footer, { x: 0.5, y: 0.95, size: 0.038, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
     void slideCount; void index;
   },
 };
