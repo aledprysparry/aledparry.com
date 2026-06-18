@@ -32,7 +32,7 @@ export const DEFAULT_COPY: CarouselCopy = {
   coverKicker: 'SGORFWRDD',
   coverTitle: '10 UCHAF YR WYTHNOS',
   coverSubtitle: 'Sêr y cwis yr wythnos yma',
-  coverCta: 'Sweipia i weld pwy sydd ar y brig →',
+  coverCta: 'Pwy sydd ar y brig? →',
   listTitle: '10 UCHAF',
   scoreUnit: 'pwynt',
   winnerKicker: 'ENILLYDD YR WYTHNOS',
@@ -98,24 +98,28 @@ const coverSlide: SlideDef = {
   draw(r, { copy, slideCount, index }) {
     r.clear();
     paintHalftoneBg(r);
-    // brand logo top-right (real PNG or gold wordmark)
-    paintLogo(r, { heightFrac: 0.1, topFrac: 0.05 });
-    // kicker
-    r.drawText(copy.coverKicker, { x: 0.06, y: 0.40, size: 0.05, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
-    // big title (wraps + auto-fits)
+    // brand logo top-right - large for instant feed recognition
+    paintLogo(r, { heightFrac: 0.15, topFrac: 0.05, rightFrac: 0.94 });
+
+    // kicker + week, raised to kill dead space at the top
+    r.drawText(copy.coverKicker, { x: 0.06, y: 0.30, size: 0.05, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT });
+    // big title (wraps + auto-fits) - the hook, dominant
     r.drawTextWrapped(copy.coverTitle, {
-      x: 0.06, y: 0.46, size: 0.108, color: BRAND_WHITE, weight: '900',
-      maxWidth: 0.88, lineHeight: 0.108, font: SERIF_FONT, letterSpacing: TRACK_TITLE,
+      x: 0.06, y: 0.355, size: 0.118, color: BRAND_WHITE, weight: '900',
+      maxWidth: 0.9, lineHeight: 0.112, font: SERIF_FONT,
     });
     // accent rule
-    r.drawRect({ x: 0.06, y: 0.70, width: 0.16, height: 0.012, color: BRAND_YELLOW, radius: 0.006 });
+    r.drawRect({ x: 0.06, y: 0.64, width: 0.16, height: 0.012, color: BRAND_YELLOW, radius: 0.006 });
     // subtitle
-    r.drawText(copy.coverSubtitle, { x: 0.06, y: 0.745, size: 0.034, color: MUTED, weight: '500', baseline: 'middle', font: DEFAULT_FONT });
+    r.drawText(copy.coverSubtitle, { x: 0.06, y: 0.685, size: 0.034, color: 'rgba(255,255,255,0.78)', weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
     // week pill
-    r.drawRect({ x: 0.06, y: 0.80, width: 0.6, height: 0.058, color: SURFACE, radius: 0.029 });
-    r.drawText(copy.weekLabel, { x: 0.09, y: 0.829, size: 0.03, color: BRAND_YELLOW, weight: '700', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.52 });
-    // bottom CTA
-    r.drawText(copy.coverCta, { x: 0.06, y: 0.90, size: 0.032, color: BRAND_WHITE, weight: '700', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.88 });
+    r.drawRect({ x: 0.06, y: 0.74, width: 0.62, height: 0.06, color: SURFACE, radius: 0.03 });
+    r.drawText(copy.weekLabel, { x: 0.09, y: 0.77, size: 0.03, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.54 });
+
+    // bottom CTA - bold gold pill (the swipe / click driver), high contrast
+    const ctaY = 0.85, ctaH = 0.072;
+    r.drawRect({ x: 0.06, y: ctaY, width: 0.72, height: ctaH, color: BRAND_YELLOW, radius: ctaH / 2 });
+    r.drawText(copy.coverCta, { x: 0.06 + 0.72 / 2, y: ctaY + ctaH / 2, size: 0.036, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.64 });
     drawFooter(r, copy, { rows: [], copy, slideCount, index });
   },
 };
@@ -129,7 +133,7 @@ function makeListSlide(id: string, label: string, range: [number, number]): Slid
     draw(r, { rows, copy, slideCount, index }) {
       r.clear();
       paintHalftoneBg(r);
-      paintLogo(r, { heightFrac: 0.075, topFrac: 0.05 });
+      paintLogo(r, { heightFrac: 0.11, topFrac: 0.05, rightFrac: 0.94 });
       r.drawText(copy.listTitle, { x: 0.06, y: 0.085, size: 0.034, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
       r.drawText(label, { x: 0.06, y: 0.15, size: 0.072, color: BRAND_WHITE, weight: '900', baseline: 'middle', font: SERIF_FONT, letterSpacing: TRACK_TITLE });
       r.drawRect({ x: 0.06, y: 0.195, width: 0.12, height: 0.01, color: BRAND_YELLOW, radius: 0.005 });
@@ -174,7 +178,7 @@ const winnerSlide: SlideDef = {
     const w = rows.find((x) => x.rank === 1) ?? rows[0] ?? { name: '-', score: null, team: '', location: '', rank: 1, movement: null };
     r.clear();
     paintHalftoneBg(r);
-    paintLogo(r, { heightFrac: 0.07, topFrac: 0.05 });
+    paintLogo(r, { heightFrac: 0.1, topFrac: 0.05, rightFrac: 0.94 });
     r.drawText(copy.winnerKicker, { x: 0.5, y: 0.16, size: 0.04, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
     r.drawText('🏆', { x: 0.5, y: 0.31, size: 0.17, align: 'center', baseline: 'middle', font: DEFAULT_FONT });
     r.drawText(w.name || '-', { x: 0.5, y: 0.52, size: 0.088, color: BRAND_WHITE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT, maxWidth: 0.86, letterSpacing: TRACK_TITLE });
@@ -198,7 +202,7 @@ const ctaSlide: SlideDef = {
   draw(r, { copy, slideCount, index }) {
     r.clear();
     paintHalftoneBg(r);
-    paintLogo(r, { heightFrac: 0.075, topFrac: 0.05 });
+    paintLogo(r, { heightFrac: 0.11, topFrac: 0.05, rightFrac: 0.94 });
     r.drawTextWrapped(copy.ctaHeadline, {
       x: 0.06, y: 0.30, size: 0.07, color: BRAND_WHITE, weight: '900',
       maxWidth: 0.88, lineHeight: 0.08, font: SERIF_FONT, letterSpacing: TRACK_TITLE,

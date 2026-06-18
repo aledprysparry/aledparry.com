@@ -20,9 +20,12 @@ export const MUTED_ON_DARK = 'rgba(255,255,255,0.62)';
 export const BODY = 'Rubik, Inter, sans-serif';
 export const DISPLAY = 'Digitalt, Rubik, Inter, sans-serif';
 
-// Tracking (fraction of width). Digitalt is condensed; tighten Rubik to suit.
-export const TRACK_TITLE = -0.006;
-export const TRACK_DISPLAY = -0.003;
+// Tracking (fraction of width). Digitalt is already a condensed display face,
+// so it wants its NATURAL spacing - negative tracking crashes the caps
+// together ("SAFLEOEDD" → merged). Keep these ~0; only the Rubik fallback
+// would want tightening, and it's close enough.
+export const TRACK_TITLE = 0;
+export const TRACK_DISPLAY = 0;
 
 export function setShadow(r: CanvasRenderer, color: string, blur: number, dy: number, dx = 0) {
   const ctx = r.context;
