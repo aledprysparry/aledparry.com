@@ -7,11 +7,13 @@ import { NextRequest, NextResponse } from 'next/server';
 const MODEL = 'claude-sonnet-4-20250514';
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
   topic?: string;
+  // clip-analysis: a video/audio transcript to mine for short-form moments
+  transcript?: string;
   // review-layout: base64 data-URL images of each slide + the format
   images?: string[];
   ratio?: string;
@@ -44,6 +46,11 @@ function buildPrompt(b: Body): { system: string; user: string } {
       return {
         system: base,
         user: `Critique this post's copy for impact, clarity, hierarchy and length-for-platform. Return JSON: {"issues":[{"title":"short issue","detail":"specific actionable fix"}]} (max 5, most important first).\n\nText:\n${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
+      };
+    case 'clip-analysis':
+      return {
+        system: `You are a senior short-form social video editor. Analyse a transcript and find the strongest moments for short-form clips (Reels / TikTok / Shorts). Prioritise: a strong hook, a clear opinion, an emotional beat, a surprising fact, a useful takeaway, a human or funny moment, and a clean beginning + end. Match the transcript's language (reply in Welsh if it is in Welsh). Respond with ONLY valid JSON, no markdown, no commentary.`,
+        user: `From the transcript below, return the best clips as JSON: {"summary":"one-line summary","clips":[{"start":"mm:ss","end":"mm:ss","duration_seconds":0,"title":"short title","hook":"on-screen hook line","reason":"why it works","caption":"suggested caption","platforms":["TikTok","Instagram Reels"],"aspect_ratio":"9:16","score":0}]} — up to 6 clips, ranked best first, score 0-100.\n\nTranscript:\n${(b.transcript || '').slice(0, 12000)}`,
       };
     default:
       return { system: base, user: 'Return JSON: {}' };
@@ -99,7 +106,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 1200, system, messages: [{ role: 'user', content: user }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: body.task === 'clip-analysis' ? 2200 : 1200, system, messages: [{ role: 'user', content: user }] }),
     });
     const data = await res.json();
     if (!res.ok) {
