@@ -123,7 +123,7 @@ export const SCOREBOARD_SLIDES: SlideDef[] = [scoreboardSlide];
 export const SCOREBOARD_COPY: Record<string, string> = {
   title: "LAST WEEK'S LEADERBOARD",
   dateRange: '11.02.24 - 18.02.24',
-  url: '',
+  url: 's4c.cymru/cwis-bob-dydd',
 };
 
 // Real Cwis Bob Dydd shape: position, username (location/postcode), score.
