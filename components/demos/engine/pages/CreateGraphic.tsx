@@ -1,12 +1,21 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Check } from 'lucide-react';
+import { ArrowLeft, Sparkles, Check, Image as ImageIcon, Layers, Film, type LucideIcon } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
 import { getKind } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
-import type { PlatformId } from '@engine/lib/model/types';
+import type { PlatformId, TemplateType } from '@engine/lib/model/types';
+import type { StringKey } from '@engine/lib/i18n/strings';
+
+// Group templates by Asset kind so the create flow reads as
+// "what are you making?" (the Postio Create Post → Choose Asset Type step).
+const ASSET_GROUPS: { key: string; labelKey: StringKey; Icon: LucideIcon; types: TemplateType[] }[] = [
+  { key: 'stills', labelKey: 'create.group.stills', Icon: ImageIcon, types: ['still', 'story-cover'] },
+  { key: 'carousels', labelKey: 'create.group.carousels', Icon: Layers, types: ['carousel'] },
+  { key: 'animated', labelKey: 'create.group.animated', Icon: Film, types: ['sequence'] },
+];
 
 export default function CreateGraphic() {
   const { brandId = '' } = useParams();
@@ -50,20 +59,33 @@ export default function CreateGraphic() {
       ) : (
         <>
           <section className="mt-7">
-            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-white/45">{t('create.template')}</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {templates.map((t) => {
-                const active = t.id === templateId;
+            <h2 className="mb-3 text-[12px] font-bold uppercase tracking-wide text-white/45">{t('create.assetType')}</h2>
+            <div className="space-y-5">
+              {ASSET_GROUPS.map((g) => {
+                const items = templates.filter((tp) => g.types.includes((getKind(tp.kind)?.type ?? 'still') as TemplateType));
+                if (items.length === 0) return null;
                 return (
-                  <button key={t.id} onClick={() => { setTemplateId(t.id); setPlatform(t.supportedPlatforms[0] || 'instagram-carousel'); }} className="text-left">
-                    <Panel className={`p-4 transition-colors ${active ? 'border-indigo-400/70 ring-1 ring-indigo-400/40' : 'hover:border-white/25'}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="font-serif text-[15px] font-bold" style={{ fontFamily: 'Bitter, serif' }}>{t.name}</span>
-                        {active && <Check size={16} className="text-indigo-300" />}
-                      </div>
-                      <p className="mt-1 text-[12px] text-white/45">{getKind(t.kind)?.description}</p>
-                    </Panel>
-                  </button>
+                  <div key={g.key}>
+                    <div className="mb-2 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-white/45">
+                      <g.Icon size={14} className="text-indigo-300" /> {t(g.labelKey)}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {items.map((tp) => {
+                        const active = tp.id === templateId;
+                        return (
+                          <button key={tp.id} onClick={() => { setTemplateId(tp.id); setPlatform(tp.supportedPlatforms[0] || 'instagram-carousel'); }} className="text-left">
+                            <Panel className={`p-4 transition-colors ${active ? 'border-indigo-400/70 ring-1 ring-indigo-400/40' : 'hover:border-white/25'}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="font-serif text-[15px] font-bold" style={{ fontFamily: 'Bitter, serif' }}>{tp.name}</span>
+                                {active && <Check size={16} className="text-indigo-300" />}
+                              </div>
+                              <p className="mt-1 text-[12px] text-white/45">{getKind(tp.kind)?.description}</p>
+                            </Panel>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
             </div>
