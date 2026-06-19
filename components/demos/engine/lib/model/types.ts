@@ -114,6 +114,14 @@ export interface Template {
   kind: string;
   supportedPlatforms: PlatformId[];
   dimensions: { width: number; height: number };
+  /**
+   * Master template: shared values graphics INHERIT. Edit the master and
+   * every graphic that hasn't overridden a field updates. `copy` holds the
+   * shared text (kicker, CTA, footer, score unit, …). Graphics store only
+   * their own `inputs.copyOverrides`; effective = kind default ← master ←
+   * override.
+   */
+  master?: { copy?: Record<string, string> };
   layout?: Record<string, unknown>;
   safeAreaRules?: Record<string, unknown>;
   /** Freeform templates generated from a style bake their starter

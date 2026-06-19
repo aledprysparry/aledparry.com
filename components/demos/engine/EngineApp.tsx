@@ -11,6 +11,7 @@ import Onboarding from '@engine/pages/Onboarding';
 import BrandDetail from '@engine/pages/BrandDetail';
 import CreateGraphic from '@engine/pages/CreateGraphic';
 import GraphicEditor from '@engine/pages/GraphicEditor';
+import MasterEditor from '@engine/pages/MasterEditor';
 
 // Canvas templates draw with real "Inter"/"Bitter" families; the site
 // loads Inter via next/font (hashed name) and not Bitter, so inject the
@@ -39,6 +40,7 @@ export default function EngineApp() {
                 <Route path="new" element={<Onboarding />} />
                 <Route path="brands/:brandId" element={<BrandDetail />} />
                 <Route path="brands/:brandId/create" element={<CreateGraphic />} />
+                <Route path="templates/:templateId/master" element={<MasterEditor />} />
                 <Route path="graphics/:graphicId" element={<GraphicEditor />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>

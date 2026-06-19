@@ -162,6 +162,16 @@ export const STRINGS = {
     'review.aiTitle': 'AI design review',
     'review.slide': 'Slide',
 
+    // master template
+    'master.title': 'Master template',
+    'master.edit': 'Edit master',
+    'master.inheriting': 'Inheriting from master',
+    'master.overridden': '{n} overridden',
+    'master.reset': 'Reset to master',
+    'master.note': 'Editing the master updates every graphic that hasn’t overridden these fields.',
+    'master.preview': 'Master preview (sample data)',
+    'master.backToBrand': 'Back to brand',
+
     'li.dormantHint': 'Beta — connecting a live account needs a Meta app (setup required). The post audit below works now without it.',
 
     // common actions
@@ -427,6 +437,16 @@ export const STRINGS = {
     'review.notConfigured': 'Mae’r adolygiad AI yn rhedeg yn y cynhyrchiad (angen ANTHROPIC_API_KEY).',
     'review.aiTitle': 'Adolygiad dylunio AI',
     'review.slide': 'Sleid',
+
+    // master template
+    'master.title': 'Prif dempled',
+    'master.edit': 'Golygu’r prif dempled',
+    'master.inheriting': 'Yn etifeddu o’r prif dempled',
+    'master.overridden': '{n} wedi’u newid',
+    'master.reset': 'Ailosod i’r prif dempled',
+    'master.note': 'Mae golygu’r prif dempled yn diweddaru pob graffig sydd heb newid y meysydd hyn.',
+    'master.preview': 'Rhagolwg y prif dempled (data enghreifftiol)',
+    'master.backToBrand': 'Yn ôl i’r brand',
 
     'li.dormantHint': 'Beta — mae angen ap Meta i gysylltu cyfrif byw (angen ei sefydlu). Mae’r archwiliad postiadau isod yn gweithio nawr hebddo.',
 
