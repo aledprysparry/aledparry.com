@@ -599,7 +599,7 @@ interface LivePost { id: string; caption: string; mediaUrl: string; permalink: s
 
 function LiveInstagram() {
   const { t } = useI18n();
-  const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'notconf' | 'notconn' | 'err'>('idle');
+  const [state, setState] = useState<'idle' | 'loading' | 'connecting' | 'ok' | 'notconf' | 'notconn' | 'err'>('idle');
   const [posts, setPosts] = useState<LivePost[]>([]);
   const [igStatus, setIgStatus] = useState<string | null>(null);
 
@@ -625,6 +625,20 @@ function LiveInstagram() {
 
   const connectHref = `/api/social/instagram/connect?return=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/app/carousel')}`;
 
+  // Probe before navigating: the connect route 503s until a Meta app is
+  // configured (the default). Hard-linking dumped users on a raw JSON error
+  // page - instead, only redirect to OAuth when it's actually configured.
+  const connect = async () => {
+    setState('connecting');
+    try {
+      const res = await fetch(connectHref, { redirect: 'manual' });
+      if (res.status === 503) return setState('notconf');
+      window.location.href = connectHref; // configured: start real OAuth
+    } catch {
+      setState('notconf');
+    }
+  };
+
   return (
     <Panel className="mb-5 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -633,7 +647,7 @@ function LiveInstagram() {
           <p className="mt-0.5 text-[12px] text-white/45">{t('li.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href={connectHref} className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10">{t('li.connect')}</a>
+          <button onClick={connect} disabled={state === 'connecting'} className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10 disabled:opacity-50">{state === 'connecting' ? t('li.connecting') : t('li.connect')}</button>
           <Button variant="subtle" onClick={pull} disabled={state === 'loading'}>{state === 'loading' ? t('li.pulling') : t('li.pull')}</Button>
         </div>
       </div>
