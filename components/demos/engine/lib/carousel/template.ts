@@ -252,9 +252,9 @@ const ctaSlide: SlideDef = {
     fr.drawRect({ x: 0.06, y: bY, width: 0.88, height: bH, color: BRAND_YELLOW, radius: bH / 2 });
     fr.drawText(`${copy.ctaAction} →`, { x: 0.5, y: bY + bH / 2, size: 0.05, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.8 });
 
-    // handle + daily-quiz frequency line under the button
-    fr.drawText(copy.ctaLink, { x: 0.06, y: 0.79, size: 0.04, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT });
-    fr.drawText('Cwis newydd bob dydd', { x: 0.06, y: 0.835, size: 0.03, color: 'rgba(255,255,255,0.6)', weight: '600', baseline: 'middle', font: DEFAULT_FONT });
+    // handle under the button (no hardcoded copy - every line is a copy field
+    // so nothing can duplicate whatever the user puts in ctaSub)
+    fr.drawText(copy.ctaLink, { x: 0.06, y: 0.8, size: 0.04, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT });
     drawFooter(fr, copy, { rows: [], copy, slideCount, index });
   },
 };
