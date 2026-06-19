@@ -63,21 +63,31 @@ function medalColour(rank: number): string {
 const fmtScore = (n: number | null) =>
   n == null ? '-' : Number.isInteger(n) ? n.toLocaleString('en-GB') : n.toFixed(2);
 
+// Pagination dots: drawn on the FULL canvas at the very bottom (they don't
+// need the safe area), so they clear the URL and sit at the canvas edge on
+// any ratio.
 function drawDots(fr: FramedRenderer, count: number, active: number) {
-  const gap = 0.03;
-  const total = (count - 1) * gap;
-  const startX = 0.5 - total / 2;
+  const base = fr.base;
+  const ctx = base.context;
+  const gap = 0.024;
+  const startX = 0.5 - ((count - 1) * gap) / 2;
+  const y = 0.972;
   for (let i = 0; i < count; i++) {
-    const isActive = i === active;
-    fillCircle(fr, startX + i * gap, 0.955, isActive ? 0.009 : 0.006, isActive ? BRAND_YELLOW : 'rgba(255,255,255,0.35)');
+    const on = i === active;
+    ctx.beginPath();
+    ctx.arc((startX + i * gap) * base.W, y * base.H, (on ? 0.008 : 0.005) * base.W, 0, Math.PI * 2);
+    ctx.fillStyle = on ? BRAND_YELLOW : 'rgba(255,255,255,0.35)';
+    ctx.fill();
   }
 }
 
 function drawFooter(fr: FramedRenderer, copy: CarouselCopy, props: SlideProps) {
-  fr.drawText(copy.footer, {
-    x: 0.06, y: 0.95, size: 0.026, color: MUTED, weight: '700',
-    align: 'left', baseline: 'middle', font: DEFAULT_FONT,
-  });
+  if (copy.footer) {
+    fr.drawText(copy.footer, {
+      x: 0.06, y: 0.95, size: 0.026, color: MUTED, weight: '700',
+      align: 'left', baseline: 'middle', font: DEFAULT_FONT,
+    });
+  }
   drawDots(fr, props.slideCount, props.index);
 }
 
@@ -106,13 +116,13 @@ const coverSlide: SlideDef = {
     fr.drawText(copy.coverKicker, { x: 0.06, y: 0.30, size: 0.05, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT });
     // big title (wraps + auto-fits) - the hook, dominant
     fr.drawTextWrapped(copy.coverTitle, {
-      x: 0.06, y: 0.355, size: 0.118, color: BRAND_WHITE, weight: '900',
-      maxWidth: 0.9, lineHeight: 0.112, font: SERIF_FONT,
+      x: 0.06, y: 0.35, size: 0.118, color: BRAND_WHITE, weight: '900',
+      maxWidth: 0.9, lineHeight: 0.124, font: SERIF_FONT,
     });
-    // subtitle - directly under the headline (no decorative rule)
-    fr.drawText(copy.coverSubtitle, { x: 0.06, y: 0.55, size: 0.034, color: 'rgba(255,255,255,0.82)', weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
+    // subtitle - clear gap below the headline (no decorative rule)
+    if (copy.coverSubtitle) fr.drawText(copy.coverSubtitle, { x: 0.06, y: 0.6, size: 0.034, color: 'rgba(255,255,255,0.82)', weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
     // date - a clean muted label (secondary detail recedes; no faint box)
-    fr.drawText(copy.weekLabel, { x: 0.06, y: 0.605, size: 0.028, color: 'rgba(255,255,255,0.5)', weight: '700', letterSpacing: 0.002, baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.8 });
+    if (copy.weekLabel) fr.drawText(copy.weekLabel, { x: 0.06, y: 0.655, size: 0.028, color: 'rgba(255,255,255,0.5)', weight: '700', letterSpacing: 0.002, baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.8 });
 
     // bottom CTA - bold gold pill (the swipe / click driver), high contrast
     const ctaY = 0.85, ctaH = 0.072;
@@ -156,8 +166,9 @@ function makeListSlide(id: string, label: string, range: [number, number]): Slid
         }
         // movement + score
         drawMovement(fr, row.movement, 0.70, cy);
-        fr.drawText(fmtScore(row.score), { x: 0.91, y: cy - 0.012, size: 0.05, color: BRAND_YELLOW, weight: '800', align: 'right', baseline: 'middle', font: SERIF_FONT });
-        fr.drawText(copy.scoreUnit, { x: 0.91, y: cy + 0.028, size: 0.022, color: MUTED, weight: '600', align: 'right', baseline: 'middle', font: DEFAULT_FONT });
+        // if Uned sgôr is left blank, centre the score on the row (no empty unit line)
+        fr.drawText(fmtScore(row.score), { x: 0.91, y: copy.scoreUnit ? cy - 0.012 : cy, size: 0.05, color: BRAND_YELLOW, weight: '800', align: 'right', baseline: 'middle', font: SERIF_FONT });
+        if (copy.scoreUnit) fr.drawText(copy.scoreUnit, { x: 0.91, y: cy + 0.028, size: 0.022, color: MUTED, weight: '600', align: 'right', baseline: 'middle', font: DEFAULT_FONT });
       });
 
       if (scoped.length === 0) {
@@ -216,7 +227,8 @@ const winnerSlide: SlideDef = {
 
     // score (the achievement) + unit
     fr.drawText(fmtScore(w.score), { x: 0.5, y: 0.65, size: 0.135, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
-    fr.drawText(`${copy.scoreUnit} ${copy.winnerSubtitle}`, { x: 0.5, y: 0.745, size: 0.032, color: 'rgba(255,255,255,0.6)', weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.7 });
+    const scoreLine = [copy.scoreUnit, copy.winnerSubtitle].filter(Boolean).join(' ').trim();
+    if (scoreLine) fr.drawText(scoreLine, { x: 0.5, y: 0.745, size: 0.032, color: 'rgba(255,255,255,0.6)', weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.7 });
 
     // bottom strip (frame-width)
     fr.drawRect({ x: 0, y: 0.9, width: 1, height: 0.1, color: BRAND_YELLOW });
