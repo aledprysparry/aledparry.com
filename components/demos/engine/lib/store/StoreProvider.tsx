@@ -72,6 +72,28 @@ function migrateMaster(templates: Template[], graphics: GeneratedGraphic[]): { t
   return { templates: newTemplates, graphics: newGraphics };
 }
 
+const ANIMATED_TPL_KEY = 'cg.v1.animatedTplMigrated';
+
+// One-time: give every existing brand an "Animated caption" template so the
+// new kind is selectable (Postio M2a). Additive — never touches existing
+// templates. Runs once per browser.
+function ensureAnimatedTemplates(brands: Brand[], templates: Template[]): Template[] | null {
+  if (typeof localStorage === 'undefined' || localStorage.getItem(ANIMATED_TPL_KEY) === 'true') return null;
+  localStorage.setItem(ANIMATED_TPL_KEY, 'true');
+  const kind = getKind('animated-caption');
+  if (!kind) return null;
+  const missing = brands.filter((b) => !templates.some((t) => t.brandId === b.id && t.kind === 'animated-caption'));
+  if (missing.length === 0) return null;
+  const added: Template[] = missing.map((b) => ({
+    id: newId('tpl'), brandId: b.id, name: kind.name, type: kind.type, kind: kind.id,
+    supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions,
+    master: { copy: { ...(kind.defaultCopy ?? {}) } }, createdAt: now(),
+  }));
+  const next = [...templates, ...added];
+  saveCollection('templates', next);
+  return next;
+}
+
 function initialState(): StoreState {
   if (!seededFlag()) {
     const seed = buildSeed();
@@ -86,8 +108,11 @@ function initialState(): StoreState {
   let graphics = loadCollection<GeneratedGraphic>('graphics');
   const migrated = migrateMaster(templates, graphics);
   if (migrated) { templates = migrated.templates; graphics = migrated.graphics; }
+  const brands = loadCollection<Brand>('brands');
+  const ensured = ensureAnimatedTemplates(brands, templates);
+  if (ensured) templates = ensured;
   return {
-    brands: loadCollection('brands'),
+    brands,
     assets: [], // hydrated from IndexedDB on mount (see StoreProvider)
     socialAccounts: loadCollection('socialAccounts'),
     templateStyles: loadCollection('templateStyles'),
