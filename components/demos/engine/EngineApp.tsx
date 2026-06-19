@@ -7,6 +7,7 @@ import { I18nProvider } from '@engine/lib/i18n/I18nProvider';
 import { OverlayProvider } from '@engine/components/primitives';
 import AppShell from '@engine/components/AppShell';
 import Dashboard from '@engine/pages/Dashboard';
+import Onboarding from '@engine/pages/Onboarding';
 import BrandDetail from '@engine/pages/BrandDetail';
 import CreateGraphic from '@engine/pages/CreateGraphic';
 import GraphicEditor from '@engine/pages/GraphicEditor';
@@ -35,6 +36,7 @@ export default function EngineApp() {
             <Routes>
               <Route element={<AppShell />}>
                 <Route index element={<Dashboard />} />
+                <Route path="new" element={<Onboarding />} />
                 <Route path="brands/:brandId" element={<BrandDetail />} />
                 <Route path="brands/:brandId/create" element={<CreateGraphic />} />
                 <Route path="graphics/:graphicId" element={<GraphicEditor />} />

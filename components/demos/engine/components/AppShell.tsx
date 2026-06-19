@@ -6,19 +6,14 @@ import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button } from './ui';
 
 export default function AppShell() {
-  const { brands, createBrand, exportAll } = useStore();
+  const { brands, exportAll } = useStore();
   const { t, lang, setLang } = useI18n();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
 
   const filtered = brands.filter((b) => b.name.toLowerCase().includes(q.toLowerCase()));
 
-  const addBrand = () => {
-    const name = prompt(t('dash.brandNamePrompt'));
-    if (!name) return;
-    const b = createBrand(name);
-    navigate(`/brands/${b.id}`);
-  };
+  const addBrand = () => navigate('/new');
 
   const backup = () => {
     const blob = new Blob([exportAll()], { type: 'application/json' });
