@@ -12,11 +12,7 @@ export default function Dashboard() {
   const { confirm } = useOverlay();
   const { brands } = store;
 
-  const addBrand = () => {
-    const name = prompt(t('dash.brandNamePrompt'));
-    if (!name) return;
-    navigate(`/brands/${store.createBrand(name).id}`);
-  };
+  const addBrand = () => navigate('/new');
 
   const renameBrand = (id: string, current: string) => {
     const name = prompt(t('ov.name'), current);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Plus, Trash2, ImagePlus, Sparkles, Copy, ExternalLink, ArrowLeft, Wand2,
-  Pencil, FolderPlus, Folder as FolderIcon, FolderInput, Search, Inbox, Layers,
+  Pencil, FolderPlus, Folder as FolderIcon, Search, Inbox, Layers,
 } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
@@ -18,12 +18,13 @@ import type { StringKey } from '@engine/lib/i18n/strings';
 import type { AssetType, SocialAccount, GraphicElement } from '@engine/lib/model/types';
 
 type Tab = 'overview' | 'templates' | 'graphics' | 'assets' | 'social';
+// Graphics first - it's the brand's graphics library, the primary view.
 const TABS: { id: Tab; key: StringKey }[] = [
-  { id: 'overview', key: 'brand.tab.overview' },
-  { id: 'templates', key: 'brand.tab.templates' },
   { id: 'graphics', key: 'brand.tab.graphics' },
+  { id: 'templates', key: 'brand.tab.templates' },
   { id: 'assets', key: 'brand.tab.assets' },
   { id: 'social', key: 'brand.tab.social' },
+  { id: 'overview', key: 'brand.tab.overview' },
 ];
 
 const ASSET_TYPES: AssetType[] = ['logo', 'background', 'font', 'gif', 'image', 'icon', 'product', 'reference', 'social-post'];
@@ -35,7 +36,7 @@ export default function BrandDetail() {
   const navigate = useNavigate();
   const { t, count } = useI18n();
   const brand = store.getBrand(brandId);
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>('graphics');
 
   if (!brand) {
     return (
@@ -347,7 +348,7 @@ function TemplatesTab({ brandId }: { brandId: string }) {
                   ]}
                 />
               </div>
-              <h3 className="mt-3 font-serif text-[16px] font-bold" style={{ fontFamily: 'Bitter, serif' }}>{t.name}</h3>
+              <h3 className="mt-3 truncate font-sans text-[14px] font-semibold text-white/90">{t.name}</h3>
               <p className="mt-1 text-[12px] text-white/45">{getKind(t.kind)?.description ?? t.kind}</p>
               <div className="mt-3 flex flex-wrap gap-1">
                 {t.supportedPlatforms.slice(0, 4).map((p) => (
@@ -425,12 +426,22 @@ function GraphicsTab({ brandId }: { brandId: string }) {
     if (ok) store.deleteFolder(id);
   };
 
+  // Move actions for a graphic - always offered (incl. "new folder…"), so a
+  // graphic can be filed even before any folder exists.
   const moveItems = (g: (typeof allGraphics)[number]): MenuItem[] => {
-    const targets: MenuItem[] = folders
+    const items: MenuItem[] = folders
       .filter((f) => f.id !== g.folderId)
-      .map((f) => ({ label: f.name, icon: <FolderIcon size={14} />, onClick: () => store.moveGraphicToFolder(g.id, f.id) }));
-    if (g.folderId) targets.unshift({ label: t('gfx.unfiled'), icon: <Inbox size={14} />, onClick: () => store.moveGraphicToFolder(g.id, null) });
-    return targets;
+      .map((f) => ({ label: `${t('gfx.moveTo')} ${f.name}`, icon: <FolderIcon size={14} />, onClick: () => store.moveGraphicToFolder(g.id, f.id) }));
+    if (g.folderId) items.push({ label: t('gfx.removeFromFolder'), icon: <Inbox size={14} />, onClick: () => store.moveGraphicToFolder(g.id, null) });
+    items.push({
+      label: t('gfx.moveToNew'),
+      icon: <FolderPlus size={14} />,
+      onClick: () => {
+        const name = prompt(t('gfx.folderNamePrompt'));
+        if (name && name.trim()) { const f = store.createFolder(brandId, name.trim()); store.moveGraphicToFolder(g.id, f.id); setFolderSel(f.id); }
+      },
+    });
+    return items;
   };
 
   if (allGraphics.length === 0)
@@ -457,7 +468,7 @@ function GraphicsTab({ brandId }: { brandId: string }) {
             />
           </span>
         ))}
-        <button onClick={newFolder} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-white/15 px-3 py-1.5 text-[12px] font-semibold text-white/50 hover:border-white/30 hover:text-white">
+        <button onClick={newFolder} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/70 hover:bg-white/10 hover:text-white">
           <FolderPlus size={13} /> {t('gfx.newFolder')}
         </button>
       </div>
@@ -486,12 +497,10 @@ function GraphicsTab({ brandId }: { brandId: string }) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {view.map((g) => {
             const platform = g.platformPresetId ? PLATFORM_PRESETS[g.platformPresetId] : undefined;
-            const moves = moveItems(g);
             const items: MenuItem[] = [
               { label: t('common.rename'), icon: <Pencil size={14} />, onClick: () => rename(g.id, g.name) },
               { label: t('common.duplicate'), icon: <Copy size={14} />, onClick: () => store.duplicateGraphic(g.id) },
-              ...(moves.length ? [{ label: t('gfx.moveTo'), icon: <FolderInput size={14} />, onClick: () => { /* submenu below */ }, disabled: true }] : []),
-              ...moves.map((m) => ({ ...m, label: `   ${m.label}` })),
+              ...moveItems(g),
               { label: t('common.delete'), icon: <Trash2 size={14} />, danger: true, onClick: () => remove(g) },
             ];
             return (
@@ -500,8 +509,8 @@ function GraphicsTab({ brandId }: { brandId: string }) {
                   <Badge>{platform?.name ?? 'Graphic'}</Badge>
                   <Menu label={t('common.actions')} items={items} />
                 </div>
-                <h3 className="mt-3 truncate font-semibold">{g.name}</h3>
-                <p className="text-[12px] text-white/40">{t('gfx.updated', { date: new Date(g.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
+                <h3 className="mt-3 truncate font-sans text-[14px] font-semibold text-white/90">{g.name}</h3>
+                <p className="mt-0.5 text-[12px] text-white/40">{t('gfx.updated', { date: new Date(g.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
                 <Button className="mt-4" variant="subtle" onClick={() => navigate(`/graphics/${g.id}`)}>{t('gfx.open')}</Button>
               </Panel>
             );
@@ -591,7 +600,7 @@ interface LivePost { id: string; caption: string; mediaUrl: string; permalink: s
 
 function LiveInstagram() {
   const { t } = useI18n();
-  const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'notconf' | 'notconn' | 'err'>('idle');
+  const [state, setState] = useState<'idle' | 'loading' | 'connecting' | 'ok' | 'notconf' | 'notconn' | 'err'>('idle');
   const [posts, setPosts] = useState<LivePost[]>([]);
   const [igStatus, setIgStatus] = useState<string | null>(null);
 
@@ -617,6 +626,20 @@ function LiveInstagram() {
 
   const connectHref = `/api/social/instagram/connect?return=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '/app/carousel')}`;
 
+  // Probe before navigating: the connect route 503s until a Meta app is
+  // configured (the default). Hard-linking dumped users on a raw JSON error
+  // page - instead, only redirect to OAuth when it's actually configured.
+  const connect = async () => {
+    setState('connecting');
+    try {
+      const res = await fetch(connectHref, { redirect: 'manual' });
+      if (res.status === 503) return setState('notconf');
+      window.location.href = connectHref; // configured: start real OAuth
+    } catch {
+      setState('notconf');
+    }
+  };
+
   return (
     <Panel className="mb-5 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -625,11 +648,12 @@ function LiveInstagram() {
           <p className="mt-0.5 text-[12px] text-white/45">{t('li.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href={connectHref} className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10">{t('li.connect')}</a>
+          <button onClick={connect} disabled={state === 'connecting'} className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10 disabled:opacity-50">{state === 'connecting' ? t('li.connecting') : t('li.connect')}</button>
           <Button variant="subtle" onClick={pull} disabled={state === 'loading'}>{state === 'loading' ? t('li.pulling') : t('li.pull')}</Button>
         </div>
       </div>
 
+      {state === 'idle' && !igStatus && <p className="mt-3 text-[12px] text-white/45">{t('li.dormantHint')}</p>}
       {igStatus === 'connected' && <p className="mt-3 text-[12px] text-[#4ade80]">{t('li.connected')}</p>}
       {igStatus && igStatus !== 'connected' && <p className="mt-3 text-[12px] text-[#f87171]">{t('li.connectFailed', { status: igStatus })}</p>}
       {state === 'notconf' && <p className="mt-3 text-[12px] text-white/55">{t('li.notConfA')}<span className="text-white/80">META_SETUP.md</span>{t('li.notConfB')}</p>}
