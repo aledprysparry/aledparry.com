@@ -8,6 +8,7 @@ import DataInput from '@engine/components/DataInput';
 import CopyEditor from '@engine/components/CopyEditor';
 import SlideCanvas from '@engine/components/SlideCanvas';
 import FreeformEditor from '@engine/components/FreeformEditor';
+import ReviewPanel from '@engine/components/ReviewPanel';
 import { getKind, platformToRatio } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { exportSlide, exportZip } from '@engine/lib/carousel/exportCarousel';
@@ -109,6 +110,7 @@ export default function GraphicEditor() {
             <DataInput value={rawText} onChange={(t) => setInputs({ rawText: t })} warnings={warnings} error={error} rowCount={rows.length} onLoadSample={() => setInputs({ rawText: kind.sampleData })} />
           </Panel>
           <Panel className="p-5"><CopyEditor copy={copy as unknown as Record<string, string | undefined>} onChange={setCopyField} fields={kind.copyFields} /></Panel>
+          <ReviewPanel slides={slides} rows={rows} copy={copy} ratio={ratio} brand={store.getBrand(graphic.brandId)} />
         </div>
 
         <div className="flex flex-col gap-4">

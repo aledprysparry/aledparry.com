@@ -7,11 +7,15 @@ import { NextRequest, NextResponse } from 'next/server';
 const MODEL = 'claude-sonnet-4-20250514';
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
   topic?: string;
+  // review-layout: base64 data-URL images of each slide + the format
+  images?: string[];
+  ratio?: string;
+  slideLabels?: string[];
 }
 
 function buildPrompt(b: Body): { system: string; user: string } {
@@ -62,6 +66,35 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = (await req.json()) as Body;
+
+    // ── vision layout review: judge each rendered slide for the format ──
+    if (body.task === 'review-layout') {
+      const ratio = body.ratio || 'portrait';
+      const labels = body.slideLabels ?? [];
+      const imgs = (body.images ?? []).slice(0, 6);
+      if (!imgs.length) return NextResponse.json({ error: 'no_images' }, { status: 400 });
+      const system = `You are a world-class social-media graphic designer reviewing slides of a ${ratio} carousel for the brand "${body.brand?.name || 'Unnamed'}". For EACH image judge: text legibility + overflow/clipping, element collisions, visual balance + use of space for this exact aspect ratio, hierarchy, and on-brand polish. Be specific and actionable. Respond with ONLY valid JSON, no markdown.`;
+      const user = `Review these ${imgs.length} slide(s) for a ${ratio} post. Return JSON: {"slides":[{"slide":1,"label":"...","ok":true,"issues":["specific fix", ...]}],"overall":"one-line verdict"}. ok=false if anything overflows, collides, or sits poorly for this ratio.`;
+      const content: unknown[] = [{ type: 'text', text: user }];
+      imgs.forEach((d, i) => {
+        const m = /^data:(image\/\w+);base64,(.+)$/.exec(d);
+        if (m) {
+          content.push({ type: 'text', text: `Slide ${i + 1}${labels[i] ? ` (${labels[i]})` : ''}:` });
+          content.push({ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } });
+        }
+      });
+      const vres = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: MODEL, max_tokens: 1500, system, messages: [{ role: 'user', content }] }),
+      });
+      const vdata = await vres.json();
+      if (!vres.ok) return NextResponse.json({ error: vdata.error?.message || 'Anthropic API error' }, { status: vres.status });
+      const result = parseJSON(vdata?.content?.[0]?.text ?? '');
+      if (!result) return NextResponse.json({ error: 'parse_failed' }, { status: 502 });
+      return NextResponse.json({ task: 'review-layout', result });
+    }
+
     const { system, user } = buildPrompt(body);
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

@@ -129,6 +129,16 @@ export const STRINGS = {
     'editor.exportImage': 'Export',
     'editor.notFound': 'Graphic not found',
 
+    // layout review
+    'review.title': 'Layout review',
+    'review.button': 'Review',
+    'review.running': 'Reviewing…',
+    'review.preflight': 'Preflight',
+    'review.allGood': 'No issues found.',
+    'review.notConfigured': 'AI review runs in production (needs ANTHROPIC_API_KEY).',
+    'review.aiTitle': 'AI design review',
+    'review.slide': 'Slide',
+
     // common actions
     'common.rename': 'Rename',
     'common.duplicate': 'Duplicate',
@@ -358,6 +368,16 @@ export const STRINGS = {
     'editor.safeAreas': 'Ardaloedd diogel',
     'editor.exportImage': 'Allforio',
     'editor.notFound': 'Heb ddod o hyd i’r graffig',
+
+    // layout review
+    'review.title': 'Adolygu’r cynllun',
+    'review.button': 'Adolygu',
+    'review.running': 'Adolygu…',
+    'review.preflight': 'Gwiriad cyflym',
+    'review.allGood': 'Dim problemau.',
+    'review.notConfigured': 'Mae’r adolygiad AI yn rhedeg yn y cynhyrchiad (angen ANTHROPIC_API_KEY).',
+    'review.aiTitle': 'Adolygiad dylunio AI',
+    'review.slide': 'Sleid',
 
     // common actions
     'common.rename': 'Ailenwi',
