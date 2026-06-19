@@ -1,12 +1,11 @@
 // QuizBookBiz / Cwis Bob Dydd - Weekly Top 10 carousel template.
 //
-// Each slide is a pure draw function over the reused CanvasRenderer
-// (from cwis-creator-hub). Both the live preview and the export pass
-// call the same draw fn, so what you see is exactly what exports.
-// Layout uses CanvasRenderer's fraction coords (0-1); text sizes are a
-// fraction of canvas WIDTH. Circles/dots/strokes use the raw 2D context.
+// Each slide draws its composition into a centred 4:5 design frame (via
+// FramedRenderer) while the halftone background fills full-bleed, so the
+// SAME layout works un-stretched across every ratio (feed 4:5, story 9:16,
+// square 1:1, landscape 16:9, whatsapp 1:1). Positions/sizes are fractions
+// of the FRAME; text sizes are a fraction of the frame's width.
 
-import { CanvasRenderer } from '@engine/lib/canvas/CanvasRenderer';
 import {
   BRAND_BLUE,
   BRAND_YELLOW,
@@ -15,6 +14,7 @@ import {
   SERIF_FONT,
 } from '@engine/lib/canvas/brandTokens';
 import { paintHalftoneBg, paintLogo, TRACK_TITLE, TRACK_DISPLAY } from './brandPaint';
+import { FramedRenderer } from './framedRenderer';
 import { rowsInRange } from './parseLeaderboard';
 import type { CarouselCopy, LeaderboardRow, SlideDef, SlideProps } from './types';
 
@@ -44,11 +44,11 @@ export const DEFAULT_COPY: CarouselCopy = {
   footer: 'Cwis Bob Dydd',
 };
 
-// ── raw-context helpers ──────────────────────────────────────────
-function fillCircle(r: CanvasRenderer, cxF: number, cyF: number, rF: number, color: string) {
-  const ctx = r.context;
+// ── frame-relative raw-context helpers ──────────────────────────────
+function fillCircle(fr: FramedRenderer, cxF: number, cyF: number, rF: number, color: string) {
+  const ctx = fr.ctx;
   ctx.beginPath();
-  ctx.arc(cxF * r.W, cyF * r.H, rF * r.W, 0, Math.PI * 2);
+  ctx.arc(fr.fx(cxF), fr.fy(cyF), fr.fs(rF), 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.fill();
 }
@@ -63,29 +63,29 @@ function medalColour(rank: number): string {
 const fmtScore = (n: number | null) =>
   n == null ? '-' : Number.isInteger(n) ? n.toLocaleString('en-GB') : n.toFixed(2);
 
-function drawDots(r: CanvasRenderer, count: number, active: number) {
+function drawDots(fr: FramedRenderer, count: number, active: number) {
   const gap = 0.03;
   const total = (count - 1) * gap;
   const startX = 0.5 - total / 2;
   for (let i = 0; i < count; i++) {
     const isActive = i === active;
-    fillCircle(r, startX + i * gap, 0.955, isActive ? 0.009 : 0.006, isActive ? BRAND_YELLOW : 'rgba(255,255,255,0.35)');
+    fillCircle(fr, startX + i * gap, 0.955, isActive ? 0.009 : 0.006, isActive ? BRAND_YELLOW : 'rgba(255,255,255,0.35)');
   }
 }
 
-function drawFooter(r: CanvasRenderer, copy: CarouselCopy, props: SlideProps) {
-  r.drawText(copy.footer, {
+function drawFooter(fr: FramedRenderer, copy: CarouselCopy, props: SlideProps) {
+  fr.drawText(copy.footer, {
     x: 0.06, y: 0.95, size: 0.026, color: MUTED, weight: '700',
     align: 'left', baseline: 'middle', font: DEFAULT_FONT,
   });
-  drawDots(r, props.slideCount, props.index);
+  drawDots(fr, props.slideCount, props.index);
 }
 
-function drawMovement(r: CanvasRenderer, m: LeaderboardRow['movement'], xF: number, yF: number) {
+function drawMovement(fr: FramedRenderer, m: LeaderboardRow['movement'], xF: number, yF: number) {
   if (!m) return;
   const colour = m.dir > 0 ? POSITIVE : m.dir < 0 ? NEGATIVE : MUTED;
   const label = m.dir === 0 ? '–' : `${m.dir > 0 ? '▲' : '▼'} ${m.value}`;
-  r.drawText(label, {
+  fr.drawText(label, {
     x: xF, y: yF, size: 0.026, color: colour, weight: '700',
     align: 'right', baseline: 'middle', font: DEFAULT_FONT,
   });
@@ -97,30 +97,31 @@ const coverSlide: SlideDef = {
   label: 'Cover',
   draw(r, { copy, slideCount, index }) {
     r.clear();
-    paintHalftoneBg(r);
+    paintHalftoneBg(r); // full-bleed background
+    const fr = new FramedRenderer(r);
     // brand logo top-right - large for instant feed recognition
-    paintLogo(r, { heightFrac: 0.15, topFrac: 0.05, rightFrac: 0.94 });
+    paintLogo(fr, { heightFrac: 0.15, topFrac: 0.05, rightFrac: 0.94 });
 
     // kicker + week, raised to kill dead space at the top
-    r.drawText(copy.coverKicker, { x: 0.06, y: 0.30, size: 0.05, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT });
+    fr.drawText(copy.coverKicker, { x: 0.06, y: 0.30, size: 0.05, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT });
     // big title (wraps + auto-fits) - the hook, dominant
-    r.drawTextWrapped(copy.coverTitle, {
+    fr.drawTextWrapped(copy.coverTitle, {
       x: 0.06, y: 0.355, size: 0.118, color: BRAND_WHITE, weight: '900',
       maxWidth: 0.9, lineHeight: 0.112, font: SERIF_FONT,
     });
     // accent rule
-    r.drawRect({ x: 0.06, y: 0.64, width: 0.16, height: 0.012, color: BRAND_YELLOW, radius: 0.006 });
+    fr.drawRect({ x: 0.06, y: 0.64, width: 0.16, height: 0.012, color: BRAND_YELLOW, radius: 0.006 });
     // subtitle
-    r.drawText(copy.coverSubtitle, { x: 0.06, y: 0.685, size: 0.034, color: 'rgba(255,255,255,0.78)', weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
+    fr.drawText(copy.coverSubtitle, { x: 0.06, y: 0.685, size: 0.034, color: 'rgba(255,255,255,0.78)', weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
     // week pill
-    r.drawRect({ x: 0.06, y: 0.74, width: 0.62, height: 0.06, color: SURFACE, radius: 0.03 });
-    r.drawText(copy.weekLabel, { x: 0.09, y: 0.77, size: 0.03, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.54 });
+    fr.drawRect({ x: 0.06, y: 0.74, width: 0.62, height: 0.06, color: SURFACE, radius: 0.03 });
+    fr.drawText(copy.weekLabel, { x: 0.09, y: 0.77, size: 0.03, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.54 });
 
     // bottom CTA - bold gold pill (the swipe / click driver), high contrast
     const ctaY = 0.85, ctaH = 0.072;
-    r.drawRect({ x: 0.06, y: ctaY, width: 0.72, height: ctaH, color: BRAND_YELLOW, radius: ctaH / 2 });
-    r.drawText(copy.coverCta, { x: 0.06 + 0.72 / 2, y: ctaY + ctaH / 2, size: 0.036, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.64 });
-    drawFooter(r, copy, { rows: [], copy, slideCount, index });
+    fr.drawRect({ x: 0.06, y: ctaY, width: 0.72, height: ctaH, color: BRAND_YELLOW, radius: ctaH / 2 });
+    fr.drawText(copy.coverCta, { x: 0.06 + 0.72 / 2, y: ctaY + ctaH / 2, size: 0.036, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.64 });
+    drawFooter(fr, copy, { rows: [], copy, slideCount, index });
   },
 };
 
@@ -133,10 +134,11 @@ function makeListSlide(id: string, label: string, range: [number, number]): Slid
     draw(r, { rows, copy, slideCount, index }) {
       r.clear();
       paintHalftoneBg(r);
-      paintLogo(r, { heightFrac: 0.11, topFrac: 0.05, rightFrac: 0.94 });
-      r.drawText(copy.listTitle, { x: 0.06, y: 0.085, size: 0.034, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
-      r.drawText(label, { x: 0.06, y: 0.15, size: 0.072, color: BRAND_WHITE, weight: '900', baseline: 'middle', font: SERIF_FONT, letterSpacing: TRACK_TITLE });
-      r.drawRect({ x: 0.06, y: 0.195, width: 0.12, height: 0.01, color: BRAND_YELLOW, radius: 0.005 });
+      const fr = new FramedRenderer(r);
+      paintLogo(fr, { heightFrac: 0.11, topFrac: 0.05, rightFrac: 0.94 });
+      fr.drawText(copy.listTitle, { x: 0.06, y: 0.085, size: 0.034, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
+      fr.drawText(label, { x: 0.06, y: 0.15, size: 0.072, color: BRAND_WHITE, weight: '900', baseline: 'middle', font: SERIF_FONT, letterSpacing: TRACK_TITLE });
+      fr.drawRect({ x: 0.06, y: 0.195, width: 0.12, height: 0.01, color: BRAND_YELLOW, radius: 0.005 });
 
       const scoped = rowsInRange(rows, range);
       const start = 0.255;
@@ -146,26 +148,26 @@ function makeListSlide(id: string, label: string, range: [number, number]): Slid
         const y = start + i * (rowH + gap);
         const cy = y + rowH / 2;
         // card
-        r.drawRect({ x: 0.06, y, width: 0.88, height: rowH, color: SURFACE, radius: 0.028 });
+        fr.drawRect({ x: 0.06, y, width: 0.88, height: rowH, color: SURFACE, radius: 0.028 });
         // rank badge
-        fillCircle(r, 0.135, cy, 0.046, medalColour(row.rank));
-        r.drawText(String(row.rank), { x: 0.135, y: cy, size: 0.046, color: row.rank <= 3 ? BRAND_BLUE : BRAND_WHITE, weight: '800', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
+        fillCircle(fr, 0.135, cy, 0.046, medalColour(row.rank));
+        fr.drawText(String(row.rank), { x: 0.135, y: cy, size: 0.046, color: row.rank <= 3 ? BRAND_BLUE : BRAND_WHITE, weight: '800', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
         // name + sub (location/postcode, falling back to team)
         const sub = row.location || row.team;
-        r.drawText(row.name || '-', { x: 0.215, y: sub ? cy - 0.018 : cy, size: 0.042, color: BRAND_WHITE, weight: '800', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.42 });
+        fr.drawText(row.name || '-', { x: 0.215, y: sub ? cy - 0.018 : cy, size: 0.042, color: BRAND_WHITE, weight: '800', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.42 });
         if (sub) {
-          r.drawText(sub, { x: 0.215, y: cy + 0.026, size: 0.026, color: MUTED, weight: '600', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.42 });
+          fr.drawText(sub, { x: 0.215, y: cy + 0.026, size: 0.026, color: MUTED, weight: '600', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.42 });
         }
         // movement + score
-        drawMovement(r, row.movement, 0.70, cy);
-        r.drawText(fmtScore(row.score), { x: 0.91, y: cy - 0.012, size: 0.05, color: BRAND_YELLOW, weight: '800', align: 'right', baseline: 'middle', font: SERIF_FONT });
-        r.drawText(copy.scoreUnit, { x: 0.91, y: cy + 0.028, size: 0.022, color: MUTED, weight: '600', align: 'right', baseline: 'middle', font: DEFAULT_FONT });
+        drawMovement(fr, row.movement, 0.70, cy);
+        fr.drawText(fmtScore(row.score), { x: 0.91, y: cy - 0.012, size: 0.05, color: BRAND_YELLOW, weight: '800', align: 'right', baseline: 'middle', font: SERIF_FONT });
+        fr.drawText(copy.scoreUnit, { x: 0.91, y: cy + 0.028, size: 0.022, color: MUTED, weight: '600', align: 'right', baseline: 'middle', font: DEFAULT_FONT });
       });
 
       if (scoped.length === 0) {
-        r.drawText('Dim safleoedd eto', { x: 0.5, y: 0.5, size: 0.04, color: MUTED, align: 'center', baseline: 'middle', font: DEFAULT_FONT });
+        fr.drawText('Dim safleoedd eto', { x: 0.5, y: 0.5, size: 0.04, color: MUTED, align: 'center', baseline: 'middle', font: DEFAULT_FONT });
       }
-      drawFooter(r, copy, { rows, copy, slideCount, index });
+      drawFooter(fr, copy, { rows, copy, slideCount, index });
     },
   };
 }
@@ -176,51 +178,53 @@ const winnerSlide: SlideDef = {
   label: 'Enillydd',
   draw(r, { rows, copy, slideCount, index }) {
     const w = rows.find((x) => x.rank === 1) ?? rows[0] ?? { name: '-', score: null, team: '', location: '', rank: 1, movement: null };
-    const ctx = r.context;
     r.clear();
     paintHalftoneBg(r);
-    paintLogo(r, { heightFrac: 0.1, topFrac: 0.05, rightFrac: 0.94 });
+    const fr = new FramedRenderer(r);
+    const ctx = fr.ctx;
+    // smaller logo tucked into the corner so it clears the centred kicker
+    paintLogo(fr, { heightFrac: 0.085, topFrac: 0.045, rightFrac: 0.94 });
 
-    // kicker
-    r.drawText(copy.winnerKicker, { x: 0.5, y: 0.115, size: 0.044, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
+    // kicker (centred)
+    fr.drawText(copy.winnerKicker, { x: 0.5, y: 0.115, size: 0.042, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
 
     // ── champion spotlight card (contains the whole winner identity) ──
     const cardX = 0.1, cardW = 0.8, cardY = 0.26, cardH = 0.53;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(cardX * r.W, cardY * r.H, cardW * r.W, cardH * r.H, 0.05 * r.W);
+    ctx.roundRect(fr.fx(cardX), fr.fy(cardY), cardW * fr.W, cardH * fr.H, 0.05 * fr.W);
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fill();
-    ctx.lineWidth = Math.max(2, 0.0018 * r.W);
+    ctx.lineWidth = Math.max(2, 0.0018 * fr.W);
     ctx.strokeStyle = 'rgba(255,255,255,0.14)';
     ctx.stroke();
     ctx.restore();
 
     // gold #1 medal badge straddling the card's top edge (ties to the leaderboard)
-    const dcx = 0.5 * r.W, dcy = cardY * r.H, dr = 0.088 * r.W;
+    const dcx = fr.fx(0.5), dcy = fr.fy(cardY), dr = 0.088 * fr.W;
     ctx.save();
     ctx.beginPath(); ctx.arc(dcx, dcy, dr * 1.1, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
     const gg = ctx.createLinearGradient(0, dcy - dr, 0, dcy + dr);
     gg.addColorStop(0, '#ffd84a'); gg.addColorStop(1, '#f4a81c');
     ctx.beginPath(); ctx.arc(dcx, dcy, dr, 0, Math.PI * 2); ctx.fillStyle = gg; ctx.fill();
     ctx.restore();
-    r.drawText('1', { x: 0.5, y: cardY, size: 0.092, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
+    fr.drawText('1', { x: 0.5, y: cardY, size: 0.092, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
 
     // winner name (hero)
-    r.drawText(w.name || '-', { x: 0.5, y: 0.42, size: 0.074, color: BRAND_WHITE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT, maxWidth: 0.7 });
+    fr.drawText(w.name || '-', { x: 0.5, y: 0.42, size: 0.074, color: BRAND_WHITE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT, maxWidth: 0.7 });
     const wsub = w.location || w.team;
-    if (wsub) r.drawText(wsub, { x: 0.5, y: 0.485, size: 0.032, color: 'rgba(255,255,255,0.6)', weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
+    if (wsub) fr.drawText(wsub, { x: 0.5, y: 0.485, size: 0.032, color: 'rgba(255,255,255,0.6)', weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT });
 
     // gold divider
-    r.drawRect({ x: 0.42, y: 0.545, width: 0.16, height: 0.007, color: BRAND_YELLOW, radius: 0.004 });
+    fr.drawRect({ x: 0.42, y: 0.545, width: 0.16, height: 0.007, color: BRAND_YELLOW, radius: 0.004 });
 
     // score (the achievement) + unit
-    r.drawText(fmtScore(w.score), { x: 0.5, y: 0.65, size: 0.135, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
-    r.drawText(`${copy.scoreUnit} ${copy.winnerSubtitle}`, { x: 0.5, y: 0.745, size: 0.032, color: 'rgba(255,255,255,0.6)', weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.7 });
+    fr.drawText(fmtScore(w.score), { x: 0.5, y: 0.65, size: 0.135, color: BRAND_YELLOW, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
+    fr.drawText(`${copy.scoreUnit} ${copy.winnerSubtitle}`, { x: 0.5, y: 0.745, size: 0.032, color: 'rgba(255,255,255,0.6)', weight: '600', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.7 });
 
-    // bottom strip
-    r.drawRect({ x: 0, y: 0.9, width: 1, height: 0.1, color: BRAND_YELLOW });
-    r.drawText(copy.footer, { x: 0.5, y: 0.95, size: 0.038, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
+    // bottom strip (frame-width)
+    fr.drawRect({ x: 0, y: 0.9, width: 1, height: 0.1, color: BRAND_YELLOW });
+    fr.drawText(copy.footer, { x: 0.5, y: 0.95, size: 0.038, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: SERIF_FONT });
     void slideCount; void index;
   },
 };
@@ -232,25 +236,26 @@ const ctaSlide: SlideDef = {
   draw(r, { copy, slideCount, index }) {
     r.clear();
     paintHalftoneBg(r);
-    paintLogo(r, { heightFrac: 0.11, topFrac: 0.05, rightFrac: 0.94 });
+    const fr = new FramedRenderer(r);
+    paintLogo(fr, { heightFrac: 0.11, topFrac: 0.05, rightFrac: 0.94 });
 
     // challenge headline - the hook, dominant
-    r.drawTextWrapped(copy.ctaHeadline, {
+    fr.drawTextWrapped(copy.ctaHeadline, {
       x: 0.06, y: 0.24, size: 0.088, color: BRAND_WHITE, weight: '900',
       maxWidth: 0.9, lineHeight: 0.09, font: SERIF_FONT,
     });
     // aspiration tie-back to the leaderboard they just saw
-    r.drawText(copy.ctaSub, { x: 0.06, y: 0.55, size: 0.04, color: 'rgba(255,255,255,0.82)', weight: '600', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.88 });
+    fr.drawText(copy.ctaSub, { x: 0.06, y: 0.55, size: 0.04, color: 'rgba(255,255,255,0.82)', weight: '600', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.88 });
 
     // hero CTA - big, full-width gold button (the conversion)
     const bY = 0.63, bH = 0.105;
-    r.drawRect({ x: 0.06, y: bY, width: 0.88, height: bH, color: BRAND_YELLOW, radius: bH / 2 });
-    r.drawText(`${copy.ctaAction} →`, { x: 0.5, y: bY + bH / 2, size: 0.05, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.8 });
+    fr.drawRect({ x: 0.06, y: bY, width: 0.88, height: bH, color: BRAND_YELLOW, radius: bH / 2 });
+    fr.drawText(`${copy.ctaAction} →`, { x: 0.5, y: bY + bH / 2, size: 0.05, color: BRAND_BLUE, weight: '900', align: 'center', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.8 });
 
     // handle + daily-quiz frequency line under the button
-    r.drawText(copy.ctaLink, { x: 0.06, y: 0.79, size: 0.04, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT });
-    r.drawText('Cwis newydd bob dydd', { x: 0.06, y: 0.835, size: 0.03, color: 'rgba(255,255,255,0.6)', weight: '600', baseline: 'middle', font: DEFAULT_FONT });
-    drawFooter(r, copy, { rows: [], copy, slideCount, index });
+    fr.drawText(copy.ctaLink, { x: 0.06, y: 0.79, size: 0.04, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT });
+    fr.drawText('Cwis newydd bob dydd', { x: 0.06, y: 0.835, size: 0.03, color: 'rgba(255,255,255,0.6)', weight: '600', baseline: 'middle', font: DEFAULT_FONT });
+    drawFooter(fr, copy, { rows: [], copy, slideCount, index });
   },
 };
 

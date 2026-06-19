@@ -4,8 +4,16 @@
 // helpers. Both the Weekly Scoreboard and the Top-10 carousel paint with
 // these, so every template stays on-brand and consistent.
 
-import type { CanvasRenderer } from '@engine/lib/canvas/CanvasRenderer';
+import type { CanvasRenderer, TextOptions, ImageOptions } from '@engine/lib/canvas/CanvasRenderer';
 import { brandImage } from './brandAssets';
+
+/** Anything that can draw text + images and reports its W/H (CanvasRenderer or FramedRenderer). */
+export interface DrawTarget {
+  readonly W: number;
+  readonly H: number;
+  drawText(text: string, opts: TextOptions): void;
+  drawImage(img: HTMLImageElement, opts: ImageOptions): void;
+}
 
 // Palette (matched to the brand halftone art).
 export const PURPLE_TOP = '#4b2fd6'; // royal indigo
@@ -69,7 +77,7 @@ export function paintHalftoneBg(r: CanvasRenderer) {
 }
 
 /** The Cwis Bob Dydd logo anchored top-right (real PNG if present, else gold wordmark). */
-export function paintLogo(r: CanvasRenderer, opts: { heightFrac?: number; rightFrac?: number; topFrac?: number } = {}) {
+export function paintLogo(r: DrawTarget, opts: { heightFrac?: number; rightFrac?: number; topFrac?: number } = {}) {
   const heightFrac = opts.heightFrac ?? 0.135;
   const rightFrac = opts.rightFrac ?? 0.9;
   const topFrac = opts.topFrac ?? 0.075;
