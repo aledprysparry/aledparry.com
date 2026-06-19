@@ -29,6 +29,36 @@ export default function ClipFinder() {
   const [summary, setSummary] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [transcribing, setTranscribing] = useState(false);
+  const [transStatus, setTransStatus] = useState<string | null>(null);
+
+  // Auto-fill the transcript from a media URL via Capsiynau (M2b).
+  const transcribe = async () => {
+    if (!videoUrl.trim() || transcribing) return;
+    setTranscribing(true); setErr(null); setTransStatus('Starting…');
+    try {
+      const start = await fetch('/api/postio/transcribe', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fileUrl: videoUrl.trim() }),
+      });
+      const sd = await start.json();
+      if (!start.ok) { setErr(sd.message || sd.error || 'Transcription unavailable.'); return; }
+      for (let i = 0; i < 40; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const pr = await fetch(`/api/postio/transcribe?jobId=${encodeURIComponent(sd.jobId)}`);
+        const pd = await pr.json();
+        if (!pr.ok) { setErr(pd.message || 'Transcription failed.'); return; }
+        if (pd.status === 'complete') { setTranscript(pd.transcript || ''); setTransStatus(null); return; }
+        setTransStatus(pd.progress != null ? `Transcribing… ${pd.progress}%` : `Transcribing… (${pd.status})`);
+      }
+      setErr('Transcription timed out — paste the transcript manually below.');
+    } catch {
+      setErr('Transcription failed.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
 
   const find = async () => {
     if (!transcript.trim() || busy) return;
@@ -77,6 +107,17 @@ export default function ClipFinder() {
       <p className="mt-1 text-[13px] text-white/45">{t('clip.subtitle')}</p>
 
       <Panel className="mt-6 p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <input
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+            placeholder={t('clip.videoPlaceholder')}
+            className="min-w-[220px] flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[13px] text-white placeholder:text-white/30 focus:border-indigo-400/60 focus:outline-none"
+          />
+          <Button variant="subtle" onClick={transcribe} disabled={transcribing || !videoUrl.trim()}>
+            {transcribing ? (transStatus || t('clip.transcribing')) : t('clip.transcribe')}
+          </Button>
+        </div>
         <textarea
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
