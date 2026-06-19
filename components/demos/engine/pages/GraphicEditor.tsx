@@ -8,6 +8,7 @@ import DataInput from '@engine/components/DataInput';
 import CopyEditor from '@engine/components/CopyEditor';
 import SlideCanvas from '@engine/components/SlideCanvas';
 import FreeformEditor from '@engine/components/FreeformEditor';
+import AnimatedEditor from '@engine/pages/AnimatedEditor';
 import ReviewPanel from '@engine/components/ReviewPanel';
 import { getKind, platformToRatio } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
@@ -43,6 +44,8 @@ export default function GraphicEditor() {
 
   // Free-form kinds use the in-place canvas editor instead of the carousel pipeline.
   if (kind.editor === 'freeform') return <FreeformEditor graphic={graphic} />;
+  // Animated kinds render a looping caption clip + WebM export.
+  if (kind.editor === 'animated') return <AnimatedEditor graphic={graphic} />;
 
   const platform = (graphic.platformPresetId ?? 'instagram-carousel') as PlatformId;
   const preset = PLATFORM_PRESETS[platform];

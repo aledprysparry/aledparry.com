@@ -12,6 +12,7 @@ import type { SlideDef } from '@engine/lib/carousel/types';
 import { SLIDES, DEFAULT_COPY } from '@engine/lib/carousel/template';
 import { parseLeaderboardText, SAMPLE_CSV, type ParseResult } from '@engine/lib/carousel/parseLeaderboard';
 import { SCOREBOARD_SLIDES, SCOREBOARD_COPY, SCOREBOARD_SAMPLE } from '@engine/lib/carousel/scoreboard';
+import { ANIMATED_COPY, ANIMATED_COPY_FIELDS } from '@engine/lib/carousel/animated';
 import { defaultPostElements } from '@engine/lib/freeform/elements';
 
 export interface TemplateKind {
@@ -22,7 +23,7 @@ export interface TemplateKind {
   supportedPlatforms: PlatformId[];
   dimensions: { width: number; height: number };
   /** Which editor + content model this kind uses. */
-  editor: 'carousel' | 'freeform';
+  editor: 'carousel' | 'freeform' | 'animated';
   // carousel kinds:
   slides?: SlideDef[];
   defaultCopy?: Record<string, string>;
@@ -71,6 +72,17 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     sampleData: SCOREBOARD_SAMPLE,
     dataHint: 'rank, name, score (decimals ok, e.g. 61.33)',
     parse: parseLeaderboardText,
+  },
+  'animated-caption': {
+    id: 'animated-caption',
+    name: 'Animated caption',
+    type: 'sequence',
+    editor: 'animated',
+    description: 'A short looping caption clip — a bold statement that animates in, exported as WebM. Brand-styled motion for Reels, TikTok and Shorts.',
+    supportedPlatforms: ['instagram-story', 'tiktok', 'instagram-feed', 'facebook'],
+    dimensions: { width: 1080, height: 1920 },
+    defaultCopy: ANIMATED_COPY,
+    copyFields: ANIMATED_COPY_FIELDS,
   },
   'freeform-post': {
     id: 'freeform-post',

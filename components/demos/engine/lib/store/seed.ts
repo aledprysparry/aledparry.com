@@ -24,16 +24,21 @@ export function buildSeed(): SeedData {
     createdAt: t,
     updatedAt: t,
   };
-  const kind = TEMPLATE_KINDS['quizbookbiz-leaderboard'];
-  const template: Template = {
-    id: newId('tpl'),
-    brandId,
-    name: kind.name,
-    type: kind.type,
-    kind: kind.id,
-    supportedPlatforms: kind.supportedPlatforms,
-    dimensions: kind.dimensions,
-    createdAt: t,
+  const templateForKind = (kindId: string): Template => {
+    const kind = TEMPLATE_KINDS[kindId];
+    return {
+      id: newId('tpl'),
+      brandId,
+      name: kind.name,
+      type: kind.type,
+      kind: kind.id,
+      supportedPlatforms: kind.supportedPlatforms,
+      dimensions: kind.dimensions,
+      createdAt: t,
+    };
   };
-  return { brands: [brand], templates: [template] };
+  return {
+    brands: [brand],
+    templates: [templateForKind('quizbookbiz-leaderboard'), templateForKind('animated-caption')],
+  };
 }
