@@ -269,8 +269,10 @@ const ctaSlide: SlideDef = {
 
 export const SLIDES: SlideDef[] = [
   coverSlide,
-  makeListSlide('top5', 'Safleoedd 1–5', [1, 5]),
+  // Countdown reveal: lower ranks first, building to the top 5 and the winner
+  // spotlight as the climax (rather than spending #1 on the first list slide).
   makeListSlide('top10', 'Safleoedd 6–10', [6, 10]),
+  makeListSlide('top5', 'Safleoedd 1–5', [1, 5]),
   winnerSlide,
   ctaSlide,
 ];
