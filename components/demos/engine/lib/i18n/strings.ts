@@ -166,6 +166,16 @@ export const STRINGS = {
     'review.notConfigured': 'AI review runs in production (needs ANTHROPIC_API_KEY).',
     'review.aiTitle': 'AI design review',
     'review.slide': 'Slide',
+    // clip finder (Postio M2b, beta)
+    'clip.title': 'Clip finder',
+    'clip.subtitle': 'Paste a transcript — AI ranks the strongest moments for short-form clips.',
+    'clip.placeholder': 'Paste your transcript here…',
+    'clip.hint': 'Welsh or English — from Capsiynau, a caption file, anywhere.',
+    'clip.find': 'Find clips',
+    'clip.finding': 'Analysing…',
+    'clip.none': 'No strong moments found.',
+    'clip.why': 'Why',
+    'clip.caption': 'Caption',
 
     // master template
     'master.title': 'Master template',
@@ -447,6 +457,16 @@ export const STRINGS = {
     'review.notConfigured': 'Mae’r adolygiad AI yn rhedeg yn y cynhyrchiad (angen ANTHROPIC_API_KEY).',
     'review.aiTitle': 'Adolygiad dylunio AI',
     'review.slide': 'Sleid',
+    // clip finder (Postio M2b, beta — angen adolygiad Cymraeg)
+    'clip.title': 'Canfod clipiau',
+    'clip.subtitle': 'Gludwch drawsgrifiad — bydd AI yn graddio’r eiliadau cryfaf ar gyfer clipiau byr.',
+    'clip.placeholder': 'Gludwch eich trawsgrifiad yma…',
+    'clip.hint': 'Cymraeg neu Saesneg — o Gapsiynau, ffeil gapsiynau, unrhyw le.',
+    'clip.find': 'Canfod clipiau',
+    'clip.finding': 'Yn dadansoddi…',
+    'clip.none': 'Heb ganfod eiliadau cryf.',
+    'clip.why': 'Pam',
+    'clip.caption': 'Capsiwn',
 
     // master template
     'master.title': 'Prif dempled',

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutGrid, Search, Plus, Sparkles, Download, HardDrive } from 'lucide-react';
+import { LayoutGrid, Search, Plus, Sparkles, Download, HardDrive, Film } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button } from './ui';
@@ -47,6 +47,16 @@ export default function AppShell() {
             }
           >
             <LayoutGrid size={16} /> {t('nav.dashboard')}
+          </NavLink>
+          <NavLink
+            to="/clips"
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors ${
+                isActive ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`
+            }
+          >
+            <Film size={16} /> {t('clip.title')}
           </NavLink>
         </nav>
 
