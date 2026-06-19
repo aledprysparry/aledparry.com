@@ -9,7 +9,7 @@ import AnimatedCanvas from '@engine/components/AnimatedCanvas';
 import { getKind, platformToRatio } from '@engine/lib/templates/registry';
 import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
 import { downloadAnimatedWebM, webmSupported } from '@engine/lib/carousel/exportAnimated';
-import { ANIMATED_COPY_FIELDS } from '@engine/lib/carousel/animated';
+import { ANIMATED_COPY_FIELDS, ANIMATED_STYLES, ANIMATED_BGS } from '@engine/lib/carousel/animated';
 import type { RatioKey } from '@engine/lib/canvas/CanvasRenderer';
 import type { GeneratedGraphic } from '@engine/lib/model/types';
 
@@ -78,6 +78,24 @@ export default function AnimatedEditor({ graphic }: { graphic: GeneratedGraphic 
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-[360px_1fr]">
         <div className="flex flex-col gap-5">
           <Panel className="p-5"><CopyEditor copy={copy} onChange={setField} fields={ANIMATED_COPY_FIELDS} /></Panel>
+          <Panel className="space-y-4 p-5">
+            <div>
+              <p className="mb-1.5 text-[12px] font-semibold text-white/70">Motion</p>
+              <div className="flex gap-2">
+                {ANIMATED_STYLES.map((s) => (
+                  <button key={s.key} onClick={() => setField('style', s.key)} className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold ${(copy.style || 'rise') === s.key ? 'border-indigo-400/70 bg-indigo-500/10 text-white' : 'border-white/10 text-white/55 hover:bg-white/5'}`}>{s.label}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-[12px] font-semibold text-white/70">Background</p>
+              <div className="flex gap-2">
+                {ANIMATED_BGS.map((b) => (
+                  <button key={b.key} onClick={() => setField('bg', b.key)} className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold ${(copy.bg || 'halftone') === b.key ? 'border-indigo-400/70 bg-indigo-500/10 text-white' : 'border-white/10 text-white/55 hover:bg-white/5'}`}>{b.label}</button>
+                ))}
+              </div>
+            </div>
+          </Panel>
           {err && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-200">{err}</p>}
           <p className="text-[12px] text-white/35">A looping caption clip rendered on the brand canvas, exported as WebM in-browser. MP4 + burnt-in subtitles arrive with the video worker (Phase 2b).</p>
         </div>
