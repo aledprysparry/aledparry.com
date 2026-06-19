@@ -176,6 +176,7 @@ export const STRINGS = {
     'clip.none': 'No strong moments found.',
     'clip.why': 'Why',
     'clip.caption': 'Caption',
+    'clip.makeCaption': 'Make caption',
 
     // master template
     'master.title': 'Master template',
@@ -467,6 +468,7 @@ export const STRINGS = {
     'clip.none': 'Heb ganfod eiliadau cryf.',
     'clip.why': 'Pam',
     'clip.caption': 'Capsiwn',
+    'clip.makeCaption': 'Creu capsiwn',
 
     // master template
     'master.title': 'Prif dempled',

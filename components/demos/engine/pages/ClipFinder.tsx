@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Film, Sparkles } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Film, Sparkles, Wand2 } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
+import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
 
 // Postio M2b — the intelligence core: paste a transcript, AI ranks the
@@ -21,6 +22,8 @@ function scoreTone(s: number): string {
 
 export default function ClipFinder() {
   const { t } = useI18n();
+  const store = useStore();
+  const navigate = useNavigate();
   const [transcript, setTranscript] = useState('');
   const [clips, setClips] = useState<Clip[] | null>(null);
   const [summary, setSummary] = useState('');
@@ -46,6 +49,22 @@ export default function ClipFinder() {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Intelligence → creation loop: turn a clip's hook straight into an
+  // animated-caption asset, reusing the M2a kind. Uses the first brand that
+  // has an Animated caption template (every brand gets one via migration).
+  const brand = store.brands.find((b) => store.templatesByBrand(b.id).some((tp) => tp.kind === 'animated-caption'));
+  const makeCaption = (c: Clip) => {
+    if (!brand) return;
+    const tpl = store.templatesByBrand(brand.id).find((tp) => tp.kind === 'animated-caption');
+    if (!tpl) return;
+    const g = store.createGraphic(brand.id, tpl.id, { name: c.title || 'Clip caption' });
+    if (!g) return;
+    store.updateGraphic(g.id, {
+      inputs: { ...g.inputs, copyOverrides: { ...((g.inputs?.copyOverrides as Record<string, string>) || {}), caption: c.hook || c.title || '', sub: c.caption || '' } },
+    });
+    navigate(`/graphics/${g.id}`);
   };
 
   return (
@@ -94,6 +113,11 @@ export default function ClipFinder() {
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {c.platforms.map((p) => <span key={p} className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-white/60">{p}</span>)}
                 </div>
+              )}
+              {brand && (
+                <button onClick={() => makeCaption(c)} className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10">
+                  <Wand2 size={13} className="text-indigo-300" /> {t('clip.makeCaption')}
+                </button>
               )}
             </Panel>
           ))}
