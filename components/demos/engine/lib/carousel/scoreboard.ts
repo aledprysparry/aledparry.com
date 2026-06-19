@@ -106,6 +106,15 @@ const scoreboardSlide: SlideDef = {
       drawNameLoc(r, left + 0.11, yc, row.name, row.location, isPill ? 0.043 : 0.038, textColor, isPill ? '800' : '700', locColor);
       r.drawText(fmtScore(row.score), { x: right - 0.03, y: yc, size: isPill ? 0.044 : 0.038, color: textColor, weight: isPill ? '900' : '800', align: 'right', baseline: 'middle', font: DISPLAY });
     });
+
+    // Footer URL — centred at the bottom. Only drawn when set, so it never
+    // ships a placeholder. Edit it per-graphic in the "Website / URL" field.
+    const url = (copy.url as string) || '';
+    if (url.trim()) {
+      setShadow(r, 'rgba(22,9,66,0.5)', 0, 0.004, 0.0012);
+      r.drawText(url.trim(), { x: 0.5, y: 0.945, size: 0.032, color: GOLD, weight: '800', align: 'center', baseline: 'middle', font: BODY, letterSpacing: -0.001 });
+      clearShadow(r);
+    }
   },
 };
 
@@ -114,6 +123,7 @@ export const SCOREBOARD_SLIDES: SlideDef[] = [scoreboardSlide];
 export const SCOREBOARD_COPY: Record<string, string> = {
   title: "LAST WEEK'S LEADERBOARD",
   dateRange: '11.02.24 - 18.02.24',
+  url: '',
 };
 
 // Real Cwis Bob Dydd shape: position, username (location/postcode), score.

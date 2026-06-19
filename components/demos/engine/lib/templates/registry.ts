@@ -66,6 +66,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     copyFields: [
       { key: 'title', label: 'Title', labelKey: 'copy.field.title' },
       { key: 'dateRange', label: 'Date range', labelKey: 'copy.field.dateRange' },
+      { key: 'url', label: 'Website / URL', labelKey: 'copy.field.url' },
     ],
     sampleData: SCOREBOARD_SAMPLE,
     dataHint: 'rank, name, score (decimals ok, e.g. 61.33)',
