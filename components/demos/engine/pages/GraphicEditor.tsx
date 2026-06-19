@@ -53,7 +53,7 @@ export default function GraphicEditor() {
 
   const downloadSlide = async (i: number) => {
     setBusy(i);
-    try { await exportSlide(slides[i], i, rows, copy, slides.length, format, ratio); }
+    try { await exportSlide(slides[i], i, rows, copy, slides.length, format, ratio, graphic.name); }
     finally { setBusy(null); }
   };
   const downloadZip = async () => {

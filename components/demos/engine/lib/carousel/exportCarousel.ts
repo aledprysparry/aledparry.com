@@ -37,9 +37,11 @@ export async function exportSlide(
   slideCount: number,
   mime: string,
   ratio: RatioKey = 'portrait',
+  name = '',
 ): Promise<void> {
   const blob = await renderSlideBlob(slide, index, rows, copy, slideCount, mime, ratio);
-  saveAs(blob, `${String(index + 1).padStart(2, '0')}_${slug(slide.label)}.${EXT[mime]}`);
+  const prefix = name ? `${slug(name)}_` : '';
+  saveAs(blob, `${prefix}${String(index + 1).padStart(2, '0')}_${slug(slide.label)}.${EXT[mime]}`);
 }
 
 export async function exportZip(
