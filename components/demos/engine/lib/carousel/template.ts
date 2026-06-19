@@ -109,13 +109,10 @@ const coverSlide: SlideDef = {
       x: 0.06, y: 0.355, size: 0.118, color: BRAND_WHITE, weight: '900',
       maxWidth: 0.9, lineHeight: 0.112, font: SERIF_FONT,
     });
-    // accent rule
-    fr.drawRect({ x: 0.06, y: 0.64, width: 0.16, height: 0.012, color: BRAND_YELLOW, radius: 0.006 });
-    // subtitle
-    fr.drawText(copy.coverSubtitle, { x: 0.06, y: 0.685, size: 0.034, color: 'rgba(255,255,255,0.78)', weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
-    // week pill
-    fr.drawRect({ x: 0.06, y: 0.74, width: 0.62, height: 0.06, color: SURFACE, radius: 0.03 });
-    fr.drawText(copy.weekLabel, { x: 0.09, y: 0.77, size: 0.03, color: BRAND_YELLOW, weight: '800', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.54 });
+    // subtitle - directly under the headline (no decorative rule)
+    fr.drawText(copy.coverSubtitle, { x: 0.06, y: 0.55, size: 0.034, color: 'rgba(255,255,255,0.82)', weight: '500', baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.86 });
+    // date - a clean muted label (secondary detail recedes; no faint box)
+    fr.drawText(copy.weekLabel, { x: 0.06, y: 0.605, size: 0.028, color: 'rgba(255,255,255,0.5)', weight: '700', letterSpacing: 0.002, baseline: 'middle', font: DEFAULT_FONT, maxWidth: 0.8 });
 
     // bottom CTA - bold gold pill (the swipe / click driver), high contrast
     const ctaY = 0.85, ctaH = 0.072;
@@ -138,7 +135,6 @@ function makeListSlide(id: string, label: string, range: [number, number]): Slid
       paintLogo(fr, { heightFrac: 0.11, topFrac: 0.05, rightFrac: 0.94 });
       fr.drawText(copy.listTitle, { x: 0.06, y: 0.085, size: 0.034, color: BRAND_YELLOW, weight: '900', baseline: 'middle', font: DEFAULT_FONT, letterSpacing: TRACK_DISPLAY });
       fr.drawText(label, { x: 0.06, y: 0.15, size: 0.072, color: BRAND_WHITE, weight: '900', baseline: 'middle', font: SERIF_FONT, letterSpacing: TRACK_TITLE });
-      fr.drawRect({ x: 0.06, y: 0.195, width: 0.12, height: 0.01, color: BRAND_YELLOW, radius: 0.005 });
 
       const scoped = rowsInRange(rows, range);
       const start = 0.255;
