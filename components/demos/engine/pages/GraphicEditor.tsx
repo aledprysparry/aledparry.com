@@ -12,6 +12,7 @@ import ReviewPanel from '@engine/components/ReviewPanel';
 import { getKind, platformToRatio } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { exportSlide, exportZip } from '@engine/lib/carousel/exportCarousel';
+import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
 import type { CarouselCopy } from '@engine/lib/carousel/types';
 import type { PlatformId } from '@engine/lib/model/types';
 
@@ -28,7 +29,9 @@ export default function GraphicEditor() {
   const [showSafe, setShowSafe] = useState(false);
 
   const rawText = (graphic?.inputs?.rawText as string) ?? '';
-  const copy = (graphic?.inputs?.copy as CarouselCopy) ?? ({} as CarouselCopy);
+  // effective copy = kind default ← template master ← this graphic's overrides
+  const overrides = graphicOverrides(graphic?.inputs);
+  const copy = effectiveCopy(kind?.defaultCopy, template?.master?.copy, overrides) as unknown as CarouselCopy;
   const { rows, warnings, error } = useMemo(
     () => (kind?.parse ? kind.parse(rawText) : { rows: [], warnings: [], error: null }),
     [kind, rawText],
@@ -48,8 +51,11 @@ export default function GraphicEditor() {
 
   const setInputs = (patch: Record<string, unknown>) =>
     store.updateGraphic(graphic.id, { inputs: { ...graphic.inputs, ...patch } });
+  // editing a field writes an OVERRIDE (so master edits still flow through to untouched fields)
   const setCopyField = (k: string, v: string) =>
-    setInputs({ copy: { ...copy, [k]: v } });
+    setInputs({ copyOverrides: { ...overrides, [k]: v } });
+  const resetToMaster = () => setInputs({ copyOverrides: {} });
+  const overrideCount = Object.keys(overrides).length;
 
   const downloadSlide = async (i: number) => {
     setBusy(i);
@@ -109,7 +115,16 @@ export default function GraphicEditor() {
           <Panel className="p-5">
             <DataInput value={rawText} onChange={(t) => setInputs({ rawText: t })} warnings={warnings} error={error} rowCount={rows.length} onLoadSample={() => setInputs({ rawText: kind.sampleData })} />
           </Panel>
-          <Panel className="p-5"><CopyEditor copy={copy as unknown as Record<string, string | undefined>} onChange={setCopyField} fields={kind.copyFields} /></Panel>
+          <Panel className="p-5">
+            <CopyEditor copy={copy as unknown as Record<string, string | undefined>} onChange={setCopyField} fields={kind.copyFields} />
+            <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-[12px]">
+              <span className="text-white/45">{overrideCount ? t('master.overridden', { n: overrideCount }) : t('master.inheriting')}</span>
+              <div className="flex items-center gap-3">
+                {overrideCount > 0 && <button onClick={resetToMaster} className="font-semibold text-indigo-300 hover:text-indigo-200">{t('master.reset')}</button>}
+                <Link to={`/templates/${template.id}/master`} className="font-semibold text-indigo-300 hover:text-indigo-200">{t('master.edit')}</Link>
+              </div>
+            </div>
+          </Panel>
           <ReviewPanel slides={slides} rows={rows} copy={copy} ratio={ratio} brand={store.getBrand(graphic.brandId)} />
         </div>
 

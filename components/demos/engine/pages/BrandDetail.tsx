@@ -341,6 +341,7 @@ function TemplatesTab({ brandId }: { brandId: string }) {
                 <Menu
                   label={tr('common.actions')}
                   items={[
+                    { label: tr('master.edit'), icon: <Layers size={14} />, onClick: () => navigate(`/templates/${t.id}/master`) },
                     { label: tr('common.rename'), icon: <Pencil size={14} />, onClick: () => rename(t.id, t.name) },
                     { label: tr('common.delete'), icon: <Trash2 size={14} />, danger: true, onClick: () => remove(t.id, t.name) },
                   ]}

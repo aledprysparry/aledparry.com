@@ -43,21 +43,56 @@ interface StoreState {
   folders: Folder[];
 }
 
+const MASTER_MIGRATION_KEY = 'cg.v1.masterMigrated';
+
+// One-time migration to the master/instance model: promote each template's
+// shared copy to its `master` (from its latest graphic's copy, else the kind
+// default), then RE-LINK every graphic to inherit it (clear full copy →
+// empty overrides). Runs once per browser.
+function migrateMaster(templates: Template[], graphics: GeneratedGraphic[]): { templates: Template[]; graphics: GeneratedGraphic[] } | null {
+  if (typeof localStorage === 'undefined' || localStorage.getItem(MASTER_MIGRATION_KEY) === 'true') return null;
+  const newTemplates = templates.map((t) => {
+    if (t.master?.copy) return t;
+    const kind = getKind(t.kind);
+    const latest = graphics
+      .filter((g) => g.templateId === t.id && g.inputs?.copy)
+      .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))[0];
+    const promoted = (latest?.inputs?.copy as Record<string, string>) ?? {};
+    return { ...t, master: { copy: { ...(kind?.defaultCopy ?? {}), ...promoted } } };
+  });
+  const newGraphics = graphics.map((g) => {
+    if (!g.inputs?.copy) return g; // freeform or already migrated
+    const { copy, ...rest } = g.inputs as Record<string, unknown>;
+    void copy;
+    return { ...g, inputs: { ...rest, copyOverrides: {} } };
+  });
+  localStorage.setItem(MASTER_MIGRATION_KEY, 'true');
+  saveCollection('templates', newTemplates);
+  saveCollection('graphics', newGraphics);
+  return { templates: newTemplates, graphics: newGraphics };
+}
+
 function initialState(): StoreState {
   if (!seededFlag()) {
     const seed = buildSeed();
+    const templates = seed.templates.map((t) => (t.master ? t : { ...t, master: { copy: { ...(getKind(t.kind)?.defaultCopy ?? {}) } } }));
     saveCollection('brands', seed.brands);
-    saveCollection('templates', seed.templates);
+    saveCollection('templates', templates);
     markSeeded();
-    return { brands: seed.brands, templates: seed.templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], folders: [] };
+    if (typeof localStorage !== 'undefined') localStorage.setItem(MASTER_MIGRATION_KEY, 'true');
+    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], folders: [] };
   }
+  let templates = loadCollection<Template>('templates');
+  let graphics = loadCollection<GeneratedGraphic>('graphics');
+  const migrated = migrateMaster(templates, graphics);
+  if (migrated) { templates = migrated.templates; graphics = migrated.graphics; }
   return {
     brands: loadCollection('brands'),
     assets: [], // hydrated from IndexedDB on mount (see StoreProvider)
     socialAccounts: loadCollection('socialAccounts'),
     templateStyles: loadCollection('templateStyles'),
-    templates: loadCollection('templates'),
-    graphics: loadCollection('graphics'),
+    templates,
+    graphics,
     folders: loadCollection('folders'),
   };
 }
@@ -92,6 +127,7 @@ export interface StoreApi extends StoreState {
   // templates
   createTemplate: (brandId: string, kindId: string, name?: string, opts?: { styleId?: string; seedElements?: GraphicElement[] }) => Template | undefined;
   renameTemplate: (id: string, name: string) => void;
+  updateTemplateMaster: (id: string, copyPatch: Record<string, string>) => void; // edit shared master copy
   deleteTemplate: (id: string) => void;
   templatesByBrand: (brandId: string) => Template[];
   getTemplate: (id: string) => Template | undefined;
@@ -215,12 +251,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createTemplate: (brandId, kindId, name, opts) => {
         const kind = getKind(kindId);
         if (!kind) return undefined;
-        const tpl: Template = { id: newId('tpl'), brandId, name: name || kind.name, type: kind.type, kind: kind.id, supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions, styleId: opts?.styleId, seedElements: opts?.seedElements, createdAt: now() };
+        const tpl: Template = { id: newId('tpl'), brandId, name: name || kind.name, type: kind.type, kind: kind.id, supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions, styleId: opts?.styleId, seedElements: opts?.seedElements, master: { copy: { ...(kind.defaultCopy ?? {}) } }, createdAt: now() };
         update('templates', (x) => [...x, tpl]);
         return tpl;
       },
       renameTemplate: (id, name) =>
         update('templates', (x) => x.map((t) => (t.id === id ? { ...t, name: name.trim() || t.name } : t))),
+      updateTemplateMaster: (id, copyPatch) =>
+        update('templates', (x) => x.map((t) => (t.id === id ? { ...t, master: { ...t.master, copy: { ...t.master?.copy, ...copyPatch } } } : t))),
       deleteTemplate: (id) => update('templates', (x) => x.filter((t) => t.id !== id)),
       templatesByBrand: (brandId) => state.templates.filter((t) => t.brandId === brandId),
       getTemplate: (id) => state.templates.find((t) => t.id === id),
@@ -252,7 +290,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const g: GeneratedGraphic =
           kind.editor === 'freeform'
             ? { ...base, slides: [{ id: newId('slide'), order: 0, elements: seed }] }
-            : { ...base, inputs: { rawText: kind.sampleData ?? '', copy: { ...(kind.defaultCopy ?? {}) } } };
+            // carousel/still graphics inherit the master's copy; they store only overrides
+            : { ...base, inputs: { rawText: kind.sampleData ?? '', copyOverrides: {} } };
         update('graphics', (x) => [g, ...x]);
         return g;
       },
