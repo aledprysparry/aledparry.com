@@ -11,26 +11,33 @@ At supabase.com. Then run this SQL (idempotent - safe to re-run) in the
 SQL editor:
 
 ```sql
--- One table per collection: (id, data jsonb).
-create table if not exists cg_brands           (id text primary key, data jsonb not null, updated_at timestamptz default now());
-create table if not exists cg_assets           (id text primary key, data jsonb not null, updated_at timestamptz default now());
-create table if not exists cg_social_accounts  (id text primary key, data jsonb not null, updated_at timestamptz default now());
-create table if not exists cg_template_styles  (id text primary key, data jsonb not null, updated_at timestamptz default now());
-create table if not exists cg_templates        (id text primary key, data jsonb not null, updated_at timestamptz default now());
-create table if not exists cg_graphics         (id text primary key, data jsonb not null, updated_at timestamptz default now());
+-- Co-located in the isolated `socialdesk` schema (shared project, alongside
+-- social-desk). One table per collection: (id, data jsonb).
+create schema if not exists socialdesk;
+grant usage on schema socialdesk to anon, authenticated;
+
+create table if not exists socialdesk.cg_brands           (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_assets           (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_social_accounts  (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_template_styles  (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_templates        (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_graphics         (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_folders          (id text primary key, data jsonb not null, updated_at timestamptz default now());
 
 -- POC access: open via the anon key (one shared workspace, no login).
 -- Replace with auth + per-user RLS before real multi-user.
 do $$
 declare t text;
 begin
-  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics']
+  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_folders']
   loop
-    execute format('alter table %I enable row level security', t);
-    execute format('drop policy if exists anon_all on %I', t);
-    execute format('create policy anon_all on %I for all to anon using (true) with check (true)', t);
+    execute format('alter table socialdesk.%I enable row level security', t);
+    execute format('drop policy if exists anon_all on socialdesk.%I', t);
+    execute format('create policy anon_all on socialdesk.%I for all to anon using (true) with check (true)', t);
+    execute format('grant select, insert, update, delete on socialdesk.%I to anon', t);
   end loop;
 end $$;
+-- Then expose the schema: Dashboard → Settings → API → "Exposed schemas" → add `socialdesk`.
 ```
 
 ## 2. Set env vars (Vercel + .env.local)

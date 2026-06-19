@@ -13,6 +13,8 @@ export function supabaseConfigured(): boolean {
 export function getClient(): SupabaseClient | null {
   if (cached !== undefined) return cached;
   if (!supabaseConfigured()) { cached = null; return null; }
-  cached = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string);
+  // Co-located on a shared project in the isolated `socialdesk` schema
+  // (alongside social-desk). The cg_* tables live there too.
+  cached = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string, { db: { schema: 'socialdesk' } }) as unknown as SupabaseClient;
   return cached;
 }
