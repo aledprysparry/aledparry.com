@@ -127,6 +127,7 @@ export const STRINGS = {
     'copy.title': 'Edit text',
     'copy.field.title': 'Title',
     'copy.field.dateRange': 'Date range',
+    'copy.field.url': 'Website / URL',
 
     // create graphic
     'create.title': 'Create graphic',
@@ -403,6 +404,7 @@ export const STRINGS = {
     'copy.title': 'Golygu testun',
     'copy.field.title': 'Teitl',
     'copy.field.dateRange': 'Ystod dyddiadau',
+    'copy.field.url': 'Gwefan / URL',
 
     // create graphic
     'create.title': 'Creu graffig',

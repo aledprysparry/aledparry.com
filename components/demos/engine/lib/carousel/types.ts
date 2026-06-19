@@ -34,6 +34,7 @@ export interface CarouselCopy {
   // Weekly Scoreboard kind:
   title?: string;
   dateRange?: string;
+  url?: string;
 }
 
 export interface SlideProps {
