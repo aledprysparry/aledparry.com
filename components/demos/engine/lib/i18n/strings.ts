@@ -83,6 +83,7 @@ export const STRINGS = {
     'gfx.newFolder': 'New folder',
     'gfx.folderNamePrompt': 'Folder name',
     'gfx.moveTo': 'Move to',
+    'gfx.moveToNew': 'Move to new folder…',
     'gfx.removeFromFolder': 'Remove from folder',
     'gfx.deleteFolderTitle': 'Delete this folder?',
     'gfx.deleteFolderBody': 'Graphics inside “{name}” are kept and moved to Unfiled.',
@@ -138,6 +139,8 @@ export const STRINGS = {
     'review.notConfigured': 'AI review runs in production (needs ANTHROPIC_API_KEY).',
     'review.aiTitle': 'AI design review',
     'review.slide': 'Slide',
+
+    'li.dormantHint': 'Beta — connecting a live account needs a Meta app (setup required). The post audit below works now without it.',
 
     // common actions
     'common.rename': 'Rename',
@@ -323,6 +326,7 @@ export const STRINGS = {
     'gfx.newFolder': 'Ffolder newydd',
     'gfx.folderNamePrompt': 'Enw’r ffolder',
     'gfx.moveTo': 'Symud i',
+    'gfx.moveToNew': 'Symud i ffolder newydd…',
     'gfx.removeFromFolder': 'Tynnu o’r ffolder',
     'gfx.deleteFolderTitle': 'Dileu’r ffolder hwn?',
     'gfx.deleteFolderBody': 'Mae’r graffigau y tu mewn i “{name}” yn cael eu cadw a’u symud i Heb ffeilio.',
@@ -378,6 +382,8 @@ export const STRINGS = {
     'review.notConfigured': 'Mae’r adolygiad AI yn rhedeg yn y cynhyrchiad (angen ANTHROPIC_API_KEY).',
     'review.aiTitle': 'Adolygiad dylunio AI',
     'review.slide': 'Sleid',
+
+    'li.dormantHint': 'Beta — mae angen ap Meta i gysylltu cyfrif byw (angen ei sefydlu). Mae’r archwiliad postiadau isod yn gweithio nawr hebddo.',
 
     // common actions
     'common.rename': 'Ailenwi',
