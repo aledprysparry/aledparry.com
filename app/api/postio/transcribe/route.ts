@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireGate } from '@/lib/postioGate';
 
 // ═══ Postio M2b — transcription via Capsiynau's v1 API ═══
 // Postio transcribes a media URL into a dedicated Capsiynau project
@@ -29,6 +30,9 @@ const FAILED = new Set(['failed', 'error', 'errored', 'cancelled', 'canceled']);
 
 // Kick off a transcription job for a media URL.
 export async function POST(req: NextRequest) {
+  // Gate paid transcription behind the server-validated client-area cookie -
+  // the server bearer key must never be reachable by anonymous callers (Codex #72).
+  if (!requireGate(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   if (!configured()) {
     return NextResponse.json({ error: 'not_configured', message: 'Set CAPSIYNAU_API_URL, CAPSIYNAU_API_KEY and CAPSIYNAU_PROJECT_ID.' }, { status: 503 });
   }
@@ -51,6 +55,7 @@ export async function POST(req: NextRequest) {
 
 // Poll a job; when complete, return the transcript text.
 export async function GET(req: NextRequest) {
+  if (!requireGate(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   if (!configured()) return NextResponse.json({ error: 'not_configured' }, { status: 503 });
   const jobId = req.nextUrl.searchParams.get('jobId');
   if (!jobId) return NextResponse.json({ error: 'bad_request', message: 'jobId is required.' }, { status: 400 });

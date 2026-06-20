@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireGate } from '@/lib/postioGate';
 
 // AI Social Media Agent for the graphics engine. Tasks: improve copy,
 // auto-fill from a topic, captions + hashtags, design critique. Calls
@@ -72,6 +73,9 @@ function parseJSON(text: string): unknown {
 }
 
 export async function POST(req: NextRequest) {
+  // Gate this paid Anthropic proxy behind the server-validated client-area
+  // cookie - same exposure as the transcribe route (Codex #72).
+  if (!requireGate(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'not_configured', message: 'ANTHROPIC_API_KEY is not set.' }, { status: 503 });
