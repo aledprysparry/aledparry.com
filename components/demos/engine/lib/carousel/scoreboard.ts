@@ -107,12 +107,15 @@ const scoreboardSlide: SlideDef = {
       r.drawText(fmtScore(row.score), { x: right - 0.03, y: yc, size: isPill ? 0.044 : 0.038, color: textColor, weight: isPill ? '900' : '800', align: 'right', baseline: 'middle', font: DISPLAY });
     });
 
-    // Footer URL — centred at the bottom. Only drawn when set, so it never
+    // Footer URL — centred near the bottom. Only drawn when set, so it never
     // ships a placeholder. Edit it per-graphic in the "Website / URL" field.
+    // y:0.89 keeps it clear of the ~120px bottom safe area IG feed/carousel
+    // reserve on the 1080x1350 canvas (safe ends ~0.911); maxWidth caps long
+    // user-entered URLs so they shrink instead of clipping off-canvas (Codex #63).
     const url = (copy.url as string) || '';
     if (url.trim()) {
       setShadow(r, 'rgba(22,9,66,0.5)', 0, 0.004, 0.0012);
-      r.drawText(url.trim(), { x: 0.5, y: 0.945, size: 0.032, color: GOLD, weight: '800', align: 'center', baseline: 'middle', font: BODY, letterSpacing: -0.001 });
+      r.drawText(url.trim(), { x: 0.5, y: 0.89, size: 0.032, color: GOLD, weight: '800', align: 'center', baseline: 'middle', font: BODY, maxWidth: 0.84, letterSpacing: -0.001 });
       clearShadow(r);
     }
   },
