@@ -24,6 +24,11 @@ export interface TemplateKind {
   dimensions: { width: number; height: number };
   /** Which editor + content model this kind uses. */
   editor: 'carousel' | 'freeform' | 'animated';
+  /** Universal kinds (blank canvas, animated caption) can be added to any
+   *  brand. Brand-specific kinds (e.g. the Cwis-painted scoreboard/leaderboard)
+   *  are only offered to a brand that already owns one (seeded), so a new
+   *  brand never sees another brand's templates. */
+  universal?: boolean;
   // carousel kinds:
   slides?: SlideDef[];
   defaultCopy?: Record<string, string>;
@@ -78,6 +83,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     name: 'Animated caption',
     type: 'sequence',
     editor: 'animated',
+    universal: true,
     description: 'A short looping caption clip — a bold statement that animates in, exported as WebM. Brand-styled motion for Reels, TikTok and Shorts.',
     supportedPlatforms: ['instagram-story', 'tiktok', 'instagram-feed', 'facebook'],
     dimensions: { width: 1080, height: 1920 },
@@ -89,6 +95,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     name: 'Blank canvas',
     type: 'still',
     editor: 'freeform',
+    universal: true,
     description: 'A blank, editable canvas - add text, shapes, logos and images, and edit everything in place.',
     supportedPlatforms: ['instagram-feed', 'instagram-story', 'instagram-carousel', 'facebook', 'linkedin', 'x', 'tiktok'],
     dimensions: { width: 1080, height: 1350 },

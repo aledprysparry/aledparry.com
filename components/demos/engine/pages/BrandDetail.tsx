@@ -325,7 +325,9 @@ function TemplatesTab({ brandId }: { brandId: string }) {
     <div>
       <StyleGenerator brandId={brandId} />
       <div className="mb-4 flex flex-wrap gap-2">
-        {TEMPLATE_KIND_LIST.map((k) => (
+        {/* Universal kinds for any brand; brand-specific kinds only if this
+            brand already owns one (so a new brand never sees Cwis templates). */}
+        {TEMPLATE_KIND_LIST.filter((k) => k.universal || templates.some((t) => t.kind === k.id)).map((k) => (
           <Button key={k.id} variant="subtle" onClick={() => store.createTemplate(brandId, k.id)}>
             <Plus size={14} /> {k.name}
           </Button>
