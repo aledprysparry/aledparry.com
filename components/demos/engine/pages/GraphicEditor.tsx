@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, ShieldCheck, Pencil } from 'lucide-react';
+import { ArrowLeft, Download, ShieldCheck, Pencil, Film } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
@@ -13,6 +13,7 @@ import ReviewPanel from '@engine/components/ReviewPanel';
 import { getKind, platformToRatio } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { exportSlide, exportZip } from '@engine/lib/carousel/exportCarousel';
+import { downloadSlidesAnimatedWebM } from '@engine/lib/carousel/exportSlidesAnimated';
 import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
 import type { CarouselCopy } from '@engine/lib/carousel/types';
 import type { PlatformId } from '@engine/lib/model/types';
@@ -26,7 +27,7 @@ export default function GraphicEditor() {
   const kind = template && getKind(template.kind);
 
   const [format, setFormat] = useState('image/png');
-  const [busy, setBusy] = useState<number | 'zip' | null>(null);
+  const [busy, setBusy] = useState<number | 'zip' | 'anim' | null>(null);
   const [showSafe, setShowSafe] = useState(false);
 
   const rawText = (graphic?.inputs?.rawText as string) ?? '';
@@ -70,6 +71,12 @@ export default function GraphicEditor() {
     try { await exportZip(slides, rows, copy, format, `${graphic.name}`, ratio); }
     finally { setBusy(null); }
   };
+  // Animated output mode — same slides, exported as motion (WebM).
+  const downloadAnimated = async () => {
+    setBusy('anim');
+    try { await downloadSlidesAnimatedWebM(graphic.name, { slides, rows, copy, ratio }); }
+    finally { setBusy(null); }
+  };
 
   // safe-area inset as % of the preset canvas (visual guide only)
   const safe = {
@@ -110,6 +117,7 @@ export default function GraphicEditor() {
             ))}
           </div>
           <Button onClick={downloadZip} disabled={busy != null || !!error}><Download size={15} /> {busy === 'zip' ? t('editor.building') : t('editor.export')}</Button>
+          <Button variant="subtle" onClick={downloadAnimated} disabled={busy != null || !!error} title={t('editor.animatedHint')}><Film size={15} /> {busy === 'anim' ? t('editor.building') : t('editor.animated')}</Button>
         </div>
       </header>
 
