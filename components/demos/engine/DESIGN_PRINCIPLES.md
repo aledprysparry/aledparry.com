@@ -1,4 +1,4 @@
-# Design principles — Graphics Engine templates
+# Design principles — Postio templates
 
 **This is the design law for every canvas template in this engine** (the
 Cwis Bob Dydd scoreboard + carousel, and anything added later). Treat it as

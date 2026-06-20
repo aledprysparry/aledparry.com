@@ -23,6 +23,7 @@ const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Bitter:wght@400;500;
 // everything below that path via basename.
 export default function EngineApp() {
   useEffect(() => {
+    document.title = 'Postio';
     if (document.querySelector(`link[href="${FONT_HREF}"]`)) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';

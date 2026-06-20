@@ -11,7 +11,7 @@
 export const STRINGS = {
   en: {
     // shell / nav
-    'shell.title': 'Graphics Engine',
+    'shell.title': 'Postio',
     'nav.dashboard': 'Dashboard',
     'shell.searchBrands': 'Search brands',
     'shell.brands': 'Brands',
@@ -306,7 +306,7 @@ export const STRINGS = {
 
   cy: {
     // shell / nav
-    'shell.title': 'Peiriant Graffeg',
+    'shell.title': 'Postio',
     'nav.dashboard': 'Dangosfwrdd',
     'shell.searchBrands': 'Chwilio brandiau',
     'shell.brands': 'Brandiau',
