@@ -177,6 +177,9 @@ export const STRINGS = {
     'clip.why': 'Why',
     'clip.caption': 'Caption',
     'clip.makeCaption': 'Make caption',
+    'clip.videoPlaceholder': 'Paste a public video/audio URL to transcribe…',
+    'clip.transcribe': 'Transcribe',
+    'clip.transcribing': 'Transcribing…',
 
     // master template
     'master.title': 'Master template',
@@ -469,6 +472,9 @@ export const STRINGS = {
     'clip.why': 'Pam',
     'clip.caption': 'Capsiwn',
     'clip.makeCaption': 'Creu capsiwn',
+    'clip.videoPlaceholder': 'Gludwch URL fideo/sain cyhoeddus i’w drawsgrifio…',
+    'clip.transcribe': 'Trawsgrifio',
+    'clip.transcribing': 'Yn trawsgrifio…',
 
     // master template
     'master.title': 'Prif dempled',
