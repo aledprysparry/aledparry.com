@@ -32,7 +32,7 @@ genuinely new.** The new 20% is one thing — a video worker that cuts clips and
 |---|---|
 | `POST /api/v1/transcribe` | submit transcription job (Whisper <24MB, AssemblyAI ≥24MB, Techiaith Welsh) → `{jobId}` |
 | `GET /api/v1/status?jobId=` | poll progress |
-| `GET /api/v1/export?projectId=&format=srt\|vtt\|ttml\|ebutt\|json` | captions out |
+| `GET /api/v1/export?projectId=&format=srt\|vtt\|txt\|json\|ttml\|ebutt` | captions out (the transcribe route uses `txt`) |
 | `GET /api/upload/presigned` | presigned R2 PUT for media |
 | `GET /api/media/{fileId}` | auth'd media fetch (1h presigned GET) |
 
