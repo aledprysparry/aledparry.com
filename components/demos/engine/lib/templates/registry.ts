@@ -83,8 +83,10 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     name: 'Animated caption',
     type: 'sequence',
     editor: 'animated',
-    universal: true,
-    description: 'A short looping caption clip — a bold statement that animates in, exported as WebM. Brand-styled motion for Reels, TikTok and Shorts.',
+    // Brand-specific (NOT universal): only offered to a brand that already owns
+    // one, so a new brand never inherits another client's animated caption.
+    // Same rule as the Cwis scoreboard/leaderboard (#74).
+    description: 'A short looping caption clip – a bold statement that animates in, exported as WebM. Brand-styled motion for Reels, TikTok and Shorts.',
     supportedPlatforms: ['instagram-story', 'tiktok', 'instagram-feed', 'facebook'],
     dimensions: { width: 1080, height: 1920 },
     defaultCopy: ANIMATED_COPY,
