@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Sparkles, Wand2, Save, Film, Layers } from 'lucide-react';
+import { ArrowLeft, Check, Sparkles, Wand2, Save, Film, Layers, X } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
@@ -44,6 +44,7 @@ export default function Pipeline() {
   const [transStatus, setTransStatus] = useState<string | null>(null);
   const [clips, setClips] = useState<Suggestion[] | null>(null);
   const [saved, setSaved] = useState<Record<number, boolean>>({});
+  const [rejected, setRejected] = useState<Record<number, boolean>>({});
   const [folderSel, setFolderSel] = useState('none');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -105,6 +106,12 @@ export default function Pipeline() {
     navigate(`/graphics/${g.id}`);
   };
 
+  // Adjust a suggestion's in/out points before saving (brief Step 6).
+  const adjust = (i: number, field: 'start' | 'end', value: string) =>
+    setClips((cs) => (cs ? cs.map((c, j) => (j === i ? { ...c, [field]: value } : c)) : cs));
+  // Reject a suggestion (hidden; indices stay stable so saved/adjust hold).
+  const reject = (i: number) => setRejected((r) => ({ ...r, [i]: true }));
+
   const savedCount = Object.values(saved).filter(Boolean).length;
   const fieldCls = 'w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[13px] leading-relaxed text-white placeholder:text-white/30 focus:border-indigo-400/60 focus:outline-none';
 
@@ -154,13 +161,20 @@ export default function Pipeline() {
                   {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                 </select>
               )}
+              {clips.every((_, i) => rejected[i]) && <p className="text-[13px] text-white/35">{t('pipe.allRejected')}</p>}
               <div className="space-y-3">
-                {clips.map((c, i) => (
+                {clips.map((c, i) => rejected[i] ? null : (
                   <Panel key={i} className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[14px] font-bold">{c.title || `Clip ${i + 1}`}</p>
-                        <p className="mt-0.5 text-[12px] text-white/45">{c.start}–{c.end} · {c.duration_seconds}s · {c.aspect_ratio}</p>
+                        {/* Adjust the in/out points (brief Step 6) — applied on save + by the render worker later. */}
+                        <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-white/45">
+                          <input value={c.start} onChange={(e) => adjust(i, 'start', e.target.value)} disabled={saved[i]} aria-label={t('pipe.in')} className="w-16 rounded border border-white/10 bg-black/30 px-2 py-1 text-center text-white/90 focus:border-indigo-400/60 focus:outline-none disabled:opacity-60" />
+                          <span>→</span>
+                          <input value={c.end} onChange={(e) => adjust(i, 'end', e.target.value)} disabled={saved[i]} aria-label={t('pipe.out')} className="w-16 rounded border border-white/10 bg-black/30 px-2 py-1 text-center text-white/90 focus:border-indigo-400/60 focus:outline-none disabled:opacity-60" />
+                          <span className="text-white/30">· {c.aspect_ratio}</span>
+                        </div>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[12px] font-bold text-white/70">{c.score}</span>
                     </div>
@@ -174,6 +188,11 @@ export default function Pipeline() {
                       {animatedTpl && (
                         <button onClick={() => makeCaption(c)} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10">
                           <Wand2 size={13} className="text-indigo-300" /> {t('clip.makeCaption')}
+                        </button>
+                      )}
+                      {!saved[i] && (
+                        <button onClick={() => reject(i)} className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white/40 hover:bg-white/5 hover:text-white/70">
+                          <X size={13} /> {t('clip.reject')}
                         </button>
                       )}
                     </div>
