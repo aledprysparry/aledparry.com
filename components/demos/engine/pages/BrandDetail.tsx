@@ -625,7 +625,7 @@ function ClipsTab({ brandId }: { brandId: string }) {
     return items;
   };
 
-  const findCta = <Button onClick={() => navigate(`/brands/${brandId}/clips`)}><Film size={15} /> {t('clip.find')}</Button>;
+  const findCta = <Button onClick={() => navigate(`/brands/${brandId}/pipeline`)}><Film size={15} /> {t('clip.find')}</Button>;
 
   if (allClips.length === 0)
     return <EmptyState title={t('clipTab.empty')} hint={t('clipTab.emptyHint')} action={findCta} />;

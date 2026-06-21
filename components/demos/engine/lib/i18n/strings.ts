@@ -221,6 +221,7 @@ export const STRINGS = {
 
     // pipeline (P1b — one guided journey)
     'pipe.start': 'Start a post',
+    'launch.pickBrand': 'Pick a brand to start a post.',
     'pipe.title': 'Start a post',
     'pipe.subtitle': 'Brief to export, in one flow — brief, media, AI clips, then create and export your assets.',
     'pipe.briefTitle': 'Brief',
@@ -579,6 +580,7 @@ export const STRINGS = {
 
     // pipeline (P1b)
     'pipe.start': 'Dechrau post',
+    'launch.pickBrand': 'Dewiswch frand i ddechrau post.',
     'pipe.title': 'Dechrau post',
     'pipe.subtitle': 'O friff i allforio mewn un llif — briff, cyfryngau, clipiau AI, yna creu ac allforio’ch asedau.',
     'pipe.briefTitle': 'Briff',
