@@ -88,14 +88,14 @@ export const demos: DemoEntry[] = [
   {
     clientSlug: "s4c",
     clientName: "S4C",
-    toolSlug: "carousel",
-    toolName: "Cwis Bob Dydd Carousels",
+    toolSlug: "postio",
+    toolName: "Postio",
     description:
-      "Auto-builds the weekly Top 10 leaderboard as a branded Instagram carousel – paste or upload (CSV/XLSX) the week's scores and export cover, places 1–5, 6–10, winner spotlight and a call-to-action as PNG/JPEG or a ZIP.",
+      "The browser-based social production workspace: create still graphics, animated posts, cut-down video clips and captioned assets from reusable branded templates — guided brief to export, ready for every platform.",
     descriptionCy:
-      "Creu carwsél Instagram o 10 Uchaf yr wythnos yn awtomatig - gludwch neu lwythwch sgorau'r wythnos (CSV/XLSX) ac allforio'r clawr, safleoedd 1-5, 6-10, sylw i'r enillydd a galwad i weithredu fel PNG/JPEG neu ZIP.",
+      "Y gweithle cynhyrchu cyfryngau cymdeithasol yn y porwr: creu graffigau llonydd, postiadau animeiddiedig, clipiau fideo a chapsiynau o dempledi brand y gellir eu hailddefnyddio - o'r briff i'r allforio, yn barod ar gyfer pob platfform.",
     componentPath: "",
-    href: "/app/carousel",
+    href: "/app/postio",
     status: "demo",
   },
   {

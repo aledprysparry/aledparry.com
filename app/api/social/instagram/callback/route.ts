@@ -4,7 +4,7 @@ import { exchangeCode, resolveInstagram, metaConfigured, META_COOKIE } from '@/l
 // OAuth callback: code -> user token -> IG business account + page token,
 // stored in an HTTP-only cookie, then back to the app.
 export async function GET(req: NextRequest) {
-  const back = decodeURIComponent(req.nextUrl.searchParams.get('state') || '/app/carousel');
+  const back = decodeURIComponent(req.nextUrl.searchParams.get('state') || '/app/postio');
   const fail = (reason: string) => NextResponse.redirect(`${req.nextUrl.origin}${back}?ig=${reason}`);
 
   if (!metaConfigured()) return fail('not_configured');

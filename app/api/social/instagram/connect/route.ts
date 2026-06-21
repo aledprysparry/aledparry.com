@@ -12,6 +12,6 @@ export function GET(req: NextRequest) {
   }
   const origin = req.nextUrl.origin;
   const redirectUri = `${origin}/api/social/instagram/callback`;
-  const back = req.nextUrl.searchParams.get('return') || '/app/carousel';
+  const back = req.nextUrl.searchParams.get('return') || '/app/postio';
   return NextResponse.redirect(oauthUrl(redirectUri, encodeURIComponent(back)));
 }
