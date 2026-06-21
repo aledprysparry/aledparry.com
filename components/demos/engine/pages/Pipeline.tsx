@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Sparkles, Wand2, Save, Film, Layers, X } from 'lucide-react';
+import { ArrowLeft, Check, Sparkles, Wand2, Save, Film, Layers, X, Upload } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
@@ -38,6 +38,7 @@ export default function Pipeline() {
   const brand = store.getBrand(brandId);
 
   const [brief, setBrief] = useState('');
+  const [briefFile, setBriefFile] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState('');
   const [transcript, setTranscript] = useState('');
   const [transcribing, setTranscribing] = useState(false);
@@ -106,6 +107,16 @@ export default function Pipeline() {
     navigate(`/graphics/${g.id}`);
   };
 
+  // Upload a written brief — TXT / Markdown read in-browser (no backend, no
+  // parser dep). PDF / DOCX need a parser library; flagged as a follow-up.
+  const uploadBrief = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { setBrief(String(reader.result || '')); setBriefFile(file.name); };
+    reader.onerror = () => setErr('Could not read that file.');
+    reader.readAsText(file);
+  };
+
   // Adjust a suggestion's in/out points before saving (brief Step 6).
   const adjust = (i: number, field: 'start' | 'end', value: string) =>
     setClips((cs) => (cs ? cs.map((c, j) => (j === i ? { ...c, [field]: value } : c)) : cs));
@@ -129,7 +140,15 @@ export default function Pipeline() {
       <div className="mt-8 flex flex-col gap-9 border-l border-white/10 pl-px">
         {/* 1 — Brief */}
         <Step n={1} title={t('pipe.briefTitle')} desc={t('pipe.briefDesc')} done={!!brief.trim()}>
-          <textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={3} placeholder={t('clip.briefPlaceholder')} className={fieldCls} />
+          <textarea value={brief} onChange={(e) => { setBrief(e.target.value); if (briefFile) setBriefFile(null); }} rows={3} placeholder={t('clip.briefPlaceholder')} className={fieldCls} />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <label className="cursor-pointer">
+              <input type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" className="hidden" onChange={(e) => uploadBrief(e.target.files?.[0])} />
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/80 hover:bg-white/10"><Upload size={13} /> {t('pipe.uploadBrief')}</span>
+            </label>
+            {briefFile && <span className="inline-flex items-center gap-1.5 text-[12px] text-emerald-300"><Check size={13} /> {briefFile}</span>}
+            <span className="text-[11px] text-white/35">{t('pipe.briefFormats')}</span>
+          </div>
         </Step>
 
         {/* 2 — Media */}
