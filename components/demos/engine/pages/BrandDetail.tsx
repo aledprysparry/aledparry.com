@@ -67,7 +67,10 @@ export default function BrandDetail() {
             <p className="text-[12px] text-white/40">{count(templates.length, 'template')} · {count(graphics.length, 'graphic')} · {count(assets.length, 'asset')}</p>
           </div>
         </div>
-        <Button onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> {t('brand.createGraphic')}</Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => navigate(`/brands/${brandId}/pipeline`)}><Sparkles size={15} /> {t('pipe.start')}</Button>
+          <Button variant="subtle" onClick={() => navigate(`/brands/${brandId}/create`)}>{t('brand.createGraphic')}</Button>
+        </div>
       </header>
 
       {/* tabs */}
