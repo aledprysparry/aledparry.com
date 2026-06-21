@@ -72,24 +72,28 @@ function migrateMaster(templates: Template[], graphics: GeneratedGraphic[]): { t
   return { templates: newTemplates, graphics: newGraphics };
 }
 
-const ANIMATED_TPL_KEY = 'cg.v1.animatedTplMigrated';
+const ANIMATED_SCOPE_KEY = 'cg.v1.animatedTplScoped';
+// Brand-specific (non-universal) branded kinds. A brand that owns one of these
+// is a "client" brand that legitimately keeps its animated caption.
+const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard']);
 
-// One-time: give every existing brand an "Animated caption" template so the
-// new kind is selectable (Postio M2a). Additive — never touches existing
-// templates. Runs once per browser.
-function ensureAnimatedTemplates(brands: Brand[], templates: Template[]): Template[] | null {
-  if (typeof localStorage === 'undefined' || localStorage.getItem(ANIMATED_TPL_KEY) === 'true') return null;
-  localStorage.setItem(ANIMATED_TPL_KEY, 'true');
-  const kind = getKind('animated-caption');
-  if (!kind) return null;
-  const missing = brands.filter((b) => !templates.some((t) => t.brandId === b.id && t.kind === 'animated-caption'));
-  if (missing.length === 0) return null;
-  const added: Template[] = missing.map((b) => ({
-    id: newId('tpl'), brandId: b.id, name: kind.name, type: kind.type, kind: kind.id,
-    supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions,
-    master: { copy: { ...(kind.defaultCopy ?? {}) } }, createdAt: now(),
-  }));
-  const next = [...templates, ...added];
+// One-time: undo the earlier auto-seed that pushed an "Animated caption"
+// template into EVERY brand. Animated caption is now client-only (#74 rule), so
+// strip the stray auto-seeded instances from brands that don't own one — but
+// keep any that a graphic actually uses (never destroy real work) and keep the
+// owner/client brand's. Runs once per browser.
+function scopeAnimatedTemplates(templates: Template[], graphics: GeneratedGraphic[]): Template[] | null {
+  if (typeof localStorage === 'undefined' || localStorage.getItem(ANIMATED_SCOPE_KEY) === 'true') return null;
+  localStorage.setItem(ANIMATED_SCOPE_KEY, 'true');
+  const usedTplIds = new Set(graphics.map((g) => g.templateId));
+  const ownerBrandIds = new Set(templates.filter((t) => BRANDED_KINDS.has(t.kind)).map((t) => t.brandId));
+  const next = templates.filter((t) => {
+    if (t.kind !== 'animated-caption') return true;
+    if (usedTplIds.has(t.id)) return true;        // a graphic uses it — keep
+    if (ownerBrandIds.has(t.brandId)) return true; // the client brand — keep
+    return false;                                  // stray auto-seeded — drop
+  });
+  if (next.length === templates.length) return null;
   saveCollection('templates', next);
   return next;
 }
@@ -109,8 +113,8 @@ function initialState(): StoreState {
   const migrated = migrateMaster(templates, graphics);
   if (migrated) { templates = migrated.templates; graphics = migrated.graphics; }
   const brands = loadCollection<Brand>('brands');
-  const ensured = ensureAnimatedTemplates(brands, templates);
-  if (ensured) templates = ensured;
+  const scoped = scopeAnimatedTemplates(templates, graphics);
+  if (scoped) templates = scoped;
   return {
     brands,
     assets: [], // hydrated from IndexedDB on mount (see StoreProvider)

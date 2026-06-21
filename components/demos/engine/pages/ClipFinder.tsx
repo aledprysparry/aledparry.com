@@ -82,8 +82,8 @@ export default function ClipFinder() {
   };
 
   // Intelligence → creation loop: turn a clip's hook straight into an
-  // animated-caption asset, reusing the M2a kind. Uses the first brand that
-  // has an Animated caption template (every brand gets one via migration).
+  // animated-caption asset, reusing the M2a kind. Animated caption is now
+  // client-specific, so this targets the (first) brand that owns one.
   const brand = store.brands.find((b) => store.templatesByBrand(b.id).some((tp) => tp.kind === 'animated-caption'));
   const makeCaption = (c: Clip) => {
     if (!brand) return;
