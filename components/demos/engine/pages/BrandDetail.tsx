@@ -14,8 +14,13 @@ import { analyseImages, deriveSuggestions } from '@engine/lib/audit/analyseImage
 import { fileToStoredDataURL } from '@engine/lib/util/imageScale';
 import { LAYOUTS, type GenStyle } from '@engine/lib/freeform/layouts';
 import ElementPreview from '@engine/components/ElementPreview';
+import SlideCanvas from '@engine/components/SlideCanvas';
+import AnimatedCanvas from '@engine/components/AnimatedCanvas';
+import { platformToRatio } from '@engine/lib/templates/registry';
+import { effectiveCopy } from '@engine/lib/carousel/copy';
 import type { StringKey } from '@engine/lib/i18n/strings';
-import type { AssetType, SocialAccount, GraphicElement } from '@engine/lib/model/types';
+import type { AssetType, SocialAccount, GraphicElement, Template, Brand } from '@engine/lib/model/types';
+import type { CarouselCopy } from '@engine/lib/carousel/types';
 
 type Tab = 'overview' | 'templates' | 'graphics' | 'clips' | 'assets' | 'social';
 // Graphics first - it's the brand's graphics library, the primary view.
@@ -309,12 +314,33 @@ function StyleGenerator({ brandId }: { brandId: string }) {
   );
 }
 
+// A live thumbnail of a template, rendered with the same canvas the editor
+// uses (first slide / default elements / animated frame) + the template's
+// master copy and sample data. Crops to a consistent card height.
+function TemplateThumb({ template, brand }: { template: Template; brand?: Brand }) {
+  const kind = getKind(template.kind);
+  if (!kind) return null;
+  const copy = effectiveCopy(kind.defaultCopy, template.master?.copy, {}) as unknown as CarouselCopy;
+  const ratio = platformToRatio(template.supportedPlatforms?.[0]);
+  const els = template.seedElements?.length ? template.seedElements : (kind.defaultElements?.(brand?.colours) ?? []);
+  const rows = kind.parse ? kind.parse(kind.sampleData ?? '').rows : [];
+  return (
+    <div className="mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/20" style={{ maxHeight: 220 }}>
+      {kind.editor === 'freeform' ? <ElementPreview elements={els} />
+        : kind.editor === 'animated' ? <AnimatedCanvas copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} />
+        : kind.slides?.[0] ? <SlideCanvas slide={kind.slides[0]} index={0} rows={rows} copy={copy} slideCount={kind.slides.length} ratio={ratio} />
+        : <div className="grid h-40 place-items-center text-[12px] text-white/30">{kind.name}</div>}
+    </div>
+  );
+}
+
 // ── Templates ──
 function TemplatesTab({ brandId }: { brandId: string }) {
   const store = useStore();
   const navigate = useNavigate();
   const { t: tr } = useI18n();
   const { confirm } = useOverlay();
+  const brand = store.getBrand(brandId);
   const templates = store.templatesByBrand(brandId);
 
   const rename = (id: string, current: string) => {
@@ -344,6 +370,7 @@ function TemplatesTab({ brandId }: { brandId: string }) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((t) => (
             <Panel key={t.id} className="flex flex-col p-5">
+              <TemplateThumb template={t} brand={brand} />
               <div className="flex items-start justify-between">
                 <Badge tone="accent">{t.type}</Badge>
                 <Menu
