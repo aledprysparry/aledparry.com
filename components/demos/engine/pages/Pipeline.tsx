@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Sparkles, Wand2, Save, Film, Layers, X, Upload, MessageSquare, Copy } from 'lucide-react';
+import { ArrowLeft, Check, Sparkles, Wand2, Save, Film, Layers, X, Upload, MessageSquare, Copy, Link2 } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
@@ -40,6 +40,7 @@ export default function Pipeline() {
   const [brief, setBrief] = useState('');
   const [briefFile, setBriefFile] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState('');
+  const [localMedia, setLocalMedia] = useState<{ name: string; url: string; audio: boolean } | null>(null);
   const [transcript, setTranscript] = useState('');
   const [transcribing, setTranscribing] = useState(false);
   const [transStatus, setTransStatus] = useState<string | null>(null);
@@ -130,6 +131,15 @@ export default function Pipeline() {
     navigator.clipboard?.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied((k) => (k === key ? null : k)), 1500); }).catch(() => {});
   };
 
+  // Link a LOCAL media file — referenced for in-browser preview, never
+  // uploaded (Issue 2: reference, don't host). Server transcription needs a
+  // URL, so a local file can't be transcribed until the render worker resolves
+  // it; for now paste/transcribe a URL separately. Session-only objectURL.
+  const linkLocal = (file?: File) => {
+    if (!file) return;
+    setLocalMedia({ name: file.name, url: URL.createObjectURL(file), audio: file.type.startsWith('audio') });
+  };
+
   // Upload a written brief — TXT / Markdown read in-browser (no backend, no
   // parser dep). PDF / DOCX need a parser library; flagged as a follow-up.
   const uploadBrief = (file?: File) => {
@@ -179,7 +189,20 @@ export default function Pipeline() {
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder={t('clip.videoPlaceholder')} className="min-w-[220px] flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[13px] text-white placeholder:text-white/30 focus:border-indigo-400/60 focus:outline-none" />
             <Button variant="subtle" onClick={transcribe} disabled={transcribing || !videoUrl.trim()}>{transcribing ? (transStatus || t('clip.transcribing')) : t('clip.transcribe')}</Button>
+            <label className="cursor-pointer">
+              <input type="file" accept="video/*,audio/*" className="hidden" onChange={(e) => linkLocal(e.target.files?.[0])} />
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] font-semibold text-white/80 hover:bg-white/10"><Link2 size={14} /> {t('pipe.linkLocal')}</span>
+            </label>
           </div>
+          {localMedia && (
+            <div className="mb-2 rounded-lg border border-white/10 bg-black/20 p-2.5">
+              <div className="mb-1.5 flex items-center gap-1.5 text-[12px] text-emerald-300"><Link2 size={13} /> {localMedia.name}</div>
+              {localMedia.audio
+                ? <audio src={localMedia.url} controls className="w-full" />
+                : <video src={localMedia.url} controls className="max-h-48 w-full rounded" />}
+              <p className="mt-1.5 text-[11px] text-white/35">{t('pipe.localNote')}</p>
+            </div>
+          )}
           <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} rows={5} placeholder={t('clip.placeholder')} className={fieldCls} />
           <p className="mt-1 text-[11px] text-white/35">{t('pipe.mediaNote')}</p>
         </Step>
