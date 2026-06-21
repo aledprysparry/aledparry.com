@@ -13,7 +13,7 @@ const MODEL = 'claude-sonnet-4-20250514';
 const CLIP_TRANSCRIPT_LIMIT = 12000;
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
@@ -56,6 +56,15 @@ function buildPrompt(b: Body): { system: string; user: string } {
         system: base,
         user: `Critique this post's copy for impact, clarity, hierarchy and length-for-platform. Return JSON: {"issues":[{"title":"short issue","detail":"specific actionable fix"}]} (max 5, most important first).\n\nText:\n${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
       };
+    case 'social-copy': {
+      // Per-platform post copy from a clip/asset's content. Each platform gets
+      // text tuned to its norms + its own hashtags. Match the source language.
+      const briefLine = b.brief && b.brief.trim() ? `\n\nProduction brief (align the copy to it):\n${b.brief.slice(0, 1000)}` : '';
+      return {
+        system: `${base} You are writing publish-ready social copy. Tune each platform to its norms: Instagram (warm, a hook + 1-2 emoji, 8-12 hashtags), TikTok (punchy, casual, 3-5 hashtags), Facebook (a touch longer, conversational, 0-3 hashtags), LinkedIn (professional, no emoji spam, 0-3 hashtags). Match the language of the source text (reply in Welsh if it is in Welsh).`,
+        user: `Write post copy for EACH platform, based on the content below. Return JSON: {"variants":[{"platform":"Instagram","text":"caption","hashtags":["#tag", ...]},{"platform":"TikTok",...},{"platform":"Facebook",...},{"platform":"LinkedIn",...}]}.${briefLine}\n\nContent:\n${texts.filter(Boolean).join('\n')}`,
+      };
+    }
     case 'clip-analysis': {
       const hasBrief = Boolean(b.brief && b.brief.trim());
       // Two modes: discovery (content alone) vs brief-aligned. The brief is an
