@@ -14,6 +14,9 @@ interface Body {
   topic?: string;
   // clip-analysis: a video/audio transcript to mine for short-form moments
   transcript?: string;
+  // clip-analysis (optional): a production brief. When absent the AI works in
+  // "discovery" mode from the content alone; when present it also judges fit.
+  brief?: string;
   // review-layout: base64 data-URL images of each slide + the format
   images?: string[];
   ratio?: string;
@@ -47,11 +50,19 @@ function buildPrompt(b: Body): { system: string; user: string } {
         system: base,
         user: `Critique this post's copy for impact, clarity, hierarchy and length-for-platform. Return JSON: {"issues":[{"title":"short issue","detail":"specific actionable fix"}]} (max 5, most important first).\n\nText:\n${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
       };
-    case 'clip-analysis':
+    case 'clip-analysis': {
+      const hasBrief = Boolean(b.brief && b.brief.trim());
+      // Two modes: discovery (content alone) vs brief-aligned. The brief is an
+      // optional enhancer — never required — so any content gives good results.
+      const modeRules = hasBrief
+        ? `A production brief is provided. Rank and judge each clip by how well it serves the brief (objective, audience, platform, tone, call-to-action) AS WELL AS its standalone short-form merit. For each clip add a "fit" line: how it serves the brief, or flag tension with it. "reason" stays about why the moment works on its own.`
+        : `No brief is provided, and that is fine. First infer the content's own topic, angle and likely audience, then rank purely on universal short-form merit (hook strength, a self-contained payoff, emotion, clarity, a clean beginning + end). Give a specific "reason" for each. Leave "fit" as "".`;
+      const briefBlock = hasBrief ? `\n\nProduction brief:\n${b.brief!.slice(0, 1500)}` : '';
       return {
-        system: `You are a senior short-form social video editor. Analyse a transcript and find the strongest moments for short-form clips (Reels / TikTok / Shorts). Prioritise: a strong hook, a clear opinion, an emotional beat, a surprising fact, a useful takeaway, a human or funny moment, and a clean beginning + end. Match the transcript's language (reply in Welsh if it is in Welsh). Respond with ONLY valid JSON, no markdown, no commentary.`,
-        user: `From the transcript below, return the best clips as JSON: {"summary":"one-line summary","clips":[{"start":"mm:ss","end":"mm:ss","duration_seconds":0,"title":"short title","hook":"on-screen hook line","reason":"why it works","caption":"suggested caption","platforms":["TikTok","Instagram Reels"],"aspect_ratio":"9:16","score":0}]} — up to 6 clips, ranked best first, score 0-100.\n\nTranscript:\n${(b.transcript || '').slice(0, 12000)}`,
+        system: `You are a senior short-form social video editor. Analyse a transcript and find the strongest moments for short-form clips (Reels / TikTok / Shorts). ${modeRules} Match the transcript's language (reply in Welsh if it is in Welsh). Respond with ONLY valid JSON, no markdown, no commentary.`,
+        user: `From the transcript below, return the best clips as JSON: {"summary":"one-line summary of the content","clips":[{"start":"mm:ss","end":"mm:ss","duration_seconds":0,"title":"short title","hook":"on-screen hook line","reason":"why the moment works","fit":"how it serves the brief, or \\"\\" if no brief","caption":"suggested caption","platforms":["TikTok","Instagram Reels"],"aspect_ratio":"9:16","score":0}]} — up to 6 clips, ranked best first, score 0-100.${briefBlock}\n\nTranscript:\n${(b.transcript || '').slice(0, 12000)}`,
       };
+    }
     default:
       return { system: base, user: 'Return JSON: {}' };
   }

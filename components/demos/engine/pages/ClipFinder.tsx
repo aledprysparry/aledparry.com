@@ -12,6 +12,7 @@ interface Clip {
   start: string; end: string; duration_seconds: number;
   title: string; hook: string; reason: string; caption: string;
   platforms: string[]; aspect_ratio: string; score: number;
+  fit?: string; // how it serves the brief (only when a brief was given)
 }
 
 function scoreTone(s: number): string {
@@ -25,6 +26,8 @@ export default function ClipFinder() {
   const store = useStore();
   const navigate = useNavigate();
   const [transcript, setTranscript] = useState('');
+  const [brief, setBrief] = useState('');
+  const [showBrief, setShowBrief] = useState(false);
   const [clips, setClips] = useState<Clip[] | null>(null);
   const [summary, setSummary] = useState('');
   const [busy, setBusy] = useState(false);
@@ -67,7 +70,7 @@ export default function ClipFinder() {
       const res = await fetch('/api/ai/social', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ task: 'clip-analysis', transcript }),
+        body: JSON.stringify({ task: 'clip-analysis', transcript, ...(brief.trim() ? { brief: brief.trim() } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) { setErr(data.message || data.error || 'Clip analysis failed.'); return; }
@@ -125,6 +128,26 @@ export default function ClipFinder() {
           placeholder={t('clip.placeholder')}
           className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[13px] leading-relaxed text-white placeholder:text-white/30 focus:border-indigo-400/60 focus:outline-none"
         />
+        {/* Optional production brief — never required. Skip it and the AI works
+            from the content alone (discovery mode); add it to target the clips. */}
+        <div className="mt-3">
+          {showBrief ? (
+            <>
+              <textarea
+                value={brief}
+                onChange={(e) => setBrief(e.target.value)}
+                rows={3}
+                placeholder={t('clip.briefPlaceholder')}
+                className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[13px] leading-relaxed text-white placeholder:text-white/30 focus:border-indigo-400/60 focus:outline-none"
+              />
+              <p className="mt-1 text-[11px] text-white/35">{t('clip.briefHint')}</p>
+            </>
+          ) : (
+            <button onClick={() => setShowBrief(true)} className="text-[12px] font-semibold text-indigo-300 hover:text-indigo-200">
+              + {t('clip.addBrief')}
+            </button>
+          )}
+        </div>
         <div className="mt-3 flex items-center justify-between">
           <span className="text-[12px] text-white/35">{t('clip.hint')}</span>
           <Button onClick={find} disabled={busy || !transcript.trim()}><Sparkles size={15} /> {busy ? t('clip.finding') : t('clip.find')}</Button>
@@ -149,6 +172,7 @@ export default function ClipFinder() {
               </div>
               {c.hook && <p className="mt-2 text-[14px] font-semibold text-amber-300">“{c.hook}”</p>}
               {c.reason && <p className="mt-1.5 text-[12px] text-white/55"><span className="font-semibold text-white/70">{t('clip.why')}:</span> {c.reason}</p>}
+              {c.fit && c.fit.trim() && <p className="mt-1.5 text-[12px] text-indigo-200/80"><span className="font-semibold text-indigo-200">{t('clip.fit')}:</span> {c.fit}</p>}
               {c.caption && <p className="mt-1.5 text-[12px] text-white/75"><span className="font-semibold text-white/55">{t('clip.caption')}:</span> {c.caption}</p>}
               {Array.isArray(c.platforms) && c.platforms.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
