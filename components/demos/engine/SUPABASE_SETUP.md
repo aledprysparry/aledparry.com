@@ -22,6 +22,7 @@ create table if not exists socialdesk.cg_social_accounts  (id text primary key, 
 create table if not exists socialdesk.cg_template_styles  (id text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists socialdesk.cg_templates        (id text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists socialdesk.cg_graphics         (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_clips            (id text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists socialdesk.cg_folders          (id text primary key, data jsonb not null, updated_at timestamptz default now());
 
 -- POC access: open via the anon key (one shared workspace, no login).
@@ -29,7 +30,7 @@ create table if not exists socialdesk.cg_folders          (id text primary key, 
 do $$
 declare t text;
 begin
-  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_folders']
+  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_clips','cg_folders']
   loop
     execute format('alter table socialdesk.%I enable row level security', t);
     execute format('drop policy if exists anon_all on socialdesk.%I', t);

@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Film, Sparkles, Wand2 } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Film, Sparkles, Wand2, Save, Check } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
 
-// Postio M2b — the intelligence core: paste a transcript, AI ranks the
-// strongest moments for short-form clips. No backend/upload yet — that
-// (video ingest + Capsiynau transcription + FFmpeg cut) is the next slice.
-interface Clip {
+// Postio M2b — the intelligence core: paste/transcribe content, AI ranks the
+// strongest moments for short-form clips. Clips are brand-scoped: found inside
+// a brand and SAVED into the same Brand -> Folder structure as still graphics.
+interface Suggestion {
   start: string; end: string; duration_seconds: number;
   title: string; hook: string; reason: string; caption: string;
   platforms: string[]; aspect_ratio: string; score: number;
@@ -25,10 +25,21 @@ export default function ClipFinder() {
   const { t } = useI18n();
   const store = useStore();
   const navigate = useNavigate();
+  const { brandId } = useParams();
+
+  // Brand scope: from the route when entered from a brand, else a picker so
+  // saved clips always land somewhere (mirrors how graphics belong to a brand).
+  const [pickedBrandId, setPickedBrandId] = useState(brandId || store.brands[0]?.id || '');
+  const activeBrandId = brandId || pickedBrandId;
+  const brand = store.getBrand(activeBrandId);
+  const folders = brand ? store.foldersByBrand(brand.id) : [];
+
   const [transcript, setTranscript] = useState('');
   const [brief, setBrief] = useState('');
   const [showBrief, setShowBrief] = useState(false);
-  const [clips, setClips] = useState<Clip[] | null>(null);
+  const [folderSel, setFolderSel] = useState<string>('none');
+  const [clips, setClips] = useState<Suggestion[] | null>(null);
+  const [saved, setSaved] = useState<Record<number, boolean>>({});
   const [summary, setSummary] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -65,7 +76,7 @@ export default function ClipFinder() {
 
   const find = async () => {
     if (!transcript.trim() || busy) return;
-    setBusy(true); setErr(null); setClips(null); setSummary('');
+    setBusy(true); setErr(null); setClips(null); setSummary(''); setSaved({});
     try {
       const res = await fetch('/api/ai/social', {
         method: 'POST',
@@ -74,7 +85,7 @@ export default function ClipFinder() {
       });
       const data = await res.json();
       if (!res.ok) { setErr(data.message || data.error || 'Clip analysis failed.'); return; }
-      const r = (data.result || {}) as { summary?: string; clips?: Clip[] };
+      const r = (data.result || {}) as { summary?: string; clips?: Suggestion[] };
       setSummary(r.summary || '');
       setClips(Array.isArray(r.clips) ? r.clips : []);
     } catch {
@@ -84,15 +95,29 @@ export default function ClipFinder() {
     }
   };
 
+  // Save a clip suggestion into the active brand (+ optional folder) as a
+  // persisted Clip — the same Brand -> Folder structure as still graphics.
+  const saveClip = (c: Suggestion, i: number) => {
+    if (!brand || saved[i]) return;
+    store.createClip(brand.id, {
+      name: c.title || 'Clip',
+      start: c.start, end: c.end,
+      durationSeconds: c.duration_seconds,
+      hook: c.hook, reason: c.reason, caption: c.caption, fit: c.fit,
+      platforms: c.platforms, aspectRatio: c.aspect_ratio, score: c.score,
+      sourceUrl: videoUrl.trim() || undefined,
+      brief: brief.trim() || undefined,
+    }, { folderId: folderSel !== 'none' ? folderSel : undefined });
+    setSaved((s) => ({ ...s, [i]: true }));
+  };
+  const saveAll = () => { (clips || []).forEach((c, i) => saveClip(c, i)); };
+
   // Intelligence → creation loop: turn a clip's hook straight into an
-  // animated-caption asset, reusing the M2a kind. Uses the first brand that
-  // has an Animated caption template (every brand gets one via migration).
-  const brand = store.brands.find((b) => store.templatesByBrand(b.id).some((tp) => tp.kind === 'animated-caption'));
-  const makeCaption = (c: Clip) => {
-    if (!brand) return;
-    const tpl = store.templatesByBrand(brand.id).find((tp) => tp.kind === 'animated-caption');
-    if (!tpl) return;
-    const g = store.createGraphic(brand.id, tpl.id, { name: c.title || 'Clip caption' });
+  // animated-caption asset in THIS brand (if it owns an Animated template).
+  const animatedTpl = brand && store.templatesByBrand(brand.id).find((tp) => tp.kind === 'animated-caption');
+  const makeCaption = (c: Suggestion) => {
+    if (!brand || !animatedTpl) return;
+    const g = store.createGraphic(brand.id, animatedTpl.id, { name: c.title || 'Clip caption' });
     if (!g) return;
     store.updateGraphic(g.id, {
       inputs: { ...g.inputs, copyOverrides: { ...((g.inputs?.copyOverrides as Record<string, string>) || {}), caption: c.hook || c.title || '', sub: c.caption || '' } },
@@ -102,14 +127,41 @@ export default function ClipFinder() {
 
   return (
     <div className="mx-auto max-w-3xl px-8 py-10">
-      <Link to="/" className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white">
-        <ArrowLeft size={14} /> {t('nav.dashboard')}
+      <Link to={brand ? `/brands/${brand.id}` : '/'} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white">
+        <ArrowLeft size={14} /> {brand ? t('editor.backToBrand') : t('nav.dashboard')}
       </Link>
       <div className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.2em] text-indigo-300"><Film size={13} /> Postio · beta</div>
       <h1 className="mt-1 text-[28px] font-extrabold tracking-tight">{t('clip.title')}</h1>
       <p className="mt-1 text-[13px] text-white/45">{t('clip.subtitle')}</p>
 
       <Panel className="mt-6 p-5">
+        {/* Where saved clips land — fixed when entered from a brand, else a picker. */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[12px] text-white/45">{t('clip.brandLabel')}</span>
+          {brandId ? (
+            <span className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[13px] font-semibold text-white/90">{brand?.name || '—'}</span>
+          ) : (
+            <select
+              value={pickedBrandId}
+              onChange={(e) => setPickedBrandId(e.target.value)}
+              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[13px] text-white/90 focus:outline-none"
+            >
+              {store.brands.length === 0 && <option value="">{t('clip.noBrand')}</option>}
+              {store.brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          )}
+          {folders.length > 0 && (
+            <select
+              value={folderSel}
+              onChange={(e) => setFolderSel(e.target.value)}
+              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[13px] text-white/90 focus:outline-none"
+            >
+              <option value="none">{t('clip.noFolder')}</option>
+              {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          )}
+        </div>
+
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
             value={videoUrl}
@@ -155,12 +207,17 @@ export default function ClipFinder() {
       </Panel>
 
       {err && <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-200">{err}</p>}
-      {summary && <p className="mt-5 text-[13px] text-white/70">{summary}</p>}
 
+      {clips && clips.length > 0 && (
+        <div className="mt-5 flex items-center justify-between">
+          {summary ? <p className="text-[13px] text-white/70">{summary}</p> : <span />}
+          {brand && <Button variant="subtle" onClick={saveAll}><Save size={14} /> {t('clip.saveAll')}</Button>}
+        </div>
+      )}
       {clips && clips.length === 0 && <div className="mt-5"><EmptyState title={t('clip.none')} /></div>}
 
       {clips && clips.length > 0 && (
-        <div className="mt-5 space-y-3">
+        <div className="mt-3 space-y-3">
           {clips.map((c, i) => (
             <Panel key={i} className="p-4">
               <div className="flex items-start justify-between gap-3">
@@ -179,11 +236,18 @@ export default function ClipFinder() {
                   {c.platforms.map((p) => <span key={p} className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-white/60">{p}</span>)}
                 </div>
               )}
-              {brand && (
-                <button onClick={() => makeCaption(c)} className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10">
-                  <Wand2 size={13} className="text-indigo-300" /> {t('clip.makeCaption')}
-                </button>
-              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {brand && (
+                  <button onClick={() => saveClip(c, i)} disabled={saved[i]} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10 disabled:opacity-60">
+                    {saved[i] ? <><Check size={13} className="text-emerald-300" /> {t('clip.saved')}</> : <><Save size={13} className="text-indigo-300" /> {t('clip.save')}</>}
+                  </button>
+                )}
+                {brand && animatedTpl && (
+                  <button onClick={() => makeCaption(c)} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10">
+                    <Wand2 size={13} className="text-indigo-300" /> {t('clip.makeCaption')}
+                  </button>
+                )}
+              </div>
             </Panel>
           ))}
         </div>

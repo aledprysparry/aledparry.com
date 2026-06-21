@@ -13,6 +13,7 @@ import type {
   Template,
   GeneratedGraphic,
   GraphicElement,
+  Clip,
   Folder,
   AssetType,
   PlatformId,
@@ -40,6 +41,7 @@ interface StoreState {
   templateStyles: TemplateStyle[];
   templates: Template[];
   graphics: GeneratedGraphic[];
+  clips: Clip[];
   folders: Folder[];
 }
 
@@ -102,7 +104,7 @@ function initialState(): StoreState {
     saveCollection('templates', templates);
     markSeeded();
     if (typeof localStorage !== 'undefined') localStorage.setItem(MASTER_MIGRATION_KEY, 'true');
-    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], folders: [] };
+    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [] };
   }
   let templates = loadCollection<Template>('templates');
   let graphics = loadCollection<GeneratedGraphic>('graphics');
@@ -118,6 +120,7 @@ function initialState(): StoreState {
     templateStyles: loadCollection('templateStyles'),
     templates,
     graphics,
+    clips: loadCollection('clips'),
     folders: loadCollection('folders'),
   };
 }
@@ -165,6 +168,14 @@ export interface StoreApi extends StoreState {
   moveGraphicToFolder: (id: string, folderId: string | null) => void;
   graphicsByBrand: (brandId: string) => GeneratedGraphic[];
   getGraphic: (id: string) => GeneratedGraphic | undefined;
+  // clips (saved short-form clip suggestions — brand-scoped like graphics)
+  createClip: (brandId: string, clip: Omit<Clip, 'id' | 'brandId' | 'createdAt' | 'updatedAt'>, opts?: { folderId?: string }) => Clip;
+  updateClip: (id: string, patch: Partial<Clip>) => void;
+  deleteClip: (id: string) => void;
+  restoreClip: (c: Clip) => void;
+  moveClipToFolder: (id: string, folderId: string | null) => void;
+  clipsByBrand: (brandId: string) => Clip[];
+  getClip: (id: string) => Clip | undefined;
   // folders
   createFolder: (brandId: string, name: string) => Folder;
   renameFolder: (id: string, name: string) => void;
@@ -231,6 +242,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('templateStyles', (s) => s.filter((x) => x.brandId !== id));
         update('templates', (tp) => tp.filter((x) => x.brandId !== id));
         update('graphics', (g) => g.filter((x) => x.brandId !== id));
+        update('clips', (c) => c.filter((x) => x.brandId !== id));
         update('folders', (f) => f.filter((x) => x.brandId !== id));
       },
       getBrand: (id) => state.brands.find((b) => b.id === id),
@@ -338,6 +350,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       graphicsByBrand: (brandId) => state.graphics.filter((g) => g.brandId === brandId),
       getGraphic: (id) => state.graphics.find((g) => g.id === id),
 
+      // ── clips (mirror graphics: brand-scoped, folder-organised) ──
+      createClip: (brandId, clip, opts) => {
+        const t = now();
+        const existingNames = state.clips.filter((c) => c.brandId === brandId).map((c) => c.name);
+        const c: Clip = {
+          ...clip,
+          id: newId('clip'),
+          brandId,
+          folderId: opts?.folderId,
+          name: uniqueName(clip.name?.trim() || 'Clip', existingNames),
+          createdAt: t,
+          updatedAt: t,
+        };
+        update('clips', (x) => [c, ...x]);
+        return c;
+      },
+      updateClip: (id, patch) =>
+        update('clips', (x) => x.map((c) => (c.id === id ? { ...c, ...patch, updatedAt: now() } : c))),
+      deleteClip: (id) => update('clips', (x) => x.filter((c) => c.id !== id)),
+      restoreClip: (c) => update('clips', (x) => (x.some((y) => y.id === c.id) ? x : [c, ...x])),
+      moveClipToFolder: (id, folderId) =>
+        update('clips', (x) => x.map((c) => (c.id === id ? { ...c, folderId: folderId ?? undefined, updatedAt: now() } : c))),
+      clipsByBrand: (brandId) => state.clips.filter((c) => c.brandId === brandId),
+      getClip: (id) => state.clips.find((c) => c.id === id),
+
       // ── folders ──
       createFolder: (brandId, name) => {
         const existing = state.folders.filter((f) => f.brandId === brandId).map((f) => f.name);
@@ -350,6 +387,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteFolder: (id) => {
         update('folders', (f) => f.filter((x) => x.id !== id));
         update('graphics', (g) => g.map((x) => (x.folderId === id ? { ...x, folderId: undefined } : x)));
+        update('clips', (c) => c.map((x) => (x.folderId === id ? { ...x, folderId: undefined } : x)));
       },
       foldersByBrand: (brandId) => state.folders.filter((f) => f.brandId === brandId),
 

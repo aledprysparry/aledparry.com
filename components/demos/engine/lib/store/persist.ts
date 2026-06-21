@@ -13,6 +13,7 @@ export const COLLECTIONS = [
   'templateStyles',
   'templates',
   'graphics',
+  'clips',
   'folders',
 ] as const;
 
