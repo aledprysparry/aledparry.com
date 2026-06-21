@@ -56,7 +56,7 @@ export default function AppShell() {
               }`
             }
           >
-            <Film size={16} /> {t('clip.title')}
+            <Film size={16} /> {t('pipe.start')}
           </NavLink>
         </nav>
 
