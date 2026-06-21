@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Sparkles, Wand2, Save, Film, Layers, X, Upload } from 'lucide-react';
+import { ArrowLeft, Check, Sparkles, Wand2, Save, Film, Layers, X, Upload, MessageSquare, Copy } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
@@ -49,6 +49,9 @@ export default function Pipeline() {
   const [folderSel, setFolderSel] = useState('none');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [copyBusy, setCopyBusy] = useState<number | null>(null);
+  const [socialCopy, setSocialCopy] = useState<Record<number, { platform: string; text: string; hashtags?: string[] }[]>>({});
+  const [copied, setCopied] = useState<string | null>(null);
 
   if (!brand) {
     return <div className="mx-auto max-w-3xl px-8 py-10"><EmptyState title={t('brand.notFound')} action={<Link to="/"><Button variant="subtle">{t('brand.backToDashboard')}</Button></Link>} /></div>;
@@ -105,6 +108,26 @@ export default function Pipeline() {
     if (!g) return;
     store.updateGraphic(g.id, { inputs: { ...g.inputs, copyOverrides: { ...((g.inputs?.copyOverrides as Record<string, string>) || {}), caption: c.hook || c.title || '', sub: c.caption || '' } } });
     navigate(`/graphics/${g.id}`);
+  };
+
+  // AI social copy — per-platform post text + hashtags from a clip's content
+  // (brief Step 7). Reuses /api/ai/social; needs the live key.
+  const genCopy = async (c: Suggestion, i: number) => {
+    if (copyBusy != null) return;
+    setCopyBusy(i); setErr(null);
+    try {
+      const res = await fetch('/api/ai/social', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ task: 'social-copy', texts: [c.hook, c.title, c.caption].filter(Boolean), ...(brief.trim() ? { brief: brief.trim() } : {}) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.message || data.error || 'Copy generation failed.'); return; }
+      const variants = (data.result?.variants || []) as { platform: string; text: string; hashtags?: string[] }[];
+      setSocialCopy((s) => ({ ...s, [i]: variants }));
+    } catch { setErr('Copy generation failed.'); } finally { setCopyBusy(null); }
+  };
+  const copyToClipboard = (key: string, text: string) => {
+    navigator.clipboard?.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied((k) => (k === key ? null : k)), 1500); }).catch(() => {});
   };
 
   // Upload a written brief — TXT / Markdown read in-browser (no backend, no
@@ -204,6 +227,9 @@ export default function Pipeline() {
                       <button onClick={() => saveClip(c, i)} disabled={saved[i]} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10 disabled:opacity-60">
                         {saved[i] ? <><Check size={13} className="text-emerald-300" /> {t('clip.saved')}</> : <><Save size={13} className="text-indigo-300" /> {t('clip.save')}</>}
                       </button>
+                      <button onClick={() => genCopy(c, i)} disabled={copyBusy != null} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10 disabled:opacity-60">
+                        <MessageSquare size={13} className="text-indigo-300" /> {copyBusy === i ? t('clip.finding') : t('clip.genCopy')}
+                      </button>
                       {animatedTpl && (
                         <button onClick={() => makeCaption(c)} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10">
                           <Wand2 size={13} className="text-indigo-300" /> {t('clip.makeCaption')}
@@ -215,6 +241,26 @@ export default function Pipeline() {
                         </button>
                       )}
                     </div>
+                    {socialCopy[i] && socialCopy[i].length > 0 && (
+                      <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                        {socialCopy[i].map((v) => {
+                          const full = (v.text || '') + (v.hashtags?.length ? '\n\n' + v.hashtags.join(' ') : '');
+                          const key = `${i}-${v.platform}`;
+                          return (
+                            <div key={key} className="rounded-lg bg-black/20 p-2.5">
+                              <div className="mb-1 flex items-center justify-between">
+                                <span className="text-[11px] font-bold uppercase tracking-wide text-indigo-200/80">{v.platform}</span>
+                                <button onClick={() => copyToClipboard(key, full)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/45 hover:text-white">
+                                  {copied === key ? <><Check size={11} className="text-emerald-300" /> {t('clip.copied')}</> : <><Copy size={11} /> {t('clip.copy')}</>}
+                                </button>
+                              </div>
+                              <p className="whitespace-pre-wrap text-[12px] text-white/80">{v.text}</p>
+                              {v.hashtags?.length ? <p className="mt-1 text-[12px] text-indigo-300/80">{v.hashtags.join(' ')}</p> : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </Panel>
                 ))}
               </div>
