@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Type, Square, Download, ShieldCheck, Trash2, ChevronUp, ChevronDown, ImagePlus, Pencil } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
-import { Button } from '@engine/components/ui';
+import { Button, Panel } from '@engine/components/ui';
 import Stage from '@engine/components/Stage';
 import AiPanel from '@engine/components/AiPanel';
 import { makeText, makeShape, makeImage, reorder } from '@engine/lib/freeform/elements';
@@ -28,6 +28,8 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
   const [format, setFormat] = useState('image/png');
   const [showSafe, setShowSafe] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Same Design / Animation / Export shell as the other editors (Issue 1).
+  const [tab, setTab] = useState<'design' | 'animation' | 'export'>('design');
 
   const platform = (graphic.platformPresetId ?? 'instagram-feed') as PlatformId;
   const preset = PLATFORM_PRESETS[platform];
@@ -110,13 +112,35 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
             {(Object.keys(PLATFORM_PRESETS) as PlatformId[]).map((p) => <option key={p} value={p}>{PLATFORM_PRESETS[p].name}</option>)}
           </select>
           <button onClick={() => setShowSafe((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold ${showSafe ? 'bg-indigo-500/20 text-indigo-200' : 'text-white/50 hover:bg-white/5'}`}><ShieldCheck size={14} /> {t('editor.safeAreas')}</button>
-          <div className="inline-flex overflow-hidden rounded-lg border border-white/10">
-            {['image/png', 'image/jpeg'].map((m) => <button key={m} onClick={() => setFormat(m)} className={`px-3 py-1.5 text-[13px] font-semibold ${format === m ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}>{m === 'image/png' ? 'PNG' : 'JPEG'}</button>)}
-          </div>
-          <Button onClick={doExport} disabled={exporting}><Download size={15} /> {exporting ? t('editor.exporting') : t('editor.exportImage')}</Button>
+          <Button onClick={() => setTab('export')}><Download size={15} /> {t('editor.exportImage')}</Button>
         </div>
       </header>
 
+      {/* Design · Animation · Export — one editor across all template kinds. */}
+      <div className="mb-6 flex gap-1 border-b border-white/10">
+        {(['design', 'animation', 'export'] as const).map((tb) => (
+          <button key={tb} onClick={() => setTab(tb)} className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors ${tab === tb ? 'border-indigo-400 text-white' : 'border-transparent text-white/45 hover:text-white/80'}`}>
+            {t(`editor.tab.${tb}` as const)}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'animation' && (
+        <div className="mx-auto max-w-2xl"><Panel className="p-6"><h3 className="text-[15px] font-bold">{t('editor.anim.title')}</h3><p className="mt-1 text-[13px] text-white/50">{t('ff.noAnimation')}</p></Panel></div>
+      )}
+
+      {tab === 'export' && (
+        <div className="mx-auto max-w-2xl"><Panel className="p-6">
+          <h3 className="text-[15px] font-bold">{t('editor.export.stillTitle')}</h3>
+          <label className="mt-4 mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('editor.export.format')}</label>
+          <div className="inline-flex overflow-hidden rounded-lg border border-white/10">
+            {['image/png', 'image/jpeg'].map((m) => <button key={m} onClick={() => setFormat(m)} className={`px-4 py-2 text-[13px] font-semibold ${format === m ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}>{m === 'image/png' ? 'PNG' : 'JPEG'}</button>)}
+          </div>
+          <div className="mt-5 border-t border-white/10 pt-4"><Button onClick={doExport} disabled={exporting}><Download size={15} /> {exporting ? t('editor.exporting') : t('editor.exportImage')}</Button></div>
+        </Panel></div>
+      )}
+
+      {tab === 'design' && (
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         {/* stage */}
         <div>
@@ -228,6 +252,7 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
         </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
