@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireGate } from '@/lib/postioGate';
 
 // AI Social Media Agent for the graphics engine. Tasks: improve copy,
 // auto-fill from a topic, captions + hashtags, design critique. Calls
 // Claude via the REST API (same pattern as /api/ai). 503 if no key.
 
 const MODEL = 'claude-sonnet-4-20250514';
+
+// clip-analysis only sees this many characters of the transcript. Longer
+// podcasts/videos exceed it, so the response flags when it was truncated and
+// the UI can tell the user only the first segment was analysed (Codex on #70).
+const CLIP_TRANSCRIPT_LIMIT = 12000;
 
 interface Body {
   task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis';
@@ -50,7 +56,7 @@ function buildPrompt(b: Body): { system: string; user: string } {
     case 'clip-analysis':
       return {
         system: `You are a senior short-form social video editor. Analyse a transcript and find the strongest moments for short-form clips (Reels / TikTok / Shorts). Prioritise: a strong hook, a clear opinion, an emotional beat, a surprising fact, a useful takeaway, a human or funny moment, and a clean beginning + end. Match the transcript's language (reply in Welsh if it is in Welsh). Respond with ONLY valid JSON, no markdown, no commentary.`,
-        user: `From the transcript below, return the best clips as JSON: {"summary":"one-line summary","clips":[{"start":"mm:ss","end":"mm:ss","duration_seconds":0,"title":"short title","hook":"on-screen hook line","reason":"why it works","caption":"suggested caption","platforms":["TikTok","Instagram Reels"],"aspect_ratio":"9:16","score":0}]} — up to 6 clips, ranked best first, score 0-100.\n\nTranscript:\n${(b.transcript || '').slice(0, 12000)}`,
+        user: `From the transcript below, return the best clips as JSON: {"summary":"one-line summary","clips":[{"start":"mm:ss","end":"mm:ss","duration_seconds":0,"title":"short title","hook":"on-screen hook line","reason":"why it works","caption":"suggested caption","platforms":["TikTok","Instagram Reels"],"aspect_ratio":"9:16","score":0}]} — up to 6 clips, ranked best first, score 0-100.\n\nTranscript:\n${(b.transcript || '').slice(0, CLIP_TRANSCRIPT_LIMIT)}`,
       };
     default:
       return { system: base, user: 'Return JSON: {}' };
@@ -67,6 +73,9 @@ function parseJSON(text: string): unknown {
 }
 
 export async function POST(req: NextRequest) {
+  // Gate this paid Anthropic proxy behind the server-validated client-area
+  // cookie - same exposure as the transcribe route (Codex #72).
+  if (!requireGate(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'not_configured', message: 'ANTHROPIC_API_KEY is not set.' }, { status: 503 });
@@ -115,7 +124,11 @@ export async function POST(req: NextRequest) {
     const text = data?.content?.[0]?.text ?? '';
     const result = parseJSON(text);
     if (!result) return NextResponse.json({ error: 'parse_failed', raw: text }, { status: 502 });
-    return NextResponse.json({ task: body.task, result });
+    // Tell the client when the transcript was longer than we analysed, so it
+    // can warn that later moments were not considered (Codex on #70).
+    const truncated = body.task === 'clip-analysis'
+      && (body.transcript?.length || 0) > CLIP_TRANSCRIPT_LIMIT;
+    return NextResponse.json({ task: body.task, result, truncated, analysedChars: truncated ? CLIP_TRANSCRIPT_LIMIT : undefined });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'error' }, { status: 500 });
   }

@@ -7,15 +7,26 @@ import { CanvasRenderer, type RatioKey } from '@engine/lib/canvas/CanvasRenderer
 import { ensureFonts } from './fonts';
 import { drawAnimatedFrame, ANIMATED_DURATION_MS } from './animated';
 
+// Candidate WebM MIME types, best-quality first. Shared by the support check
+// and pickMime() so they agree on what "supported" means.
+const WEBM_CANDIDATES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+
 export function webmSupported(): boolean {
-  return typeof MediaRecorder !== 'undefined'
-    && typeof HTMLCanvasElement !== 'undefined'
-    && typeof HTMLCanvasElement.prototype.captureStream === 'function';
+  if (typeof MediaRecorder === 'undefined'
+    || typeof HTMLCanvasElement === 'undefined'
+    || typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
+    return false;
+  }
+  // Some browsers expose MediaRecorder + captureStream but ship no WebM
+  // encoder; without this check pickMime() falls back to 'video/webm' and
+  // `new MediaRecorder(..., { mimeType })` throws NotSupportedError — the
+  // Download WebM button would be enabled but fail (Codex on #66).
+  return typeof MediaRecorder.isTypeSupported === 'function'
+    && WEBM_CANDIDATES.some((m) => MediaRecorder.isTypeSupported(m));
 }
 
 function pickMime(): string {
-  const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-  for (const m of candidates) {
+  for (const m of WEBM_CANDIDATES) {
     if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) return m;
   }
   return 'video/webm';
