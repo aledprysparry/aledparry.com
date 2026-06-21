@@ -29,6 +29,10 @@ export default function GraphicEditor() {
   const [format, setFormat] = useState('image/png');
   const [busy, setBusy] = useState<number | 'zip' | 'anim' | null>(null);
   const [showSafe, setShowSafe] = useState(false);
+  // One editor, three tabs (Issue 1: still + animated are the same template).
+  const [tab, setTab] = useState<'design' | 'animation' | 'export'>('design');
+  const [animSpeed, setAnimSpeed] = useState<'fast' | 'standard' | 'slow'>('standard');
+  const ANIM_MS = { fast: 1800, standard: 2600, slow: 3400 } as const;
 
   const rawText = (graphic?.inputs?.rawText as string) ?? '';
   // effective copy = kind default ← template master ← this graphic's overrides
@@ -74,7 +78,7 @@ export default function GraphicEditor() {
   // Animated output mode — same slides, exported as motion (WebM).
   const downloadAnimated = async () => {
     setBusy('anim');
-    try { await downloadSlidesAnimatedWebM(graphic.name, { slides, rows, copy, ratio }); }
+    try { await downloadSlidesAnimatedWebM(graphic.name, { slides, rows, copy, ratio, perSlideMs: ANIM_MS[animSpeed] }); }
     finally { setBusy(null); }
   };
 
@@ -111,16 +115,24 @@ export default function GraphicEditor() {
           >
             {template.supportedPlatforms.map((p) => <option key={p} value={p}>{PLATFORM_PRESETS[p].name}</option>)}
           </select>
-          <div className="inline-flex overflow-hidden rounded-lg border border-white/10">
-            {['image/png', 'image/jpeg'].map((m) => (
-              <button key={m} onClick={() => setFormat(m)} className={`px-3 py-1.5 text-[13px] font-semibold ${format === m ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}>{m === 'image/png' ? 'PNG' : 'JPEG'}</button>
-            ))}
-          </div>
-          <Button onClick={downloadZip} disabled={busy != null || !!error}><Download size={15} /> {busy === 'zip' ? t('editor.building') : t('editor.export')}</Button>
-          <Button variant="subtle" onClick={downloadAnimated} disabled={busy != null || !!error} title={t('editor.animatedHint')}><Film size={15} /> {busy === 'anim' ? t('editor.building') : t('editor.animated')}</Button>
+          <Button onClick={() => setTab('export')} disabled={!!error}><Download size={15} /> {t('editor.exportImage')}</Button>
         </div>
       </header>
 
+      {/* One template, output modes — Design · Animation · Export (Issue 1). */}
+      <div className="mb-6 flex gap-1 border-b border-white/10">
+        {(['design', 'animation', 'export'] as const).map((tb) => (
+          <button
+            key={tb}
+            onClick={() => setTab(tb)}
+            className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors ${tab === tb ? 'border-indigo-400 text-white' : 'border-transparent text-white/45 hover:text-white/80'}`}
+          >
+            {t(`editor.tab.${tb}` as const)}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'design' && (
       <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-7">
         <div className="flex flex-col gap-5">
           <Panel className="p-5">
@@ -167,6 +179,59 @@ export default function GraphicEditor() {
           <p className="text-[12px] text-white/35">In-place click-to-edit on the canvas lands in the next phase. For now, edit content and copy on the left - the preview and export update live.</p>
         </div>
       </div>
+      )}
+
+      {tab === 'animation' && (
+        <div className="mx-auto max-w-2xl">
+          <Panel className="p-6">
+            <h3 className="text-[15px] font-bold">{t('editor.anim.title')}</h3>
+            <p className="mt-1 text-[13px] text-white/50">{t('editor.anim.appliesNote')}</p>
+            <label className="mt-5 mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('editor.anim.speed')}</label>
+            <div className="inline-flex overflow-hidden rounded-lg border border-white/10">
+              {(['fast', 'standard', 'slow'] as const).map((s) => (
+                <button key={s} onClick={() => setAnimSpeed(s)} className={`px-4 py-2 text-[13px] font-semibold ${animSpeed === s ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}>{t(`editor.anim.${s}` as const)}</button>
+              ))}
+            </div>
+            <div className="mt-5 flex items-center gap-3 border-t border-white/10 pt-4">
+              <Button variant="subtle" onClick={downloadAnimated} disabled={busy != null || !!error} title={t('editor.animatedHint')}><Film size={15} /> {busy === 'anim' ? t('editor.building') : t('editor.animated')}</Button>
+              <span className="text-[12px] text-white/40">{t('editor.anim.note')}</span>
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {tab === 'export' && (
+        <div className="grid gap-5 md:grid-cols-2">
+          <Panel className="p-6">
+            <h3 className="text-[15px] font-bold">{t('editor.export.stillTitle')}</h3>
+            <label className="mt-4 mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('editor.export.format')}</label>
+            <div className="inline-flex overflow-hidden rounded-lg border border-white/10">
+              {['image/png', 'image/jpeg'].map((m) => (
+                <button key={m} onClick={() => setFormat(m)} className={`px-4 py-2 text-[13px] font-semibold ${format === m ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}>{m === 'image/png' ? 'PNG' : 'JPEG'}</button>
+              ))}
+            </div>
+            <div className="mt-5 border-t border-white/10 pt-4">
+              <Button onClick={downloadZip} disabled={busy != null || !!error}><Download size={15} /> {busy === 'zip' ? t('editor.building') : t('editor.export')}</Button>
+            </div>
+            <label className="mt-5 mb-2 block text-[11px] uppercase tracking-wide text-white/40">{t('editor.export.perSlide')}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {slides.map((slide, i) => (
+                <button key={slide.id} onClick={() => downloadSlide(i)} disabled={busy != null} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-[12px] font-semibold text-white/80 hover:bg-white/10 disabled:opacity-50">
+                  {busy === i ? t('editor.exporting') : `${i + 1}. ${slide.label}`}
+                </button>
+              ))}
+            </div>
+          </Panel>
+          <Panel className="p-6">
+            <h3 className="text-[15px] font-bold">{t('editor.export.animatedTitle')}</h3>
+            <p className="mt-1 text-[13px] text-white/50">{t('editor.animatedHint')}</p>
+            <div className="mt-5">
+              <Button variant="subtle" onClick={downloadAnimated} disabled={busy != null || !!error}><Film size={15} /> {busy === 'anim' ? t('editor.building') : t('editor.animated')}</Button>
+            </div>
+            <p className="mt-4 text-[12px] text-white/35">{t('editor.export.mp4Soon')}</p>
+          </Panel>
+        </div>
+      )}
     </div>
   );
 }
