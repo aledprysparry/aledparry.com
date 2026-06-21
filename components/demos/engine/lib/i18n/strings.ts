@@ -214,6 +214,13 @@ export const STRINGS = {
     'clip.genCopy': 'Generate copy',
     'clip.copy': 'Copy',
     'clip.copied': 'Copied',
+    // ── MP4 export (P3a render worker) ──
+    'clip.exportMp4': 'Export MP4 (beta)',
+    'clip.exporting': 'Rendering',
+    'clip.exportReady': 'Download MP4',
+    'clip.exportFailed': 'Export failed - try again',
+    'clip.exportSetup': 'Video export is being set up',
+    'clip.exportNoSource': 'No source video saved for this clip',
     'clipTab.all': 'All clips',
     'clipTab.search': 'Search clips…',
     'clipTab.empty': 'No saved clips yet',
@@ -221,6 +228,7 @@ export const STRINGS = {
 
     // pipeline (P1b — one guided journey)
     'pipe.start': 'Start a post',
+    'launch.pickBrand': 'Pick a brand to start a post.',
     'pipe.title': 'Start a post',
     'pipe.subtitle': 'Brief to export, in one flow — brief, media, AI clips, then create and export your assets.',
     'pipe.briefTitle': 'Brief',
@@ -243,7 +251,7 @@ export const STRINGS = {
     'pipe.viewClips': 'View saved clips',
     'pipe.exportTitle': 'Export',
     'pipe.exportDesc': 'Export each asset for every platform.',
-    'pipe.exportNote': 'Assets export from the editor — still (PNG/JPG/ZIP) or animated (WebM). MP4/MOV via the render worker is coming.',
+    'pipe.exportNote': 'Assets export from the editor – still (PNG/JPG/ZIP) or animated (WebM). Saved clips export to MP4 from the Clips tab (beta).',
 
     // master template
     'master.title': 'Master template',
@@ -572,6 +580,13 @@ export const STRINGS = {
     'clip.genCopy': 'Creu copi',
     'clip.copy': 'Copïo',
     'clip.copied': 'Wedi’i gopïo',
+    // ── MP4 export (P3a) — machine-drafted, NEEDS NATIVE WELSH REVIEW ──
+    'clip.exportMp4': 'Allforio MP4 (beta)',
+    'clip.exporting': 'Wrthi’n rendro',
+    'clip.exportReady': 'Lawrlwytho MP4',
+    'clip.exportFailed': 'Methodd yr allforio - rhowch gynnig arall',
+    'clip.exportSetup': 'Wrthi’n sefydlu allforio fideo',
+    'clip.exportNoSource': 'Dim fideo ffynhonnell ar gyfer y clip hwn',
     'clipTab.all': 'Pob clip',
     'clipTab.search': 'Chwilio clipiau…',
     'clipTab.empty': 'Dim clipiau wedi’u cadw eto',
@@ -579,6 +594,7 @@ export const STRINGS = {
 
     // pipeline (P1b)
     'pipe.start': 'Dechrau post',
+    'launch.pickBrand': 'Dewiswch frand i ddechrau post.',
     'pipe.title': 'Dechrau post',
     'pipe.subtitle': 'O friff i allforio mewn un llif — briff, cyfryngau, clipiau AI, yna creu ac allforio’ch asedau.',
     'pipe.briefTitle': 'Briff',
@@ -601,7 +617,7 @@ export const STRINGS = {
     'pipe.viewClips': 'Gweld clipiau wedi’u cadw',
     'pipe.exportTitle': 'Allforio',
     'pipe.exportDesc': 'Allforiwch bob ased ar gyfer pob platfform.',
-    'pipe.exportNote': 'Mae asedau’n allforio o’r golygydd — llonydd (PNG/JPG/ZIP) neu animeiddiedig (WebM). Mae MP4/MOV drwy’r gweithiwr rendro ar y ffordd.',
+    'pipe.exportNote': 'Mae asedau’n allforio o’r golygydd – llonydd (PNG/JPG/ZIP) neu animeiddiedig (WebM). Mae clipiau wedi’u cadw’n allforio i MP4 o’r tab Clipiau (beta).',
     'clip.transcribe': 'Trawsgrifio',
     'clip.transcribing': 'Yn trawsgrifio…',
 

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Plus, Trash2, ImagePlus, Sparkles, Copy, ExternalLink, ArrowLeft, Wand2,
   Pencil, FolderPlus, Folder as FolderIcon, Search, Inbox, Layers, Film,
+  Download, Loader2,
 } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
@@ -19,7 +20,7 @@ import AnimatedCanvas from '@engine/components/AnimatedCanvas';
 import { platformToRatio } from '@engine/lib/templates/registry';
 import { effectiveCopy } from '@engine/lib/carousel/copy';
 import type { StringKey } from '@engine/lib/i18n/strings';
-import type { AssetType, SocialAccount, GraphicElement, Template, Brand } from '@engine/lib/model/types';
+import type { AssetType, SocialAccount, GraphicElement, Template, Brand, Clip } from '@engine/lib/model/types';
 import type { CarouselCopy } from '@engine/lib/carousel/types';
 
 type Tab = 'overview' | 'templates' | 'graphics' | 'clips' | 'assets' | 'social';
@@ -555,6 +556,73 @@ function GraphicsTab({ brandId }: { brandId: string }) {
   );
 }
 
+// ── Export a saved clip to MP4 via the render worker (P3a) ──
+// Calls /api/postio/render with the clip's in/out points + ratio, polls until
+// the worker returns a URL, then offers it for download. Degrades gracefully:
+// a 503 means the worker isn't configured yet ("being set up"); a clip with no
+// sourceUrl can't be rendered (the source reference is required).
+type ExportState = { phase: 'idle' | 'rendering' | 'ready' | 'error'; progress: number; url?: string; msg?: string };
+
+function ClipExportButton({ clip }: { clip: Clip }) {
+  const { t } = useI18n();
+  const [st, setSt] = useState<ExportState>({ phase: 'idle', progress: 0 });
+  const hasSource = Boolean(clip.sourceUrl);
+
+  const run = async () => {
+    if (!hasSource || st.phase === 'rendering') return;
+    setSt({ phase: 'rendering', progress: 0 });
+    try {
+      const res = await fetch('/api/postio/render', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          sourceUrl: clip.sourceUrl,
+          startSec: clip.start,
+          endSec: clip.end,
+          aspectRatio: clip.aspectRatio || '9:16',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 503) { setSt({ phase: 'error', progress: 0, msg: t('clip.exportSetup') }); return; }
+      if (!res.ok) { setSt({ phase: 'error', progress: 0, msg: data.message || t('clip.exportFailed') }); return; }
+      // Poll status (worker renders in the background).
+      for (let i = 0; i < 100; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const pr = await fetch(`/api/postio/render?jobId=${encodeURIComponent(data.jobId)}`);
+        const pd = await pr.json().catch(() => ({}));
+        if (!pr.ok) { setSt({ phase: 'error', progress: 0, msg: pd.message || t('clip.exportFailed') }); return; }
+        if (pd.status === 'complete' && pd.url) { setSt({ phase: 'ready', progress: 100, url: pd.url }); return; }
+        if (pd.status === 'failed') { setSt({ phase: 'error', progress: 0, msg: pd.message || t('clip.exportFailed') }); return; }
+        setSt({ phase: 'rendering', progress: typeof pd.progress === 'number' ? pd.progress : 0 });
+      }
+      setSt({ phase: 'error', progress: 0, msg: t('clip.exportFailed') });
+    } catch {
+      setSt({ phase: 'error', progress: 0, msg: t('clip.exportFailed') });
+    }
+  };
+
+  const btnCls = 'inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10 disabled:opacity-50';
+
+  if (st.phase === 'ready' && st.url) {
+    return (
+      <a href={st.url} target="_blank" rel="noopener noreferrer" download className={`${btnCls} text-emerald-300 border-emerald-500/30 bg-emerald-500/10`}>
+        <Download size={13} /> {t('clip.exportReady')}
+      </a>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-1">
+      <button onClick={run} disabled={!hasSource || st.phase === 'rendering'} className={btnCls} title={!hasSource ? t('clip.exportNoSource') : undefined}>
+        {st.phase === 'rendering'
+          ? <><Loader2 size={13} className="animate-spin text-indigo-300" /> {t('clip.exporting')}{st.progress ? ` ${st.progress}%` : '…'}</>
+          : <><Film size={13} className="text-indigo-300" /> {t('clip.exportMp4')}</>}
+      </button>
+      {st.phase === 'error' && st.msg && <span className="text-[11px] text-amber-300/90">{st.msg}</span>}
+      {!hasSource && st.phase === 'idle' && <span className="text-[11px] text-white/35">{t('clip.exportNoSource')}</span>}
+    </div>
+  );
+}
+
 // ── Clips (saved short-form clips — same Brand -> Folder structure as graphics) ──
 function ClipsTab({ brandId }: { brandId: string }) {
   const store = useStore();
@@ -625,7 +693,7 @@ function ClipsTab({ brandId }: { brandId: string }) {
     return items;
   };
 
-  const findCta = <Button onClick={() => navigate(`/brands/${brandId}/clips`)}><Film size={15} /> {t('clip.find')}</Button>;
+  const findCta = <Button onClick={() => navigate(`/brands/${brandId}/pipeline`)}><Film size={15} /> {t('clip.find')}</Button>;
 
   if (allClips.length === 0)
     return <EmptyState title={t('clipTab.empty')} hint={t('clipTab.emptyHint')} action={findCta} />;
@@ -696,7 +764,10 @@ function ClipsTab({ brandId }: { brandId: string }) {
                     {c.platforms.slice(0, 4).map((p) => <span key={p} className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-white/60">{p}</span>)}
                   </div>
                 )}
-                <p className="mt-auto pt-3 text-[12px] text-white/40">{t('gfx.updated', { date: new Date(c.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
+                <div className="mt-auto pt-3">
+                  <ClipExportButton clip={c} />
+                </div>
+                <p className="pt-2 text-[12px] text-white/40">{t('gfx.updated', { date: new Date(c.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
               </Panel>
             );
           })}
