@@ -12,8 +12,8 @@ import BrandDetail from '@engine/pages/BrandDetail';
 import CreateGraphic from '@engine/pages/CreateGraphic';
 import GraphicEditor from '@engine/pages/GraphicEditor';
 import MasterEditor from '@engine/pages/MasterEditor';
-import ClipFinder from '@engine/pages/ClipFinder';
 import Pipeline from '@engine/pages/Pipeline';
+import PipelineLauncher, { BrandClipsRedirect } from '@engine/pages/PipelineLauncher';
 
 // Canvas templates draw with real "Inter"/"Bitter" families; the site
 // loads Inter via next/font (hashed name) and not Bitter, so inject the
@@ -41,8 +41,8 @@ export default function EngineApp() {
               <Route element={<AppShell />}>
                 <Route index element={<Dashboard />} />
                 <Route path="new" element={<Onboarding />} />
-                <Route path="clips" element={<ClipFinder />} />
-                <Route path="brands/:brandId/clips" element={<ClipFinder />} />
+                <Route path="clips" element={<PipelineLauncher />} />
+                <Route path="brands/:brandId/clips" element={<BrandClipsRedirect />} />
                 <Route path="brands/:brandId/pipeline" element={<Pipeline />} />
                 <Route path="brands/:brandId" element={<BrandDetail />} />
                 <Route path="brands/:brandId/create" element={<CreateGraphic />} />
