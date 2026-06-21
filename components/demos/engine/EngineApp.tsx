@@ -20,7 +20,7 @@ import Pipeline from '@engine/pages/Pipeline';
 // real-named webfonts here.
 const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Bitter:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap';
 
-// Mounted under the Next catch-all at /app/carousel; react-router owns
+// Mounted under the Next catch-all at /app/postio; react-router owns
 // everything below that path via basename.
 export default function EngineApp() {
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function EngineApp() {
   }, []);
 
   return (
-    <BrowserRouter basename="/app/carousel">
+    <BrowserRouter basename="/app/postio">
       <I18nProvider>
         <StoreProvider>
           <OverlayProvider>

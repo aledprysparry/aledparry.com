@@ -57,7 +57,7 @@ const FALLBACK_VISUAL = { from: "#475569", to: "#94a3b8", mono: "•" };
 // Demos with a real captured preview image at /app/previews/<toolSlug>.jpg.
 // The rest (login-walled / coming-soon) fall back to the gradient cover.
 const HAS_PREVIEW = new Set([
-  "radar", "socialeditor", "guessprice", "carousel", "tanio",
+  "radar", "socialeditor", "guessprice", "postio", "tanio",
   "qt-live", "pma", "notes", "keepitlocal",
 ]);
 
