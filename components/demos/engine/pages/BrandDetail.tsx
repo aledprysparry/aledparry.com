@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Plus, Trash2, ImagePlus, Sparkles, Copy, ExternalLink, ArrowLeft, Wand2,
-  Pencil, FolderPlus, Folder as FolderIcon, Search, Inbox, Layers,
+  Pencil, FolderPlus, Folder as FolderIcon, Search, Inbox, Layers, Film,
 } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
@@ -17,10 +17,11 @@ import ElementPreview from '@engine/components/ElementPreview';
 import type { StringKey } from '@engine/lib/i18n/strings';
 import type { AssetType, SocialAccount, GraphicElement } from '@engine/lib/model/types';
 
-type Tab = 'overview' | 'templates' | 'graphics' | 'assets' | 'social';
+type Tab = 'overview' | 'templates' | 'graphics' | 'clips' | 'assets' | 'social';
 // Graphics first - it's the brand's graphics library, the primary view.
 const TABS: { id: Tab; key: StringKey }[] = [
   { id: 'graphics', key: 'brand.tab.graphics' },
+  { id: 'clips', key: 'brand.tab.clips' },
   { id: 'templates', key: 'brand.tab.templates' },
   { id: 'assets', key: 'brand.tab.assets' },
   { id: 'social', key: 'brand.tab.social' },
@@ -87,6 +88,7 @@ export default function BrandDetail() {
       {tab === 'overview' && <OverviewTab brandId={brandId} />}
       {tab === 'templates' && <TemplatesTab brandId={brandId} />}
       {tab === 'graphics' && <GraphicsTab brandId={brandId} />}
+      {tab === 'clips' && <ClipsTab brandId={brandId} />}
       {tab === 'assets' && <AssetsTab brandId={brandId} />}
       {tab === 'social' && <SocialTab brandId={brandId} />}
 
@@ -514,6 +516,157 @@ function GraphicsTab({ brandId }: { brandId: string }) {
                 <h3 className="mt-3 truncate font-sans text-[14px] font-semibold text-white/90">{g.name}</h3>
                 <p className="mt-0.5 text-[12px] text-white/40">{t('gfx.updated', { date: new Date(g.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
                 <Button className="mt-4" variant="subtle" onClick={() => navigate(`/graphics/${g.id}`)}>{t('gfx.open')}</Button>
+              </Panel>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Clips (saved short-form clips — same Brand -> Folder structure as graphics) ──
+function ClipsTab({ brandId }: { brandId: string }) {
+  const store = useStore();
+  const navigate = useNavigate();
+  const { t, lang } = useI18n();
+  const { confirm, toast } = useOverlay();
+
+  const allClips = store.clipsByBrand(brandId);
+  const folders = store.foldersByBrand(brandId);
+
+  const [folderSel, setFolderSel] = useState<string>('all'); // 'all' | 'unfiled' | folderId
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<SortKey>('updated');
+
+  useEffect(() => {
+    if (folderSel !== 'all' && folderSel !== 'unfiled' && !folders.some((f) => f.id === folderSel)) setFolderSel('all');
+  }, [folders, folderSel]);
+
+  const view = useMemo(() => {
+    let list = allClips;
+    if (folderSel === 'unfiled') list = list.filter((c) => !c.folderId);
+    else if (folderSel !== 'all') list = list.filter((c) => c.folderId === folderSel);
+    if (q.trim()) { const needle = q.toLowerCase(); list = list.filter((c) => (c.name + ' ' + (c.hook || '') + ' ' + (c.caption || '')).toLowerCase().includes(needle)); }
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      if (sort === 'name') return a.name.localeCompare(b.name);
+      if (sort === 'oldest') return a.createdAt.localeCompare(b.createdAt);
+      if (sort === 'newest') return b.createdAt.localeCompare(a.createdAt);
+      return b.updatedAt.localeCompare(a.updatedAt);
+    });
+    return sorted;
+  }, [allClips, folderSel, q, sort]);
+
+  const rename = (id: string, current: string) => {
+    const name = prompt(t('common.rename'), current);
+    if (name && name.trim()) store.updateClip(id, { name: name.trim() });
+  };
+  const remove = (c: (typeof allClips)[number]) => {
+    store.deleteClip(c.id);
+    toast({ message: t('common.deleted', { name: c.name }), actionLabel: t('common.undo'), onAction: () => store.restoreClip(c) });
+  };
+  const newFolder = () => {
+    const name = prompt(t('gfx.folderNamePrompt'));
+    if (name && name.trim()) { const f = store.createFolder(brandId, name.trim()); setFolderSel(f.id); }
+  };
+  const renameFolder = (id: string, current: string) => {
+    const name = prompt(t('gfx.folderNamePrompt'), current);
+    if (name && name.trim()) store.renameFolder(id, name.trim());
+  };
+  const deleteFolder = async (id: string, name: string) => {
+    const ok = await confirm({ title: t('gfx.deleteFolderTitle'), body: t('gfx.deleteFolderBody', { name }), confirmLabel: t('common.confirmDelete'), danger: true });
+    if (ok) store.deleteFolder(id);
+  };
+
+  const moveItems = (c: (typeof allClips)[number]): MenuItem[] => {
+    const items: MenuItem[] = folders
+      .filter((f) => f.id !== c.folderId)
+      .map((f) => ({ label: `${t('gfx.moveTo')} ${f.name}`, icon: <FolderIcon size={14} />, onClick: () => store.moveClipToFolder(c.id, f.id) }));
+    if (c.folderId) items.push({ label: t('gfx.removeFromFolder'), icon: <Inbox size={14} />, onClick: () => store.moveClipToFolder(c.id, null) });
+    items.push({
+      label: t('gfx.moveToNew'),
+      icon: <FolderPlus size={14} />,
+      onClick: () => {
+        const name = prompt(t('gfx.folderNamePrompt'));
+        if (name && name.trim()) { const f = store.createFolder(brandId, name.trim()); store.moveClipToFolder(c.id, f.id); setFolderSel(f.id); }
+      },
+    });
+    return items;
+  };
+
+  const findCta = <Button onClick={() => navigate(`/brands/${brandId}/clips`)}><Film size={15} /> {t('clip.find')}</Button>;
+
+  if (allClips.length === 0)
+    return <EmptyState title={t('clipTab.empty')} hint={t('clipTab.emptyHint')} action={findCta} />;
+
+  const folderTabClass = (active: boolean) =>
+    `inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${active ? 'bg-indigo-500/20 text-indigo-100' : 'text-white/55 hover:bg-white/5 hover:text-white'}`;
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+        <button onClick={() => setFolderSel('all')} className={folderTabClass(folderSel === 'all')}><Layers size={13} /> {t('clipTab.all')}</button>
+        <button onClick={() => setFolderSel('unfiled')} className={folderTabClass(folderSel === 'unfiled')}><Inbox size={13} /> {t('gfx.unfiled')}</button>
+        {folders.map((f) => (
+          <span key={f.id} className={`group inline-flex items-center rounded-lg ${folderSel === f.id ? 'bg-indigo-500/20' : ''}`}>
+            <button onClick={() => setFolderSel(f.id)} className={folderTabClass(folderSel === f.id)}><FolderIcon size={13} /> {f.name}</button>
+            <Menu
+              label={t('common.actions')}
+              items={[
+                { label: t('common.rename'), icon: <Pencil size={14} />, onClick: () => renameFolder(f.id, f.name) },
+                { label: t('common.delete'), icon: <Trash2 size={14} />, danger: true, onClick: () => deleteFolder(f.id, f.name) },
+              ]}
+            />
+          </span>
+        ))}
+        <button onClick={newFolder} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/70 hover:bg-white/10 hover:text-white">
+          <FolderPlus size={13} /> {t('gfx.newFolder')}
+        </button>
+        <span className="ml-auto">{findCta}</span>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[200px] flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('clipTab.search')} className="w-full rounded-lg bg-black/30 border border-white/10 focus:border-indigo-400/60 focus:outline-none pl-8 pr-3 py-2 text-[13px] text-white/90 placeholder:text-white/25" />
+        </div>
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+          <option value="updated">{t('gfx.sort.updated')}</option>
+          <option value="newest">{t('gfx.sort.newest')}</option>
+          <option value="oldest">{t('gfx.sort.oldest')}</option>
+          <option value="name">{t('gfx.sort.name')}</option>
+        </select>
+      </div>
+
+      {view.length === 0 ? (
+        <EmptyState title={t('gfx.noMatches')} />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {view.map((c) => {
+            const items: MenuItem[] = [
+              { label: t('common.rename'), icon: <Pencil size={14} />, onClick: () => rename(c.id, c.name) },
+              ...moveItems(c),
+              { label: t('common.delete'), icon: <Trash2 size={14} />, danger: true, onClick: () => remove(c) },
+            ];
+            return (
+              <Panel key={c.id} className="flex flex-col p-5">
+                <div className="flex items-start justify-between gap-2">
+                  <Badge>{c.start}–{c.end}{c.aspectRatio ? ` · ${c.aspectRatio}` : ''}</Badge>
+                  <div className="flex items-center gap-1.5">
+                    {typeof c.score === 'number' && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/70">{c.score}</span>}
+                    <Menu label={t('common.actions')} items={items} />
+                  </div>
+                </div>
+                <h3 className="mt-3 truncate font-sans text-[14px] font-semibold text-white/90">{c.name}</h3>
+                {c.hook && <p className="mt-1 line-clamp-2 text-[12px] text-amber-300/90">“{c.hook}”</p>}
+                {c.caption && <p className="mt-1.5 line-clamp-2 text-[12px] text-white/55">{c.caption}</p>}
+                {Array.isArray(c.platforms) && c.platforms.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {c.platforms.slice(0, 4).map((p) => <span key={p} className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-white/60">{p}</span>)}
+                  </div>
+                )}
+                <p className="mt-auto pt-3 text-[12px] text-white/40">{t('gfx.updated', { date: new Date(c.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
               </Panel>
             );
           })}

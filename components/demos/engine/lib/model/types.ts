@@ -165,6 +165,36 @@ export interface GeneratedGraphic {
   updatedAt: ISODate;
 }
 
+/**
+ * A saved short-form clip suggestion. Brand-scoped and folder-organised
+ * EXACTLY like GeneratedGraphic (still assets) - so clips live in the same
+ * Brand -> Folder structure, with the same rename/delete/move management.
+ * Produced by the Clip Finder; persisted when the user saves it to a brand.
+ */
+export interface Clip {
+  id: ID;
+  brandId: ID;
+  /** Optional folder this clip belongs to (null/undefined = Unfiled). */
+  folderId?: ID;
+  name: string;
+  start: string; // mm:ss
+  end: string;
+  durationSeconds?: number;
+  hook?: string;
+  reason?: string;
+  caption?: string;
+  /** How the clip serves a brief (only set when a brief was provided). */
+  fit?: string;
+  platforms?: string[];
+  aspectRatio?: string;
+  score?: number;
+  /** Provenance: the media URL + brief the clip was found from, if any. */
+  sourceUrl?: string;
+  brief?: string;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
 export interface PlatformPreset {
   id: PlatformId;
   name: string;

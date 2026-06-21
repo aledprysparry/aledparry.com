@@ -41,6 +41,7 @@ export default function EngineApp() {
                 <Route index element={<Dashboard />} />
                 <Route path="new" element={<Onboarding />} />
                 <Route path="clips" element={<ClipFinder />} />
+                <Route path="brands/:brandId/clips" element={<ClipFinder />} />
                 <Route path="brands/:brandId" element={<BrandDetail />} />
                 <Route path="brands/:brandId/create" element={<CreateGraphic />} />
                 <Route path="templates/:templateId/master" element={<MasterEditor />} />
