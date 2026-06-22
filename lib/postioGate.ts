@@ -20,7 +20,7 @@ const TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 // hardcoded value so nothing breaks before the env var is set in Vercel).
 // APP_GATE_SECRET: HMAC signing key for the cookie (falls back to the password,
 // then a dev constant). Set a distinct random APP_GATE_SECRET in prod.
-const passwordOf = () => process.env.APP_GATE_PASSWORD || 'Qwerty123';
+const passwordOf = () => process.env.APP_GATE_PASSWORD || 'A1ed26!';
 const secretOf = () => process.env.APP_GATE_SECRET || process.env.APP_GATE_PASSWORD || 'postio-dev-secret';
 
 /** Constant-time password comparison. */
