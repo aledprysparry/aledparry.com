@@ -57,7 +57,9 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
 
   // Inter-slide fade colour: the brand background where known, else deep navy.
   const fadeBg = brand?.colours?.[0] ?? '#0b1120';
-  const total = perSlideMs * slides.length;
+  // Hold the final asset at the end (no fade out) so the sequence pauses on it.
+  const END_HOLD_MS = 1000;
+  const total = perSlideMs * slides.length + END_HOLD_MS;
   const stopped = new Promise<void>((resolve) => { rec.onstop = () => resolve(); });
 
   rec.start();
@@ -69,7 +71,10 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
       const idx = Math.min(slides.length - 1, Math.floor(el / perSlideMs));
       const local = (el - idx * perSlideMs) / perSlideMs; // 0..1 within this slide
       const reveal = easeOut(local / 0.28);
-      const outp = slides.length > 1 ? easeOut((local - 0.85) / 0.15) : 0; // fade between slides
+      const isLast = idx === slides.length - 1;
+      // every asset fades out to transition to the next - EXCEPT the last one,
+      // which holds (no fade) so the sequence pauses on it.
+      const outp = (slides.length > 1 && !isLast) ? easeOut((local - 0.85) / 0.15) : 0;
       const alpha = Math.max(0, reveal * (1 - outp));
       const scale = 0.985 + 0.015 * reveal;
       ctx.clearRect(0, 0, W, H);

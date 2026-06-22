@@ -46,8 +46,10 @@ export async function exportSlide(
 ): Promise<void> {
   const images = await loadSlideImages(imageUrls);
   const blob = await renderSlideBlob(slide, index, rows, copy, slideCount, mime, ratio, brand, images);
-  const prefix = name ? `${slug(name)}_` : '';
-  saveAs(blob, `${prefix}${String(index + 1).padStart(2, '0')}_${slug(slide.label)}.${EXT[mime]}`);
+  // Number first so files load/sort in swipe order, then the slide label, then
+  // the post name (which usually carries the date): 01_question_<name>.png
+  const suffix = name ? `_${slug(name)}` : '';
+  saveAs(blob, `${String(index + 1).padStart(2, '0')}_${slug(slide.label)}${suffix}.${EXT[mime]}`);
 }
 
 export async function exportZip(
