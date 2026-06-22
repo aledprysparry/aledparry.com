@@ -16,6 +16,13 @@ const TABLE: Record<CollectionName, string> = {
   graphics: 'cg_graphics',
   clips: 'cg_clips',
   folders: 'cg_folders',
+  // ── Postio Coach (tables created when Supabase M0 lands) ──
+  referenceAccounts: 'cg_reference_accounts',
+  postAnalyses: 'cg_post_analyses',
+  aiRecommendations: 'cg_ai_recommendations',
+  performance: 'cg_performance',
+  coachPresets: 'cg_coach_presets',
+  coachSettings: 'cg_coach_settings',
 };
 
 interface HasId { id: string }

@@ -11,6 +11,7 @@ import SlideCanvas from '@engine/components/SlideCanvas';
 import FreeformEditor from '@engine/components/FreeformEditor';
 import AnimatedEditor from '@engine/pages/AnimatedEditor';
 import ReviewPanel from '@engine/components/ReviewPanel';
+import PreExportCheck from '@engine/components/coach/PreExportCheck';
 import { getKind, platformToRatio, kindBaseCopy } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { exportSlide, exportZip } from '@engine/lib/carousel/exportCarousel';
@@ -187,6 +188,7 @@ export default function GraphicEditor() {
             </Panel>
           ) : null}
           <ReviewPanel slides={slides} rows={rows} copy={copy} ratio={ratio} brand={store.getBrand(graphic.brandId)} />
+          <PreExportCheck graphic={graphic} brand={store.getBrand(graphic.brandId)} platformName={preset.name} />
         </div>
 
         <div className="flex flex-col gap-4">

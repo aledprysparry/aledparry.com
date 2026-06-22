@@ -13,7 +13,7 @@ const MODEL = 'claude-sonnet-4-20250514';
 const CLIP_TRANSCRIPT_LIMIT = 12000;
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
@@ -30,7 +30,22 @@ interface Body {
   // template-from-image: one base64 data-URL design + how faithful to be
   image?: string;
   mode?: 'reproduce' | 'polish';
+  // ── Postio Coach ──
+  // coach-analyse: the enabled benchmark modules to score against
+  benchmarks?: { id: string; label: string; desc: string }[];
+  // coach-analyse (optional context): lessons from reference accounts +
+  // a summary of the user's own performance, so advice is grounded.
+  referenceLessons?: string[];
+  performanceSummary?: string;
+  templateName?: string;
+  // coach-account: one reference account to extract (NOT scrape) patterns from
+  account?: { platform?: string; handle?: string; displayName?: string; notes?: string };
+  // coach-performance: rows of imported/manual metrics to learn from
+  entries?: { label?: string; platform?: string; metrics?: Record<string, unknown> }[];
 }
+
+// The Postio Coach system instruction (spec #10). Reused by every coach task.
+const COACH_SYSTEM = `You are Postio's AI Content Coach. You help social media managers improve content quality and performance. Never give vague feedback. Every observation MUST include: (1) what you noticed, (2) why it matters, (3) what to change, and (4) the expected benefit. Respect the selected benchmark settings. Learn from the user's previous posts, their best-performing content, the selected reference accounts, the intended platform, the brand style, and the current template. Never copy another account directly - identify the patterns and adapt them ethically. Match the language of the post copy (reply in Welsh if the copy is in Welsh). Respond with ONLY valid JSON, no markdown fences, no commentary.`;
 
 function buildPrompt(b: Body): { system: string; user: string } {
   const brand = b.brand ?? {};
@@ -81,9 +96,52 @@ function buildPrompt(b: Body): { system: string; user: string } {
         user: `From the transcript below, return the best clips as JSON: {"summary":"one-line summary of the content","clips":[{"start":"mm:ss","end":"mm:ss","duration_seconds":0,"title":"short title","hook":"on-screen hook line","reason":"why the moment works","fit":"how it serves the brief, or \\"\\" if no brief","caption":"suggested caption","platforms":["TikTok","Instagram Reels"],"aspect_ratio":"9:16","score":0}]} — up to 6 clips, ranked best first, score 0-100.${briefBlock}\n\nTranscript:\n${(b.transcript || '').slice(0, CLIP_TRANSCRIPT_LIMIT)}`,
       };
     }
+    case 'coach-analyse': {
+      const mods = (b.benchmarks ?? []).filter((m) => m && m.id);
+      const modList = mods.map((m) => `- ${m.id} (${m.label}): ${m.desc}`).join('\n') || '- overall_content_score (Overall): general content quality';
+      const refBlock = b.referenceLessons?.length
+        ? `\n\nPatterns from reference accounts the user admires (adapt ethically, never copy):\n${b.referenceLessons.slice(0, 8).map((l) => `- ${l}`).join('\n')}`
+        : '';
+      const perfBlock = b.performanceSummary ? `\n\nWhat has worked for this user before:\n${b.performanceSummary.slice(0, 800)}` : '';
+      const tplBlock = b.templateName ? `\n\nCurrent template: ${b.templateName}.` : '';
+      return {
+        system: `${COACH_SYSTEM} ${brandCtx}`,
+        user: `Analyse this post for ${b.platform || 'Instagram'}. Score ONLY these benchmark modules (use their exact ids):\n${modList}${refBlock}${perfBlock}${tplBlock}\n\nReturn JSON exactly:
+{"overallScore":0-100,
+ "results":[{"id":"module_id","score":0-100,"summary":"what you noticed (one line)","issue":"the problem, or omit if none","recommendation":"what to change + the expected benefit","priority":"low|medium|high"}],
+ "strengths":["top 3 strengths, most important first"],
+ "issues":["top 3 issues, most important first"],
+ "actionPlan":{"quickWins":["2-4 specific quick wins"],"recommendedEdits":["2-4 concrete edits"],"experimentalIdeas":["1-3 things to test"],"risks":["1-3 risks of posting as-is"]},
+ "platformNotes":"one line of platform-specific guidance",
+ "recommendations":[{"type":"headline|caption|cta|visual|animation|platform|accessibility|timing","originalValue":"current text if relevant","suggestedValue":"the concrete replacement or action","reason":"why + expected benefit","priority":"low|medium|high"}]}
+Be specific ("Move the strongest phrase to line 1, cut the caption ~30%, add a closing question"), never vague.\n\nPost text (each line is a separate text element):\n${texts.map((t, i) => `${i + 1}. ${t}`).join('\n') || '(no text on the post yet)'}`,
+      };
+    }
+    case 'coach-account': {
+      const a = b.account ?? {};
+      return {
+        system: `${COACH_SYSTEM} You are extracting reusable PATTERNS from a reference account the user admires, based on what the user tells you and your general knowledge of social media. You have NOT scraped the account. Frame everything as patterns to adapt, never "copy this account".`,
+        user: `Reference account: ${a.displayName || a.handle || 'an account'} (@${a.handle || ''}) on ${a.platform || 'instagram'}.${a.notes ? ` The user notes: "${a.notes}".` : ''}\n\nReturn JSON with arrays of short, specific strings: {"commonFormats":[],"toneOfVoice":[],"visualStyle":[],"postingPatterns":[],"recurringHooks":[],"captionPatterns":[],"ctaPatterns":[],"highPerformingThemes":[],"contentPillars":[],"lessonsForUser":["3-5 lessons the user can apply, each with the expected benefit"]}.`,
+      };
+    }
+    case 'coach-performance': {
+      const rows = (b.entries ?? []).slice(0, 40);
+      return {
+        system: `${COACH_SYSTEM} You are analysing the user's OWN post performance to find what works for them.`,
+        user: `Here are the user's posts with metrics. Find patterns in best vs worst (topics, formats, hooks, caption styles, posting times, CTAs, reusable templates). Return JSON: {"insights":[{"insight":"the pattern","evidence":"the numbers that show it","recommendation":"what to do + expected benefit","confidence":"low|medium|high"}]} (up to 6, most useful first).\n\nData:\n${JSON.stringify(rows)}`,
+      };
+    }
     default:
       return { system: base, user: 'Return JSON: {}' };
   }
+}
+
+// Token budget per task: the Coach analysis returns a large structured object.
+function coachMaxTokens(task: Body['task']): number {
+  if (task === 'coach-analyse') return 3200;
+  if (task === 'coach-account' || task === 'coach-performance') return 1600;
+  if (task === 'clip-analysis') return 2200;
+  return 1200;
 }
 
 function parseJSON(text: string): unknown {
@@ -176,7 +234,7 @@ Return JSON: {"name":"short template name, 2-4 words","elements":[ ...elements b
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: body.task === 'clip-analysis' ? 2200 : 1200, system, messages: [{ role: 'user', content: user }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: coachMaxTokens(body.task), system, messages: [{ role: 'user', content: user }] }),
     });
     const data = await res.json();
     if (!res.ok) {
