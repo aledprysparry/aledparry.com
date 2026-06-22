@@ -7,6 +7,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { MoreHorizontal, X } from 'lucide-react';
 import { Button } from './ui';
 
@@ -21,34 +22,65 @@ export interface MenuItem {
 
 export function Menu({ items, label = 'Actions' }: { items: MenuItem[]; label?: string }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+
+  // Place the dropdown in a fixed-position portal so it is never clipped by an
+  // overflow-hidden ancestor (e.g. a rounded asset/template card). Flips above
+  // the trigger when there isn't room below.
+  const place = () => {
+    const b = btnRef.current?.getBoundingClientRect();
+    if (!b) return;
+    const menuH = items.length * 40 + 12;
+    const below = b.bottom + 4;
+    const flipUp = below + menuH > window.innerHeight - 8;
+    setPos({ top: flipUp ? Math.max(8, b.top - menuH - 4) : below, right: Math.max(8, window.innerWidth - b.right) });
+  };
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!btnRef.current?.contains(t) && !menuRef.current?.contains(t)) setOpen(false);
+    };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const reclose = () => setOpen(false); // close on scroll/resize rather than drift
     window.addEventListener('mousedown', onDoc);
     window.addEventListener('keydown', onKey);
-    return () => { window.removeEventListener('mousedown', onDoc); window.removeEventListener('keydown', onKey); };
+    window.addEventListener('scroll', reclose, true);
+    window.addEventListener('resize', reclose);
+    return () => {
+      window.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', reclose, true);
+      window.removeEventListener('resize', reclose);
+    };
   }, [open]);
 
   const stop = (e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); };
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
+        ref={btnRef}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={label}
         title={label}
-        onClick={(e) => { stop(e); setOpen((o) => !o); }}
+        onClick={(e) => { stop(e); if (!open) place(); setOpen((o) => !o); }}
         className="grid h-9 w-9 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
       >
         <MoreHorizontal size={16} />
       </button>
-      {open && (
-        <div role="menu" className="absolute right-0 z-40 mt-1 min-w-[176px] overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-800 dark:shadow-black/40">
+      {open && pos && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 200 }}
+          className="min-w-[176px] overflow-hidden rounded-xl border border-zinc-200 bg-white p-1 shadow-xl shadow-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-800 dark:shadow-black/40"
+        >
           {items.map((it, i) => (
             <button
               key={i}
@@ -63,7 +95,8 @@ export function Menu({ items, label = 'Actions' }: { items: MenuItem[]; label?: 
               {it.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
