@@ -25,7 +25,9 @@ export default function PerformancePanel({ brandId }: { brandId: string }) {
   const { confirm, toast } = useOverlay();
   const entries = store.performanceByBrand(brandId);
 
+  const graphics = store.graphicsByBrand(brandId);
   const [label, setLabel] = useState('');
+  const [postId, setPostId] = useState('');
   const [platform, setPlatform] = useState('instagram');
   const [impressions, setImpressions] = useState('');
   const [likes, setLikes] = useState('');
@@ -37,9 +39,33 @@ export default function PerformancePanel({ brandId }: { brandId: string }) {
   const numOr = (s: string): number | undefined => { const n = parseFloat(s.replace(/[, ]/g, '')); return Number.isNaN(n) ? undefined : n; };
 
   const addManual = () => {
-    if (!label.trim()) return;
-    store.addPerformance(brandId, { label: label.trim(), source: 'manual', metrics: { platform, impressions: numOr(impressions), likes: numOr(likes), comments: numOr(comments), saves: numOr(saves) } });
-    setLabel(''); setImpressions(''); setLikes(''); setComments(''); setSaves(''); setInsights(null);
+    const linked = postId ? store.getGraphic(postId) : undefined;
+    const name = label.trim() || linked?.name;
+    if (!name) return;
+    store.addPerformance(brandId, { label: name, postId: postId || undefined, source: 'manual', metrics: { platform, impressions: numOr(impressions), likes: numOr(likes), comments: numOr(comments), saves: numOr(saves) } });
+    setLabel(''); setPostId(''); setImpressions(''); setLikes(''); setComments(''); setSaves(''); setInsights(null);
+  };
+
+  // Correlate analysis score with engagement, for linked posts.
+  const scoreInsight = (): PerformanceInsight | null => {
+    const linked = entries.filter((e) => e.postId).map((e) => {
+      const a = store.latestAnalysis(e.postId!);
+      const er = engagement(e.metrics);
+      return a && er !== null ? { score: a.overallScore, er } : null;
+    }).filter(Boolean) as { score: number; er: number }[];
+    if (linked.length < 2) return null;
+    const hi = linked.filter((x) => x.score >= 70).map((x) => x.er);
+    const lo = linked.filter((x) => x.score < 70).map((x) => x.er);
+    if (!hi.length || !lo.length) return null;
+    const a = hi.reduce((s, x) => s + x, 0) / hi.length;
+    const b = lo.reduce((s, x) => s + x, 0) / lo.length;
+    if (a <= b) return null;
+    return {
+      insight: `Higher-scoring posts earn more engagement for you.`,
+      evidence: `Posts scoring 70+ average ${(a * 100).toFixed(1)}% engagement vs ${(b * 100).toFixed(1)}% for lower-scoring ones.`,
+      recommendation: 'Act on Coach recommendations before posting; lifting the score has tracked with real engagement gains for your account.',
+      confidence: linked.length >= 4 ? 'high' : 'medium',
+    };
   };
 
   const importCsv = async (file: File | null) => {
@@ -63,8 +89,9 @@ export default function PerformancePanel({ brandId }: { brandId: string }) {
     const { result } = await callCoach<{ insights?: PerformanceInsight[] }>('coach-performance', {
       entries: entries.map((e) => ({ label: e.label, platform: e.metrics.platform, metrics: e.metrics })),
     });
-    const out = result?.insights?.length ? result.insights : localPerformanceInsights(entries);
-    setInsights(out);
+    const base = result?.insights?.length ? result.insights : localPerformanceInsights(entries);
+    const si = scoreInsight();
+    setInsights(si ? [si, ...base] : base);
     setBusy(false);
   };
 
@@ -80,6 +107,12 @@ export default function PerformancePanel({ brandId }: { brandId: string }) {
         <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('coach.addManually')}</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div className="col-span-2 sm:col-span-1"><TextInput value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('coach.perfLabel')} /></div>
+          {graphics.length > 0 && (
+            <select value={postId} onChange={(e) => setPostId(e.target.value)} className="col-span-2 eng-control rounded-lg border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 sm:col-span-1">
+              <option value="">{t('coach.linkPostNone')}</option>
+              {graphics.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          )}
           <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="eng-control rounded-lg border border-zinc-200 bg-white px-3 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
             {['instagram', 'tiktok', 'facebook', 'linkedin', 'youtube', 'x'].map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
@@ -112,6 +145,7 @@ export default function PerformancePanel({ brandId }: { brandId: string }) {
                       <div className="flex items-center gap-2">
                         <span className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-50">{e.label || t('coach.untitledPost')}</span>
                         {e.metrics.platform && <Badge tone="muted">{e.metrics.platform}</Badge>}
+                        {e.postId && store.getGraphic(e.postId) && <Badge tone="accent">{t('coach.linked')}</Badge>}
                       </div>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                         {e.metrics.impressions ? `${fmt(e.metrics.impressions)} ${t('coach.impr')} · ` : ''}{e.metrics.likes ? `${fmt(e.metrics.likes)} ${t('coach.likes')} · ` : ''}{e.metrics.saves ? `${fmt(e.metrics.saves)} ${t('coach.saves')}` : ''}

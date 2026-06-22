@@ -382,6 +382,8 @@ export interface AIRecommendation {
   reason: string;
   priority: Priority;
   applied: boolean;
+  /** When set, Apply writes suggestedValue into this text element. */
+  targetElementId?: ID;
   createdAt: ISODate;
 }
 

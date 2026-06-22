@@ -2,15 +2,18 @@
 // A per-brand business brief drives seven generative plays. Outputs are saved,
 // structured artifacts (sections / pillars / calendar / post), never chat.
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Sparkles, Save, Copy, Compass, Brain, Crown, Columns3, CalendarDays, Megaphone, BadgePoundSterling,
+  Sparkles, Save, Copy, Compass, Brain, Crown, Columns3, CalendarDays, Megaphone, BadgePoundSterling, PenLine, FileDown,
 } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useOverlay } from '@engine/components/primitives';
 import { Button, Panel, Badge, TextInput } from '@engine/components/ui';
 import { STRATEGY_PLAYS, runStrategy, briefIsReady } from '@engine/lib/coach/strategy';
+import { createDraftFromIdea } from '@engine/lib/coach/actions';
+import { exportStrategyReport } from '@engine/lib/coach/report';
 import type { CoachBrief, StrategyData, StrategyPlayId } from '@engine/lib/model/types';
 import type { StringKey } from '@engine/lib/i18n/strings';
 
@@ -34,7 +37,13 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
   const store = useStore();
   const { t } = useI18n();
   const { toast } = useOverlay();
+  const navigate = useNavigate();
   const brand = store.getBrand(brandId);
+
+  const createDraft = (headline: string, support?: string) => {
+    const id = createDraftFromIdea(store, brandId, headline, { support });
+    if (id) { toast({ message: t('coach.strategy.draftCreated') }); navigate(`/graphics/${id}`); }
+  };
   const refs = store.referenceAccountsByBrand(brandId);
   const perf = store.performanceByBrand(brandId);
 
@@ -130,16 +139,19 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
         <Panel className="p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <p className="inline-flex items-center gap-2 text-[14px] font-bold text-zinc-900 dark:text-zinc-50">{PLAY_ICON[result.play]} {t(`coach.play.${result.play}` as StringKey)}</p>
-            <Badge tone="muted">{result.usedAI ? t('coach.modelAI') : t('coach.modelOffline')}</Badge>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => exportStrategyReport(t, brand?.name || 'Postio', t(`coach.play.${result.play}` as StringKey), result.data)}><FileDown size={13} /> {t('coach.exportReport')}</Button>
+              <Badge tone="muted">{result.usedAI ? t('coach.modelAI') : t('coach.modelOffline')}</Badge>
+            </div>
           </div>
-          <StrategyView data={result.data} />
+          <StrategyView data={result.data} onCreate={createDraft} />
         </Panel>
       )}
     </div>
   );
 }
 
-function StrategyView({ data }: { data: StrategyData }) {
+function StrategyView({ data, onCreate }: { data: StrategyData; onCreate: (headline: string, support?: string) => void }) {
   const { t } = useI18n();
   const { toast } = useOverlay();
   const copy = (s: string) => { navigator.clipboard?.writeText(s); toast({ message: t('coach.copied') }); };
@@ -199,6 +211,7 @@ function StrategyView({ data }: { data: StrategyData }) {
                   <Badge tone="muted">{d.format}</Badge>
                   <Badge tone={goalTone(d.goal)}>{d.goal}</Badge>
                 </div>
+                <button onClick={() => onCreate(d.idea, d.angle)} title={t('coach.strategy.createPost')} aria-label={t('coach.strategy.createPost')} className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg text-zinc-400 hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"><PenLine size={14} /></button>
               </div>
             ))}
           </div>
@@ -219,6 +232,7 @@ function StrategyView({ data }: { data: StrategyData }) {
   ) : null;
   return (
     <div className="space-y-2.5">
+      <div><Button variant="subtle" onClick={() => onCreate(data.hook, data.insight)}><PenLine size={14} /> {t('coach.strategy.createPost')}</Button></div>
       {row(t('coach.strategy.hook'), data.hook)}
       {row(t('coach.strategy.insight'), data.insight)}
       {row(t('coach.strategy.cta'), data.cta)}

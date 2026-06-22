@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Trash2, Copy, Type, MessageSquare, MousePointerClick, Image, Sparkles, Smartphone, Eye, Clock, ArrowRight } from 'lucide-react';
+import { Check, Trash2, Copy, Type, MessageSquare, MousePointerClick, Image, Sparkles, Smartphone, Eye, Clock, ArrowRight, Wand2 } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useOverlay } from '@engine/components/primitives';
 import { Button, Badge, EmptyState } from '@engine/components/ui';
 import type { AIRecommendation, AIRecommendationType } from '@engine/lib/model/types';
 import type { StringKey } from '@engine/lib/i18n/strings';
+import { applyRecommendation, isApplyable } from '@engine/lib/coach/actions';
 import { priorityTone, usePriorityLabel } from './shared';
 
 const TYPE_ICON: Record<AIRecommendationType, JSX.Element> = {
@@ -35,6 +36,16 @@ export default function RecommendationsPanel({ brandId }: { brandId: string }) {
   }, [recs]);
 
   const copy = (s: string) => { navigator.clipboard?.writeText(s); toast({ message: t('coach.copied') }); };
+  const apply = (r: AIRecommendation) => {
+    const g = store.getGraphic(r.postId);
+    if (!g) return;
+    const slides = applyRecommendation(g, r);
+    if (!slides) { toast({ message: t('coach.applyNotPossible') }); return; }
+    store.updateGraphic(g.id, { slides });
+    store.setRecommendationApplied(r.id, true);
+    toast({ message: t('coach.appliedToPost') });
+  };
+  const canApply = (r: AIRecommendation) => isApplyable(r) && !!store.getGraphic(r.postId)?.slides?.length;
   const remove = async (id: string) => {
     if (await confirm({ title: t('coach.removeRecTitle'), confirmLabel: t('coach.delete'), cancelLabel: t('coach.cancel'), danger: true })) store.deleteRecommendation(id);
   };
@@ -69,7 +80,10 @@ export default function RecommendationsPanel({ brandId }: { brandId: string }) {
                 <p className="mt-1 text-[13px] font-medium leading-relaxed text-zinc-900 dark:text-zinc-50">{r.suggestedValue}</p>
                 {r.reason && <p className="mt-1 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">{r.reason}</p>}
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                  <Button variant={r.applied ? 'subtle' : 'primary'} onClick={() => store.setRecommendationApplied(r.id, !r.applied)}>
+                  {canApply(r) && !r.applied && (
+                    <Button variant="primary" onClick={() => apply(r)}><Wand2 size={13} /> {t('coach.applyToPost')}</Button>
+                  )}
+                  <Button variant={r.applied ? 'subtle' : canApply(r) ? 'ghost' : 'primary'} onClick={() => store.setRecommendationApplied(r.id, !r.applied)}>
                     <Check size={13} /> {r.applied ? t('coach.markedDone') : t('coach.markDone')}
                   </Button>
                   <Button variant="ghost" onClick={() => copy(r.suggestedValue)}><Copy size={13} /> {t('coach.copy')}</Button>

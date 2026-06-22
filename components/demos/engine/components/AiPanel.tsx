@@ -5,6 +5,7 @@ import { Button } from '@engine/components/ui';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { extractPostText, runPostAnalysis } from '@engine/lib/coach/analysis';
+import { renderGraphicImage } from '@engine/lib/coach/actions';
 import { ScoreRing, useCoachConfig } from '@engine/components/coach/shared';
 import type { Brand, GeneratedGraphic, PostAnalysis } from '@engine/lib/model/types';
 
@@ -59,6 +60,7 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
   const analyse = async () => {
     if (!graphic || !brand) return;
     setAnalysing(true); setAnalysis(null); setError(null);
+    const image = await renderGraphicImage(graphic);
     const r = await runPostAnalysis({
       text: { lines: texts, joined: texts.join('\n') },
       brand, platformName: platform, enabledIds,
@@ -66,6 +68,7 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
       performanceEntries: store.performanceByBrand(brand.id),
       ids: { postId: graphic.id, brandId: brand.id },
       templateName: store.getTemplate(graphic.templateId)?.name,
+      image: image ?? undefined,
     });
     store.saveAnalysis(r.analysis);
     if (r.recommendations.length) store.saveRecommendations(r.recommendations);

@@ -365,7 +365,32 @@ export function deriveRecommendations(
 // ── AI client ──────────────────────────────────────────────────────────
 export type CoachTask = 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy';
 
+// ── cost guardrail ──────────────────────────────────────────────────────
+// Every coach call hits a paid model, so cap calls per day and cache identical
+// inputs in-session. Both keep the deterministic fallback as the safety net:
+// over-cap / cached-miss simply route to offline scoring, never a silent bill.
+const COACH_DAILY_CAP = 80;
+const USAGE_KEY = 'cg.v1.coachUsage';
+const cache = new Map<string, unknown>();
+
+export function coachUsage(): { date: string; count: number; cap: number; remaining: number } {
+  const today = new Date().toISOString().slice(0, 10);
+  let count = 0;
+  if (typeof localStorage !== 'undefined') {
+    try { const r = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}'); if (r.date === today) count = r.count || 0; } catch { /* ignore */ }
+  }
+  return { date: today, count, cap: COACH_DAILY_CAP, remaining: Math.max(0, COACH_DAILY_CAP - count) };
+}
+function bumpUsage(): void {
+  if (typeof localStorage === 'undefined') return;
+  const { date, count } = coachUsage();
+  try { localStorage.setItem(USAGE_KEY, JSON.stringify({ date, count: count + 1 })); } catch { /* ignore */ }
+}
+
 export async function callCoach<T>(task: CoachTask, payload: Record<string, unknown>): Promise<{ result?: T; error?: string }> {
+  const key = `${task}:${JSON.stringify(payload)}`;
+  if (cache.has(key)) return { result: cache.get(key) as T };
+  if (coachUsage().remaining <= 0) return { error: 'rate_limited' };
   try {
     const res = await fetch('/api/ai/social', {
       method: 'POST',
@@ -374,8 +399,11 @@ export async function callCoach<T>(task: CoachTask, payload: Record<string, unkn
     });
     if (res.status === 503) return { error: 'not_configured' };
     if (res.status === 401) return { error: 'unauthorized' };
+    if (res.status === 429) return { error: 'rate_limited' };
     const data = await res.json();
     if (!res.ok) return { error: data.error || 'error' };
+    bumpUsage();
+    cache.set(key, data.result);
     return { result: data.result as T };
   } catch {
     return { error: 'network' };
@@ -425,6 +453,8 @@ export interface RunAnalysisParams {
   performanceEntries: PerformanceEntry[];
   ids: { postId: string; brandId: string };
   templateName?: string;
+  /** A rendered JPEG/PNG data URL of the post, for vision-based scoring. */
+  image?: string;
 }
 
 export interface RunAnalysisResult {
@@ -450,6 +480,7 @@ export async function runPostAnalysis(p: RunAnalysisParams): Promise<RunAnalysis
     referenceLessons: referenceLessonsFrom(p.referenceAccounts),
     performanceSummary: performanceSummaryFrom(p.performanceEntries),
     templateName: p.templateName,
+    images: p.image ? [p.image] : undefined,
   });
 
   if (result && Array.isArray(result.results) && result.results.length) {

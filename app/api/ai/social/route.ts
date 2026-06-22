@@ -210,6 +210,25 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Body;
 
+    // ── Coach analysis WITH a rendered image: judge the visual from pixels ──
+    if (body.task === 'coach-analyse' && body.images?.length) {
+      const m = /^data:(image\/\w+);base64,(.+)$/.exec(body.images[0]);
+      const { system, user } = buildPrompt(body);
+      const visionUser = `${user}\n\nA rendered image of the post is attached. Judge the VISUAL benchmarks (visual clarity, text hierarchy, brand consistency, accessibility/contrast, format) from what you actually see in the image, not just the text.`;
+      const content: unknown[] = [{ type: 'text', text: visionUser }];
+      if (m) content.push({ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } });
+      const vres = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: MODEL, max_tokens: coachMaxTokens('coach-analyse'), system, messages: [{ role: 'user', content }] }),
+      });
+      const vdata = await vres.json();
+      if (!vres.ok) return NextResponse.json({ error: vdata.error?.message || 'Anthropic API error' }, { status: vres.status });
+      const result = parseJSON(vdata?.content?.[0]?.text ?? '');
+      if (!result) return NextResponse.json({ error: 'parse_failed' }, { status: 502 });
+      return NextResponse.json({ task: 'coach-analyse', result });
+    }
+
     // ── vision layout review: judge each rendered slide for the format ──
     if (body.task === 'review-layout') {
       const ratio = body.ratio || 'portrait';
