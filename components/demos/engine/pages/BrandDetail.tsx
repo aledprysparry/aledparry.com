@@ -318,8 +318,8 @@ function TemplateThumb({ template, brand }: { template: Template; brand?: Brand 
   return (
     <div className="mb-3 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800" style={{ maxHeight: 220 }}>
       {kind.editor === 'freeform' ? <ElementPreview elements={els} />
-        : kind.editor === 'animated' ? <AnimatedCanvas copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} />
-        : kind.slides?.[0] ? <SlideCanvas slide={kind.slides[0]} index={0} rows={rows} copy={copy} slideCount={kind.slides.length} ratio={ratio} />
+        : kind.editor === 'animated' ? <AnimatedCanvas copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} brand={kind.universal && brand ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined} />
+        : kind.slides?.[0] ? <SlideCanvas slide={kind.slides[0]} index={0} rows={rows} copy={copy} slideCount={kind.slides.length} ratio={ratio} brand={brand ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined} />
         : <div className="grid h-40 place-items-center text-[12px] text-zinc-400 dark:text-zinc-500">{kind.name}</div>}
     </div>
   );
@@ -351,7 +351,7 @@ function TemplatesTab({ brandId }: { brandId: string }) {
             brand already owns one (so a new brand never sees Cwis templates). */}
         {TEMPLATE_KIND_LIST.filter((k) => k.universal || templates.some((t) => t.kind === k.id)).map((k) => (
           <Button key={k.id} variant="subtle" onClick={() => store.createTemplate(brandId, k.id)}>
-            <Plus size={14} /> {k.name}
+            <Plus size={14} /> {k.nameKey ? tr(k.nameKey) : k.name}
           </Button>
         ))}
       </div>
@@ -810,11 +810,11 @@ function AssetsTab({ brandId }: { brandId: string }) {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {assets.map((a) => (
             <Panel key={a.id} className="overflow-hidden">
-              <div className="relative grid h-28 place-items-center bg-zinc-100 dark:bg-zinc-800">
+              <div className="relative h-28 overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                 {/image|logo|background|icon|product|reference|social-post/.test(a.type) && a.url.startsWith('data:image') ? (
-                  <img src={a.url} alt={a.name} className="max-h-full max-w-full object-contain p-2" />
+                  <img src={a.url} alt={a.name} className="absolute inset-0 h-full w-full object-contain p-2" />
                 ) : (
-                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{a.type}</span>
+                  <span className="absolute inset-0 grid place-items-center text-[11px] text-zinc-500 dark:text-zinc-400">{a.type}</span>
                 )}
               </div>
               <div className="flex items-start justify-between gap-1 p-2.5">

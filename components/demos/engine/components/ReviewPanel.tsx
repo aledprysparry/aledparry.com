@@ -11,7 +11,7 @@ interface Props {
   rows: LeaderboardRow[];
   copy: CarouselCopy;
   ratio: RatioKey;
-  brand?: { name?: string; toneNotes?: string };
+  brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
 }
 
 // "Review & fit": deterministic preflight (instant) + an AI vision review of
@@ -27,7 +27,8 @@ export default function ReviewPanel({ slides, rows, copy, ratio, brand }: Props)
     setBusy(true); setAi(null); setNote(null);
     setPre(preflight(rows));
     try {
-      const thumbs = await renderSlideThumbs(slides, rows, copy, ratio);
+      const carBrand = brand?.colours?.length ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined;
+      const thumbs = await renderSlideThumbs(slides, rows, copy, ratio, 540, carBrand);
       const r = await aiReview(thumbs, ratio, brand, slides.map((s) => s.label));
       if (r.notConfigured) setNote(t('review.notConfigured'));
       else if (r.error) setNote(r.error);

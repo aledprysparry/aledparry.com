@@ -36,7 +36,7 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
   const preset = PLATFORM_PRESETS[platform];
   const ratio = platformToRatio(platform);
   // CanvasRenderer ratio dims (for stage aspect + font scaling)
-  const dims = ratio === 'story' ? { w: 1080, h: 1920 } : ratio === 'landscape' ? { w: 1920, h: 1080 } : { w: 1080, h: 1350 };
+  const dims = ratio === 'story' ? { w: 1080, h: 1920 } : ratio === 'landscape' ? { w: 1920, h: 1080 } : ratio === 'square' ? { w: 1080, h: 1080 } : { w: 1080, h: 1350 };
 
   const commit = (els: GraphicElement[] = elements) =>
     store.updateGraphic(graphic.id, { slides: [{ id: graphic.slides?.[0]?.id ?? 'slide_0', order: 0, elements: els }] });
@@ -150,7 +150,7 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
             </label>
           </div>
           <div className="rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/40 sm:p-6">
-            <div className="mx-auto w-full" style={{ maxWidth: `min(100%, ${ratio === 'landscape' ? 720 : ratio === 'story' ? 380 : 520}px)` }}>
+            <div className="mx-auto w-full" style={{ maxWidth: `min(100%, ${ratio === 'landscape' ? 720 : ratio === 'story' ? 380 : ratio === 'square' ? 460 : 520}px)` }}>
               <Stage elements={elements} width={dims.w} height={dims.h} selectedId={selectedId} onSelect={setSelectedId} onChange={setElements} onCommit={() => commit()} onDropAsset={placeAsset} showSafe={showSafe} safeInsets={safeInsets} />
             </div>
           </div>

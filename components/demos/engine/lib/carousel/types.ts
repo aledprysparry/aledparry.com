@@ -37,11 +37,25 @@ export interface CarouselCopy {
   url?: string;
 }
 
+/** Brand paint for universal (brand-agnostic) carousels. The Cwis-specific
+ *  kinds ignore this and keep their own paint; the universal kinds resolve it
+ *  into a palette so they adopt whatever brand is applied. */
+export interface CarouselBrand {
+  name?: string;
+  colours: string[];
+  fonts?: string[];
+  logoUrl?: string;
+}
+
 export interface SlideProps {
   rows: LeaderboardRow[];
   copy: CarouselCopy;
   slideCount: number;
   index: number;
+  /** Present for universal kinds; undefined for the Cwis-painted kinds. */
+  brand?: CarouselBrand;
+  /** Optional, decoded user-uploaded images keyed by the kind's imageSlot key. */
+  images?: Record<string, HTMLImageElement>;
 }
 
 export interface SlideDef {

@@ -26,6 +26,7 @@ import {
   markSeeded,
   newId,
   now,
+  loadLang,
   exportSnapshot,
   type CollectionName,
 } from './persist';
@@ -77,7 +78,51 @@ function migrateMaster(templates: Template[], graphics: GeneratedGraphic[]): { t
 const ANIMATED_SCOPE_KEY = 'cg.v1.animatedTplScoped';
 // Brand-specific (non-universal) branded kinds. A brand that owns one of these
 // is a "client" brand that legitimately keeps its animated caption.
-const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard']);
+const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard', 'cwis-quiz']);
+
+// One-time: add the "Question of the day" (cwis-quiz) template to brands that
+// already own a Cwis-painted kind (the leaderboard/scoreboard) - i.e. the Cwis
+// brand seeded before this kind existed - AND refresh any existing quiz
+// template's capability fields (platforms + dimensions) from the kind, so an
+// early-seeded record picks up the later square/aspect support. Fresh installs
+// get it correct via buildSeed. (Key bumped to re-run for early adopters.)
+const QUIZ_SEED_KEY = 'cg.v1.quizKindSeeded2';
+function ensureQuizForCwis(templates: Template[]): Template[] | null {
+  if (typeof localStorage === 'undefined' || localStorage.getItem(QUIZ_SEED_KEY) === 'true') return null;
+  localStorage.setItem(QUIZ_SEED_KEY, 'true');
+  const kind = getKind('cwis-quiz');
+  if (!kind) return null;
+  let changed = false;
+  // Refresh capability fields on existing quiz templates.
+  let next = templates.map((t) => {
+    if (t.kind !== 'cwis-quiz') return t;
+    if (sameArray(t.supportedPlatforms, kind.supportedPlatforms) && t.dimensions.width === kind.dimensions.width && t.dimensions.height === kind.dimensions.height) return t;
+    changed = true;
+    return { ...t, supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions };
+  });
+  // Add to Cwis brands that don't own one yet.
+  const cwisBrandIds = Array.from(new Set(
+    next.filter((t) => t.kind === 'quizbookbiz-leaderboard' || t.kind === 'cwis-weekly-scoreboard').map((t) => t.brandId),
+  ));
+  const owns = new Set(next.filter((t) => t.kind === 'cwis-quiz').map((t) => t.brandId));
+  for (const brandId of cwisBrandIds) {
+    if (owns.has(brandId)) continue;
+    next = [...next, {
+      id: newId('tpl'), brandId, name: kind.name, type: kind.type, kind: kind.id,
+      supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions,
+      master: { copy: { ...(kind.defaultCopyByLang?.[loadLang()] ?? kind.defaultCopy ?? {}) } },
+      createdAt: now(),
+    }];
+    changed = true;
+  }
+  if (!changed) return null;
+  saveCollection('templates', next);
+  return next;
+}
+
+function sameArray(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
 
 // One-time: undo the earlier auto-seed that pushed an "Animated caption"
 // template into EVERY brand. Animated caption is now client-only (#74 rule), so
@@ -117,6 +162,8 @@ function initialState(): StoreState {
   const brands = loadCollection<Brand>('brands');
   const scoped = scopeAnimatedTemplates(templates, graphics);
   if (scoped) templates = scoped;
+  const withQuiz = ensureQuizForCwis(templates);
+  if (withQuiz) templates = withQuiz;
   return {
     brands,
     assets: [], // hydrated from IndexedDB on mount (see StoreProvider)
@@ -292,7 +339,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createTemplate: (brandId, kindId, name, opts) => {
         const kind = getKind(kindId);
         if (!kind) return undefined;
-        const tpl: Template = { id: newId('tpl'), brandId, name: name || kind.name, type: kind.type, kind: kind.id, supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions, styleId: opts?.styleId, seedElements: opts?.seedElements, master: { copy: { ...(kind.defaultCopy ?? {}) } }, createdAt: now() };
+        const baseCopy = kind.defaultCopyByLang?.[loadLang()] ?? kind.defaultCopy ?? {};
+        const tpl: Template = { id: newId('tpl'), brandId, name: name || kind.name, type: kind.type, kind: kind.id, supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions, styleId: opts?.styleId, seedElements: opts?.seedElements, master: { copy: { ...baseCopy } }, createdAt: now() };
         update('templates', (x) => [...x, tpl]);
         return tpl;
       },
@@ -327,7 +375,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         // clone with fresh ids so each graphic owns its elements.
         const seed = tpl.seedElements?.length
           ? tpl.seedElements.map((el) => ({ ...el, id: newId('el') }))
-          : kind.defaultElements?.(brand?.colours) ?? [];
+          : kind.defaultElements?.(brand?.colours, loadLang()) ?? [];
         const g: GeneratedGraphic =
           kind.editor === 'freeform'
             ? { ...base, slides: [{ id: newId('slide'), order: 0, elements: seed }] }

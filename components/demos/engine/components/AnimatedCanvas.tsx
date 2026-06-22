@@ -2,19 +2,23 @@ import { useEffect, useRef } from 'react';
 import { CanvasRenderer, type RatioKey } from '@engine/lib/canvas/CanvasRenderer';
 import { ensureFonts } from '@engine/lib/carousel/fonts';
 import { drawAnimatedFrame, ANIMATED_DURATION_MS } from '@engine/lib/carousel/animated';
+import type { CarouselBrand } from '@engine/lib/carousel/types';
 
 interface Props {
   copy: Record<string, string | undefined>;
   ratio?: RatioKey;
   durationMs?: number;
+  brand?: CarouselBrand;
 }
 
 // Live looping preview of the animated caption, drawn on the shared
-// CanvasRenderer (same brand paint as the stills).
-export default function AnimatedCanvas({ copy, ratio = 'story', durationMs = ANIMATED_DURATION_MS }: Props) {
+// CanvasRenderer (Cwis paint, or brand paint when `brand` is set).
+export default function AnimatedCanvas({ copy, ratio = 'story', durationMs = ANIMATED_DURATION_MS, brand }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const copyRef = useRef(copy);
   copyRef.current = copy;
+  const brandRef = useRef(brand);
+  brandRef.current = brand;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -27,7 +31,7 @@ export default function AnimatedCanvas({ copy, ratio = 'story', durationMs = ANI
     const loop = (t: number) => {
       if (!alive) return;
       if (!start) start = t;
-      drawAnimatedFrame(r, copyRef.current, ((t - start) % durationMs) / durationMs);
+      drawAnimatedFrame(r, copyRef.current, ((t - start) % durationMs) / durationMs, brandRef.current);
       raf = requestAnimationFrame(loop);
     };
     ensureFonts().then(() => { if (alive) raf = requestAnimationFrame(loop); });

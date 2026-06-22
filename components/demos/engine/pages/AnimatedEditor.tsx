@@ -29,6 +29,9 @@ export default function AnimatedEditor({ graphic }: { graphic: GeneratedGraphic 
   const overrides = graphicOverrides(graphic.inputs);
   const master = (template?.master?.copy as Record<string, string> | undefined);
   const copy = effectiveCopy(kind?.defaultCopy, master, overrides);
+  // Brand paint only for the universal kind; the Cwis caption keeps its own paint.
+  const brandModel = store.getBrand(graphic.brandId);
+  const carBrand = kind?.universal && brandModel ? { name: brandModel.name, colours: brandModel.colours, fonts: brandModel.fonts } : undefined;
 
   const [ratio, setRatio] = useState<RatioKey>(platformToRatio(graphic.platformPresetId));
   const [busy, setBusy] = useState(false);
@@ -45,7 +48,7 @@ export default function AnimatedEditor({ graphic }: { graphic: GeneratedGraphic 
     setErr(null);
     setBusy(true);
     try {
-      await downloadAnimatedWebM(graphic.name, { copy, ratio });
+      await downloadAnimatedWebM(graphic.name, { copy, ratio, brand: carBrand });
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Export failed.');
     } finally {
@@ -89,7 +92,7 @@ export default function AnimatedEditor({ graphic }: { graphic: GeneratedGraphic 
                 <button key={o.key} onClick={() => setRatio(o.key)} className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${ratio === o.key ? 'border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-500 dark:bg-violet-500/15 dark:text-violet-300' : 'border-zinc-200 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>{o.label}</button>
               ))}
             </div>
-            <div className="rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/40 sm:p-6"><div className="mx-auto w-full max-w-[360px]"><AnimatedCanvas copy={copy} ratio={ratio} /></div></div>
+            <div className="rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/40 sm:p-6"><div className="mx-auto w-full max-w-[360px]"><AnimatedCanvas copy={copy} ratio={ratio} brand={carBrand} /></div></div>
           </div>
         </div>
       )}
@@ -105,7 +108,9 @@ export default function AnimatedEditor({ graphic }: { graphic: GeneratedGraphic 
                 ))}
               </div>
             </div>
-            <div>
+            {/* Background preset only applies to the Cwis caption; the universal
+                kind paints on the brand colour, so the toggle is hidden. */}
+            <div className={kind.universal ? 'hidden' : undefined}>
               <p className="mb-1.5 text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">{t('editor.anim.background')}</p>
               <div className="flex flex-wrap gap-2">
                 {ANIMATED_BGS.map((b) => (

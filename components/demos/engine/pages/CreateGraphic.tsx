@@ -72,14 +72,17 @@ export default function CreateGraphic() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       {items.map((tp) => {
                         const active = tp.id === templateId;
+                        const k = getKind(tp.kind);
+                        const name = k?.nameKey ? t(k.nameKey) : tp.name;
+                        const desc = k?.descKey ? t(k.descKey) : k?.description;
                         return (
                           <button key={tp.id} onClick={() => { setTemplateId(tp.id); setPlatform(tp.supportedPlatforms[0] || 'instagram-carousel'); }} className="text-left">
                             <Panel className={`p-4 transition-colors ${active ? 'border-violet-400 ring-1 ring-violet-400/40 dark:border-violet-500' : 'hover:border-zinc-300 dark:hover:border-zinc-700'}`}>
                               <div className="flex items-center justify-between">
-                                <span className="text-[15px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{tp.name}</span>
+                                <span className="text-[15px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{name}</span>
                                 {active && <Check size={16} className="text-violet-600 dark:text-violet-400" />}
                               </div>
-                              <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">{getKind(tp.kind)?.description}</p>
+                              <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">{desc}</p>
                             </Panel>
                           </button>
                         );

@@ -4,21 +4,23 @@
 
 import { CanvasRenderer, type RatioKey } from '@engine/lib/canvas/CanvasRenderer';
 import { ensureFonts } from './fonts';
-import type { CarouselCopy, LeaderboardRow, SlideDef } from './types';
+import { loadSlideImages } from './slideImages';
+import type { CarouselBrand, CarouselCopy, LeaderboardRow, SlideDef } from './types';
 
 export interface ReviewIssue { slide: number; label?: string; ok?: boolean; issues: string[]; }
 export interface AiReview { slides: ReviewIssue[]; overall?: string; }
 
 /** Render every slide at its target ratio, downscaled, as JPEG data-URLs. */
 export async function renderSlideThumbs(
-  slides: SlideDef[], rows: LeaderboardRow[], copy: CarouselCopy, ratio: RatioKey, maxW = 540,
+  slides: SlideDef[], rows: LeaderboardRow[], copy: CarouselCopy, ratio: RatioKey, maxW = 540, brand?: CarouselBrand, imageUrls?: Record<string, string>,
 ): Promise<string[]> {
   await ensureFonts();
+  const images = await loadSlideImages(imageUrls);
   const out: string[] = [];
   slides.forEach((slide, index) => {
     const full = document.createElement('canvas');
     const r = new CanvasRenderer(full, ratio);
-    slide.draw(r, { rows, copy, slideCount: slides.length, index });
+    slide.draw(r, { rows, copy, slideCount: slides.length, index, brand, images });
     const scale = Math.min(1, maxW / r.W);
     const tc = document.createElement('canvas');
     tc.width = Math.round(r.W * scale);

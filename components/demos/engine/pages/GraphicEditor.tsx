@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, ShieldCheck, Pencil, Film } from 'lucide-react';
+import { ArrowLeft, Download, ShieldCheck, Pencil, Film, ImagePlus } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
@@ -16,6 +16,7 @@ import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { exportSlide, exportZip } from '@engine/lib/carousel/exportCarousel';
 import { downloadSlidesAnimatedWebM } from '@engine/lib/carousel/exportSlidesAnimated';
 import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
+import { fileToStoredDataURL } from '@engine/lib/util/imageScale';
 import type { CarouselCopy } from '@engine/lib/carousel/types';
 import type { PlatformId } from '@engine/lib/model/types';
 
@@ -57,6 +58,9 @@ export default function GraphicEditor() {
   const preset = PLATFORM_PRESETS[platform];
   const ratio = platformToRatio(platform);
   const slides = kind.slides ?? [];
+  // Brand paint for universal carousel kinds (Cwis kinds ignore it).
+  const brand = store.getBrand(graphic.brandId);
+  const carBrand = brand ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined;
 
   const setInputs = (patch: Record<string, unknown>) =>
     store.updateGraphic(graphic.id, { inputs: { ...graphic.inputs, ...patch } });
@@ -66,20 +70,33 @@ export default function GraphicEditor() {
   const resetToMaster = () => setInputs({ copyOverrides: {} });
   const overrideCount = Object.keys(overrides).length;
 
+  // Optional uploaded images (carousel kinds that declare imageSlots).
+  const imageUrls = (graphic.inputs?.images as Record<string, string>) ?? {};
+  const setImage = async (key: string, file?: File) => {
+    if (!file) return;
+    const url = await fileToStoredDataURL(file, 1200);
+    setInputs({ images: { ...imageUrls, [key]: url } });
+  };
+  const removeImage = (key: string) => {
+    const next = { ...imageUrls };
+    delete next[key];
+    setInputs({ images: next });
+  };
+
   const downloadSlide = async (i: number) => {
     setBusy(i);
-    try { await exportSlide(slides[i], i, rows, copy, slides.length, format, ratio, graphic.name); }
+    try { await exportSlide(slides[i], i, rows, copy, slides.length, format, ratio, graphic.name, carBrand, imageUrls); }
     finally { setBusy(null); }
   };
   const downloadZip = async () => {
     setBusy('zip');
-    try { await exportZip(slides, rows, copy, format, `${graphic.name}`, ratio); }
+    try { await exportZip(slides, rows, copy, format, `${graphic.name}`, ratio, carBrand, imageUrls); }
     finally { setBusy(null); }
   };
   // Animated output mode - same slides, exported as motion (WebM).
   const downloadAnimated = async () => {
     setBusy('anim');
-    try { await downloadSlidesAnimatedWebM(graphic.name, { slides, rows, copy, ratio, perSlideMs: ANIM_MS[animSpeed] }); }
+    try { await downloadSlidesAnimatedWebM(graphic.name, { slides, rows, copy, ratio, perSlideMs: ANIM_MS[animSpeed], brand: carBrand, imageUrls }); }
     finally { setBusy(null); }
   };
 
@@ -127,9 +144,12 @@ export default function GraphicEditor() {
       {tab === 'design' && (
       <div className="grid grid-cols-1 gap-7 lg:grid-cols-[360px_1fr]">
         <div className="flex flex-col gap-5">
-          <Panel className="p-5">
-            <DataInput value={rawText} onChange={(t) => setInputs({ rawText: t })} warnings={warnings} error={error} rowCount={rows.length} onLoadSample={() => setInputs({ rawText: kind.sampleData })} />
-          </Panel>
+          {/* Data paste only for data-driven kinds; copy-only carousels skip it. */}
+          {kind.parse && (
+            <Panel className="p-5">
+              <DataInput value={rawText} onChange={(t) => setInputs({ rawText: t })} warnings={warnings} error={error} rowCount={rows.length} onLoadSample={() => setInputs({ rawText: kind.sampleData })} />
+            </Panel>
+          )}
           <Panel className="p-5">
             <CopyEditor copy={copy as unknown as Record<string, string | undefined>} onChange={setCopyField} fields={kind.copyFields} />
             <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-3 text-[12px] dark:border-zinc-800">
@@ -140,6 +160,31 @@ export default function GraphicEditor() {
               </div>
             </div>
           </Panel>
+          {kind.imageSlots?.length ? (
+            <Panel className="p-5">
+              <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">{t('editor.images.title')}</p>
+              <div className="mt-3 space-y-3">
+                {kind.imageSlots.map((slot) => {
+                  const url = imageUrls[slot.key];
+                  return (
+                    <div key={slot.key}>
+                      <label className="mb-1.5 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{slot.labelKey ? t(slot.labelKey) : slot.label}</label>
+                      <div className="flex items-center gap-3">
+                        {url
+                          ? <img src={url} alt="" className="h-14 w-14 rounded-lg border border-zinc-200 object-contain p-1 dark:border-zinc-700" />
+                          : <div className="grid h-14 w-14 place-items-center rounded-lg border border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-700"><ImagePlus size={16} /></div>}
+                        <label className="cursor-pointer">
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => setImage(slot.key, e.target.files?.[0])} />
+                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] font-semibold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"><ImagePlus size={14} /> {url ? t('editor.images.replace') : t('editor.images.add')}</span>
+                        </label>
+                        {url && <button onClick={() => removeImage(slot.key)} className="text-[12px] font-semibold text-zinc-500 hover:text-red-600 dark:text-zinc-400">{t('editor.images.remove')}</button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Panel>
+          ) : null}
           <ReviewPanel slides={slides} rows={rows} copy={copy} ratio={ratio} brand={store.getBrand(graphic.brandId)} />
         </div>
 
@@ -153,10 +198,10 @@ export default function GraphicEditor() {
           <Panel className="bg-zinc-100 p-4 dark:bg-zinc-800/40 sm:p-5">
             <div className="flex snap-x gap-5 overflow-x-auto pb-3">
               {slides.map((slide, i) => (
-                <div key={slide.id} className="shrink-0 snap-start" style={{ width: ratio === 'story' ? 200 : ratio === 'landscape' ? 320 : 260 }}>
+                <div key={slide.id} className="shrink-0 snap-start" style={{ width: ratio === 'story' ? 200 : ratio === 'landscape' ? 320 : ratio === 'square' ? 240 : 260 }}>
                   <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{i + 1}. {slide.label}</div>
                   <div className="relative overflow-hidden rounded-xl border border-zinc-200 shadow-sm shadow-zinc-900/[0.04] dark:border-zinc-700">
-                    <SlideCanvas slide={slide} index={i} rows={rows} copy={copy} slideCount={slides.length} ratio={ratio} />
+                    <SlideCanvas slide={slide} index={i} rows={rows} copy={copy} slideCount={slides.length} ratio={ratio} brand={carBrand} imageUrls={imageUrls} />
                     {showSafe && (
                       <div className="pointer-events-none absolute border border-dashed border-emerald-400/70" style={{ top: safe.top, bottom: safe.bottom, left: safe.left, right: safe.right }} />
                     )}

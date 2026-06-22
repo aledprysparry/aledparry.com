@@ -24,6 +24,16 @@ export const PLATFORM_PRESETS: Record<PlatformId, PlatformPreset> = {
     slideCount: { min: 2, max: 10 },
     notes: 'Swipe dots sit bottom-centre; the page indicator overlaps the lower edge.',
   },
+  'instagram-square': {
+    id: 'instagram-square',
+    name: 'Instagram Square',
+    width: 1080,
+    height: 1080,
+    aspectRatio: '1:1',
+    safeArea: { top: 60, right: 60, bottom: 90, left: 60 },
+    slideCount: { min: 2, max: 10 },
+    notes: 'Classic 1:1 square - the format S4C uses for the daily-quiz posts.',
+  },
   'instagram-story': {
     id: 'instagram-story',
     name: 'Instagram Story / Reel',

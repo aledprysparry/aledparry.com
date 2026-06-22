@@ -6,6 +6,7 @@
 import { CanvasRenderer, type RatioKey } from '@engine/lib/canvas/CanvasRenderer';
 import { ensureFonts } from './fonts';
 import { drawAnimatedFrame, ANIMATED_DURATION_MS } from './animated';
+import type { CarouselBrand } from './types';
 
 // Candidate WebM MIME types, best-quality first. Shared by the support check
 // and pickMime() so they agree on what "supported" means.
@@ -38,12 +39,13 @@ export interface AnimatedExportOpts {
   durationMs?: number;
   loops?: number;
   fps?: number;
+  brand?: CarouselBrand;
 }
 
 /** Render the animated caption to a WebM Blob. */
 export async function renderAnimatedWebM(opts: AnimatedExportOpts): Promise<Blob> {
   if (!webmSupported()) throw new Error('This browser can’t record video (no MediaRecorder/captureStream).');
-  const { copy, ratio = 'story', durationMs = ANIMATED_DURATION_MS, loops = 2, fps = 30 } = opts;
+  const { copy, ratio = 'story', durationMs = ANIMATED_DURATION_MS, loops = 2, fps = 30, brand } = opts;
 
   await ensureFonts();
 
@@ -62,7 +64,7 @@ export async function renderAnimatedWebM(opts: AnimatedExportOpts): Promise<Blob
   await new Promise<void>((resolve) => {
     const tick = (nowT: number) => {
       const elapsed = nowT - start;
-      drawAnimatedFrame(r, copy, (elapsed % durationMs) / durationMs);
+      drawAnimatedFrame(r, copy, (elapsed % durationMs) / durationMs, brand);
       if (elapsed >= total) { rec.stop(); resolve(); return; }
       requestAnimationFrame(tick);
     };

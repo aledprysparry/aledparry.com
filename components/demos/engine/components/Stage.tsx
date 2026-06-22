@@ -88,7 +88,10 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
       onDragOver={(e) => { if (e.dataTransfer.types.includes('application/x-asset')) e.preventDefault(); }}
       onDrop={handleDrop}
       className="relative w-full select-none overflow-hidden rounded-xl border border-zinc-200 shadow-sm shadow-zinc-900/10 dark:border-zinc-700"
-      style={{ aspectRatio: `${width} / ${height}` }}
+      // container-type lets text/radii size in cqi (1cqi = 1% of the stage's
+      // rendered width) so the preview proportion matches the export exactly,
+      // at any display size. (Fonts/radii are fractions of canvas width.)
+      style={{ aspectRatio: `${width} / ${height}`, containerType: 'inline-size' }}
     >
       {elements.map((el) => {
         const s = (el.style ?? {}) as Record<string, unknown>;
@@ -132,7 +135,7 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
                   color: (s.color as string) ?? '#fff',
                   fontFamily: `${(s.fontFamily as string) ?? 'Inter'}, sans-serif`,
                   fontWeight: (s.fontWeight as string) ?? '600',
-                  fontSize: `${((s.fontSize as number) ?? 0.05) * width}px`,
+                  fontSize: `${((s.fontSize as number) ?? 0.05) * 100}cqi`,
                   textAlign: ((s.align as 'left' | 'center' | 'right') ?? 'left'),
                   lineHeight: String((s.lineHeight as number) ?? 1.2),
                   overflow: 'visible',
@@ -146,7 +149,7 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
         }
         if (el.type === 'shape') {
           return (
-            <div key={el.id} className={`${common} ${ring}`} style={{ ...box, background: (s.fill as string) ?? '#6366f1', borderRadius: `${((s.radius as number) ?? 0) * width}px` }} onPointerDown={(e) => startDrag(e, el, 'move')}>
+            <div key={el.id} className={`${common} ${ring}`} style={{ ...box, background: (s.fill as string) ?? '#6366f1', borderRadius: `${((s.radius as number) ?? 0) * 100}cqi` }} onPointerDown={(e) => startDrag(e, el, 'move')}>
               {selected && <ResizeHandle onDown={(e) => startDrag(e, el, 'resize')} />}
             </div>
           );
@@ -154,7 +157,7 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
         // image / logo
         return (
           <div key={el.id} className={`${common} ${ring}`} style={box} onPointerDown={(e) => startDrag(e, el, 'move')}>
-            <img src={el.content} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: ((s.fit as 'cover' | 'contain') ?? 'contain'), borderRadius: `${((s.radius as number) ?? 0) * width}px`, pointerEvents: 'none' }} />
+            <img src={el.content} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: ((s.fit as 'cover' | 'contain') ?? 'contain'), borderRadius: `${((s.radius as number) ?? 0) * 100}cqi`, pointerEvents: 'none' }} />
             {selected && <ResizeHandle onDown={(e) => startDrag(e, el, 'resize')} />}
           </div>
         );

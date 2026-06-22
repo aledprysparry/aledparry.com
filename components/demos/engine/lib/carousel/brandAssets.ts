@@ -16,6 +16,7 @@ export interface BrandImage {
 // (see that folder's README) and they light up automatically.
 const IMAGE_MANIFEST = {
   logo: '/app/cwis/logo.png',
+  appIcon: '/app/cwis/app-icon.png',
   bgPurple: '/app/cwis/bg-purple.png',
   bgCyan: '/app/cwis/bg-cyan.png',
   bgYellow: '/app/cwis/bg-yellow.png',
@@ -25,6 +26,7 @@ export type BrandImageKey = keyof typeof IMAGE_MANIFEST;
 
 const images: Record<BrandImageKey, BrandImage> = {
   logo: { img: null, ready: false },
+  appIcon: { img: null, ready: false },
   bgPurple: { img: null, ready: false },
   bgCyan: { img: null, ready: false },
   bgYellow: { img: null, ready: false },

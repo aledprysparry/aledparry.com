@@ -9,7 +9,8 @@
 import { CanvasRenderer, type RatioKey } from '@engine/lib/canvas/CanvasRenderer';
 import { ensureFonts } from './fonts';
 import { webmSupported } from './exportAnimated';
-import type { SlideDef, LeaderboardRow, CarouselCopy } from './types';
+import { loadSlideImages } from './slideImages';
+import type { SlideDef, LeaderboardRow, CarouselCopy, CarouselBrand } from './types';
 
 function pickMime(): string {
   for (const m of ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) {
@@ -26,19 +27,22 @@ export interface SlidesAnimatedOpts {
   ratio?: RatioKey;
   perSlideMs?: number;
   fps?: number;
+  brand?: CarouselBrand;
+  imageUrls?: Record<string, string>;
 }
 
 export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promise<Blob> {
   if (!webmSupported()) throw new Error('This browser can’t record video (no MediaRecorder/captureStream).');
-  const { slides, rows, copy, ratio = 'portrait', perSlideMs = 2600, fps = 30 } = opts;
+  const { slides, rows, copy, ratio = 'portrait', perSlideMs = 2600, fps = 30, brand, imageUrls } = opts;
   if (!slides.length) throw new Error('Nothing to animate.');
   await ensureFonts();
+  const images = await loadSlideImages(imageUrls);
 
   // Render each slide once to its own offscreen bitmap (static).
   const bitmaps = slides.map((slide, i) => {
     const c = document.createElement('canvas');
     const r = new CanvasRenderer(c, ratio);
-    slide.draw(r, { rows, copy, slideCount: slides.length, index: i });
+    slide.draw(r, { rows, copy, slideCount: slides.length, index: i, brand, images });
     return c;
   });
 
@@ -51,6 +55,8 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
   const chunks: BlobPart[] = [];
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
 
+  // Inter-slide fade colour: the brand background where known, else deep navy.
+  const fadeBg = brand?.colours?.[0] ?? '#0b1120';
   const total = perSlideMs * slides.length;
   const stopped = new Promise<void>((resolve) => { rec.onstop = () => resolve(); });
 
@@ -67,7 +73,7 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
       const alpha = Math.max(0, reveal * (1 - outp));
       const scale = 0.985 + 0.015 * reveal;
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#0b1120';
+      ctx.fillStyle = fadeBg;
       ctx.fillRect(0, 0, W, H);
       ctx.save();
       ctx.globalAlpha = alpha;

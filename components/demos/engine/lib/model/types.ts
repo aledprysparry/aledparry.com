@@ -12,6 +12,7 @@ export type ISODate = string;
 export type PlatformId =
   | 'instagram-feed'
   | 'instagram-carousel'
+  | 'instagram-square'
   | 'instagram-story'
   | 'tiktok'
   | 'facebook'
