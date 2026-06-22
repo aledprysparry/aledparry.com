@@ -48,7 +48,7 @@ export interface TemplateKind {
   defaultCopyByLang?: Partial<Record<Lang, Record<string, string>>>;
   /** Which copy fields the editor shows (defaults to the carousel set).
    *  labelKey points at an i18n string so the label is bilingual. */
-  copyFields?: { key: string; label: string; labelKey?: StringKey; multiline?: boolean }[];
+  copyFields?: { key: string; label: string; labelKey?: StringKey; multiline?: boolean; toggle?: boolean }[];
   /** Optional image slots a carousel kind accepts (uploaded per graphic, stored
    *  in graphic.inputs.images[key]). Blank by default; drawn if the user adds one. */
   imageSlots?: { key: string; label: string; labelKey?: StringKey }[];

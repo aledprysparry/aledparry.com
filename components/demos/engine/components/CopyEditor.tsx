@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import type { StringKey } from '@engine/lib/i18n/strings';
 
-export type CopyField = { key: string; label: string; labelKey?: StringKey; multiline?: boolean };
+export type CopyField = { key: string; label: string; labelKey?: StringKey; multiline?: boolean; toggle?: boolean };
 
 const DEFAULT_FIELDS: CopyField[] = [
   { key: 'brandLine', label: 'Brand' },
@@ -44,7 +44,17 @@ export default function CopyEditor({ copy, onChange, fields }: Props) {
       </button>
       {open && (
         <div className="mt-4 grid grid-cols-1 gap-3">
-          {FIELDS.map((f) => (
+          {FIELDS.map((f) => f.toggle ? (
+            <label key={f.key} className="flex cursor-pointer items-center gap-2 pt-0.5">
+              <input
+                type="checkbox"
+                checked={(copy[f.key] ?? '') !== ''}
+                onChange={(e) => onChange(f.key, e.target.checked ? '1' : '')}
+                className="h-4 w-4 rounded border-zinc-300 accent-violet-600 dark:border-zinc-600"
+              />
+              <span className="text-[12px] font-medium text-zinc-700 dark:text-zinc-300">{f.labelKey ? t(f.labelKey) : f.label}</span>
+            </label>
+          ) : (
             <label key={f.key} className="flex flex-col gap-1">
               <span className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{f.labelKey ? t(f.labelKey) : f.label}</span>
               {f.multiline ? (

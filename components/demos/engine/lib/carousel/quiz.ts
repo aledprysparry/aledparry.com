@@ -129,11 +129,17 @@ const answerSlide: SlideDef = {
     paintLogoCentred(r);
     goldTitle(r, (c.answerTitle || 'ATEB').toUpperCase(), 0.33, 0.088);
 
-    const answer = c.answer || 'Your answer';
+    // Caps toggle: ON = the chunky Digitalt display face (caps look, great for
+    // short answers like "1988"); OFF = the normal body font, as typed (better
+    // for a longer mixed-case answer with emoji).
+    const caps = (c.answerCaps ?? '1') !== '';
+    const ansFont = caps ? DISPLAY : BODY;
+    const ansWeight = caps ? '900' : '800';
+    const answer = (caps ? (c.answer || 'Your answer').toUpperCase() : (c.answer || 'Your answer'));
     // Shrink slightly once the answer runs to several lines so "more info" fits.
-    const size = countWrappedLines(r, answer, 0.075, DISPLAY, '900', 0.82) > 2 ? 0.05 : 0.075;
+    const size = countWrappedLines(r, answer, 0.075, ansFont, ansWeight, 0.82) > 2 ? 0.05 : 0.075;
     const lh = size * 1.12;
-    const lines = countWrappedLines(r, answer, size, DISPLAY, '900', 0.82);
+    const lines = countWrappedLines(r, answer, size, ansFont, ansWeight, 0.82);
     const blockH = lines * lh;
 
     const topRule = 0.43;
@@ -150,7 +156,7 @@ const answerSlide: SlideDef = {
 
     rule(r, topRule, 0.82, WHITE, 0.0035);
     setShadow(r, 'rgba(8,3,34,0.4)', 0, 0.006, 0.0015);
-    r.drawTextWrapped(answer, { x: 0.5, y: textTop, size, color: WHITE, weight: '900', align: 'center', font: DISPLAY, maxWidth: 0.82, lineHeight: lh, baseline: 'top' });
+    r.drawTextWrapped(answer, { x: 0.5, y: textTop, size, color: WHITE, weight: ansWeight, align: 'center', font: ansFont, maxWidth: 0.82, lineHeight: lh, baseline: 'top' });
     clearShadow(r);
     rule(r, botRule, 0.82, WHITE, 0.0035);
   },
@@ -219,6 +225,7 @@ export const QUIZ_COPY: Record<Lang, Copy> = {
     question: 'In which year was the series "Sgorio" first broadcast?',
     answerTitle: 'ANSWER',
     answer: '1988',
+    answerCaps: '1',
     ctaText: 'For more Welsh trivia, download the App for free…',
     url: 'www.s4c.cymru/cwis-bob-dydd',
   },
@@ -227,6 +234,7 @@ export const QUIZ_COPY: Record<Lang, Copy> = {
     question: 'Ym mha flwyddyn cafodd y gyfres "Sgorio" ei darlledu am y tro cyntaf?',
     answerTitle: 'ATEB',
     answer: '1988',
+    answerCaps: '1',
     ctaText: 'Am ragor o drivia Gymraeg lawrlwytha’r Ap am ddim…',
     url: 'www.s4c.cymru/cwis-bob-dydd',
   },
@@ -237,6 +245,7 @@ export const QUIZ_FIELDS: CopyField[] = [
   { key: 'question', label: 'Question', labelKey: 'copy.f.question', multiline: true },
   { key: 'answerTitle', label: 'Answer title', labelKey: 'copy.f.answerTitle' },
   { key: 'answer', label: 'Answer', labelKey: 'copy.f.answer', multiline: true },
+  { key: 'answerCaps', label: 'Answer in capitals', labelKey: 'copy.f.answerCaps', toggle: true },
   { key: 'ctaText', label: 'App CTA text', labelKey: 'copy.f.ctaText', multiline: true },
   { key: 'url', label: 'Website / URL', labelKey: 'copy.field.url' },
 ];
