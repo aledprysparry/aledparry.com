@@ -15,7 +15,7 @@ import { SCOREBOARD_SLIDES, SCOREBOARD_COPY, SCOREBOARD_SAMPLE } from '@engine/l
 import { QUIZ_SLIDES, QUIZ_COPY, QUIZ_FIELDS } from '@engine/lib/carousel/quiz';
 import { ANIMATED_COPY, ANIMATED_COPY_FIELDS, UNIVERSAL_ANIMATED_COPY } from '@engine/lib/carousel/animated';
 import { defaultPostElements } from '@engine/lib/freeform/elements';
-import { STILL_BUILDERS } from '@engine/lib/freeform/stillTemplates';
+import { STILL_BUILDERS, applyBrandPaint } from '@engine/lib/freeform/stillTemplates';
 import {
   LISTICLE_SLIDES, LISTICLE_COPY, LISTICLE_FIELDS,
   EXPLAINER_SLIDES, EXPLAINER_COPY, EXPLAINER_FIELDS,
@@ -55,8 +55,9 @@ export interface TemplateKind {
   sampleData?: string;
   dataHint?: string;
   parse?: (text: string) => ParseResult;
-  // freeform kinds:
-  defaultElements?: (brandColours?: string[], lang?: Lang) => GraphicElement[];
+  // freeform kinds. Brand paint: colours + language, plus the brand's fonts
+  // (fonts[0] → display) and logo URL (small corner mark) where available.
+  defaultElements?: (brandColours?: string[], lang?: Lang, fonts?: string[], logoUrl?: string) => GraphicElement[];
 }
 
 // Universal still platforms (every still adapts across these ratios).
@@ -95,7 +96,8 @@ const STILL_KINDS: Record<string, TemplateKind> = Object.fromEntries(
       description: m.description,
       supportedPlatforms: STILL_PLATFORMS,
       dimensions: { width: 1080, height: 1350 },
-      defaultElements: (colours?: string[], lang?: Lang) => STILL_BUILDERS[m.id](colours, lang),
+      defaultElements: (colours?: string[], lang?: Lang, fonts?: string[], logoUrl?: string) =>
+        applyBrandPaint(STILL_BUILDERS[m.id](colours, lang), fonts, logoUrl),
     } satisfies TemplateKind,
   ]),
 );

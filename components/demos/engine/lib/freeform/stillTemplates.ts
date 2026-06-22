@@ -240,6 +240,24 @@ function fact(colours?: string[], lang: Lang = 'en'): GraphicElement[] {
   ];
 }
 
+/** Make a built still on-brand: swap the display font (Bitter) for the brand's
+ *  first font where it has one, and add a small corner logo when the brand has
+ *  a logo asset. Keeps everything within the freeform style vocabulary. */
+export function applyBrandPaint(els: GraphicElement[], fonts?: string[], logoUrl?: string): GraphicElement[] {
+  const display = fonts?.[0];
+  const out = els.map((el) =>
+    display && display !== DISPLAY && el.type === 'text' && (el.style?.fontFamily === DISPLAY)
+      ? { ...el, style: { ...el.style, fontFamily: display } }
+      : el,
+  );
+  if (logoUrl) {
+    // top-right corner; recedes (branding = hierarchy level 3). The user can
+    // move or remove it in the editor.
+    out.push({ id: newId('el'), type: 'logo', content: logoUrl, position: { x: 0.74, y: 0.07 }, size: { width: 0.18, height: 0.075 }, style: { fit: 'contain' } });
+  }
+  return out;
+}
+
 export type StillBuilder = (colours?: string[], lang?: Lang) => GraphicElement[];
 
 /** Registry of universal still builders, keyed by the kind id suffix. */

@@ -415,9 +415,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         };
         // Generated templates bake their starter layout into seedElements;
         // clone with fresh ids so each graphic owns its elements.
+        const logoUrl = (state.assets.find((a) => a.id === brand?.logos?.[0]) ?? state.assets.find((a) => a.type === 'logo' && a.brandId === brandId))?.url;
         const seed = tpl.seedElements?.length
           ? tpl.seedElements.map((el) => ({ ...el, id: newId('el') }))
-          : kind.defaultElements?.(brand?.colours, loadLang()) ?? [];
+          : kind.defaultElements?.(brand?.colours, loadLang(), brand?.fonts, logoUrl) ?? [];
         const g: GeneratedGraphic =
           kind.editor === 'freeform'
             ? { ...base, slides: [{ id: newId('slide'), order: 0, elements: seed }] }

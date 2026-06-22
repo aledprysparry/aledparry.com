@@ -468,11 +468,14 @@ function StyleGenerator({ brandId }: { brandId: string }) {
 // master copy and sample data. Crops to a consistent card height.
 function TemplateThumb({ template, brand }: { template: Template; brand?: Brand }) {
   const { lang } = useI18n();
+  const store = useStore();
   const kind = getKind(template.kind);
   if (!kind) return null;
   const copy = effectiveCopy(kindBaseCopy(kind, lang), template.master?.copy, {}) as unknown as CarouselCopy;
   const ratio = platformToRatio(template.supportedPlatforms?.[0]);
-  const els = template.seedElements?.length ? template.seedElements : (kind.defaultElements?.(brand?.colours) ?? []);
+  const brandAssets = brand ? store.assetsByBrand(brand.id) : [];
+  const logoUrl = (brandAssets.find((a) => a.id === brand?.logos?.[0]) ?? brandAssets.find((a) => a.type === 'logo'))?.url;
+  const els = template.seedElements?.length ? template.seedElements : (kind.defaultElements?.(brand?.colours, lang, brand?.fonts, logoUrl) ?? []);
   const rows = kind.parse ? kind.parse(kind.sampleData ?? '').rows : [];
   return (
     <div className="mb-3 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800" style={{ maxHeight: 220 }}>
@@ -533,50 +536,55 @@ function TemplatesTab({ brandId }: { brandId: string }) {
   };
 
   return (
-    <div>
-      <TemplateFromImage brandId={brandId} />
-      <StyleGenerator brandId={brandId} />
-      <div className="mb-4 flex flex-wrap gap-2">
-        {/* Universal kinds for any brand; brand-specific kinds only if this
-            brand already owns one (so a new brand never sees Cwis templates). */}
-        {TEMPLATE_KIND_LIST.filter((k) => k.universal || templates.some((t) => t.kind === k.id)).map((k) => (
-          <Button key={k.id} variant="subtle" onClick={() => store.createTemplate(brandId, k.id)}>
-            <Plus size={14} /> {k.nameKey ? tr(k.nameKey) : k.name}
-          </Button>
-        ))}
-      </div>
-      {templates.length === 0 ? (
-        <EmptyState title={tr('tpl.empty')} hint={tr('tpl.emptyHint')} />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((t) => (
-            <Panel key={t.id} className="flex flex-col p-5">
-              <TemplateThumb template={t} brand={brand} />
-              <div className="flex items-start justify-between">
-                <Badge tone="accent">{t.type}</Badge>
-                <Menu
-                  label={tr('common.actions')}
-                  items={[
-                    { label: tr('master.edit'), icon: <Layers size={14} />, onClick: () => navigate(`/templates/${t.id}/master`) },
-                    { label: tr('common.rename'), icon: <Pencil size={14} />, onClick: () => rename(t.id, t.name) },
-                    { label: tr('common.delete'), icon: <Trash2 size={14} />, danger: true, onClick: () => remove(t.id, t.name) },
-                  ]}
-                />
-              </div>
-              <h3 className="mt-3 truncate text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">{t.name}</h3>
-              <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">{getKind(t.kind)?.description ?? t.kind}</p>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {t.supportedPlatforms.slice(0, 4).map((p) => (
-                  <span key={p} className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">{PLATFORM_PRESETS[p].name}</span>
-                ))}
-              </div>
-              <Button className="mt-4" onClick={() => navigate(`/brands/${brandId}/create?template=${t.id}`)}>
-                <Sparkles size={14} /> {tr('tpl.use')}
-              </Button>
-            </Panel>
+    <div className="space-y-8">
+      {templates.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">{tr('tpl.yours')}</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {templates.map((t) => (
+              <Panel key={t.id} className="flex flex-col p-5">
+                <TemplateThumb template={t} brand={brand} />
+                <div className="flex items-start justify-between">
+                  <Badge tone="accent">{t.type}</Badge>
+                  <Menu
+                    label={tr('common.actions')}
+                    items={[
+                      { label: tr('master.edit'), icon: <Layers size={14} />, onClick: () => navigate(`/templates/${t.id}/master`) },
+                      { label: tr('common.rename'), icon: <Pencil size={14} />, onClick: () => rename(t.id, t.name) },
+                      { label: tr('common.delete'), icon: <Trash2 size={14} />, danger: true, onClick: () => remove(t.id, t.name) },
+                    ]}
+                  />
+                </div>
+                <h3 className="mt-3 truncate text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">{t.name}</h3>
+                <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">{getKind(t.kind)?.description ?? t.kind}</p>
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {t.supportedPlatforms.slice(0, 4).map((p) => (
+                    <span key={p} className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">{PLATFORM_PRESETS[p].name}</span>
+                  ))}
+                </div>
+                <Button className="mt-4" onClick={() => navigate(`/brands/${brandId}/create?template=${t.id}`)}>
+                  <Sparkles size={14} /> {tr('tpl.use')}
+                </Button>
+              </Panel>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section>
+        <h2 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">{tr('tpl.addNew')}</h2>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {/* Universal kinds for any brand; brand-specific kinds only if this
+              brand already owns one (so a new brand never sees Cwis templates). */}
+          {TEMPLATE_KIND_LIST.filter((k) => k.universal || templates.some((t) => t.kind === k.id)).map((k) => (
+            <Button key={k.id} variant="subtle" onClick={() => store.createTemplate(brandId, k.id)}>
+              <Plus size={14} /> {k.nameKey ? tr(k.nameKey) : k.name}
+            </Button>
           ))}
         </div>
-      )}
+        <TemplateFromImage brandId={brandId} />
+        <StyleGenerator brandId={brandId} />
+      </section>
     </div>
   );
 }
