@@ -5,7 +5,9 @@ import { requireGate } from '@/lib/postioGate';
 // auto-fill from a topic, captions + hashtags, design critique. Calls
 // Claude via the REST API (same pattern as /api/ai). 503 if no key.
 
-const MODEL = 'claude-sonnet-4-20250514';
+// Sonnet 4.6 — `claude-sonnet-4-20250514` retired 15.06.2026 (the dated
+// alias now 404s from the API, which surfaced as "Build template" failing).
+const MODEL = 'claude-sonnet-4-6';
 
 // clip-analysis only sees this many characters of the transcript. Longer
 // podcasts/videos exceed it, so the response flags when it was truncated and
