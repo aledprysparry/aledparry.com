@@ -363,7 +363,7 @@ export function deriveRecommendations(
 }
 
 // ── AI client ──────────────────────────────────────────────────────────
-export type CoachTask = 'coach-analyse' | 'coach-account' | 'coach-performance';
+export type CoachTask = 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy';
 
 export async function callCoach<T>(task: CoachTask, payload: Record<string, unknown>): Promise<{ result?: T; error?: string }> {
   try {

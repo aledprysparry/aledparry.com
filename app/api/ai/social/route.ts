@@ -13,7 +13,7 @@ const MODEL = 'claude-sonnet-4-20250514';
 const CLIP_TRANSCRIPT_LIMIT = 12000;
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
@@ -42,7 +42,31 @@ interface Body {
   account?: { platform?: string; handle?: string; displayName?: string; notes?: string };
   // coach-performance: rows of imported/manual metrics to learn from
   entries?: { label?: string; platform?: string; metrics?: Record<string, unknown> }[];
+  // coach-strategy: which play + the per-brand business brief (topic reuses
+  // the existing `topic` field; pillars feed the 30-day plan).
+  play?: string;
+  strategyBrief?: { niche?: string; audience?: string; goals?: string; businessModel?: string; competitors?: string; notes?: string };
+  pillars?: string[];
 }
+
+// Strategy plays -> the structured shape + intent the model must return.
+const STRATEGY_SPEC: Record<string, { kind: 'sections' | 'pillars' | 'calendar' | 'post'; intent: string }> = {
+  full_strategy: { kind: 'sections', intent: 'A complete strategy covering brand positioning, content direction, audience targeting, and how to monetize. Use one section per area.' },
+  audience_psychology: { kind: 'sections', intent: 'Break the audience down: sections for Frustrations, Desires, Fears, Daily content habits, then Messaging angles and Content topics that stop the scroll and build trust.' },
+  authority_positioning: { kind: 'sections', intent: 'A positioning strategy that separates this brand from everyone else and makes it the go-to name: sections for the edge, a positioning statement, differentiators, and proof to build.' },
+  content_pillars: { kind: 'pillars', intent: 'Exactly 5 content pillars that attract followers, build credibility and drive leads or sales. Each pillar: a name, why it connects with this audience, and 3 example post topics.' },
+  thirty_day_plan: { kind: 'calendar', intent: 'A 30-day content calendar. One entry per day (day 1..30): a content idea, a post format (Carousel/Reel/Single image/Story), the message angle, and the goal (Reach, Trust, or Sell). Cycle the content pillars.' },
+  scroll_post: { kind: 'post', intent: 'One high-engagement post on the given topic: a hook that stops the scroll, a clear useful insight, and a CTA that drives comments, saves or clicks, plus a caption and a few hashtags.' },
+  monetization: { kind: 'sections', intent: 'Turn followers into paying customers: sections for offer ideas, pricing structure, content angles that move follower to buyer, and the immediate next step.' },
+};
+
+// The exact JSON envelope the model must return for each shape.
+const STRATEGY_SHAPE: Record<string, string> = {
+  sections: '{"summary":"one-line summary","sections":[{"heading":"...","body":"optional 1-2 sentences","bullets":["specific, actionable points"]}]}',
+  pillars: '{"summary":"one-line summary","pillars":[{"name":"pillar name","why":"why it connects with this audience","topics":["example post topic", "..."]}]}',
+  calendar: '{"summary":"one-line summary","days":[{"day":1,"idea":"the post idea","format":"Carousel|Reel|Single image|Story","angle":"the message angle","goal":"Reach|Trust|Sell"}]}',
+  post: '{"hook":"scroll-stopping first line","insight":"the clear useful insight","cta":"comment/save/click CTA","caption":"the full caption","hashtags":["#tag"]}',
+};
 
 // The Postio Coach system instruction (spec #10). Reused by every coach task.
 const COACH_SYSTEM = `You are Postio's AI Content Coach. You help social media managers improve content quality and performance. Never give vague feedback. Every observation MUST include: (1) what you noticed, (2) why it matters, (3) what to change, and (4) the expected benefit. Respect the selected benchmark settings. Learn from the user's previous posts, their best-performing content, the selected reference accounts, the intended platform, the brand style, and the current template. Never copy another account directly - identify the patterns and adapt them ethically. Match the language of the post copy (reply in Welsh if the copy is in Welsh). Respond with ONLY valid JSON, no markdown fences, no commentary.`;
@@ -131,6 +155,27 @@ Be specific ("Move the strongest phrase to line 1, cut the caption ~30%, add a c
         user: `Here are the user's posts with metrics. Find patterns in best vs worst (topics, formats, hooks, caption styles, posting times, CTAs, reusable templates). Return JSON: {"insights":[{"insight":"the pattern","evidence":"the numbers that show it","recommendation":"what to do + expected benefit","confidence":"low|medium|high"}]} (up to 6, most useful first).\n\nData:\n${JSON.stringify(rows)}`,
       };
     }
+    case 'coach-strategy': {
+      const spec = STRATEGY_SPEC[b.play || ''] || STRATEGY_SPEC.full_strategy;
+      const shape = STRATEGY_SHAPE[spec.kind];
+      const br = b.strategyBrief ?? {};
+      const briefBlock = [
+        br.niche && `Niche: ${br.niche}`,
+        br.audience && `Audience: ${br.audience}`,
+        br.goals && `Goals: ${br.goals}`,
+        br.businessModel && `Business model: ${br.businessModel}`,
+        br.competitors && `Competitors: ${br.competitors}`,
+        br.notes && `Notes: ${br.notes}`,
+      ].filter(Boolean).join('\n');
+      const refBlock = b.referenceLessons?.length ? `\n\nPatterns from accounts they admire (adapt, never copy):\n${b.referenceLessons.slice(0, 8).map((l) => `- ${l}`).join('\n')}` : '';
+      const perfBlock = b.performanceSummary ? `\n\nWhat has worked for them before:\n${b.performanceSummary.slice(0, 800)}` : '';
+      const topicBlock = b.play === 'scroll_post' && b.topic ? `\n\nTopic for the post: ${b.topic}` : '';
+      const pillarBlock = b.play === 'thirty_day_plan' && b.pillars?.length ? `\n\nUse these content pillars across the 30 days: ${b.pillars.join(', ')}.` : '';
+      return {
+        system: `${COACH_SYSTEM} You are also a social media strategist who has built brands from zero to a large, engaged following. Be specific and practical, never generic. Do not invent fake statistics, testimonials or guarantees. ${brandCtx}`,
+        user: `Play: ${spec.intent}\n\nBusiness brief:\n${briefBlock || '(sparse - infer sensibly and keep advice general where the brief is thin)'}${refBlock}${perfBlock}${topicBlock}${pillarBlock}\n\nReturn JSON exactly in this shape (no extra keys):\n${shape}`,
+      };
+    }
     default:
       return { system: base, user: 'Return JSON: {}' };
   }
@@ -139,6 +184,7 @@ Be specific ("Move the strongest phrase to line 1, cut the caption ~30%, add a c
 // Token budget per task: the Coach analysis returns a large structured object.
 function coachMaxTokens(task: Body['task']): number {
   if (task === 'coach-analyse') return 3200;
+  if (task === 'coach-strategy') return 3600; // the 30-day calendar is large
   if (task === 'coach-account' || task === 'coach-performance') return 1600;
   if (task === 'clip-analysis') return 2200;
   return 1200;

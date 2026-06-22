@@ -23,6 +23,8 @@ const TABLE: Record<CollectionName, string> = {
   performance: 'cg_performance',
   coachPresets: 'cg_coach_presets',
   coachSettings: 'cg_coach_settings',
+  coachBriefs: 'cg_coach_briefs',
+  strategyArtifacts: 'cg_strategy_artifacts',
 };
 
 interface HasId { id: string }

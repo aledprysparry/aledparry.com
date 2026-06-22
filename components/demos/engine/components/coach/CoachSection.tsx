@@ -5,7 +5,7 @@
 // as a slot so that working feature is untouched).
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { Gauge, Sparkles, Sliders, Users, TrendingUp, ListChecks, Layers, ImageDown } from 'lucide-react';
+import { Gauge, Sparkles, Sliders, Users, TrendingUp, ListChecks, Layers, ImageDown, Compass } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Tabs } from '@engine/components/primitives';
@@ -17,9 +17,10 @@ import ReferenceAccountsPanel from './ReferenceAccountsPanel';
 import PerformancePanel from './PerformancePanel';
 import RecommendationsPanel from './RecommendationsPanel';
 import PresetsPanel from './PresetsPanel';
+import StrategyPanel from './StrategyPanel';
 import { ScoreRing, useCoachConfig } from './shared';
 
-type Sub = 'overview' | 'analyse' | 'benchmarks' | 'accounts' | 'performance' | 'recommendations' | 'presets' | 'audit';
+type Sub = 'overview' | 'strategy' | 'analyse' | 'benchmarks' | 'accounts' | 'performance' | 'recommendations' | 'presets' | 'audit';
 
 export default function CoachSection({ brandId, auditSlot }: { brandId: string; auditSlot?: ReactNode }) {
   const { t } = useI18n();
@@ -27,6 +28,7 @@ export default function CoachSection({ brandId, auditSlot }: { brandId: string; 
 
   const SUBS: { id: Sub; key: StringKey; icon: ReactNode }[] = [
     { id: 'overview', key: 'coach.sub.overview', icon: <Gauge size={14} /> },
+    { id: 'strategy', key: 'coach.sub.strategy', icon: <Compass size={14} /> },
     { id: 'analyse', key: 'coach.sub.analyse', icon: <Sparkles size={14} /> },
     { id: 'benchmarks', key: 'coach.sub.benchmarks', icon: <Sliders size={14} /> },
     { id: 'accounts', key: 'coach.sub.accounts', icon: <Users size={14} /> },
@@ -51,6 +53,7 @@ export default function CoachSection({ brandId, auditSlot }: { brandId: string; 
       </div>
 
       {sub === 'overview' && <Overview brandId={brandId} go={setSub} />}
+      {sub === 'strategy' && <StrategyPanel brandId={brandId} />}
       {sub === 'analyse' && <AnalysePanel brandId={brandId} />}
       {sub === 'benchmarks' && <BenchmarksPanel brandId={brandId} />}
       {sub === 'accounts' && <ReferenceAccountsPanel brandId={brandId} />}
@@ -131,6 +134,7 @@ function Overview({ brandId, go }: { brandId: string; go: (s: Sub) => void }) {
       </Panel>
 
       <div className="grid gap-3 sm:grid-cols-2">
+        <CtaCard icon={<Compass size={16} />} title={t('coach.cta.strategy')} body={t('coach.cta.strategyBody')} onClick={() => go('strategy')} />
         <CtaCard icon={<Sparkles size={16} />} title={t('coach.cta.analyse')} body={t('coach.cta.analyseBody')} onClick={() => go('analyse')} />
         <CtaCard icon={<Sliders size={16} />} title={t('coach.cta.benchmarks')} body={t('coach.cta.benchmarksBody')} onClick={() => go('benchmarks')} />
         <CtaCard icon={<Users size={16} />} title={t('coach.cta.accounts')} body={t('coach.cta.accountsBody')} onClick={() => go('accounts')} />

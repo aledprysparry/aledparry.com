@@ -384,3 +384,60 @@ export interface AIRecommendation {
   applied: boolean;
   createdAt: ISODate;
 }
+
+// ═══ Postio Coach: Strategy / Playbook layer ═══
+//
+// The reactive Coach scores existing posts; the Strategy layer is generative:
+// a one-time per-brand business brief feeds a set of "plays" (full strategy,
+// audience psychology, positioning, pillars, 30-day plan, scroll-stopping
+// post, monetization), each producing a saved, structured artifact. Outputs
+// feed the rest of the Coach (pillars -> plan -> draft -> Analyse -> learn).
+
+/** A per-brand business brief, reused by every Strategy play (the `[paste]`). */
+export interface CoachBrief {
+  id: ID; // === brandId (one brief per brand)
+  brandId: ID;
+  niche: string;
+  audience: string;
+  goals: string;
+  businessModel: string;
+  competitors?: string;
+  notes?: string;
+  updatedAt: ISODate;
+}
+
+export type StrategyPlayId =
+  | 'full_strategy'
+  | 'audience_psychology'
+  | 'authority_positioning'
+  | 'content_pillars'
+  | 'thirty_day_plan'
+  | 'scroll_post'
+  | 'monetization';
+
+/** A titled block of advice (bullets and/or prose). */
+export interface StrategySection {
+  heading: string;
+  body?: string;
+  bullets?: string[];
+}
+
+/** Discriminated artifact payload: each play renders one of these shapes. */
+export type StrategyData =
+  | { kind: 'sections'; summary?: string; sections: StrategySection[] }
+  | { kind: 'pillars'; summary?: string; pillars: { name: string; why: string; topics: string[] }[] }
+  | { kind: 'calendar'; summary?: string; days: { day: number; idea: string; format: string; angle: string; goal: string }[] }
+  | { kind: 'post'; hook: string; insight: string; cta: string; caption?: string; hashtags?: string[] };
+
+export type StrategyDataKind = StrategyData['kind'];
+
+/** A saved Strategy play output. */
+export interface StrategyArtifact {
+  id: ID;
+  brandId: ID;
+  play: StrategyPlayId;
+  title: string;
+  data: StrategyData;
+  modelUsed: string;
+  createdAt: ISODate;
+}

@@ -25,6 +25,9 @@ import type {
   BenchmarkPreset,
   CoachSettings,
   AccountBenchmarkProfile,
+  CoachBrief,
+  StrategyArtifact,
+  StrategyPlayId,
 } from '@engine/lib/model/types';
 import { getKind } from '@engine/lib/templates/registry';
 import {
@@ -59,6 +62,8 @@ interface StoreState {
   performance: PerformanceEntry[];
   coachPresets: BenchmarkPreset[];
   coachSettings: CoachSettings[];
+  coachBriefs: CoachBrief[];
+  strategyArtifacts: StrategyArtifact[];
 }
 
 const MASTER_MIGRATION_KEY = 'cg.v1.masterMigrated';
@@ -205,7 +210,7 @@ function initialState(): StoreState {
     saveCollection('templates', templates);
     markSeeded();
     if (typeof localStorage !== 'undefined') localStorage.setItem(MASTER_MIGRATION_KEY, 'true');
-    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [], referenceAccounts: [], postAnalyses: [], aiRecommendations: [], performance: [], coachPresets: [], coachSettings: [] };
+    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [], referenceAccounts: [], postAnalyses: [], aiRecommendations: [], performance: [], coachPresets: [], coachSettings: [], coachBriefs: [], strategyArtifacts: [] };
   }
   let templates = loadCollection<Template>('templates');
   let graphics = loadCollection<GeneratedGraphic>('graphics');
@@ -233,6 +238,8 @@ function initialState(): StoreState {
     performance: loadCollection('performance'),
     coachPresets: loadCollection('coachPresets'),
     coachSettings: loadCollection('coachSettings'),
+    coachBriefs: loadCollection('coachBriefs'),
+    strategyArtifacts: loadCollection('strategyArtifacts'),
   };
 }
 
@@ -322,6 +329,13 @@ export interface StoreApi extends StoreState {
   // per-brand coach settings (live benchmark toggles + active preset)
   getCoachSettings: (brandId: string) => CoachSettings | undefined;
   setCoachSettings: (brandId: string, patch: Partial<Omit<CoachSettings, 'id' | 'brandId' | 'updatedAt'>>) => CoachSettings;
+  // strategy: business brief + saved play artifacts
+  getBrief: (brandId: string) => CoachBrief | undefined;
+  setBrief: (brandId: string, patch: Partial<Omit<CoachBrief, 'id' | 'brandId' | 'updatedAt'>>) => CoachBrief;
+  saveStrategy: (a: Omit<StrategyArtifact, 'id' | 'createdAt'>) => StrategyArtifact;
+  deleteStrategy: (id: string) => void;
+  strategiesByBrand: (brandId: string) => StrategyArtifact[];
+  latestStrategy: (brandId: string, play: StrategyPlayId) => StrategyArtifact | undefined;
   // backup
   exportAll: () => string;
 }
@@ -391,6 +405,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('performance', (p) => p.filter((x) => x.brandId !== id));
         update('coachPresets', (p) => p.filter((x) => x.brandId !== id));
         update('coachSettings', (s) => s.filter((x) => x.brandId !== id));
+        update('coachBriefs', (b) => b.filter((x) => x.brandId !== id));
+        update('strategyArtifacts', (a) => a.filter((x) => x.brandId !== id));
       },
       getBrand: (id) => state.brands.find((b) => b.id === id),
 
@@ -619,6 +635,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('coachSettings', (x) => (existing ? x.map((s) => (s.brandId === brandId ? next : s)) : [...x, next]));
         return next;
       },
+
+      // ── Postio Coach: strategy ──
+      getBrief: (brandId) => state.coachBriefs.find((b) => b.brandId === brandId),
+      setBrief: (brandId, patch) => {
+        const existing = state.coachBriefs.find((b) => b.brandId === brandId);
+        const next: CoachBrief = existing
+          ? { ...existing, ...patch, updatedAt: now() }
+          : { id: brandId, brandId, niche: '', audience: '', goals: '', businessModel: '', ...patch, updatedAt: now() };
+        update('coachBriefs', (x) => (existing ? x.map((b) => (b.brandId === brandId ? next : b)) : [...x, next]));
+        return next;
+      },
+      saveStrategy: (a) => {
+        const art: StrategyArtifact = { ...a, id: newId('strat'), createdAt: now() };
+        update('strategyArtifacts', (x) => [art, ...x]);
+        return art;
+      },
+      deleteStrategy: (id) => update('strategyArtifacts', (x) => x.filter((a) => a.id !== id)),
+      strategiesByBrand: (brandId) => state.strategyArtifacts.filter((a) => a.brandId === brandId),
+      latestStrategy: (brandId, play) =>
+        state.strategyArtifacts
+          .filter((a) => a.brandId === brandId && a.play === play)
+          .sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0],
 
       // ── backup ──
       exportAll: () => exportSnapshot({ assets: state.assets }),
