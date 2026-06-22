@@ -188,7 +188,7 @@ function OverviewTab({ brandId }: { brandId: string }) {
   const { t, count } = useI18n();
   const { confirm } = useOverlay();
   const brand = store.getBrand(brandId)!;
-  const [newColour, setNewColour] = useState('#7c3aed');
+  const colourInputRef = useRef<HTMLInputElement>(null);
 
   const deleteBrand = async () => {
     const tn = store.templatesByBrand(brandId).length;
@@ -239,9 +239,16 @@ function OverviewTab({ brandId }: { brandId: string }) {
             </div>
           ))}
         </div>
-        <div className="mt-4 flex items-center gap-2">
-          <input type="color" value={newColour} onChange={(e) => setNewColour(e.target.value)} className="h-10 w-14 rounded bg-transparent" />
-          <Button variant="subtle" onClick={() => store.updateBrand(brandId, { colours: [...brand.colours, newColour] })}>
+        <div className="mt-4">
+          {/* Hidden picker: the swatch only appears once you open it, not as a
+              standing preview next to the button. */}
+          <input
+            ref={colourInputRef}
+            type="color"
+            className="sr-only"
+            onChange={(e) => store.updateBrand(brandId, { colours: [...brand.colours, e.target.value] })}
+          />
+          <Button variant="subtle" onClick={() => colourInputRef.current?.click()}>
             <Plus size={14} /> {t('ov.addColour')}
           </Button>
         </div>
