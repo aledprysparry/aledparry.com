@@ -20,6 +20,10 @@ import { fileToStoredDataURL } from '@engine/lib/util/imageScale';
 import type { CarouselCopy } from '@engine/lib/carousel/types';
 import type { PlatformId } from '@engine/lib/model/types';
 
+// Stable empty map so a graphic with no uploaded images keeps a constant
+// `imageUrls` identity (prevents needless image re-decodes on every keystroke).
+const NO_IMAGES: Record<string, string> = {};
+
 export default function GraphicEditor() {
   const { graphicId = '' } = useParams();
   const store = useStore();
@@ -44,6 +48,15 @@ export default function GraphicEditor() {
   const { rows, warnings, error } = useMemo(
     () => (kind?.parse ? kind.parse(rawText) : { rows: [], warnings: [], error: null }),
     [kind, rawText],
+  );
+  // Optional uploaded images (carousel kinds with imageSlots). Memoised on the
+  // underlying `images` ref — which setInputs preserves across copy edits — so
+  // editing copy doesn't churn this identity and force SlideCanvas to re-decode
+  // the (potentially large) data-URL images on every keystroke. Hook lives
+  // above the early returns to satisfy the Rules of Hooks.
+  const imageUrls = useMemo(
+    () => (graphic?.inputs?.images as Record<string, string> | undefined) ?? NO_IMAGES,
+    [graphic?.inputs?.images],
   );
 
   if (!graphic || !template || !kind) {
@@ -71,8 +84,6 @@ export default function GraphicEditor() {
   const resetToMaster = () => setInputs({ copyOverrides: {} });
   const overrideCount = Object.keys(overrides).length;
 
-  // Optional uploaded images (carousel kinds that declare imageSlots).
-  const imageUrls = (graphic.inputs?.images as Record<string, string>) ?? {};
   const setImage = async (key: string, file?: File) => {
     if (!file) return;
     const url = await fileToStoredDataURL(file, 1200);

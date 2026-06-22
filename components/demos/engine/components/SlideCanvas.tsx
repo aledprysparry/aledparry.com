@@ -28,17 +28,26 @@ export default function SlideCanvas({ slide, index, rows, copy, slideCount, rati
     setRatio(ratio);
   }, [ratio, setRatio]);
 
-  // Redraw once fonts + any uploaded images are ready, and whenever the
-  // data/copy/ratio/brand/images change.
+  // Decode uploaded images ONLY when the url map changes. Data-URL decode is
+  // expensive; folding it into the redraw effect re-decoded the image on every
+  // copy keystroke (a fresh image element per slide per render), which could
+  // pile up enough to freeze the tab on an image-bearing graphic.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([ensureFonts(), loadSlideImages(imageUrls)]).then(([, imgs]) => {
+    loadSlideImages(imageUrls).then((imgs) => {
       if (cancelled) return;
       imagesRef.current = imgs;
       redraw();
     });
     return () => { cancelled = true; };
-  }, [slide, index, rows, copy, slideCount, ratio, brand, imageUrls, redraw]);
+  }, [imageUrls, redraw]);
+
+  // Redraw on content/layout change, reusing the already-decoded images.
+  useEffect(() => {
+    let cancelled = false;
+    ensureFonts().then(() => { if (!cancelled) redraw(); });
+    return () => { cancelled = true; };
+  }, [slide, index, rows, copy, slideCount, ratio, brand, redraw]);
 
   return <canvas ref={canvasRef} className="block w-full h-auto" />;
 }
