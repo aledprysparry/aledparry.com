@@ -38,6 +38,16 @@ export function signGateToken(): string {
   return `${payload}.${sig}`;
 }
 
+// Constant-time signature compare that can't throw on malformed input: compare
+// BYTE lengths (a string with non-ASCII chars has more bytes than chars), so a
+// crafted signature segment never reaches timingSafeEqual with mismatched
+// buffer lengths and 500s the caller (Codex #94).
+function safeSigEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
+}
+
 /** Verify a gate token: shape, signature (constant-time), and expiry. */
 export function verifyGateToken(token: string | undefined | null): boolean {
   if (!token) return false;
@@ -45,8 +55,7 @@ export function verifyGateToken(token: string | undefined | null): boolean {
   if (parts.length !== 3) return false;
   const [v, exp, sig] = parts;
   const expected = createHmac('sha256', secretOf()).update(`${v}.${exp}`).digest('base64url');
-  if (sig.length !== expected.length) return false;
-  if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
+  if (!safeSigEqual(sig, expected)) return false;
   return Number(exp) > Math.floor(Date.now() / 1000);
 }
 
@@ -62,21 +71,36 @@ export function requireGate(req: NextRequest): boolean {
 // can reach (Codex IDOR on #78). So we HMAC-sign jobId+projectId together.
 const JOB_SEP = '::';
 
+// Job tokens must be signed with a secret the client CANNOT know. secretOf()
+// falls back to the gate PASSWORD, which every unlocked Postio user types - so
+// in the shared-API-key context they could HMAC jobId::otherProjectId and still
+// export another project despite the signature. Require a dedicated server-only
+// APP_GATE_SECRET and fail CLOSED without it (Codex #94).
+const jobSecret = (): string | null => process.env.APP_GATE_SECRET || null;
+
+/** True if secure job-token signing is configured. */
+export function jobTokensConfigured(): boolean {
+  return !!jobSecret();
+}
+
 export function signJobToken(jobId: string, projectId: string): string {
+  const secret = jobSecret();
+  if (!secret) throw new Error('APP_GATE_SECRET is required to issue secure job tokens.');
   const payload = `${jobId}${JOB_SEP}${projectId}`;
-  const sig = createHmac('sha256', secretOf()).update(payload).digest('base64url');
+  const sig = createHmac('sha256', secret).update(payload).digest('base64url');
   return `${payload}${JOB_SEP}${sig}`;
 }
 
-/** Verify + unpack a job token. Returns null if missing/tampered. */
+/** Verify + unpack a job token. Returns null if missing/tampered/not configured. */
 export function verifyJobToken(token: string | undefined | null): { jobId: string; projectId: string } | null {
-  if (!token) return null;
+  const secret = jobSecret();
+  if (!secret || !token) return null;
   const cut = token.lastIndexOf(JOB_SEP);
   if (cut === -1) return null;
   const payload = token.slice(0, cut);
   const sig = token.slice(cut + JOB_SEP.length);
-  const expected = createHmac('sha256', secretOf()).update(payload).digest('base64url');
-  if (sig.length !== expected.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  const expected = createHmac('sha256', secret).update(payload).digest('base64url');
+  if (!safeSigEqual(sig, expected)) return null;
   const split = payload.indexOf(JOB_SEP);
   if (split === -1) return null;
   return { jobId: payload.slice(0, split), projectId: payload.slice(split + JOB_SEP.length) };
