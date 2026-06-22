@@ -55,5 +55,32 @@ export function requireGate(req: NextRequest): boolean {
   return verifyGateToken(req.cookies.get(COOKIE)?.value);
 }
 
+// ── Postio job tokens ───────────────────────────────────────────────────────
+// The transcribe poll echoes back a token that carries the Capsiynau projectId
+// to export from. That projectId MUST be tamper-proof: an unsigned token lets a
+// caller swap the projectId suffix and export any project the shared API key
+// can reach (Codex IDOR on #78). So we HMAC-sign jobId+projectId together.
+const JOB_SEP = '::';
+
+export function signJobToken(jobId: string, projectId: string): string {
+  const payload = `${jobId}${JOB_SEP}${projectId}`;
+  const sig = createHmac('sha256', secretOf()).update(payload).digest('base64url');
+  return `${payload}${JOB_SEP}${sig}`;
+}
+
+/** Verify + unpack a job token. Returns null if missing/tampered. */
+export function verifyJobToken(token: string | undefined | null): { jobId: string; projectId: string } | null {
+  if (!token) return null;
+  const cut = token.lastIndexOf(JOB_SEP);
+  if (cut === -1) return null;
+  const payload = token.slice(0, cut);
+  const sig = token.slice(cut + JOB_SEP.length);
+  const expected = createHmac('sha256', secretOf()).update(payload).digest('base64url');
+  if (sig.length !== expected.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  const split = payload.indexOf(JOB_SEP);
+  if (split === -1) return null;
+  return { jobId: payload.slice(0, split), projectId: payload.slice(split + JOB_SEP.length) };
+}
+
 export const GATE_COOKIE = COOKIE;
 export const GATE_TTL_SEC = TTL_SEC;

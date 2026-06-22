@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireGate } from '@/lib/postioGate';
+import { requireGate, signJobToken, verifyJobToken } from '@/lib/postioGate';
 
 // ═══ Postio M2b — transcription via Capsiynau's v1 API ═══
 // Postio transcribes a media URL into a Capsiynau project and reads the
@@ -33,14 +33,17 @@ const DONE = new Set(['complete', 'completed', 'done', 'finished']);
 // client-side timeout, hiding the real error (Codex on #72).
 const FAILED = new Set(['failed', 'error', 'errored', 'cancelled', 'canceled']);
 
-// jobId + projectId travel together in one opaque token (the client echoes it
-// back verbatim on the poll), so GET knows which project to export from.
-const SEP = '::';
-const packToken = (jobId: string, projectId: string) => `${jobId}${SEP}${projectId}`;
-function unpackToken(token: string): { jobId: string; projectId: string } {
-  const i = token.indexOf(SEP);
-  if (i === -1) return { jobId: token, projectId: PROJECT() || '' };
-  return { jobId: token.slice(0, i), projectId: token.slice(i + SEP.length) };
+// jobId + projectId travel together in one HMAC-signed token (signJobToken /
+// verifyJobToken in lib/postioGate). The signature stops a caller swapping the
+// projectId to export another project (Codex IDOR on #78).
+
+// Accept only well-formed http(s) media URLs. Rejecting junk up front avoids
+// provisioning a Capsiynau project for a request that can never transcribe.
+function isHttpUrl(u: string): boolean {
+  try {
+    const p = new URL(u);
+    return p.protocol === 'http:' || p.protocol === 'https:';
+  } catch { return false; }
 }
 
 // Create a fresh Capsiynau project and return its id.
@@ -58,6 +61,16 @@ async function createProject(): Promise<string> {
   return String(id);
 }
 
+// Best-effort delete of an auto-provisioned project so a failed transcribe
+// doesn't leave an empty project behind (Codex orphan finding on #78).
+async function deleteProject(id: string): Promise<void> {
+  try {
+    await fetch(`${BASE()}/api/v1/projects`, {
+      method: 'DELETE', headers: headers(), body: JSON.stringify({ id }), cache: 'no-store',
+    });
+  } catch { /* non-fatal cleanup */ }
+}
+
 // Kick off a transcription job for a media URL.
 export async function POST(req: NextRequest) {
   // Gate paid transcription behind the server-validated client-area cookie -
@@ -67,9 +80,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'not_configured', message: 'Set CAPSIYNAU_API_URL and CAPSIYNAU_API_KEY.' }, { status: 503 });
   }
   const { fileUrl, sourceLanguage } = (await req.json().catch(() => ({}))) as { fileUrl?: string; sourceLanguage?: string };
-  if (!fileUrl) return NextResponse.json({ error: 'bad_request', message: 'fileUrl is required.' }, { status: 400 });
+  if (!fileUrl || !isHttpUrl(fileUrl)) {
+    return NextResponse.json({ error: 'bad_request', message: 'A valid http(s) fileUrl is required.' }, { status: 400 });
+  }
+  // Track an auto-provisioned project so we can delete it if the transcribe
+  // request is rejected (otherwise every bad job leaves an empty project).
+  const fixedProject = PROJECT();
+  let createdProjectId: string | null = null;
   try {
-    const projectId = PROJECT() || (await createProject());
+    let projectId = fixedProject;
+    if (!projectId) { createdProjectId = await createProject(); projectId = createdProjectId; }
     const r = await fetch(`${BASE()}/api/v1/transcribe`, {
       method: 'POST',
       headers: headers(),
@@ -77,9 +97,13 @@ export async function POST(req: NextRequest) {
       cache: 'no-store',
     });
     const data = await r.json().catch(() => ({}));
-    if (!r.ok) return NextResponse.json({ error: 'capsiynau_error', message: data?.message || data?.error || 'Transcribe request failed.' }, { status: r.status });
-    return NextResponse.json({ jobId: packToken(data.jobId, projectId), status: data.status || 'queued' });
+    if (!r.ok) {
+      if (createdProjectId) await deleteProject(createdProjectId);
+      return NextResponse.json({ error: 'capsiynau_error', message: data?.message || data?.error || 'Transcribe request failed.' }, { status: r.status });
+    }
+    return NextResponse.json({ jobId: signJobToken(data.jobId, projectId), status: data.status || 'queued' });
   } catch (e) {
+    if (createdProjectId) await deleteProject(createdProjectId);
     return NextResponse.json({ error: 'fetch_failed', message: e instanceof Error ? e.message : 'failed' }, { status: 502 });
   }
 }
@@ -90,8 +114,11 @@ export async function GET(req: NextRequest) {
   if (!configured()) return NextResponse.json({ error: 'not_configured' }, { status: 503 });
   const token = req.nextUrl.searchParams.get('jobId');
   if (!token) return NextResponse.json({ error: 'bad_request', message: 'jobId is required.' }, { status: 400 });
-  const { jobId, projectId } = unpackToken(token);
-  if (!projectId) return NextResponse.json({ error: 'bad_request', message: 'No project for this job.' }, { status: 400 });
+  // Verify the HMAC signature before trusting the projectId — a tampered/forged
+  // token (swapped projectId) is rejected rather than exporting another project.
+  const verified = verifyJobToken(token);
+  if (!verified?.projectId) return NextResponse.json({ error: 'bad_request', message: 'Invalid or expired job token.' }, { status: 400 });
+  const { jobId, projectId } = verified;
   try {
     const sr = await fetch(`${BASE()}/api/v1/status?jobId=${encodeURIComponent(jobId)}`, { headers: headers(), cache: 'no-store' });
     const s = await sr.json().catch(() => ({}));
