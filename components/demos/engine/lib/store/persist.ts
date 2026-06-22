@@ -68,6 +68,28 @@ export function saveLang(lang: 'en' | 'cy'): void {
   if (typeof localStorage !== 'undefined') localStorage.setItem(`${NS}.lang`, lang);
 }
 
+/** UI density + colour-theme preferences, persisted so they survive reloads. */
+export type Density = 'compact' | 'comfortable' | 'touch';
+export type Theme = 'light' | 'dark' | 'system';
+
+export function loadDensity(): Density {
+  if (typeof localStorage === 'undefined') return 'comfortable';
+  const v = localStorage.getItem(`${NS}.density`);
+  return v === 'compact' || v === 'touch' ? v : 'comfortable';
+}
+export function saveDensity(d: Density): void {
+  if (typeof localStorage !== 'undefined') localStorage.setItem(`${NS}.density`, d);
+}
+
+export function loadTheme(): Theme {
+  if (typeof localStorage === 'undefined') return 'system';
+  const v = localStorage.getItem(`${NS}.theme`);
+  return v === 'light' || v === 'dark' ? v : 'system';
+}
+export function saveTheme(t: Theme): void {
+  if (typeof localStorage !== 'undefined') localStorage.setItem(`${NS}.theme`, t);
+}
+
 /**
  * Snapshot every collection for a "back up / export" download. Assets live
  * in IndexedDB (not localStorage), so the caller passes them in.

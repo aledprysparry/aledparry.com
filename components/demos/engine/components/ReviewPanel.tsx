@@ -40,8 +40,8 @@ export default function ReviewPanel({ slides, rows, copy, ratio, brand }: Props)
   return (
     <Panel className="p-5">
       <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-white/80">
-          <ShieldCheck size={15} className="text-indigo-300" /> {t('review.title')}
+        <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">
+          <ShieldCheck size={15} className="text-violet-600 dark:text-violet-400" /> {t('review.title')}
         </span>
         <Button variant="subtle" onClick={run} disabled={busy}>
           <Sparkles size={14} /> {busy ? t('review.running') : t('review.button')}
@@ -50,33 +50,33 @@ export default function ReviewPanel({ slides, rows, copy, ratio, brand }: Props)
 
       {pre && (
         <div className="mt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{t('review.preflight')}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('review.preflight')}</p>
           {pre.length === 0 ? (
-            <p className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-[#4ade80]"><Check size={13} /> {t('review.allGood')}</p>
+            <p className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-emerald-600"><Check size={13} /> {t('review.allGood')}</p>
           ) : (
             <ul className="mt-1 space-y-1">
               {pre.map((p, i) => (
-                <li key={i} className="flex items-start gap-1.5 text-[12px] text-[#fde68a]"><AlertTriangle size={12} className="mt-0.5 shrink-0" /> {p}</li>
+                <li key={i} className="flex items-start gap-1.5 text-[12px] text-amber-600"><AlertTriangle size={12} className="mt-0.5 shrink-0" /> {p}</li>
               ))}
             </ul>
           )}
         </div>
       )}
 
-      {note && <p className="mt-3 text-[12px] text-white/50">{note}</p>}
+      {note && <p className="mt-3 text-[12px] text-zinc-500 dark:text-zinc-400">{note}</p>}
 
       {ai && (
         <div className="mt-4 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{t('review.aiTitle')}</p>
-          {ai.overall && <p className="text-[12px] leading-relaxed text-white/70">{ai.overall}</p>}
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('review.aiTitle')}</p>
+          {ai.overall && <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-300">{ai.overall}</p>}
           {ai.slides?.map((s, i) => (
-            <div key={i} className="rounded-lg bg-white/[0.03] px-3 py-2">
-              <p className="text-[12px] font-semibold text-white/85">
-                {t('review.slide')} {s.slide}{s.label ? ` · ${s.label}` : ''} {s.ok ? <span className="text-[#4ade80]">✓</span> : ''}
+            <div key={i} className="rounded-lg bg-white px-3 py-2 dark:bg-zinc-900">
+              <p className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-50">
+                {t('review.slide')} {s.slide}{s.label ? ` · ${s.label}` : ''} {s.ok ? <span className="text-emerald-600 dark:text-emerald-400">✓</span> : ''}
               </p>
               {s.issues?.length > 0 && (
                 <ul className="mt-1 space-y-0.5">
-                  {s.issues.map((is, j) => <li key={j} className="text-[12px] text-white/50">• {is}</li>)}
+                  {s.issues.map((is, j) => <li key={j} className="text-[12px] text-zinc-500 dark:text-zinc-400">• {is}</li>)}
                 </ul>
               )}
             </div>

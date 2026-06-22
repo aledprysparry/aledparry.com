@@ -4,6 +4,7 @@ import { ArrowLeft, Type, Square, Download, ShieldCheck, Trash2, ChevronUp, Chev
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel } from '@engine/components/ui';
+import { Tabs } from '@engine/components/primitives';
 import Stage from '@engine/components/Stage';
 import AiPanel from '@engine/components/AiPanel';
 import { makeText, makeShape, makeImage, reorder } from '@engine/lib/freeform/elements';
@@ -99,49 +100,45 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
   const sStyle = (selected?.style ?? {}) as Record<string, unknown>;
 
   return (
-    <div className="mx-auto max-w-[1320px] px-8 py-8">
-      <Link to={`/brands/${graphic.brandId}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white"><ArrowLeft size={14} /> {t('editor.backToBrand')}</Link>
+    <div className="mx-auto max-w-[1320px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <Link to={`/brands/${graphic.brandId}`} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"><ArrowLeft size={14} /> {t('editor.backToBrand')}</Link>
 
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <label className="group inline-flex items-center gap-2 rounded-lg px-1 -mx-1 hover:bg-white/5 focus-within:bg-white/5" title={t('editor.renameHint')}>
-          <input value={graphic.name} onChange={(e) => store.updateGraphic(graphic.id, { name: e.target.value })} aria-label={t('common.rename')} className="bg-transparent text-[22px] font-extrabold tracking-tight focus:outline-none" style={{ fontFamily: 'Bitter, serif' }} />
-          <Pencil size={15} className="text-white/30 transition-colors group-hover:text-white/60" />
+        <label className="group -mx-1 inline-flex min-w-0 items-center gap-2 rounded-lg px-1 hover:bg-zinc-100 focus-within:bg-zinc-100 dark:hover:bg-zinc-800 dark:focus-within:bg-zinc-800" title={t('editor.renameHint')}>
+          <input value={graphic.name} onChange={(e) => store.updateGraphic(graphic.id, { name: e.target.value })} aria-label={t('common.rename')} className="min-w-0 bg-transparent text-[20px] font-bold tracking-tight text-zinc-900 focus:outline-none dark:text-zinc-50 sm:text-[22px]" />
+          <Pencil size={15} className="shrink-0 text-zinc-400 transition-colors group-hover:text-zinc-600 dark:group-hover:text-zinc-300" />
         </label>
-        <div className="flex items-center gap-3">
-          <select value={platform} onChange={(e) => store.updateGraphic(graphic.id, { platformPresetId: e.target.value as PlatformId })} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <select value={platform} onChange={(e) => store.updateGraphic(graphic.id, { platformPresetId: e.target.value as PlatformId })} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-800 focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
             {(Object.keys(PLATFORM_PRESETS) as PlatformId[]).map((p) => <option key={p} value={p}>{PLATFORM_PRESETS[p].name}</option>)}
           </select>
-          <button onClick={() => setShowSafe((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold ${showSafe ? 'bg-indigo-500/20 text-indigo-200' : 'text-white/50 hover:bg-white/5'}`}><ShieldCheck size={14} /> {t('editor.safeAreas')}</button>
+          <button onClick={() => setShowSafe((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[12px] font-semibold ${showSafe ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300' : 'text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}><ShieldCheck size={14} /> {t('editor.safeAreas')}</button>
           <Button onClick={() => setTab('export')}><Download size={15} /> {t('editor.exportImage')}</Button>
         </div>
       </header>
 
-      {/* Design · Animation · Export — one editor across all template kinds. */}
-      <div className="mb-6 flex gap-1 border-b border-white/10">
-        {(['design', 'animation', 'export'] as const).map((tb) => (
-          <button key={tb} onClick={() => setTab(tb)} className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors ${tab === tb ? 'border-indigo-400 text-white' : 'border-transparent text-white/45 hover:text-white/80'}`}>
-            {t(`editor.tab.${tb}` as const)}
-          </button>
-        ))}
+      {/* Design, Animation, Export - one editor across all template kinds. */}
+      <div className="mb-6">
+        <Tabs value={tab} onChange={setTab} tabs={(['design', 'animation', 'export'] as const).map((tb) => ({ id: tb, label: t(`editor.tab.${tb}` as const) }))} />
       </div>
 
       {tab === 'animation' && (
-        <div className="mx-auto max-w-2xl"><Panel className="p-6"><h3 className="text-[15px] font-bold">{t('editor.anim.title')}</h3><p className="mt-1 text-[13px] text-white/50">{t('ff.noAnimation')}</p></Panel></div>
+        <div className="mx-auto max-w-2xl"><Panel className="p-5 sm:p-6"><h3 className="text-[15px] font-bold text-zinc-900 dark:text-zinc-50">{t('editor.anim.title')}</h3><p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">{t('ff.noAnimation')}</p></Panel></div>
       )}
 
       {tab === 'export' && (
-        <div className="mx-auto max-w-2xl"><Panel className="p-6">
-          <h3 className="text-[15px] font-bold">{t('editor.export.stillTitle')}</h3>
-          <label className="mt-4 mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('editor.export.format')}</label>
-          <div className="inline-flex overflow-hidden rounded-lg border border-white/10">
-            {['image/png', 'image/jpeg'].map((m) => <button key={m} onClick={() => setFormat(m)} className={`px-4 py-2 text-[13px] font-semibold ${format === m ? 'bg-indigo-500 text-white' : 'text-white/60 hover:bg-white/5'}`}>{m === 'image/png' ? 'PNG' : 'JPEG'}</button>)}
+        <div className="mx-auto max-w-2xl"><Panel className="p-5 sm:p-6">
+          <h3 className="text-[15px] font-bold text-zinc-900 dark:text-zinc-50">{t('editor.export.stillTitle')}</h3>
+          <label className="mb-1 mt-4 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('editor.export.format')}</label>
+          <div className="inline-flex overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700">
+            {['image/png', 'image/jpeg'].map((m) => <button key={m} onClick={() => setFormat(m)} className={`px-4 py-2 text-[13px] font-semibold ${format === m ? 'bg-violet-600 text-white' : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>{m === 'image/png' ? 'PNG' : 'JPEG'}</button>)}
           </div>
-          <div className="mt-5 border-t border-white/10 pt-4"><Button onClick={doExport} disabled={exporting}><Download size={15} /> {exporting ? t('editor.exporting') : t('editor.exportImage')}</Button></div>
+          <div className="mt-5 border-t border-zinc-200 pt-4 dark:border-zinc-800"><Button onClick={doExport} disabled={exporting}><Download size={15} /> {exporting ? t('editor.exporting') : t('editor.exportImage')}</Button></div>
         </Panel></div>
       )}
 
       {tab === 'design' && (
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         {/* stage */}
         <div>
           <div className="mb-3 flex flex-wrap gap-2">
@@ -149,13 +146,15 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
             <Button variant="subtle" onClick={() => addEl(makeShape())}><Square size={14} /> {t('ff.shape')}</Button>
             <label className="cursor-pointer">
               <input type="file" accept="image/*,.woff,.woff2,.ttf,.otf" className="hidden" onChange={(e) => onUploadAsset(e.target.files?.[0])} />
-              <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10"><ImagePlus size={14} /> {t('ff.uploadAsset')}</span>
+              <span className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"><ImagePlus size={14} /> {t('ff.uploadAsset')}</span>
             </label>
           </div>
-          <div className="mx-auto" style={{ maxWidth: ratio === 'landscape' ? 720 : ratio === 'story' ? 380 : 520 }}>
-            <Stage elements={elements} width={dims.w} height={dims.h} selectedId={selectedId} onSelect={setSelectedId} onChange={setElements} onCommit={() => commit()} onDropAsset={placeAsset} showSafe={showSafe} safeInsets={safeInsets} />
+          <div className="rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/40 sm:p-6">
+            <div className="mx-auto w-full" style={{ maxWidth: `min(100%, ${ratio === 'landscape' ? 720 : ratio === 'story' ? 380 : 520}px)` }}>
+              <Stage elements={elements} width={dims.w} height={dims.h} selectedId={selectedId} onSelect={setSelectedId} onChange={setElements} onCommit={() => commit()} onDropAsset={placeAsset} showSafe={showSafe} safeInsets={safeInsets} />
+            </div>
           </div>
-          <p className="mt-3 text-center text-[12px] text-white/35">{t('ff.dragHint')}</p>
+          <p className="mt-3 text-center text-[12px] text-zinc-400 dark:text-zinc-500">{t('ff.dragHint')}</p>
         </div>
 
         {/* assets + inspector */}
@@ -173,40 +172,40 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
             onSetBg={(a) => setBackgroundImage(a.url)}
             onApplyFont={(a) => selected?.type === 'text' && patchStyle({ fontFamily: fontFamilyFor(a) })}
           />
-        <div className="rounded-2xl border border-white/10 bg-[#141d30] p-4">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
           {!selected ? (
-            <p className="text-[13px] text-white/45">{t('ff.selectPrompt')}</p>
+            <p className="text-[13px] text-zinc-500 dark:text-zinc-400">{t('ff.selectPrompt')}</p>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-[12px] font-bold uppercase tracking-wide text-white/55">{selected.type}</span>
-                <div className="flex gap-1">
-                  <button onClick={() => update(reorder(elements, selected.id, 1))} className="text-white/40 hover:text-white" title={t('ff.bringForward')}><ChevronUp size={16} /></button>
-                  <button onClick={() => update(reorder(elements, selected.id, -1))} className="text-white/40 hover:text-white" title={t('ff.sendBack')}><ChevronDown size={16} /></button>
-                  <button onClick={del} className="text-white/40 hover:text-red-300" title={t('common.delete')}><Trash2 size={15} /></button>
+                <span className="text-[12px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">{selected.type}</span>
+                <div className="flex gap-0.5">
+                  <button onClick={() => update(reorder(elements, selected.id, 1))} className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100" title={t('ff.bringForward')}><ChevronUp size={16} /></button>
+                  <button onClick={() => update(reorder(elements, selected.id, -1))} className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100" title={t('ff.sendBack')}><ChevronDown size={16} /></button>
+                  <button onClick={del} className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40" title={t('common.delete')}><Trash2 size={15} /></button>
                 </div>
               </div>
 
               {selected.type === 'text' && (
                 <>
-                  <textarea value={selected.content ?? ''} onChange={(e) => patchEl({ content: e.target.value })} className="w-full h-20 resize-y rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none" />
+                  <textarea value={selected.content ?? ''} onChange={(e) => patchEl({ content: e.target.value })} className="h-20 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" />
                   <Field label={t('ff.font')}>
-                    <select value={(sStyle.fontFamily as string) ?? 'Inter'} onChange={(e) => patchStyle({ fontFamily: e.target.value })} className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[13px] text-white/90 focus:outline-none">
+                    <select value={(sStyle.fontFamily as string) ?? 'Inter'} onChange={(e) => patchStyle({ fontFamily: e.target.value })} className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-[13px] text-zinc-800 focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
                       {fontOptions.map((f) => <option key={f} value={f}>{f}</option>)}
                     </select>
                   </Field>
                   <Field label={`${t('ff.size')} ${Math.round(((sStyle.fontSize as number) ?? 0.05) * 1000) / 10}`}>
-                    <input type="range" min={20} max={160} value={Math.round(((sStyle.fontSize as number) ?? 0.05) * 1000)} onChange={(e) => patchStyle({ fontSize: Number(e.target.value) / 1000 })} className="w-full" />
+                    <input type="range" min={20} max={160} value={Math.round(((sStyle.fontSize as number) ?? 0.05) * 1000)} onChange={(e) => patchStyle({ fontSize: Number(e.target.value) / 1000 })} className="w-full accent-violet-600" />
                   </Field>
                   <Field label={t('ff.weight')}>
-                    <select value={(sStyle.fontWeight as string) ?? '700'} onChange={(e) => patchStyle({ fontWeight: e.target.value })} className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[13px] text-white/90 focus:outline-none">
+                    <select value={(sStyle.fontWeight as string) ?? '700'} onChange={(e) => patchStyle({ fontWeight: e.target.value })} className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-[13px] text-zinc-800 focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
                       {['400', '500', '600', '700', '800', '900'].map((w) => <option key={w} value={w}>{w}</option>)}
                     </select>
                   </Field>
                   <Field label={t('ff.align')}>
                     <div className="flex gap-1">
                       {(['left', 'center', 'right'] as const).map((a) => (
-                        <button key={a} onClick={() => patchStyle({ align: a })} className={`flex-1 rounded-lg border px-2 py-1.5 text-[12px] capitalize ${(sStyle.align ?? 'left') === a ? 'border-indigo-400/70 bg-indigo-500/10 text-white' : 'border-white/10 text-white/60'}`}>{a}</button>
+                        <button key={a} onClick={() => patchStyle({ align: a })} className={`flex-1 rounded-lg border px-2 py-2 text-[12px] capitalize ${(sStyle.align ?? 'left') === a ? 'border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-500 dark:bg-violet-500/15 dark:text-violet-300' : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'}`}>{a}</button>
                       ))}
                     </div>
                   </Field>
@@ -218,7 +217,7 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
                 <>
                   <Field label={t('ff.fill')}><ColourInput value={(sStyle.fill as string) ?? '#6366f1'} onChange={(c) => patchStyle({ fill: c })} /></Field>
                   <Field label={`${t('ff.corner')} ${Math.round(((sStyle.radius as number) ?? 0) * 100)}`}>
-                    <input type="range" min={0} max={20} value={Math.round(((sStyle.radius as number) ?? 0) * 100)} onChange={(e) => patchStyle({ radius: Number(e.target.value) / 100 })} className="w-full" />
+                    <input type="range" min={0} max={20} value={Math.round(((sStyle.radius as number) ?? 0) * 100)} onChange={(e) => patchStyle({ radius: Number(e.target.value) / 100 })} className="w-full accent-violet-600" />
                   </Field>
                 </>
               )}
@@ -231,7 +230,7 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
                 <Field label={t('ff.fit')}>
                   <div className="flex gap-1">
                     {(['contain', 'cover'] as const).map((f) => (
-                      <button key={f} onClick={() => patchStyle({ fit: f })} className={`flex-1 rounded-lg border px-2 py-1.5 text-[12px] capitalize ${(sStyle.fit ?? 'contain') === f ? 'border-indigo-400/70 bg-indigo-500/10 text-white' : 'border-white/10 text-white/60'}`}>{f}</button>
+                      <button key={f} onClick={() => patchStyle({ fit: f })} className={`flex-1 rounded-lg border px-2 py-2 text-[12px] capitalize ${(sStyle.fit ?? 'contain') === f ? 'border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-500 dark:bg-violet-500/15 dark:text-violet-300' : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'}`}>{f}</button>
                     ))}
                   </div>
                 </Field>
@@ -239,10 +238,10 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
 
               {brand && brand.colours.length > 0 && (
                 <div>
-                  <p className="mb-1.5 text-[11px] uppercase tracking-wide text-white/40">{t('ff.brandColours')}</p>
+                  <p className="mb-1.5 text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('ff.brandColours')}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {brand.colours.map((c, i) => (
-                      <button key={i} onClick={() => patchStyle(selected.type === 'text' ? { color: c } : { fill: c })} className="h-6 w-6 rounded-full border border-white/15" style={{ background: c }} title={c} />
+                      <button key={i} onClick={() => patchStyle(selected.type === 'text' ? { color: c } : { fill: c })} className="h-7 w-7 rounded-full border border-zinc-200 dark:border-zinc-600" style={{ background: c }} title={c} />
                     ))}
                   </div>
                 </div>
@@ -277,7 +276,7 @@ function AssetPanel({ assets, onPlace, onSetBg, onApplyFont }: {
       onDragStart={(e) => e.dataTransfer.setData('application/x-asset', JSON.stringify({ assetId: a.id, type: a.type, url: a.url }))}
       onClick={onClick}
       title={a.name}
-      className="group relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-black/30 hover:border-indigo-400/60"
+      className="group relative aspect-square overflow-hidden rounded-lg border border-zinc-200 bg-white hover:border-violet-400 dark:border-zinc-700 dark:bg-zinc-800"
     >
       <img src={a.url} alt={a.name} className="h-full w-full object-contain p-1" draggable={false} />
     </button>
@@ -285,25 +284,25 @@ function AssetPanel({ assets, onPlace, onSetBg, onApplyFont }: {
 
   const Group = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
-      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-white/40">{label}</p>
+      <p className="mb-1.5 text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</p>
       {children}
     </div>
   );
 
   if (assets.length === 0) {
-    return <div className="rounded-2xl border border-white/10 bg-[#141d30] p-4 text-[12px] text-white/45">{t('ff.assetsEmpty')}</div>;
+    return <div className="rounded-2xl border border-zinc-200 bg-white p-4 text-[12px] text-zinc-500 shadow-sm shadow-zinc-900/[0.04] dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:shadow-none">{t('ff.assetsEmpty')}</div>;
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-[#141d30] p-4">
-      <p className="text-[12px] font-bold uppercase tracking-wide text-white/55">{t('ff.assets')} <span className="font-normal text-white/35">· {t('ff.dragOntoStage')}</span></p>
+    <div className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm shadow-zinc-900/[0.04] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+      <p className="text-[12px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">{t('ff.assets')} <span className="font-normal text-zinc-400 dark:text-zinc-500">· {t('ff.dragOntoStage')}</span></p>
       {logos.length > 0 && <Group label={t('ff.logos')}><div className="grid grid-cols-4 gap-2">{logos.map((a) => <Thumb key={a.id} a={a} onClick={() => onPlace(a)} />)}</div></Group>}
       {backgrounds.length > 0 && <Group label={t('ff.backgroundsApply')}><div className="grid grid-cols-4 gap-2">{backgrounds.map((a) => <Thumb key={a.id} a={a} onClick={() => onSetBg(a)} />)}</div></Group>}
       {others.length > 0 && <Group label={t('ff.imagesGifs')}><div className="grid grid-cols-4 gap-2">{others.map((a) => <Thumb key={a.id} a={a} onClick={() => onPlace(a)} />)}</div></Group>}
       {fonts.length > 0 && (
         <Group label={t('ff.fontsApply')}>
           <div className="flex flex-wrap gap-1.5">
-            {fonts.map((a) => <button key={a.id} onClick={() => onApplyFont(a)} className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[12px] text-white/80 hover:border-indigo-400/60" style={{ fontFamily: `${fontFamilyFor(a)}, sans-serif` }}>{fontFamilyFor(a)}</button>)}
+            {fonts.map((a) => <button key={a.id} onClick={() => onApplyFont(a)} className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-[12px] text-zinc-800 hover:border-violet-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100" style={{ fontFamily: `${fontFamilyFor(a)}, sans-serif` }}>{fontFamilyFor(a)}</button>)}
           </div>
         </Group>
       )}
@@ -314,7 +313,7 @@ function AssetPanel({ assets, onPlace, onSetBg, onApplyFont }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">{label}</span>
+      <span className="mb-1 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</span>
       {children}
     </label>
   );
@@ -323,8 +322,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function ColourInput({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
     <div className="flex items-center gap-2">
-      <input type="color" value={value.startsWith('#') ? value : '#ffffff'} onChange={(e) => onChange(e.target.value)} className="h-8 w-10 rounded bg-transparent" />
-      <input value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[12px] text-white/90 focus:outline-none" />
+      <input type="color" value={value.startsWith('#') ? value : '#ffffff'} onChange={(e) => onChange(e.target.value)} className="h-9 w-11 rounded bg-transparent" />
+      <input value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-[12px] text-zinc-800 focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100" />
     </div>
   );
 }

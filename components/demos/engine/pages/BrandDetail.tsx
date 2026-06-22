@@ -8,7 +8,7 @@ import {
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, Badge, TextInput, EmptyState } from '@engine/components/ui';
-import { Menu, useOverlay, type MenuItem } from '@engine/components/primitives';
+import { Menu, Tabs, useOverlay, type MenuItem } from '@engine/components/primitives';
 import { TEMPLATE_KIND_LIST, getKind } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { analyseImages, deriveSuggestions } from '@engine/lib/audit/analyseImages';
@@ -47,7 +47,7 @@ export default function BrandDetail() {
 
   if (!brand) {
     return (
-      <div className="mx-auto max-w-6xl px-8 py-10">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <EmptyState title={t('brand.notFound')} action={<Link to="/"><Button variant="subtle">{t('brand.backToDashboard')}</Button></Link>} />
       </div>
     );
@@ -58,40 +58,30 @@ export default function BrandDetail() {
   const assets = store.assetsByBrand(brandId);
 
   return (
-    <div className="mx-auto max-w-6xl px-8 py-10">
-      <Link to="/" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-white/45 hover:text-white">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <Link to="/" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
         <ArrowLeft size={14} /> {t('nav.dashboard')}
       </Link>
 
-      <header className="mb-6 flex items-end justify-between gap-4">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex items-center gap-4">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl text-[20px] font-bold" style={{ background: brand.colours[0] || '#6366f1' }}>
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-[20px] font-bold text-white" style={{ background: brand.colours[0] || '#7c3aed' }}>
             {brand.name.slice(0, 1).toUpperCase()}
           </span>
-          <div>
-            <h1 className="font-serif text-[26px] font-extrabold tracking-tight" style={{ fontFamily: 'Bitter, serif' }}>{brand.name}</h1>
-            <p className="text-[12px] text-white/40">{count(templates.length, 'template')} · {count(graphics.length, 'graphic')} · {count(assets.length, 'asset')}</p>
+          <div className="min-w-0">
+            <h1 className="truncate text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-[26px]">{brand.name}</h1>
+            <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{count(templates.length, 'template')} · {count(graphics.length, 'graphic')} · {count(assets.length, 'asset')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => navigate(`/brands/${brandId}/pipeline`)}><Sparkles size={15} /> {t('pipe.start')}</Button>
-          <Button variant="subtle" onClick={() => navigate(`/brands/${brandId}/create`)}>{t('brand.createGraphic')}</Button>
+          <Button className="flex-1 sm:flex-none" onClick={() => navigate(`/brands/${brandId}/pipeline`)}><Sparkles size={15} /> {t('pipe.start')}</Button>
+          <Button variant="subtle" className="flex-1 sm:flex-none" onClick={() => navigate(`/brands/${brandId}/create`)}>{t('brand.createGraphic')}</Button>
         </div>
       </header>
 
-      {/* tabs */}
-      <div className="mb-6 flex gap-1 border-b border-white/10">
-        {TABS.map((tb) => (
-          <button
-            key={tb.id}
-            onClick={() => setTab(tb.id)}
-            className={`-mb-px border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors ${
-              tab === tb.id ? 'border-indigo-400 text-white' : 'border-transparent text-white/45 hover:text-white/80'
-            }`}
-          >
-            {t(tb.key)}
-          </button>
-        ))}
+      {/* tabs (scrollable on mobile) */}
+      <div className="mb-6">
+        <Tabs tabs={TABS.map((tb) => ({ id: tb.id, label: t(tb.key) }))} value={tab} onChange={setTab} />
       </div>
 
       {tab === 'overview' && <OverviewTab brandId={brandId} />}
@@ -101,7 +91,7 @@ export default function BrandDetail() {
       {tab === 'assets' && <AssetsTab brandId={brandId} />}
       {tab === 'social' && <SocialTab brandId={brandId} />}
 
-      <div className="mt-10 flex justify-center border-t border-white/10 pt-8">
+      <div className="mt-10 flex justify-center border-t border-zinc-200 pt-8 dark:border-zinc-800">
         <Button onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> {t('brand.createGraphic')}</Button>
       </div>
     </div>
@@ -115,7 +105,7 @@ function OverviewTab({ brandId }: { brandId: string }) {
   const { t, count } = useI18n();
   const { confirm } = useOverlay();
   const brand = store.getBrand(brandId)!;
-  const [newColour, setNewColour] = useState('#6366f1');
+  const [newColour, setNewColour] = useState('#7c3aed');
 
   const deleteBrand = async () => {
     const tn = store.templatesByBrand(brandId).length;
@@ -133,46 +123,46 @@ function OverviewTab({ brandId }: { brandId: string }) {
   return (
     <div className="grid gap-5 md:grid-cols-2">
       <Panel className="p-5">
-        <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-white/55">{t('ov.identity')}</h3>
-        <label className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('ov.name')}</label>
+        <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">{t('ov.identity')}</h3>
+        <label className="mb-1 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('ov.name')}</label>
         <TextInput value={brand.name} onChange={(e) => store.updateBrand(brandId, { name: e.target.value })} />
-        <label className="mb-1 mt-4 block text-[11px] uppercase tracking-wide text-white/40">{t('ov.fonts')}</label>
+        <label className="mb-1 mt-4 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('ov.fonts')}</label>
         <TextInput value={brand.fonts.join(', ')} onChange={(e) => store.updateBrand(brandId, { fonts: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
-        <label className="mb-1 mt-4 block text-[11px] uppercase tracking-wide text-white/40">{t('ov.tone')}</label>
+        <label className="mb-1 mt-4 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('ov.tone')}</label>
         <textarea
           value={brand.toneNotes ?? ''}
           onChange={(e) => store.updateBrand(brandId, { toneNotes: e.target.value })}
-          className="w-full h-24 resize-y rounded-lg bg-black/30 border border-white/10 focus:border-indigo-400/60 focus:outline-none px-3 py-2 text-[13px] text-white/90"
+          className="h-24 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
         />
 
-        <h3 className="mb-2 mt-6 text-[13px] font-bold uppercase tracking-wide text-red-300/80">{t('ov.dangerZone')}</h3>
+        <h3 className="mb-2 mt-6 text-[13px] font-bold uppercase tracking-wide text-red-600 dark:text-red-400">{t('ov.dangerZone')}</h3>
         <Button variant="danger" onClick={deleteBrand}><Trash2 size={14} /> {t('brand.deleteBrand')}</Button>
       </Panel>
 
       <Panel className="p-5">
-        <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-white/55">{t('ov.colours')}</h3>
+        <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">{t('ov.colours')}</h3>
         <div className="flex flex-wrap gap-2">
           {brand.colours.map((c, i) => (
             <div key={i} className="group relative">
-              <span className="block h-12 w-12 rounded-xl border border-white/10" style={{ background: c }} />
+              <span className="block h-12 w-12 rounded-xl border border-zinc-200 dark:border-zinc-700" style={{ background: c }} />
               <button
                 onClick={() => store.updateBrand(brandId, { colours: brand.colours.filter((_, j) => j !== i) })}
-                className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-black text-white/70 group-hover:grid"
+                className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-zinc-900 text-white group-hover:grid dark:bg-zinc-700"
                 title={t('common.delete')}
               >
                 <Trash2 size={11} />
               </button>
-              <span className="mt-1 block text-center text-[9px] text-white/35">{c}</span>
+              <span className="mt-1 block text-center text-[9px] text-zinc-400 dark:text-zinc-500">{c}</span>
             </div>
           ))}
         </div>
         <div className="mt-4 flex items-center gap-2">
-          <input type="color" value={newColour} onChange={(e) => setNewColour(e.target.value)} className="h-9 w-12 rounded bg-transparent" />
+          <input type="color" value={newColour} onChange={(e) => setNewColour(e.target.value)} className="h-10 w-14 rounded bg-transparent" />
           <Button variant="subtle" onClick={() => store.updateBrand(brandId, { colours: [...brand.colours, newColour] })}>
             <Plus size={14} /> {t('ov.addColour')}
           </Button>
         </div>
-        <p className="mt-5 text-[12px] text-white/40">{t('ov.coloursHint')}</p>
+        <p className="mt-5 text-[12px] text-zinc-500 dark:text-zinc-400">{t('ov.coloursHint')}</p>
         <Button className="mt-3" onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> {t('ov.createGraphic')}</Button>
       </Panel>
     </div>
@@ -241,18 +231,18 @@ function StyleGenerator({ brandId }: { brandId: string }) {
   return (
     <Panel className="mb-4 p-4">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
-        <span className="inline-flex items-center gap-2 text-[14px] font-bold"><Wand2 size={15} className="text-indigo-300" /> {t('tpl.generateTitle')}</span>
-        <span className="text-[12px] text-white/40">{open ? t('common.hide') : t('common.open')}</span>
+        <span className="inline-flex items-center gap-2 text-[14px] font-bold text-zinc-900 dark:text-zinc-50"><Wand2 size={15} className="text-violet-600 dark:text-violet-400" /> {t('tpl.generateTitle')}</span>
+        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">{open ? t('common.hide') : t('common.open')}</span>
       </button>
 
       {open && (
         <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5">
-            <p className="text-[12px] text-white/45">{t('tpl.refsReady', { n: refImages.length })}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/40">
+            <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{t('tpl.refsReady', { n: refImages.length })}</p>
             <div className="flex items-center gap-2">
               <label className="cursor-pointer">
                 <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onRefs(e.target.files)} />
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10"><ImagePlus size={14} /> {t('tpl.addPosts')}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] font-semibold text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"><ImagePlus size={14} /> {t('tpl.addPosts')}</span>
               </label>
               <Button onClick={generate} disabled={busy || refImages.length === 0}><Wand2 size={14} /> {busy ? t('tpl.analysing') : t('tpl.analyse')}</Button>
             </div>
@@ -263,30 +253,30 @@ function StyleGenerator({ brandId }: { brandId: string }) {
               {/* controls */}
               <div className="space-y-4">
                 <div>
-                  <p className="mb-1.5 text-[11px] uppercase tracking-wide text-white/40">{t('sg.palette')}</p>
+                  <p className="mb-1.5 text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('sg.palette')}</p>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {style.palette.map((c, i) => (
                       <span key={i} className="group relative">
-                        <input type="color" value={c.startsWith('#') ? c : '#888888'} onChange={(e) => setStyle({ ...style, palette: style.palette.map((x, j) => (j === i ? e.target.value : x)) })} className="h-7 w-7 rounded bg-transparent" />
+                        <input type="color" value={c.startsWith('#') ? c : '#888888'} onChange={(e) => setStyle({ ...style, palette: style.palette.map((x, j) => (j === i ? e.target.value : x)) })} className="h-9 w-9 rounded bg-transparent" />
                       </span>
                     ))}
-                    <button onClick={() => setStyle({ ...style, palette: [...style.palette, '#6366f1'] })} className="grid h-7 w-7 place-items-center rounded border border-white/15 text-white/50"><Plus size={13} /></button>
+                    <button onClick={() => setStyle({ ...style, palette: [...style.palette, '#7c3aed'] })} className="grid h-9 w-9 place-items-center rounded border border-zinc-200 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"><Plus size={13} /></button>
                   </div>
                 </div>
-                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('sg.theme')}</span>
+                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('sg.theme')}</span>
                   <div className="flex gap-1">
                     {(['dark', 'light'] as const).map((t) => (
-                      <button key={t} onClick={() => setStyle({ ...style, theme: t })} className={`flex-1 rounded-lg border px-2 py-1.5 text-[12px] capitalize ${style.theme === t ? 'border-indigo-400/70 bg-indigo-500/10 text-white' : 'border-white/10 text-white/60'}`}>{t}</button>
+                      <button key={t} onClick={() => setStyle({ ...style, theme: t })} className={`flex-1 rounded-lg border px-2 py-2 text-[12px] capitalize ${style.theme === t ? 'border-violet-400 bg-violet-50 text-violet-700 dark:border-violet-500 dark:bg-violet-500/15 dark:text-violet-300' : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'}`}>{t}</button>
                     ))}
                   </div>
                 </label>
-                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('sg.headingFont')}</span>
-                  <select value={style.heading} onChange={(e) => setStyle({ ...style, heading: e.target.value })} className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[13px] text-white/90 focus:outline-none">{fonts.map((f) => <option key={f} value={f}>{f}</option>)}</select>
+                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('sg.headingFont')}</span>
+                  <select value={style.heading} onChange={(e) => setStyle({ ...style, heading: e.target.value })} className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">{fonts.map((f) => <option key={f} value={f}>{f}</option>)}</select>
                 </label>
-                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('sg.bodyFont')}</span>
-                  <select value={style.body} onChange={(e) => setStyle({ ...style, body: e.target.value })} className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-[13px] text-white/90 focus:outline-none">{fonts.map((f) => <option key={f} value={f}>{f}</option>)}</select>
+                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('sg.bodyFont')}</span>
+                  <select value={style.body} onChange={(e) => setStyle({ ...style, body: e.target.value })} className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">{fonts.map((f) => <option key={f} value={f}>{f}</option>)}</select>
                 </label>
-                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-white/40">{t('sg.templateName')}</span>
+                <label className="block"><span className="mb-1 block text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('sg.templateName')}</span>
                   <TextInput value={name} onChange={(e) => setName(e.target.value)} />
                 </label>
                 <div className="flex flex-col gap-2 pt-1">
@@ -297,12 +287,12 @@ function StyleGenerator({ brandId }: { brandId: string }) {
 
               {/* layout variant previews */}
               <div>
-                <p className="mb-2 text-[11px] uppercase tracking-wide text-white/40">{t('sg.layoutPick')}</p>
-                <div className="grid grid-cols-3 gap-3">
+                <p className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('sg.layoutPick')}</p>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {LAYOUTS.map((l) => (
-                    <button key={l.id} onClick={() => setLayoutId(l.id)} className={`overflow-hidden rounded-xl border text-left transition-colors ${layoutId === l.id ? 'border-indigo-400/70 ring-1 ring-indigo-400/40' : 'border-white/10 hover:border-white/25'}`}>
+                    <button key={l.id} onClick={() => setLayoutId(l.id)} className={`overflow-hidden rounded-xl border text-left transition-colors ${layoutId === l.id ? 'border-violet-400 ring-1 ring-violet-400/40 dark:border-violet-500' : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600'}`}>
                       <ElementPreview elements={elementsFor(style, l.id)} />
-                      <div className="px-2 py-1.5 text-[12px] font-semibold text-white/80">{l.name}</div>
+                      <div className="px-2 py-1.5 text-[12px] font-semibold text-zinc-800 dark:text-zinc-200">{l.name}</div>
                     </button>
                   ))}
                 </div>
@@ -326,11 +316,11 @@ function TemplateThumb({ template, brand }: { template: Template; brand?: Brand 
   const els = template.seedElements?.length ? template.seedElements : (kind.defaultElements?.(brand?.colours) ?? []);
   const rows = kind.parse ? kind.parse(kind.sampleData ?? '').rows : [];
   return (
-    <div className="mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/20" style={{ maxHeight: 220 }}>
+    <div className="mb-3 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800" style={{ maxHeight: 220 }}>
       {kind.editor === 'freeform' ? <ElementPreview elements={els} />
         : kind.editor === 'animated' ? <AnimatedCanvas copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} />
         : kind.slides?.[0] ? <SlideCanvas slide={kind.slides[0]} index={0} rows={rows} copy={copy} slideCount={kind.slides.length} ratio={ratio} />
-        : <div className="grid h-40 place-items-center text-[12px] text-white/30">{kind.name}</div>}
+        : <div className="grid h-40 place-items-center text-[12px] text-zinc-400 dark:text-zinc-500">{kind.name}</div>}
     </div>
   );
 }
@@ -383,11 +373,11 @@ function TemplatesTab({ brandId }: { brandId: string }) {
                   ]}
                 />
               </div>
-              <h3 className="mt-3 truncate font-sans text-[14px] font-semibold text-white/90">{t.name}</h3>
-              <p className="mt-1 text-[12px] text-white/45">{getKind(t.kind)?.description ?? t.kind}</p>
+              <h3 className="mt-3 truncate text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">{t.name}</h3>
+              <p className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">{getKind(t.kind)?.description ?? t.kind}</p>
               <div className="mt-3 flex flex-wrap gap-1">
                 {t.supportedPlatforms.slice(0, 4).map((p) => (
-                  <span key={p} className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-white/40">{PLATFORM_PRESETS[p].name}</span>
+                  <span key={p} className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">{PLATFORM_PRESETS[p].name}</span>
                 ))}
               </div>
               <Button className="mt-4" onClick={() => navigate(`/brands/${brandId}/create?template=${t.id}`)}>
@@ -483,7 +473,7 @@ function GraphicsTab({ brandId }: { brandId: string }) {
     return <EmptyState title={t('gfx.empty')} hint={t('gfx.emptyHint')} action={<Button onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> {t('brand.createGraphic')}</Button>} />;
 
   const folderTabClass = (active: boolean) =>
-    `inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${active ? 'bg-indigo-500/20 text-indigo-100' : 'text-white/55 hover:bg-white/5 hover:text-white'}`;
+    `inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-semibold transition-colors ${active ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'}`;
 
   return (
     <div>
@@ -492,7 +482,7 @@ function GraphicsTab({ brandId }: { brandId: string }) {
         <button onClick={() => setFolderSel('all')} className={folderTabClass(folderSel === 'all')}><Layers size={13} /> {t('gfx.allGraphics')}</button>
         <button onClick={() => setFolderSel('unfiled')} className={folderTabClass(folderSel === 'unfiled')}><Inbox size={13} /> {t('gfx.unfiled')}</button>
         {folders.map((f) => (
-          <span key={f.id} className={`group inline-flex items-center rounded-lg ${folderSel === f.id ? 'bg-indigo-500/20' : ''}`}>
+          <span key={f.id} className={`group inline-flex items-center rounded-lg ${folderSel === f.id ? 'bg-violet-50 dark:bg-violet-500/15' : ''}`}>
             <button onClick={() => setFolderSel(f.id)} className={folderTabClass(folderSel === f.id)}><FolderIcon size={13} /> {f.name}</button>
             <Menu
               label={t('common.actions')}
@@ -503,22 +493,22 @@ function GraphicsTab({ brandId }: { brandId: string }) {
             />
           </span>
         ))}
-        <button onClick={newFolder} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/70 hover:bg-white/10 hover:text-white">
+        <button onClick={newFolder} className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100">
           <FolderPlus size={13} /> {t('gfx.newFolder')}
         </button>
       </div>
 
       {/* search + sort + filter */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('gfx.search')} className="w-full rounded-lg bg-black/30 border border-white/10 focus:border-indigo-400/60 focus:outline-none pl-8 pr-3 py-2 text-[13px] text-white/90 placeholder:text-white/25" />
+        <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('gfx.search')} className="w-full rounded-lg border border-zinc-200 bg-white pl-8 pr-3 py-2 text-[13px] text-zinc-900 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500" />
         </div>
-        <select value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value)} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+        <select value={templateFilter} onChange={(e) => setTemplateFilter(e.target.value)} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
           <option value="all">{t('gfx.filterTemplate')}</option>
           {templates.map((tp) => <option key={tp.id} value={tp.id}>{tp.name}</option>)}
         </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
           <option value="updated">{t('gfx.sort.updated')}</option>
           <option value="newest">{t('gfx.sort.newest')}</option>
           <option value="oldest">{t('gfx.sort.oldest')}</option>
@@ -544,8 +534,8 @@ function GraphicsTab({ brandId }: { brandId: string }) {
                   <Badge>{platform?.name ?? 'Graphic'}</Badge>
                   <Menu label={t('common.actions')} items={items} />
                 </div>
-                <h3 className="mt-3 truncate font-sans text-[14px] font-semibold text-white/90">{g.name}</h3>
-                <p className="mt-0.5 text-[12px] text-white/40">{t('gfx.updated', { date: new Date(g.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
+                <h3 className="mt-3 truncate text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">{g.name}</h3>
+                <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">{t('gfx.updated', { date: new Date(g.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
                 <Button className="mt-4" variant="subtle" onClick={() => navigate(`/graphics/${g.id}`)}>{t('gfx.open')}</Button>
               </Panel>
             );
@@ -601,11 +591,11 @@ function ClipExportButton({ clip }: { clip: Clip }) {
     }
   };
 
-  const btnCls = 'inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10 disabled:opacity-50';
+  const btnCls = 'inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800';
 
   if (st.phase === 'ready' && st.url) {
     return (
-      <a href={st.url} target="_blank" rel="noopener noreferrer" download className={`${btnCls} text-emerald-300 border-emerald-500/30 bg-emerald-500/10`}>
+      <a href={st.url} target="_blank" rel="noopener noreferrer" download className={`${btnCls} border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400`}>
         <Download size={13} /> {t('clip.exportReady')}
       </a>
     );
@@ -614,16 +604,16 @@ function ClipExportButton({ clip }: { clip: Clip }) {
     <div className="flex flex-col gap-1">
       <button onClick={run} disabled={!hasSource || st.phase === 'rendering'} className={btnCls} title={!hasSource ? t('clip.exportNoSource') : undefined}>
         {st.phase === 'rendering'
-          ? <><Loader2 size={13} className="animate-spin text-indigo-300" /> {t('clip.exporting')}{st.progress ? ` ${st.progress}%` : '…'}</>
-          : <><Film size={13} className="text-indigo-300" /> {t('clip.exportMp4')}</>}
+          ? <><Loader2 size={13} className="animate-spin text-violet-600 dark:text-violet-400" /> {t('clip.exporting')}{st.progress ? ` ${st.progress}%` : '…'}</>
+          : <><Film size={13} className="text-violet-600 dark:text-violet-400" /> {t('clip.exportMp4')}</>}
       </button>
-      {st.phase === 'error' && st.msg && <span className="text-[11px] text-amber-300/90">{st.msg}</span>}
-      {!hasSource && st.phase === 'idle' && <span className="text-[11px] text-white/35">{t('clip.exportNoSource')}</span>}
+      {st.phase === 'error' && st.msg && <span className="text-[11px] text-amber-600 dark:text-amber-400">{st.msg}</span>}
+      {!hasSource && st.phase === 'idle' && <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('clip.exportNoSource')}</span>}
     </div>
   );
 }
 
-// ── Clips (saved short-form clips — same Brand -> Folder structure as graphics) ──
+// ── Clips (saved short-form clips, same Brand -> Folder structure as graphics) ──
 function ClipsTab({ brandId }: { brandId: string }) {
   const store = useStore();
   const navigate = useNavigate();
@@ -699,7 +689,7 @@ function ClipsTab({ brandId }: { brandId: string }) {
     return <EmptyState title={t('clipTab.empty')} hint={t('clipTab.emptyHint')} action={findCta} />;
 
   const folderTabClass = (active: boolean) =>
-    `inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${active ? 'bg-indigo-500/20 text-indigo-100' : 'text-white/55 hover:bg-white/5 hover:text-white'}`;
+    `inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-semibold transition-colors ${active ? 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'}`;
 
   return (
     <div>
@@ -707,7 +697,7 @@ function ClipsTab({ brandId }: { brandId: string }) {
         <button onClick={() => setFolderSel('all')} className={folderTabClass(folderSel === 'all')}><Layers size={13} /> {t('clipTab.all')}</button>
         <button onClick={() => setFolderSel('unfiled')} className={folderTabClass(folderSel === 'unfiled')}><Inbox size={13} /> {t('gfx.unfiled')}</button>
         {folders.map((f) => (
-          <span key={f.id} className={`group inline-flex items-center rounded-lg ${folderSel === f.id ? 'bg-indigo-500/20' : ''}`}>
+          <span key={f.id} className={`group inline-flex items-center rounded-lg ${folderSel === f.id ? 'bg-violet-50 dark:bg-violet-500/15' : ''}`}>
             <button onClick={() => setFolderSel(f.id)} className={folderTabClass(folderSel === f.id)}><FolderIcon size={13} /> {f.name}</button>
             <Menu
               label={t('common.actions')}
@@ -718,18 +708,18 @@ function ClipsTab({ brandId }: { brandId: string }) {
             />
           </span>
         ))}
-        <button onClick={newFolder} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/70 hover:bg-white/10 hover:text-white">
+        <button onClick={newFolder} className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] font-semibold text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100">
           <FolderPlus size={13} /> {t('gfx.newFolder')}
         </button>
         <span className="ml-auto">{findCta}</span>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('clipTab.search')} className="w-full rounded-lg bg-black/30 border border-white/10 focus:border-indigo-400/60 focus:outline-none pl-8 pr-3 py-2 text-[13px] text-white/90 placeholder:text-white/25" />
+        <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('clipTab.search')} className="w-full rounded-lg border border-zinc-200 bg-white pl-8 pr-3 py-2 text-[13px] text-zinc-900 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500" />
         </div>
-        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
           <option value="updated">{t('gfx.sort.updated')}</option>
           <option value="newest">{t('gfx.sort.newest')}</option>
           <option value="oldest">{t('gfx.sort.oldest')}</option>
@@ -752,22 +742,22 @@ function ClipsTab({ brandId }: { brandId: string }) {
                 <div className="flex items-start justify-between gap-2">
                   <Badge>{c.start}–{c.end}{c.aspectRatio ? ` · ${c.aspectRatio}` : ''}</Badge>
                   <div className="flex items-center gap-1.5">
-                    {typeof c.score === 'number' && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/70">{c.score}</span>}
+                    {typeof c.score === 'number' && <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-bold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{c.score}</span>}
                     <Menu label={t('common.actions')} items={items} />
                   </div>
                 </div>
-                <h3 className="mt-3 truncate font-sans text-[14px] font-semibold text-white/90">{c.name}</h3>
-                {c.hook && <p className="mt-1 line-clamp-2 text-[12px] text-amber-300/90">“{c.hook}”</p>}
-                {c.caption && <p className="mt-1.5 line-clamp-2 text-[12px] text-white/55">{c.caption}</p>}
+                <h3 className="mt-3 truncate text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">{c.name}</h3>
+                {c.hook && <p className="mt-1 line-clamp-2 text-[12px] text-amber-600 dark:text-amber-400">“{c.hook}”</p>}
+                {c.caption && <p className="mt-1.5 line-clamp-2 text-[12px] text-zinc-600 dark:text-zinc-300">{c.caption}</p>}
                 {Array.isArray(c.platforms) && c.platforms.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {c.platforms.slice(0, 4).map((p) => <span key={p} className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-white/60">{p}</span>)}
+                    {c.platforms.slice(0, 4).map((p) => <span key={p} className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{p}</span>)}
                   </div>
                 )}
                 <div className="mt-auto pt-3">
                   <ClipExportButton clip={c} />
                 </div>
-                <p className="pt-2 text-[12px] text-white/40">{t('gfx.updated', { date: new Date(c.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
+                <p className="pt-2 text-[12px] text-zinc-500 dark:text-zinc-400">{t('gfx.updated', { date: new Date(c.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
               </Panel>
             );
           })}
@@ -803,33 +793,33 @@ function AssetsTab({ brandId }: { brandId: string }) {
     <div>
       <Panel className="mb-5 p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <select value={type} onChange={(e) => setType(e.target.value as AssetType)} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+          <select value={type} onChange={(e) => setType(e.target.value as AssetType)} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
             {ASSET_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
           <label className="cursor-pointer">
             <input type="file" accept="image/*,.woff,.woff2,.ttf,.otf" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-            <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10"><ImagePlus size={15} /> {t('asset.upload', { type })}</span>
+            <span className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"><ImagePlus size={15} /> {t('asset.upload', { type })}</span>
           </label>
-          <span className="text-[12px] text-white/35">{t('asset.storedLocally')}</span>
+          <span className="text-[12px] text-zinc-400 dark:text-zinc-500">{t('asset.storedLocally')}</span>
         </div>
       </Panel>
 
       {assets.length === 0 ? (
         <EmptyState title={t('asset.empty')} hint={t('asset.emptyHint')} />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {assets.map((a) => (
             <Panel key={a.id} className="overflow-hidden">
-              <div className="relative grid h-28 place-items-center bg-black/30">
+              <div className="relative grid h-28 place-items-center bg-zinc-100 dark:bg-zinc-800">
                 {/image|logo|background|icon|product|reference|social-post/.test(a.type) && a.url.startsWith('data:image') ? (
                   <img src={a.url} alt={a.name} className="max-h-full max-w-full object-contain p-2" />
                 ) : (
-                  <span className="text-[11px] text-white/40">{a.type}</span>
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{a.type}</span>
                 )}
               </div>
               <div className="flex items-start justify-between gap-1 p-2.5">
                 <div className="min-w-0">
-                  <p className="truncate text-[12px] text-white/80">{a.name}</p>
+                  <p className="truncate text-[12px] text-zinc-800 dark:text-zinc-200">{a.name}</p>
                   <Badge tone="muted">{a.type}</Badge>
                 </div>
                 <Menu
@@ -900,36 +890,36 @@ function LiveInstagram() {
     <Panel className="mb-5 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="inline-flex items-center gap-2 text-[14px] font-bold"><Wand2 size={15} className="text-indigo-300" /> {t('li.title')} <Badge tone="accent">beta</Badge></p>
-          <p className="mt-0.5 text-[12px] text-white/45">{t('li.subtitle')}</p>
+          <p className="inline-flex items-center gap-2 text-[14px] font-bold text-zinc-900 dark:text-zinc-50"><Wand2 size={15} className="text-violet-600 dark:text-violet-400" /> {t('li.title')} <Badge tone="accent">beta</Badge></p>
+          <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">{t('li.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={connect} disabled={state === 'connecting'} className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 hover:bg-white/10 disabled:opacity-50">{state === 'connecting' ? t('li.connecting') : t('li.connect')}</button>
+          <button onClick={connect} disabled={state === 'connecting'} className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800">{state === 'connecting' ? t('li.connecting') : t('li.connect')}</button>
           <Button variant="subtle" onClick={pull} disabled={state === 'loading'}>{state === 'loading' ? t('li.pulling') : t('li.pull')}</Button>
         </div>
       </div>
 
-      {state === 'idle' && !igStatus && <p className="mt-3 text-[12px] text-white/45">{t('li.dormantHint')}</p>}
-      {igStatus === 'connected' && <p className="mt-3 text-[12px] text-[#4ade80]">{t('li.connected')}</p>}
-      {igStatus && igStatus !== 'connected' && <p className="mt-3 text-[12px] text-[#f87171]">{t('li.connectFailed', { status: igStatus })}</p>}
-      {state === 'notconf' && <p className="mt-3 text-[12px] text-white/55">{t('li.notConfA')}<span className="text-white/80">META_SETUP.md</span>{t('li.notConfB')}</p>}
-      {state === 'notconn' && <p className="mt-3 text-[12px] text-white/55">{t('li.notConnected')}</p>}
-      {state === 'err' && <p className="mt-3 text-[12px] text-[#f87171]">{t('li.pullError')}</p>}
+      {state === 'idle' && !igStatus && <p className="mt-3 text-[12px] text-zinc-500 dark:text-zinc-400">{t('li.dormantHint')}</p>}
+      {igStatus === 'connected' && <p className="mt-3 text-[12px] text-emerald-600 dark:text-emerald-400">{t('li.connected')}</p>}
+      {igStatus && igStatus !== 'connected' && <p className="mt-3 text-[12px] text-red-600 dark:text-red-400">{t('li.connectFailed', { status: igStatus })}</p>}
+      {state === 'notconf' && <p className="mt-3 text-[12px] text-zinc-600 dark:text-zinc-300">{t('li.notConfA')}<span className="text-zinc-800 dark:text-zinc-100">META_SETUP.md</span>{t('li.notConfB')}</p>}
+      {state === 'notconn' && <p className="mt-3 text-[12px] text-zinc-600 dark:text-zinc-300">{t('li.notConnected')}</p>}
+      {state === 'err' && <p className="mt-3 text-[12px] text-red-600 dark:text-red-400">{t('li.pullError')}</p>}
 
       {state === 'ok' && (
         posts.length === 0 ? (
-          <p className="mt-3 text-[12px] text-white/45">{t('li.noPosts')}</p>
+          <p className="mt-3 text-[12px] text-zinc-500 dark:text-zinc-400">{t('li.noPosts')}</p>
         ) : (
           <div className="mt-4">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-white/40">{t('li.topPerformers')}</p>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('li.topPerformers')}</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {posts.slice(0, 8).map((p, i) => (
-                <a key={p.id} href={p.permalink} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                <a key={p.id} href={p.permalink} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800">
                   <div className="relative aspect-square">
                     {p.mediaUrl && <img src={p.mediaUrl} alt="" className="h-full w-full object-cover" />}
-                    {i < 3 && <span className="absolute left-2 top-2 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[10px] font-bold">#{i + 1}</span>}
+                    {i < 3 && <span className="absolute left-2 top-2 rounded-full bg-violet-600 px-1.5 py-0.5 text-[10px] font-bold text-white">#{i + 1}</span>}
                   </div>
-                  <div className="px-2 py-1.5 text-[11px] text-white/60">♥ {p.likes.toLocaleString()} · 💬 {p.comments.toLocaleString()}</div>
+                  <div className="px-2 py-1.5 text-[11px] text-zinc-600 dark:text-zinc-300">♥ {p.likes.toLocaleString()} · 💬 {p.comments.toLocaleString()}</div>
                 </a>
               ))}
             </div>
@@ -987,21 +977,21 @@ function SocialTab({ brandId }: { brandId: string }) {
       <LiveInstagram />
       <Panel className="mb-4 p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <select value={platform} onChange={(e) => setPlatform(e.target.value as SocialAccount['platform'])} className="rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none">
+          <select value={platform} onChange={(e) => setPlatform(e.target.value as SocialAccount['platform'])} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
             {SOCIAL_PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
-          <div className="flex-1 min-w-[220px]"><TextInput placeholder="https://instagram.com/yourbrand" value={url} onChange={(e) => setUrl(e.target.value)} /></div>
+          <div className="min-w-0 flex-1 sm:min-w-[220px]"><TextInput placeholder="https://instagram.com/yourbrand" value={url} onChange={(e) => setUrl(e.target.value)} /></div>
           <Button onClick={add}><Plus size={14} /> {t('soc.addAccount')}</Button>
         </div>
       </Panel>
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
-        <p className="text-[12px] text-white/45">
-          {t('soc.auditsPre')}<span className="text-white/70">{t('soc.auditsEmph')}</span>{t('soc.auditsPost', { n: refImages.length })}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+        <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
+          {t('soc.auditsPre')}<span className="text-zinc-700 dark:text-zinc-200">{t('soc.auditsEmph')}</span>{t('soc.auditsPost', { n: refImages.length })}
         </p>
         <label className="cursor-pointer">
           <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPosts(e.target.files)} />
-          <span className="inline-flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-[12px] font-semibold text-white/85 hover:bg-white/10"><ImagePlus size={14} /> {t('soc.addPostImages')}</span>
+          <span className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[12px] font-semibold text-zinc-800 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"><ImagePlus size={14} /> {t('soc.addPostImages')}</span>
         </label>
       </div>
 
@@ -1014,61 +1004,61 @@ function SocialTab({ brandId }: { brandId: string }) {
             const r = s.auditResult;
             return (
               <Panel key={s.id} className="p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-2">
                     <Badge tone="accent">{s.platform}</Badge>
-                    <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 truncate text-[13px] text-white/70 hover:text-white">
-                      {s.url} <ExternalLink size={12} />
+                    <a href={s.url} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1 truncate text-[13px] text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100">
+                      <span className="truncate">{s.url}</span> <ExternalLink size={12} className="shrink-0" />
                     </a>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="subtle" disabled={busy} onClick={() => runAudit(s.id)}>
                       <Wand2 size={14} /> {busy ? t('tpl.analysing') : s.auditStatus === 'complete' ? t('soc.reaudit') : t('soc.auditPosts')}
                     </Button>
-                    <button onClick={() => store.removeSocialAccount(s.id)} className="text-white/30 hover:text-red-300"><Trash2 size={14} /></button>
+                    <button onClick={() => store.removeSocialAccount(s.id)} className="grid h-9 w-9 place-items-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-red-600 dark:hover:bg-zinc-800"><Trash2 size={14} /></button>
                   </div>
                 </div>
 
                 {s.auditStatus === 'complete' && r && (
-                  <div className="mt-3 space-y-3 border-t border-white/10 pt-3">
+                  <div className="mt-3 space-y-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
                     {r.count === 0 ? (
-                      <p className="text-[12px] text-white/45">{t('soc.noRefs')}</p>
+                      <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{t('soc.noRefs')}</p>
                     ) : (
                       <>
                         <div className="flex flex-wrap items-center gap-4">
                           <div>
-                            <p className="text-[11px] uppercase tracking-wide text-white/40">{t('sg.palette')} ({r.count} {r.count === 1 ? t('soc.post.one') : t('soc.post.other')})</p>
+                            <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('sg.palette')} ({r.count} {r.count === 1 ? t('soc.post.one') : t('soc.post.other')})</p>
                             <div className="mt-1 flex gap-1.5">
-                              {r.palette.map((c, i) => <span key={i} className="h-6 w-6 rounded-md border border-white/15" style={{ background: c }} title={c} />)}
+                              {r.palette.map((c, i) => <span key={i} className="h-6 w-6 rounded-md border border-zinc-200 dark:border-zinc-700" style={{ background: c }} title={c} />)}
                             </div>
                           </div>
                           <div>
-                            <p className="text-[11px] uppercase tracking-wide text-white/40">{t('sg.theme')}</p>
-                            <p className="mt-1 text-[13px] capitalize text-white/80">{r.theme}</p>
+                            <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('sg.theme')}</p>
+                            <p className="mt-1 text-[13px] capitalize text-zinc-800 dark:text-zinc-200">{r.theme}</p>
                           </div>
                           <div>
-                            <p className="text-[11px] uppercase tracking-wide text-white/40">{t('soc.formatMix')}</p>
-                            <p className="mt-1 text-[13px] text-white/80">{r.aspects.portrait}P · {r.aspects.square}Sq · {r.aspects.landscape}L</p>
+                            <p className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('soc.formatMix')}</p>
+                            <p className="mt-1 text-[13px] text-zinc-800 dark:text-zinc-200">{r.aspects.portrait}P · {r.aspects.square}Sq · {r.aspects.landscape}L</p>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{t('soc.suggestions')}</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('soc.suggestions')}</p>
                           {s.auditSuggestions?.map((sug, i) => (
-                            <div key={i} className="rounded-lg bg-white/[0.03] px-3 py-2">
-                              <p className="text-[13px] font-semibold text-white/85">{sug.title}</p>
-                              <p className="text-[12px] text-white/45">{sug.rationale}</p>
+                            <div key={i} className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+                              <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">{sug.title}</p>
+                              <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{sug.rationale}</p>
                             </div>
                           ))}
                         </div>
-                        <div className="flex items-center gap-2 border-t border-white/10 pt-3">
+                        <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
                           <Button onClick={() => store.updateBrand(brandId, { colours: r.palette })}><Sparkles size={14} /> {t('soc.updateBrand')}</Button>
-                          <span className="text-[12px] text-white/40">{t('soc.applyPaletteNote')}</span>
+                          <span className="text-[12px] text-zinc-500 dark:text-zinc-400">{t('soc.applyPaletteNote')}</span>
                         </div>
                       </>
                     )}
                   </div>
                 )}
-                {s.auditStatus === 'failed' && <p className="mt-3 border-t border-white/10 pt-3 text-[12px] text-red-300">{t('soc.auditFailed')}</p>}
+                {s.auditStatus === 'failed' && <p className="mt-3 border-t border-zinc-200 pt-3 text-[12px] text-red-600 dark:border-zinc-800 dark:text-red-400">{t('soc.auditFailed')}</p>}
               </Panel>
             );
           })}

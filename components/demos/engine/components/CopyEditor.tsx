@@ -37,20 +37,20 @@ export default function CopyEditor({ copy, onChange, fields }: Props) {
     <div>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between text-[13px] font-semibold text-white/80"
+        className="flex w-full items-center justify-between text-[13px] font-semibold text-zinc-800 dark:text-zinc-100"
       >
         <span>{t('copy.title')}</span>
-        <ChevronDown size={16} className={`text-white/40 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className={`text-zinc-500 transition-transform dark:text-zinc-400 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="grid grid-cols-1 gap-3 mt-4">
+        <div className="mt-4 grid grid-cols-1 gap-3">
           {FIELDS.map((f) => (
             <label key={f.key} className="flex flex-col gap-1">
-              <span className="text-[11px] uppercase tracking-wide text-white/40">{f.labelKey ? t(f.labelKey) : f.label}</span>
+              <span className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{f.labelKey ? t(f.labelKey) : f.label}</span>
               <input
                 value={copy[f.key] ?? ''}
                 onChange={(e) => onChange(f.key, e.target.value)}
-                className="rounded-lg bg-black/30 border border-white/10 focus:border-[#fecf0a]/60 focus:outline-none px-3 py-2 text-[13px] text-white/90"
+                className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-800 focus:border-violet-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               />
             </label>
           ))}

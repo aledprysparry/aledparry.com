@@ -87,7 +87,7 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
       onPointerDown={() => onSelect(null)}
       onDragOver={(e) => { if (e.dataTransfer.types.includes('application/x-asset')) e.preventDefault(); }}
       onDrop={handleDrop}
-      className="relative w-full select-none overflow-hidden rounded-xl border border-white/10 shadow-2xl shadow-black/50"
+      className="relative w-full select-none overflow-hidden rounded-xl border border-zinc-200 shadow-sm shadow-zinc-900/10 dark:border-zinc-700"
       style={{ aspectRatio: `${width} / ${height}` }}
     >
       {elements.map((el) => {
@@ -107,7 +107,7 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
           return <div key={el.id} style={bgStyle} onPointerDown={(e) => { e.stopPropagation(); onSelect(el.id); }} />;
         }
         const common = 'absolute cursor-move';
-        const ring = selected ? 'outline outline-2 outline-indigo-400' : 'hover:outline hover:outline-1 hover:outline-white/30';
+        const ring = selected ? 'outline outline-2 outline-violet-500' : 'hover:outline hover:outline-1 hover:outline-zinc-300';
         if (el.type === 'text') {
           const editing = editingId === el.id;
           return (
@@ -171,8 +171,12 @@ function ResizeHandle({ onDown }: { onDown: (e: React.PointerEvent) => void }) {
   return (
     <span
       onPointerDown={onDown}
-      className="absolute -bottom-1.5 -right-1.5 h-3.5 w-3.5 cursor-nwse-resize rounded-full border-2 border-indigo-400 bg-white"
-    />
+      // Larger, touch-friendlier hit target than the visual dot (the padding
+      // extends the tappable area on coarse pointers).
+      className="absolute -bottom-2.5 -right-2.5 grid h-6 w-6 cursor-nwse-resize place-items-center"
+    >
+      <span className="block h-3.5 w-3.5 rounded-full border-2 border-violet-500 bg-white dark:bg-zinc-900" />
+    </span>
   );
 }
 

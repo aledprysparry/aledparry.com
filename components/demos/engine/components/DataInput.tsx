@@ -28,7 +28,7 @@ export default function DataInput({ value, onChange, warnings, error, rowCount, 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <label className="text-[12px] font-semibold tracking-wide uppercase text-white/55">
+        <label className="text-[12px] font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300">
           {t('data.label')}
         </label>
         <div className="flex items-center gap-1">
@@ -41,13 +41,13 @@ export default function DataInput({ value, onChange, warnings, error, rowCount, 
           />
           <button
             onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/70 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[12px] font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
           >
             <Upload size={13} /> {t('data.csv')}
           </button>
           <button
             onClick={onLoadSample}
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/70 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[12px] font-semibold text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
           >
             <FileSpreadsheet size={13} /> {t('data.sample')}
           </button>
@@ -59,23 +59,23 @@ export default function DataInput({ value, onChange, warnings, error, rowCount, 
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
         placeholder={t('data.placeholder')}
-        className="w-full h-56 resize-y rounded-xl bg-black/30 border border-white/10 focus:border-[#fecf0a]/60 focus:outline-none px-4 py-3 font-mono text-[13px] leading-relaxed text-white/90 placeholder:text-white/25"
+        className="h-56 w-full resize-y rounded-xl border border-zinc-200 bg-white px-4 py-3 font-mono text-[13px] leading-relaxed text-zinc-800 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
       />
 
-      <p className="text-[12px] text-white/40">{t('data.hint', { cols: t('data.cols') })}</p>
+      <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{t('data.hint', { cols: t('data.cols') })}</p>
 
       {error && (
-        <div className="rounded-lg border border-[#f87171]/40 bg-[#f87171]/10 px-4 py-2.5 text-[13px] text-[#fca5a5]">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-[13px] text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
           {error}
         </div>
       )}
       {!error && warnings.length > 0 && (
-        <div className="rounded-lg border border-[#fecf0a]/30 bg-[#fecf0a]/10 px-4 py-2.5 text-[13px] text-[#fde68a] space-y-0.5">
+        <div className="space-y-0.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
           {warnings.map((w, i) => <div key={i}>⚠ {w}</div>)}
         </div>
       )}
       {!error && (
-        <div className="inline-flex items-center gap-1.5 text-[12px] text-[#4ade80]">
+        <div className="inline-flex items-center gap-1.5 text-[12px] text-emerald-600 dark:text-emerald-400">
           <Check size={13} /> {t('data.ready', { n: rowCount })}
         </div>
       )}

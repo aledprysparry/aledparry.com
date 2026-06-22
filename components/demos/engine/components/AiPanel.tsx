@@ -58,29 +58,29 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
   const copy = (s: string) => navigator.clipboard?.writeText(s);
 
   return (
-    <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/5 p-4">
+    <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-500/20 dark:bg-violet-500/10">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
-        <span className="inline-flex items-center gap-2 text-[14px] font-bold"><Sparkles size={15} className="text-indigo-300" /> {t('ai.title')}</span>
-        <span className="text-[12px] text-white/40">{open ? t('common.hide') : t('common.open')}</span>
+        <span className="inline-flex items-center gap-2 text-[14px] font-bold text-zinc-900 dark:text-zinc-50"><Sparkles size={15} className="text-violet-600 dark:text-violet-400" /> {t('ai.title')}</span>
+        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">{open ? t('common.hide') : t('common.open')}</span>
       </button>
 
       {open && (
         <div className="mt-4 space-y-4">
-          {error === 'not_configured' && <p className="text-[12px] text-white/55">{t('ai.notConfigured')}</p>}
-          {error && error !== 'not_configured' && <p className="inline-flex items-center gap-1.5 text-[12px] text-[#f87171]"><AlertTriangle size={13} /> {t('ai.failed', { error })}</p>}
+          {error === 'not_configured' && <p className="text-[12px] text-zinc-600 dark:text-zinc-300">{t('ai.notConfigured')}</p>}
+          {error && error !== 'not_configured' && <p className="inline-flex items-center gap-1.5 text-[12px] text-red-600 dark:text-red-400"><AlertTriangle size={13} /> {t('ai.failed', { error })}</p>}
 
           {/* auto-fill */}
           <div>
             <div className="flex gap-2">
-              <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t('ai.topicPlaceholder')} className="flex-1 rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-[13px] text-white/90 focus:outline-none" />
+              <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t('ai.topicPlaceholder')} className="flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-800 focus:border-violet-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100" />
               <Button variant="subtle" disabled={busy !== null || !topic.trim()} onClick={() => run('autofill', { topic })}><Wand2 size={14} /> {busy === 'autofill' ? '…' : t('ai.draft')}</Button>
             </div>
             {autofill && (
               <div className="mt-2 space-y-1.5">
                 {(['headline', 'subheading', 'cta'] as const).map((k) => autofill[k] && (
-                  <div key={k} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5">
-                    <span className="text-[12px] text-white/80">{autofill[k]}</span>
-                    <button onClick={() => onAddText(autofill[k] as string)} className="shrink-0 text-[11px] font-semibold text-indigo-300 hover:text-indigo-200">{t('ai.add')}</button>
+                  <div key={k} className="flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-1.5 dark:bg-zinc-900">
+                    <span className="text-[12px] text-zinc-800 dark:text-zinc-200">{autofill[k]}</span>
+                    <button onClick={() => onAddText(autofill[k] as string)} className="shrink-0 text-[11px] font-semibold text-violet-600 hover:text-violet-700">{t('ai.add')}</button>
                   </div>
                 ))}
               </div>
@@ -96,12 +96,12 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
 
           {improve && improve.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{t('ai.improvedCopy')}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('ai.improvedCopy')}</p>
               {improve.map((it, i) => (
-                <div key={i} className="rounded-lg bg-white/[0.03] px-3 py-2">
-                  <p className="text-[12px] text-white/80">{it.suggestion}</p>
-                  <p className="mt-0.5 text-[11px] text-white/35 line-through">{it.original}</p>
-                  {textElements[i] && <button onClick={() => onApply(textElements[i].id, it.suggestion)} className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-300 hover:text-indigo-200"><Check size={12} /> {t('ai.apply')}</button>}
+                <div key={i} className="rounded-lg bg-white px-3 py-2 dark:bg-zinc-900">
+                  <p className="text-[12px] text-zinc-800 dark:text-zinc-200">{it.suggestion}</p>
+                  <p className="mt-0.5 text-[11px] text-zinc-400 line-through dark:text-zinc-500">{it.original}</p>
+                  {textElements[i] && <button onClick={() => onApply(textElements[i].id, it.suggestion)} className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-600 hover:text-violet-700"><Check size={12} /> {t('ai.apply')}</button>}
                 </div>
               ))}
             </div>
@@ -109,14 +109,14 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
 
           {captions && (
             <div className="space-y-2">
-              <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-                <div className="flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{t('ai.caption')}</span><button onClick={() => copy(captions.caption || '')} className="text-white/40 hover:text-white"><Copy size={12} /></button></div>
-                <p className="mt-1 text-[12px] text-white/80">{captions.caption}</p>
+              <div className="rounded-lg bg-white px-3 py-2 dark:bg-zinc-900">
+                <div className="flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('ai.caption')}</span><button onClick={() => copy(captions.caption || '')} className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"><Copy size={12} /></button></div>
+                <p className="mt-1 text-[12px] text-zinc-800 dark:text-zinc-200">{captions.caption}</p>
               </div>
               {captions.hashtags && captions.hashtags.length > 0 && (
-                <div className="rounded-lg bg-white/[0.03] px-3 py-2">
-                  <div className="flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{t('ai.hashtags')}</span><button onClick={() => copy((captions.hashtags || []).join(' '))} className="text-white/40 hover:text-white"><Copy size={12} /></button></div>
-                  <p className="mt-1 text-[12px] text-indigo-200">{captions.hashtags.join(' ')}</p>
+                <div className="rounded-lg bg-white px-3 py-2 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('ai.hashtags')}</span><button onClick={() => copy((captions.hashtags || []).join(' '))} className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"><Copy size={12} /></button></div>
+                  <p className="mt-1 text-[12px] text-violet-600 dark:text-violet-400">{captions.hashtags.join(' ')}</p>
                 </div>
               )}
             </div>
@@ -124,11 +124,11 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
 
           {critique && critique.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">{t('ai.critique')}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('ai.critique')}</p>
               {critique.map((c, i) => (
-                <div key={i} className="rounded-lg bg-white/[0.03] px-3 py-2">
-                  <p className="text-[12px] font-semibold text-white/85">{c.title}</p>
-                  <p className="text-[12px] text-white/45">{c.detail}</p>
+                <div key={i} className="rounded-lg bg-white px-3 py-2 dark:bg-zinc-900">
+                  <p className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-50">{c.title}</p>
+                  <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{c.detail}</p>
                 </div>
               ))}
             </div>

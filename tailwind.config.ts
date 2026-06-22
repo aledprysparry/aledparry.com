@@ -1,6 +1,10 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  // Scoped dark mode: `dark:` variants only fire inside the Postio engine when
+  // its root carries `.dark` (set by the engine's SettingsProvider). This keeps
+  // dark styling out of the marketing site, which has no dark theme.
+  darkMode: ["selector", ".postio-engine.dark"],
   content: [
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
