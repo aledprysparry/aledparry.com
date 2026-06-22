@@ -6,7 +6,7 @@ import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
 import CopyEditor from '@engine/components/CopyEditor';
 import SlideCanvas from '@engine/components/SlideCanvas';
-import { getKind } from '@engine/lib/templates/registry';
+import { getKind, kindBaseCopy } from '@engine/lib/templates/registry';
 import { effectiveCopy } from '@engine/lib/carousel/copy';
 import type { CarouselCopy } from '@engine/lib/carousel/types';
 
@@ -16,7 +16,7 @@ import type { CarouselCopy } from '@engine/lib/carousel/types';
 export default function MasterEditor() {
   const { templateId = '' } = useParams();
   const store = useStore();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const template = store.getTemplate(templateId);
   const kind = template && getKind(template.kind);
 
@@ -30,7 +30,7 @@ export default function MasterEditor() {
   }
 
   const masterCopy = (template.master?.copy ?? {}) as Record<string, string>;
-  const copy = effectiveCopy(kind.defaultCopy, masterCopy, {}) as unknown as CarouselCopy;
+  const copy = effectiveCopy(kindBaseCopy(kind, lang), masterCopy, {}) as unknown as CarouselCopy;
   const slides = kind.slides ?? [];
   const setField = (k: string, v: string) => store.updateTemplateMaster(template.id, { [k]: v });
 

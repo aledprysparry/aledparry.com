@@ -18,7 +18,7 @@ import { buildTemplateFromImage, type TemplateMode } from '@engine/lib/audit/tem
 import ElementPreview from '@engine/components/ElementPreview';
 import SlideCanvas from '@engine/components/SlideCanvas';
 import AnimatedCanvas from '@engine/components/AnimatedCanvas';
-import { platformToRatio } from '@engine/lib/templates/registry';
+import { platformToRatio, kindBaseCopy } from '@engine/lib/templates/registry';
 import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
 import type { StringKey } from '@engine/lib/i18n/strings';
 import type { AssetType, SocialAccount, GraphicElement, Template, Brand, Clip, GeneratedGraphic } from '@engine/lib/model/types';
@@ -467,9 +467,10 @@ function StyleGenerator({ brandId }: { brandId: string }) {
 // uses (first slide / default elements / animated frame) + the template's
 // master copy and sample data. Crops to a consistent card height.
 function TemplateThumb({ template, brand }: { template: Template; brand?: Brand }) {
+  const { lang } = useI18n();
   const kind = getKind(template.kind);
   if (!kind) return null;
-  const copy = effectiveCopy(kind.defaultCopy, template.master?.copy, {}) as unknown as CarouselCopy;
+  const copy = effectiveCopy(kindBaseCopy(kind, lang), template.master?.copy, {}) as unknown as CarouselCopy;
   const ratio = platformToRatio(template.supportedPlatforms?.[0]);
   const els = template.seedElements?.length ? template.seedElements : (kind.defaultElements?.(brand?.colours) ?? []);
   const rows = kind.parse ? kind.parse(kind.sampleData ?? '').rows : [];

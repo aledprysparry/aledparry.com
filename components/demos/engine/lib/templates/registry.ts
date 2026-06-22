@@ -48,7 +48,7 @@ export interface TemplateKind {
   defaultCopyByLang?: Partial<Record<Lang, Record<string, string>>>;
   /** Which copy fields the editor shows (defaults to the carousel set).
    *  labelKey points at an i18n string so the label is bilingual. */
-  copyFields?: { key: string; label: string; labelKey?: StringKey }[];
+  copyFields?: { key: string; label: string; labelKey?: StringKey; multiline?: boolean }[];
   /** Optional image slots a carousel kind accepts (uploaded per graphic, stored
    *  in graphic.inputs.images[key]). Blank by default; drawn if the user adds one. */
   imageSlots?: { key: string; label: string; labelKey?: StringKey }[];
@@ -253,6 +253,14 @@ export const TEMPLATE_KIND_LIST = Object.values(TEMPLATE_KINDS);
 
 export function getKind(id: string): TemplateKind | undefined {
   return TEMPLATE_KINDS[id];
+}
+
+/** Placeholder copy base for a kind in the CURRENT language. Kinds with
+ *  `defaultCopyByLang` switch with the app language live (the master no longer
+ *  bakes a single-language snapshot); others fall back to `defaultCopy`. */
+export function kindBaseCopy(kind: TemplateKind | undefined, lang: Lang): Record<string, string> {
+  if (!kind) return {};
+  return kind.defaultCopyByLang?.[lang] ?? kind.defaultCopy ?? {};
 }
 
 // Map a platform to the CanvasRenderer ratio its preset implies, so the

@@ -195,9 +195,9 @@ export const QUIZ_COPY: Record<Lang, Copy> = {
 
 export const QUIZ_FIELDS: CopyField[] = [
   { key: 'questionTitle', label: 'Question title', labelKey: 'copy.f.questionTitle' },
-  { key: 'question', label: 'Question', labelKey: 'copy.f.question' },
+  { key: 'question', label: 'Question', labelKey: 'copy.f.question', multiline: true },
   { key: 'answerTitle', label: 'Answer title', labelKey: 'copy.f.answerTitle' },
   { key: 'answer', label: 'Answer', labelKey: 'copy.f.answer' },
-  { key: 'ctaText', label: 'App CTA text', labelKey: 'copy.f.ctaText' },
+  { key: 'ctaText', label: 'App CTA text', labelKey: 'copy.f.ctaText', multiline: true },
   { key: 'url', label: 'Website / URL', labelKey: 'copy.field.url' },
 ];

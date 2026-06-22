@@ -110,7 +110,8 @@ function ensureQuizForCwis(templates: Template[]): Template[] | null {
     next = [...next, {
       id: newId('tpl'), brandId, name: kind.name, type: kind.type, kind: kind.id,
       supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions,
-      master: { copy: { ...(kind.defaultCopyByLang?.[loadLang()] ?? kind.defaultCopy ?? {}) } },
+      // empty master: cwis-quiz has defaultCopyByLang, so copy follows the language
+      master: { copy: {} },
       createdAt: now(),
     }];
     changed = true;
@@ -122,6 +123,36 @@ function ensureQuizForCwis(templates: Template[]): Template[] | null {
 
 function sameArray(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+// One-time: language-aware kinds used to BAKE a single language's defaults into
+// `master.copy`, which then shadowed the live app language (so the template was
+// stuck in whatever language it was created in). Strip any master field that
+// merely equals a baked default (en OR cy) so the copy follows the language
+// again - while preserving GENUINE master edits (values that match neither).
+const MASTER_DELANG_KEY = 'cg.v1.masterDelang';
+function delangBakedMaster(templates: Template[]): Template[] | null {
+  if (typeof localStorage === 'undefined' || localStorage.getItem(MASTER_DELANG_KEY) === 'true') return null;
+  localStorage.setItem(MASTER_DELANG_KEY, 'true');
+  let changed = false;
+  const next = templates.map((t) => {
+    const byLang = getKind(t.kind)?.defaultCopyByLang;
+    const master = t.master?.copy;
+    if (!byLang || !master) return t;
+    const en = byLang.en ?? {};
+    const cy = byLang.cy ?? {};
+    const cleaned: Record<string, string> = {};
+    for (const [k, v] of Object.entries(master)) {
+      if (v === en[k] || v === cy[k]) continue; // a baked default → drop
+      cleaned[k] = v;                            // a genuine edit → keep
+    }
+    if (Object.keys(cleaned).length === Object.keys(master).length) return t;
+    changed = true;
+    return { ...t, master: { copy: cleaned } };
+  });
+  if (!changed) return null;
+  saveCollection('templates', next);
+  return next;
 }
 
 // One-time: undo the earlier auto-seed that pushed an "Animated caption"
@@ -148,7 +179,13 @@ function scopeAnimatedTemplates(templates: Template[], graphics: GeneratedGraphi
 function initialState(): StoreState {
   if (!seededFlag()) {
     const seed = buildSeed();
-    const templates = seed.templates.map((t) => (t.master ? t : { ...t, master: { copy: { ...(getKind(t.kind)?.defaultCopy ?? {}) } } }));
+    const templates = seed.templates.map((t) => {
+      if (t.master) return t;
+      const k = getKind(t.kind);
+      // language-aware kinds keep an empty master (copy follows the app language)
+      const copy = k?.defaultCopyByLang ? {} : { ...(k?.defaultCopy ?? {}) };
+      return { ...t, master: { copy } };
+    });
     saveCollection('brands', seed.brands);
     saveCollection('templates', templates);
     markSeeded();
@@ -164,6 +201,8 @@ function initialState(): StoreState {
   if (scoped) templates = scoped;
   const withQuiz = ensureQuizForCwis(templates);
   if (withQuiz) templates = withQuiz;
+  const delang = delangBakedMaster(templates);
+  if (delang) templates = delang;
   return {
     brands,
     assets: [], // hydrated from IndexedDB on mount (see StoreProvider)
@@ -339,7 +378,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createTemplate: (brandId, kindId, name, opts) => {
         const kind = getKind(kindId);
         if (!kind) return undefined;
-        const baseCopy = kind.defaultCopyByLang?.[loadLang()] ?? kind.defaultCopy ?? {};
+        // Language-aware kinds keep an EMPTY master so the placeholder copy
+        // follows the app language live (effective = kindBaseCopy(lang) ←
+        // master ← overrides); others bake their single default set.
+        const baseCopy = kind.defaultCopyByLang ? {} : (kind.defaultCopy ?? {});
         const tpl: Template = { id: newId('tpl'), brandId, name: name || kind.name, type: kind.type, kind: kind.id, supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions, styleId: opts?.styleId, seedElements: opts?.seedElements, master: { copy: { ...baseCopy } }, createdAt: now() };
         update('templates', (x) => [...x, tpl]);
         return tpl;

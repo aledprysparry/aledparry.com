@@ -7,7 +7,7 @@ import { Button, Panel } from '@engine/components/ui';
 import { Tabs } from '@engine/components/primitives';
 import CopyEditor from '@engine/components/CopyEditor';
 import AnimatedCanvas from '@engine/components/AnimatedCanvas';
-import { getKind, platformToRatio } from '@engine/lib/templates/registry';
+import { getKind, platformToRatio, kindBaseCopy } from '@engine/lib/templates/registry';
 import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
 import { downloadAnimatedWebM, webmSupported } from '@engine/lib/carousel/exportAnimated';
 import { ANIMATED_COPY_FIELDS, ANIMATED_STYLES, ANIMATED_BGS } from '@engine/lib/carousel/animated';
@@ -22,13 +22,13 @@ const RATIO_OPTS: { key: RatioKey; label: string }[] = [
 
 export default function AnimatedEditor({ graphic }: { graphic: GeneratedGraphic }) {
   const store = useStore();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const template = store.getTemplate(graphic.templateId);
   const kind = template && getKind(template.kind);
 
   const overrides = graphicOverrides(graphic.inputs);
   const master = (template?.master?.copy as Record<string, string> | undefined);
-  const copy = effectiveCopy(kind?.defaultCopy, master, overrides);
+  const copy = effectiveCopy(kindBaseCopy(kind || undefined, lang), master, overrides);
   // Brand paint only for the universal kind; the Cwis caption keeps its own paint.
   const brandModel = store.getBrand(graphic.brandId);
   const carBrand = kind?.universal && brandModel ? { name: brandModel.name, colours: brandModel.colours, fonts: brandModel.fonts } : undefined;

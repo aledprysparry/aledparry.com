@@ -11,7 +11,7 @@ import SlideCanvas from '@engine/components/SlideCanvas';
 import FreeformEditor from '@engine/components/FreeformEditor';
 import AnimatedEditor from '@engine/pages/AnimatedEditor';
 import ReviewPanel from '@engine/components/ReviewPanel';
-import { getKind, platformToRatio } from '@engine/lib/templates/registry';
+import { getKind, platformToRatio, kindBaseCopy } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { exportSlide, exportZip } from '@engine/lib/carousel/exportCarousel';
 import { downloadSlidesAnimatedWebM } from '@engine/lib/carousel/exportSlidesAnimated';
@@ -23,7 +23,7 @@ import type { PlatformId } from '@engine/lib/model/types';
 export default function GraphicEditor() {
   const { graphicId = '' } = useParams();
   const store = useStore();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const graphic = store.getGraphic(graphicId);
   const template = graphic && store.getTemplate(graphic.templateId);
   const kind = template && getKind(template.kind);
@@ -37,9 +37,10 @@ export default function GraphicEditor() {
   const ANIM_MS = { fast: 1800, standard: 2600, slow: 3400 } as const;
 
   const rawText = (graphic?.inputs?.rawText as string) ?? '';
-  // effective copy = kind default ← template master ← this graphic's overrides
+  // effective copy = language-aware kind base ← template master ← this graphic's
+  // overrides (so defaultCopyByLang kinds follow the app language live).
   const overrides = graphicOverrides(graphic?.inputs);
-  const copy = effectiveCopy(kind?.defaultCopy, template?.master?.copy, overrides) as unknown as CarouselCopy;
+  const copy = effectiveCopy(kindBaseCopy(kind || undefined, lang), template?.master?.copy, overrides) as unknown as CarouselCopy;
   const { rows, warnings, error } = useMemo(
     () => (kind?.parse ? kind.parse(rawText) : { rows: [], warnings: [], error: null }),
     [kind, rawText],

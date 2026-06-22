@@ -188,21 +188,22 @@ export class CanvasRenderer {
     this.ctx.font = `${weight} ${fontSize}px ${font}`;
     this.ctx.letterSpacing = opts.letterSpacing ? `${opts.letterSpacing * this.W}px` : '0px';
 
-    const words = text.split(' ');
-    let line = '';
     const startY = y;
-
-    for (const word of words) {
-      const testLine = line ? `${line} ${word}` : word;
-      if (this.ctx.measureText(testLine).width > maxPx && line) {
-        this.ctx.fillText(line, x, y);
-        line = word;
-        y += lineHeight;
-      } else {
-        line = testLine;
+    // Honour explicit line breaks (\n) first, then word-wrap within each.
+    const paragraphs = text.split('\n');
+    for (const para of paragraphs) {
+      let line = '';
+      for (const word of para.split(' ')) {
+        const testLine = line ? `${line} ${word}` : word;
+        if (this.ctx.measureText(testLine).width > maxPx && line) {
+          this.ctx.fillText(line, x, y);
+          line = word;
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
       }
-    }
-    if (line) {
+      // draw the final (or only) line of this paragraph; '' just adds a blank line
       this.ctx.fillText(line, x, y);
       y += lineHeight;
     }
