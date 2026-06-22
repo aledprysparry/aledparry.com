@@ -282,8 +282,10 @@ function TemplateFromImage({ brandId }: { brandId: string }) {
       if (r.error || !r.result) { setErr(r.error || t('tfi.failed')); return; }
       const tpl = store.createTemplate(brandId, 'freeform-post', r.result.name, { seedElements: r.result.elements });
       if (!tpl) { setErr(t('tfi.failed')); return; }
-      const g = store.createGraphic(brandId, tpl.id, { platform: 'instagram-feed' });
-      if (g) navigate(`/graphics/${g.id}`);
+      // Open the create step with the new template preselected. (Creating the
+      // graphic inline would read a stale store snapshot - the template was
+      // just added in the same tick - so route to the fresh create page.)
+      navigate(`/brands/${brandId}/create?template=${tpl.id}`);
     } finally { setBusy(false); }
   };
 
