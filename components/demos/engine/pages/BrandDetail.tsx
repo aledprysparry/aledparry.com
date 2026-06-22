@@ -1,37 +1,37 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   Plus, Trash2, ImagePlus, Sparkles, Copy, ExternalLink, ArrowLeft, Wand2,
   Pencil, FolderPlus, Folder as FolderIcon, Search, Inbox, Layers, Film,
-  Download, Loader2,
+  Download, Loader2, ChevronDown, Image as ImageIcon,
 } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, Badge, TextInput, EmptyState } from '@engine/components/ui';
-import { Menu, Tabs, useOverlay, type MenuItem } from '@engine/components/primitives';
+import { Menu, Tabs, SegmentedControl, useOverlay, type MenuItem } from '@engine/components/primitives';
 import { TEMPLATE_KIND_LIST, getKind } from '@engine/lib/templates/registry';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { analyseImages, deriveSuggestions } from '@engine/lib/audit/analyseImages';
 import { fileToStoredDataURL } from '@engine/lib/util/imageScale';
 import { LAYOUTS, type GenStyle } from '@engine/lib/freeform/layouts';
+import { buildTemplateFromImage, type TemplateMode } from '@engine/lib/audit/templateFromImage';
 import ElementPreview from '@engine/components/ElementPreview';
 import SlideCanvas from '@engine/components/SlideCanvas';
 import AnimatedCanvas from '@engine/components/AnimatedCanvas';
 import { platformToRatio } from '@engine/lib/templates/registry';
-import { effectiveCopy } from '@engine/lib/carousel/copy';
+import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
 import type { StringKey } from '@engine/lib/i18n/strings';
-import type { AssetType, SocialAccount, GraphicElement, Template, Brand, Clip } from '@engine/lib/model/types';
+import type { AssetType, SocialAccount, GraphicElement, Template, Brand, Clip, GeneratedGraphic } from '@engine/lib/model/types';
 import type { CarouselCopy } from '@engine/lib/carousel/types';
 
-type Tab = 'overview' | 'templates' | 'graphics' | 'clips' | 'assets' | 'social';
-// Graphics first - it's the brand's graphics library, the primary view.
+// Three top-level groups: the things you've MADE (Content = graphics + clips),
+// your BRAND setup (overview + assets + templates), and analysis (Insights,
+// formerly "Social"). Each top tab has its own sub-navigation.
+type Tab = 'content' | 'brand' | 'insights';
 const TABS: { id: Tab; key: StringKey }[] = [
-  { id: 'graphics', key: 'brand.tab.graphics' },
-  { id: 'clips', key: 'brand.tab.clips' },
-  { id: 'templates', key: 'brand.tab.templates' },
-  { id: 'assets', key: 'brand.tab.assets' },
-  { id: 'social', key: 'brand.tab.social' },
-  { id: 'overview', key: 'brand.tab.overview' },
+  { id: 'content', key: 'brand.tab.content' },
+  { id: 'brand', key: 'brand.tab.brand' },
+  { id: 'insights', key: 'brand.tab.insights' },
 ];
 
 const ASSET_TYPES: AssetType[] = ['logo', 'background', 'font', 'gif', 'image', 'icon', 'product', 'reference', 'social-post'];
@@ -40,10 +40,9 @@ const SOCIAL_PLATFORMS: SocialAccount['platform'][] = ['instagram', 'tiktok', 'f
 export default function BrandDetail() {
   const { brandId = '' } = useParams();
   const store = useStore();
-  const navigate = useNavigate();
   const { t, count } = useI18n();
   const brand = store.getBrand(brandId);
-  const [tab, setTab] = useState<Tab>('graphics');
+  const [tab, setTab] = useState<Tab>('content');
 
   if (!brand) {
     return (
@@ -73,10 +72,7 @@ export default function BrandDetail() {
             <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{count(templates.length, 'template')} · {count(graphics.length, 'graphic')} · {count(assets.length, 'asset')}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button className="flex-1 sm:flex-none" onClick={() => navigate(`/brands/${brandId}/pipeline`)}><Sparkles size={15} /> {t('pipe.start')}</Button>
-          <Button variant="subtle" className="flex-1 sm:flex-none" onClick={() => navigate(`/brands/${brandId}/create`)}>{t('brand.createGraphic')}</Button>
-        </div>
+        <NewMenu brandId={brandId} />
       </header>
 
       {/* tabs (scrollable on mobile) */}
@@ -84,16 +80,103 @@ export default function BrandDetail() {
         <Tabs tabs={TABS.map((tb) => ({ id: tb.id, label: t(tb.key) }))} value={tab} onChange={setTab} />
       </div>
 
-      {tab === 'overview' && <OverviewTab brandId={brandId} />}
-      {tab === 'templates' && <TemplatesTab brandId={brandId} />}
-      {tab === 'graphics' && <GraphicsTab brandId={brandId} />}
-      {tab === 'clips' && <ClipsTab brandId={brandId} />}
-      {tab === 'assets' && <AssetsTab brandId={brandId} />}
-      {tab === 'social' && <SocialTab brandId={brandId} />}
+      {tab === 'content' && <ContentTab brandId={brandId} />}
+      {tab === 'brand' && <BrandTab brandId={brandId} />}
+      {tab === 'insights' && <SocialTab brandId={brandId} />}
+    </div>
+  );
+}
 
-      <div className="mt-10 flex justify-center border-t border-zinc-200 pt-8 dark:border-zinc-800">
-        <Button onClick={() => navigate(`/brands/${brandId}/create`)}><Sparkles size={15} /> {t('brand.createGraphic')}</Button>
+// One "New" action: collapses the old Start-a-post / Create-graphic / Find-clips
+// entry points into a single chooser - still graphic, motion graphic, or clip.
+function NewMenu({ brandId }: { brandId: string }) {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('mousedown', onDoc);
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('mousedown', onDoc); window.removeEventListener('keydown', onKey); };
+  }, [open]);
+  const go = (path: string) => { setOpen(false); navigate(path); };
+  const opts = [
+    { icon: <ImageIcon size={16} />, label: t('brand.new.still'), desc: t('brand.new.stillDesc'), onClick: () => go(`/brands/${brandId}/create?make=still`) },
+    { icon: <Sparkles size={16} />, label: t('brand.new.motion'), desc: t('brand.new.motionDesc'), onClick: () => go(`/brands/${brandId}/create?make=motion`) },
+    { icon: <Film size={16} />, label: t('brand.new.clip'), desc: t('brand.new.clipDesc'), onClick: () => go(`/brands/${brandId}/pipeline`) },
+  ];
+  return (
+    <div ref={ref} className="relative">
+      <Button className="w-full sm:w-auto" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
+        <Plus size={15} /> {t('brand.new')} <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </Button>
+      {open && (
+        <div role="menu" className="absolute right-0 z-40 mt-2 w-[270px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-xl shadow-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900">
+          {opts.map((o) => (
+            <button key={o.label} role="menuitem" onClick={o.onClick} className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800">
+              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">{o.icon}</span>
+              <span className="min-w-0">
+                <span className="block text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">{o.label}</span>
+                <span className="block text-[12px] leading-snug text-zinc-500 dark:text-zinc-400">{o.desc}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Content = everything the brand has MADE: graphics + clips, switched by a
+// sub-segment (the "type filter" for the made library).
+function ContentTab({ brandId }: { brandId: string }) {
+  const { t } = useI18n();
+  const [sub, setSub] = useState<'graphics' | 'clips'>('graphics');
+  return (
+    <div>
+      <div className="mb-5">
+        <SegmentedControl
+          size="sm"
+          label={t('brand.tab.content')}
+          value={sub}
+          onChange={setSub}
+          options={[
+            { value: 'graphics', label: t('brand.tab.graphics') },
+            { value: 'clips', label: t('brand.tab.clips') },
+          ]}
+        />
       </div>
+      {sub === 'graphics' ? <GraphicsTab brandId={brandId} /> : <ClipsTab brandId={brandId} />}
+    </div>
+  );
+}
+
+// Brand = the brand's SETUP + info: overview, brand kit (assets) and templates,
+// switched by a sub-segment. (Assets + Overview are both "brand", now together.)
+function BrandTab({ brandId }: { brandId: string }) {
+  const { t } = useI18n();
+  const [sub, setSub] = useState<'overview' | 'assets' | 'templates'>('overview');
+  return (
+    <div>
+      <div className="mb-5">
+        <SegmentedControl
+          size="sm"
+          label={t('brand.tab.brand')}
+          value={sub}
+          onChange={setSub}
+          options={[
+            { value: 'overview', label: t('brand.tab.overview') },
+            { value: 'assets', label: t('brand.tab.assets') },
+            { value: 'templates', label: t('brand.tab.templates') },
+          ]}
+        />
+      </div>
+      {sub === 'overview' && <OverviewTab brandId={brandId} />}
+      {sub === 'assets' && <AssetsTab brandId={brandId} />}
+      {sub === 'templates' && <TemplatesTab brandId={brandId} />}
     </div>
   );
 }
@@ -170,6 +253,79 @@ function OverviewTab({ brandId }: { brandId: string }) {
 }
 
 // ── Template Style Generator ──
+// Template AI agent: upload a design -> Claude vision rebuilds it as an
+// editable freeform template, then opens it in the editor. Reproduce = match
+// the source; Polish = re-lay-out cleanly using the brand palette.
+function TemplateFromImage({ brandId }: { brandId: string }) {
+  const store = useStore();
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const brand = store.getBrand(brandId)!;
+  const [open, setOpen] = useState(false);
+  const [img, setImg] = useState<string | null>(null);
+  const [mode, setMode] = useState<TemplateMode>('reproduce');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onUpload = async (file?: File) => {
+    if (!file) return;
+    setErr(null);
+    setImg(await fileToStoredDataURL(file, 1400));
+  };
+
+  const build = async () => {
+    if (!img) return;
+    setBusy(true); setErr(null);
+    try {
+      const r = await buildTemplateFromImage({ imageUrl: img, brand: { name: brand.name, colours: brand.colours, fonts: brand.fonts }, mode });
+      if (r.notConfigured) { setErr(t('tfi.notConfigured')); return; }
+      if (r.error || !r.result) { setErr(r.error || t('tfi.failed')); return; }
+      const tpl = store.createTemplate(brandId, 'freeform-post', r.result.name, { seedElements: r.result.elements });
+      if (!tpl) { setErr(t('tfi.failed')); return; }
+      const g = store.createGraphic(brandId, tpl.id, { platform: 'instagram-feed' });
+      if (g) navigate(`/graphics/${g.id}`);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Panel className="mb-4 p-4">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
+        <span className="inline-flex items-center gap-2 text-[14px] font-bold text-zinc-900 dark:text-zinc-50"><Sparkles size={15} className="text-violet-600 dark:text-violet-400" /> {t('tfi.title')}</span>
+        <span className="text-[12px] text-zinc-500 dark:text-zinc-400">{open ? t('common.hide') : t('common.open')}</span>
+      </button>
+      {open && (
+        <div className="mt-4 space-y-4">
+          <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{t('tfi.hint')}</p>
+          <div className="grid gap-4 sm:grid-cols-[200px_1fr]">
+            <div>
+              <label className="block cursor-pointer">
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => onUpload(e.target.files?.[0])} />
+                {img
+                  ? <img src={img} alt="" className="aspect-[4/5] w-full rounded-xl border border-zinc-200 object-cover dark:border-zinc-700" />
+                  : <span className="grid aspect-[4/5] w-full place-items-center rounded-xl border border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-700"><span className="flex flex-col items-center gap-2 text-[12px]"><ImagePlus size={20} /> {t('tfi.upload')}</span></span>}
+              </label>
+              {img && <button onClick={() => setImg(null)} className="mt-2 text-[12px] font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">{t('tfi.clear')}</button>}
+            </div>
+            <div className="space-y-4">
+              <div>
+                <p className="mb-1.5 text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('tfi.mode')}</p>
+                <div className="flex gap-1">
+                  {(['reproduce', 'polish'] as const).map((mItem) => (
+                    <button key={mItem} onClick={() => setMode(mItem)} className={`flex-1 rounded-lg border px-3 py-2 text-[12px] font-semibold ${mode === mItem ? 'border-violet-400 bg-violet-50 text-violet-700 dark:border-violet-500 dark:bg-violet-500/15 dark:text-violet-300' : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'}`}>{t(mItem === 'reproduce' ? 'tfi.mode.reproduce' : 'tfi.mode.polish')}</button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">{t(mode === 'reproduce' ? 'tfi.modeHint.reproduce' : 'tfi.modeHint.polish')}</p>
+              </div>
+              <Button onClick={build} disabled={!img || busy}>{busy ? <><Loader2 size={14} className="animate-spin" /> {t('tfi.building')}</> : <><Sparkles size={14} /> {t('tfi.build')}</>}</Button>
+              {err && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">{err}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function StyleGenerator({ brandId }: { brandId: string }) {
   const store = useStore();
   const { t } = useI18n();
@@ -325,6 +481,36 @@ function TemplateThumb({ template, brand }: { template: Template; brand?: Brand 
   );
 }
 
+// Live preview of a SAVED graphic's first slide - uses the same renderers and
+// the same input derivation as the editor, so the card thumbnail matches what
+// you open. (Graphic cards were previously text-only with no preview.)
+function GraphicThumb({ graphic, brand }: { graphic: GeneratedGraphic; brand?: Brand }) {
+  const store = useStore();
+  const template = store.getTemplate(graphic.templateId);
+  const kind = template && getKind(template.kind);
+  const frame = 'mb-3 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800';
+  if (!kind) {
+    return <div className={`${frame} grid h-32 place-items-center`}><Layers size={20} className="text-zinc-300 dark:text-zinc-600" /></div>;
+  }
+  const ratio = platformToRatio(graphic.platformPresetId);
+  const carBrand = brand ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined;
+
+  if (kind.editor === 'freeform') {
+    return <div className={frame} style={{ maxHeight: 220 }}><ElementPreview elements={graphic.slides?.[0]?.elements ?? []} /></div>;
+  }
+  const copy = effectiveCopy(kind.defaultCopy, template!.master?.copy, graphicOverrides(graphic.inputs)) as unknown as CarouselCopy;
+  if (kind.editor === 'animated') {
+    return <div className={frame} style={{ maxHeight: 220 }}><AnimatedCanvas copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} brand={kind.universal && brand ? carBrand : undefined} /></div>;
+  }
+  if (kind.slides?.[0]) {
+    const rawText = (graphic.inputs?.rawText as string) ?? '';
+    const rows = kind.parse ? kind.parse(rawText).rows : [];
+    const imageUrls = (graphic.inputs?.images as Record<string, string>) ?? {};
+    return <div className={frame} style={{ maxHeight: 220 }}><SlideCanvas slide={kind.slides[0]} index={0} rows={rows} copy={copy} slideCount={kind.slides.length} ratio={ratio} brand={carBrand} imageUrls={imageUrls} /></div>;
+  }
+  return <div className={`${frame} grid h-32 place-items-center text-[12px] text-zinc-400 dark:text-zinc-500`}>{kind.name}</div>;
+}
+
 // ── Templates ──
 function TemplatesTab({ brandId }: { brandId: string }) {
   const store = useStore();
@@ -345,6 +531,7 @@ function TemplatesTab({ brandId }: { brandId: string }) {
 
   return (
     <div>
+      <TemplateFromImage brandId={brandId} />
       <StyleGenerator brandId={brandId} />
       <div className="mb-4 flex flex-wrap gap-2">
         {/* Universal kinds for any brand; brand-specific kinds only if this
@@ -403,6 +590,7 @@ function GraphicsTab({ brandId }: { brandId: string }) {
   const allGraphics = store.graphicsByBrand(brandId);
   const folders = store.foldersByBrand(brandId);
   const templates = store.templatesByBrand(brandId);
+  const brand = store.getBrand(brandId);
 
   const [folderSel, setFolderSel] = useState<string>('all'); // 'all' | 'unfiled' | folderId
   const [q, setQ] = useState('');
@@ -530,11 +718,12 @@ function GraphicsTab({ brandId }: { brandId: string }) {
             ];
             return (
               <Panel key={g.id} className="flex flex-col p-5">
-                <div className="flex items-start justify-between">
+                <div className="mb-3 flex items-start justify-between">
                   <Badge>{platform?.name ?? 'Graphic'}</Badge>
                   <Menu label={t('common.actions')} items={items} />
                 </div>
-                <h3 className="mt-3 truncate text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">{g.name}</h3>
+                <GraphicThumb graphic={g} brand={brand} />
+                <h3 className="truncate text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">{g.name}</h3>
                 <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">{t('gfx.updated', { date: new Date(g.updatedAt).toLocaleDateString(lang === 'cy' ? 'cy-GB' : 'en-GB') })}</p>
                 <Button className="mt-4" variant="subtle" onClick={() => navigate(`/graphics/${g.id}`)}>{t('gfx.open')}</Button>
               </Panel>

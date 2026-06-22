@@ -13,7 +13,7 @@ const MODEL = 'claude-sonnet-4-20250514';
 const CLIP_TRANSCRIPT_LIMIT = 12000;
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
@@ -27,6 +27,9 @@ interface Body {
   images?: string[];
   ratio?: string;
   slideLabels?: string[];
+  // template-from-image: one base64 data-URL design + how faithful to be
+  image?: string;
+  mode?: 'reproduce' | 'polish';
 }
 
 function buildPrompt(b: Body): { system: string; user: string } {
@@ -129,6 +132,44 @@ export async function POST(req: NextRequest) {
       const result = parseJSON(vdata?.content?.[0]?.text ?? '');
       if (!result) return NextResponse.json({ error: 'parse_failed' }, { status: 502 });
       return NextResponse.json({ task: 'review-layout', result });
+    }
+
+    // ── vision: reverse-engineer one design image into an editable template ──
+    if (body.task === 'template-from-image') {
+      const m = body.image ? /^data:(image\/\w+);base64,(.+)$/.exec(body.image) : null;
+      if (!m) return NextResponse.json({ error: 'no_image' }, { status: 400 });
+      const mode = body.mode === 'polish' ? 'polish' : 'reproduce';
+      const brand = body.brand ?? {};
+      const palette = (brand.colours ?? []).slice(0, 6);
+      const fonts = Array.from(new Set([...(brand.fonts ?? []), 'Bitter', 'Inter']));
+      const ratio = body.ratio || 'portrait';
+      const system = `You are a senior social-media template designer. You reverse-engineer ONE social post image into an EDITABLE, REUSABLE template: a list of positioned elements on a normalised 0..1 canvas (origin top-left; x/y/width/height are fractions of the canvas; fontSize is a fraction of canvas WIDTH). The template must be MULTI-PURPOSE: put every distinct line of text in its OWN element so it can be re-edited, and represent any photo, logo or icon as an EMPTY image/logo PLACEHOLDER (no content) for the user to fill - never try to recreate a photo.
+
+Allowed element types:
+- "background": exactly one, FIRST, full-bleed. style:{fill:"#hex"}.
+- "text": {content:"the actual words", position:{x,y}, size:{width,height}, style:{color:"#hex", fontFamily, fontWeight:"400".."900", fontSize:0.02..0.30, align:"left"|"center"|"right", lineHeight:1.0..1.4}}.
+- "shape": {position, size, style:{fill:"#hex", radius:0..0.5}} (accent bars, chips, panels).
+- "image" or "logo": placeholder, {position, size, style:{fit:"contain"|"cover", radius:0..0.5}}, NO content.
+Use ONLY these fonts: ${JSON.stringify(fonts)} (Bitter for display/headlines, Inter for body/labels). Max 12 elements. Transcribe the ACTUAL visible words as text content and KEEP their language (e.g. Welsh stays Welsh). Respond with ONLY valid JSON, no markdown.`;
+      const modeRule = mode === 'polish'
+        ? `MODE = POLISH: treat the image as inspiration but re-lay it out cleanly with strong hierarchy and confident spacing, and recolour using THIS brand palette ${JSON.stringify(palette)} (background = the darkest/most dominant brand colour; accents from the others; text legible on the background). Keep the message and the copy.`
+        : `MODE = REPRODUCE: match the source as closely as you can - its background colour, element positions, colours, text content and hierarchy.`;
+      const user = `Build a ${ratio} template from this image. ${modeRule}
+Return JSON: {"name":"short template name, 2-4 words","elements":[ ...elements back-to-front, background first... ]}.`;
+      const content: unknown[] = [
+        { type: 'text', text: user },
+        { type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } },
+      ];
+      const vres = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: MODEL, max_tokens: 2000, system, messages: [{ role: 'user', content }] }),
+      });
+      const vdata = await vres.json();
+      if (!vres.ok) return NextResponse.json({ error: vdata.error?.message || 'Anthropic API error' }, { status: vres.status });
+      const result = parseJSON(vdata?.content?.[0]?.text ?? '');
+      if (!result) return NextResponse.json({ error: 'parse_failed' }, { status: 502 });
+      return NextResponse.json({ task: 'template-from-image', result });
     }
 
     const { system, user } = buildPrompt(body);
