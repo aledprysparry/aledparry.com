@@ -487,7 +487,7 @@ function TemplateThumb({ template, brand }: { template: Template; brand?: Brand 
   return (
     <div className="mb-3 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800" style={{ maxHeight: 220 }}>
       {kind.editor === 'freeform' ? <ElementPreview elements={els} />
-        : kind.editor === 'animated' ? <AnimatedCanvas copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} brand={kind.universal && brand ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined} />
+        : kind.editor === 'animated' ? <AnimatedCanvas poster copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} brand={kind.universal && brand ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined} />
         : kind.slides?.[0] ? <SlideCanvas slide={kind.slides[0]} index={0} rows={rows} copy={copy} slideCount={kind.slides.length} ratio={ratio} brand={brand ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined} />
         : <div className="grid h-40 place-items-center text-[12px] text-zinc-400 dark:text-zinc-500">{kind.name}</div>}
     </div>
@@ -513,7 +513,7 @@ function GraphicThumb({ graphic, brand }: { graphic: GeneratedGraphic; brand?: B
   }
   const copy = effectiveCopy(kind.defaultCopy, template!.master?.copy, graphicOverrides(graphic.inputs)) as unknown as CarouselCopy;
   if (kind.editor === 'animated') {
-    return <div className={frame} style={{ maxHeight: 220 }}><AnimatedCanvas copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} brand={kind.universal && brand ? carBrand : undefined} /></div>;
+    return <div className={frame} style={{ maxHeight: 220 }}><AnimatedCanvas poster copy={copy as unknown as Record<string, string | undefined>} ratio={ratio} brand={kind.universal && brand ? carBrand : undefined} /></div>;
   }
   if (kind.slides?.[0]) {
     const rawText = (graphic.inputs?.rawText as string) ?? '';
