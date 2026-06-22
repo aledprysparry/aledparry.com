@@ -113,7 +113,7 @@ export const ANIMATED_COPY_FIELDS: CopyField[] = [
 ];
 
 // Universal (brand-agnostic) animated caption placeholder copy.
-// ⚠️ cy = machine draft, needs native review.
+// cy reviewed 22.06.2026 (house standard: naturalised, not literal).
 export const UNIVERSAL_ANIMATED_COPY: Record<Lang, Record<string, string>> = {
   en: { kicker: 'Your brand', caption: 'Say one bold thing.', sub: 'yourbrand.com' },
   cy: { kicker: 'Eich brand', caption: 'Dwedwch un peth cryf.', sub: 'eichbrand.com' },

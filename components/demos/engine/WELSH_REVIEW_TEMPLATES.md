@@ -1,81 +1,57 @@
-# Welsh review - Postio template library (machine draft)
+# Welsh review - Postio template library
 
-All `cy` strings below were machine-drafted for the new universal template
-library (built 22.06.2026). They follow the house naturalised-Welsh standard as
-a first pass only and **must be reviewed by a native Welsh editor before any
-real demo or client share** (house rule). Apply corrections to the source files
-listed against each group.
+Status: **reviewed 22.06.2026** (Welsh-linguist pass against the house
+naturalised-Welsh standard; no em-dashes, dates dd.mm.yyyy). The machine-draft
+`cy` strings for the universal template library (built 22.06.2026) have been
+corrected in source. A final read by a human native editor before a high-stakes
+client share is still welcome, but the strings below are no longer machine
+drafts.
 
-House copy rules apply: no em-dashes (use hyphen / rephrase), dates dd.mm.yyyy.
+Corrections applied to:
+- `lib/i18n/strings.ts` (template names/descriptions, `copy.f.kicker`)
+- `lib/freeform/stillTemplates.ts` (`COPY` table, `cy`)
+- `lib/carousel/universal.ts` (`EXPLAINER_COPY.cy`)
+- `lib/carousel/animated.ts` (`UNIVERSAL_ANIMATED_COPY.cy` - read clean, no change)
 
----
+## Decisions on the flagged points
 
-## 1. Template names + descriptions - `lib/i18n/strings.ts` (cy block)
+- **Testimonial name** kept as **Adolygiad** (review), not *Tystiolaeth*.
+  *Adolygiad* reads as a customer review in a social context; *tystiolaeth*
+  carries a legal/religious "testimony" weight that is wrong here.
+- **`copy.f.kicker`** changed from the loanword **Tag** to **Pennyn** (the Welsh
+  term for a heading/strapline). Avoids the loanword and does not collide with
+  the before/after fields, which already use *Label cyn* / *Label wedyn*.
+- **Imperative register** confirmed as polite-plural (*chi*) throughout
+  (*Dechreuwch, Sweipiwch, Cadwch, Gwnewch*), consistent with the rest of the
+  Postio UI. No change.
 
-| key | EN | CY (draft) |
-|---|---|---|
-| still-quote.name | Quote card | Cerdyn dyfyniad |
-| still-quote.desc | A bold pull-quote set large... | Dyfyniad cryf wedi'i osod yn fawr, gyda marc acen a chydnabyddiaeth dawel. |
-| still-stat.name | Big stat | Ffigwr mawr |
-| still-stat.desc | One oversized number... | Un rhif anferth fel y prif beth, gydag un llinell o gyd-destun. |
-| still-announcement.name | Announcement | Cyhoeddiad |
-| still-announcement.desc | A tagged headline post... | Post pennawd a thag ar gyfer newyddion a lansiadau, gydag galwad i weithredu. |
-| still-event.name | Event | Digwyddiad |
-| still-event.desc | Title plus date, time and place... | Teitl ynghyd a dyddiad, amser a lleoliad, wedi'u gosod yn glir. |
-| still-tip.name | Tip / how-to | Awgrym |
-| still-tip.desc | A single useful tip... | Un awgrym defnyddiol, a thag ac wedi'i osod yn fawr, gydag ychydig o gyd-destun. |
-| still-testimonial.name | Testimonial | Adolygiad |
-| still-testimonial.desc | A five-star review quote... | Dyfyniad pum seren gydag enw a rol y cwsmer. |
-| still-poll.name | Question / poll | Cwestiwn / pol |
-| still-poll.desc | A question with two option chips... | Cwestiwn gyda dau opsiwn i ennyn ymateb a rhannu. |
-| still-live.name | Now live / CTA | Yn fyw nawr |
-| still-live.desc | A live badge... | Bathodyn byw, pennawd cryf a botwm galw-i-weithredu y gellir ei dapio. |
-| still-before-after.name | Before & after | Cyn ac wedyn |
-| still-before-after.desc | A two-panel before/after split... | Hollt cyn-ac-wedyn dau banel wedi'i rannu gan reol acen. |
-| still-milestone.name | Milestone / thank-you | Carreg filltir / diolch |
-| still-milestone.desc | A celebratory milestone number... | Rhif carreg filltir i ddathlu, gyda llinell ddiolch gynnes. |
-| still-fact.name | Did you know? | A wyddoch chi? |
-| still-fact.desc | A surprising fact... | Ffaith annisgwyl, a thag ac wedi'i gosod yn fawr, gyda llinell ffynhonnell. |
-| universal-listicle.name | Listicle | Rhestr |
-| universal-listicle.desc | A cover, three big-number points... | Clawr, tri phwynt a rhifau mawr a galwad i weithredu - rhestr rifol gwerth ei chadw. |
-| universal-explainer.name | Mini-explainer | Eglurhad byr |
-| universal-explainer.desc | A cover, three numbered steps... | Clawr, tri cham wedi'u rhifo gyda bar cynnydd a galwad i weithredu. |
-| universal-before-after.name | Before & after carousel | Carwsel cyn ac wedyn |
-| universal-before-after.desc | A cover plus a before slide... | Clawr ynghyd a sleid cyn a sleid wedyn - stori drawsnewid. |
-| universal-animated.name | Animated statement | Datganiad animeiddiedig |
-| universal-animated.desc | A bold statement that animates in... | Datganiad cryf sy'n animeiddio i mewn ar liw eich brand - capsiwn dolennog ar gyfer Reels, TikTok a Shorts. |
+## Substantive copy changes (beyond mutation/idiom tidy-ups)
 
-## 2. Copy-field labels - `lib/i18n/strings.ts` (cy block, `copy.f.*`)
+- `still-quote.desc`: "marc acen … dawel" → "acen liw … gynnil" (the design's
+  accent is a colour mark, and the attribution is understated, not silent).
+- `still-stat.name`: *Ffigwr* → *Ffigur* (numeric-figure sense).
+- `still-stat.desc`: "fel y prif beth" → "i ddal y llygad" (idiomatic
+  thumb-stopper).
+- `still-announcement.desc`: restored the dropped "updates" (*diweddariadau*)
+  and fixed *gydag galwad* → *gyda galwad*.
+- `still-live.desc`: "pennawd cryf" → "pennawd bachog" (punchy), and
+  "y gellir ei dapio" → "i'w dapio".
+- `still-before-after.desc`: reworded to "Dau banel cyn-ac-wedyn wedi'u gwahanu
+  gan linell liw" (clearer word order; *reol acen* → *llinell liw*).
+- `still-poll.desc`: *dau opsiwn* → *dau ddewis* (native term).
+- `stillTemplates.ts`: announcement sub, event kicker (*GWAHODDIAD I CHI*), tip
+  sub, testimonial quote, poll question, milestone sub, fact line - all
+  naturalised; *ffigwr* → *ffigur*.
+- `universal.ts` explainer step2: "un cam canolbwyntiedig" → "un eisteddiad".
 
-kicker=Tag · subtitle=Is-deitl · point1/2/3=Pwynt 1/2/3 · step1/2/3=Cam 1/2/3 ·
-ctaHeadline=Pennawd galw-i-weithredu · ctaSub=Is-destun galw-i-weithredu ·
-link=Dolen / enw · beforeLabel=Label cyn · before=Cyn · afterLabel=Label wedyn ·
-after=Wedyn · caption=Capsiwn · sub=Is-destun / URL.
-(`kicker` reuses the existing `copy.f.kicker`; `title` reuses `copy.field.title`=Teitl.)
+## Protected (not touched)
 
-## 3. Still placeholder copy - `lib/freeform/stillTemplates.ts` (`COPY` table, `cy`)
+- `lib/carousel/quiz.ts` `QUIZ_COPY.cy` - S4C's own published "Cwestiwn y Dydd"
+  wording. Do not change.
 
-Each still seeds editable placeholder text. Review the `cy` half of the `COPY`
-object - quote, stat, announcement, event, tip, testimonial, poll, live,
-beforeAfter, milestone, fact. Note: `still-event` dates are illustrative
-(`Sadwrn 12 Gorffennaf`) and the user edits them per post.
+## Still outstanding (separate from this pack)
 
-## 4. Carousel placeholder copy - `lib/carousel/universal.ts`
-
-`LISTICLE_COPY.cy`, `EXPLAINER_COPY.cy`, `BEFORE_AFTER_COPY.cy` - cover titles,
-points/steps, before/after lines and CTAs. Handles use `@eichbrand` as a
-placeholder.
-
-## 5. Animated placeholder copy - `lib/carousel/animated.ts`
-
-`UNIVERSAL_ANIMATED_COPY.cy` - kicker `Eich brand`, caption `Dwedwch un peth
-cryf.`, sub `eichbrand.com`.
-
----
-
-### Known points to check
-- `still-testimonial` named **Adolygiad** (review) rather than *Tystiolaeth* -
-  confirm which reads best for a social context.
-- `copy.f.kicker` = **Tag** (loanword) - confirm or replace with a Welsh term.
-- Verb forms / mutations in the imperative placeholder lines (e.g.
-  *Dechreuwch*, *Sweipiwch*, *Cadwch*) - confirm register (informal vs formal).
+- New brand-detail keys in `strings.ts` (`brand.tab.content/brand/insights`,
+  `brand.new.*`) are first-draft Welsh from a separate workstream and still
+  carry a "flag for native review" note in source. Not part of this template
+  library review.

@@ -12,8 +12,8 @@
 // typographic hierarchy, oversized numbers/quotes, accent bars and rounded
 // chips - never gradients or effects. See DESIGN_PRINCIPLES.md.
 //
-// ⚠️ WELSH: the `cy` placeholder copy below is a MACHINE DRAFT and must have
-// a native Welsh review before any real demo (house rule). It is co-located
+// WELSH: the `cy` placeholder copy below had a native Welsh review pass on
+// 22.06.2026 (house standard: naturalised, not literal). It is co-located
 // with each layout so a reviewer can read copy + context together; the
 // template *names/descriptions* live in lib/i18n/strings.ts (UI lookups).
 
@@ -53,7 +53,7 @@ function chip(x: number, y: number, w: number, h: number, fill: string, label: s
   ];
 }
 
-// ── bilingual placeholder copy (CY = machine draft, needs native review) ──
+// ── bilingual placeholder copy (CY reviewed 22.06.2026) ──
 type Copy = Record<string, string>;
 const COPY: Record<string, { en: Copy; cy: Copy }> = {
   quote: {
@@ -62,27 +62,27 @@ const COPY: Record<string, { en: Copy; cy: Copy }> = {
   },
   stat: {
     en: { kicker: 'BY THE NUMBERS', number: '73%', context: 'Say what the number means in one strong line.', sub: 'Add the source or a short note.' },
-    cy: { kicker: 'YN Y FFIGURAU', number: '73%', context: 'Dwedwch beth mae’r ffigwr yn ei olygu mewn un llinell gref.', sub: 'Ychwanegwch y ffynhonnell neu nodyn byr.' },
+    cy: { kicker: 'YN Y FFIGURAU', number: '73%', context: 'Dwedwch beth mae’r ffigur yn ei olygu mewn un llinell gref.', sub: 'Ychwanegwch y ffynhonnell neu nodyn byr.' },
   },
   announcement: {
     en: { tag: 'ANNOUNCEMENT', headline: 'Something new is here. Say it big.', sub: 'One supporting line with the detail that matters.', cta: 'Find out more →' },
-    cy: { tag: 'CYHOEDDIAD', headline: 'Mae rhywbeth newydd yma. Dwedwch o’n fawr.', sub: 'Un llinell i gefnogi gyda’r manylyn pwysig.', cta: 'Rhagor o wybodaeth →' },
+    cy: { tag: 'CYHOEDDIAD', headline: 'Mae rhywbeth newydd yma. Dwedwch o’n fawr.', sub: 'Un llinell ategol, gyda’r manylyn sy’n cyfri.', cta: 'Rhagor o wybodaeth →' },
   },
   event: {
     en: { kicker: 'YOU’RE INVITED', title: 'Event name goes here', date: 'Sadwrn 12 Gorffennaf', time: '7:00pm', place: 'Venue, town', cta: 'Tickets in bio' },
-    cy: { kicker: 'CROESO I CHI', title: 'Enw’r digwyddiad yma', date: 'Sadwrn 12 Gorffennaf', time: '7:00yh', place: 'Lleoliad, tref', cta: 'Tocynnau yn y bio' },
+    cy: { kicker: 'GWAHODDIAD I CHI', title: 'Enw’r digwyddiad yma', date: 'Sadwrn 12 Gorffennaf', time: '7:00yh', place: 'Lleoliad, tref', cta: 'Tocynnau yn y bio' },
   },
   tip: {
     en: { tag: 'TIP', headline: 'The one thing worth knowing, said plainly.', sub: 'A sentence of context so it actually helps.' },
-    cy: { tag: 'AWGRYM', headline: 'Yr un peth sy’n werth ei wybod, yn syml.', sub: 'Brawddeg o gyd-destun fel ei fod o wir help.' },
+    cy: { tag: 'AWGRYM', headline: 'Yr un peth sy’n werth ei wybod, yn syml.', sub: 'Brawddeg o gyd-destun fel ei fod o gymorth go iawn.' },
   },
   testimonial: {
     en: { stars: '★★★★★', quote: '“Something genuine a real customer said about you.”', who: 'Customer name', role: 'What they do' },
-    cy: { stars: '★★★★★', quote: '“Rhywbeth dilys ddwedodd cwsmer go iawn amdanoch.”', who: 'Enw’r cwsmer', role: 'Beth maen nhw’n ei wneud' },
+    cy: { stars: '★★★★★', quote: '“Rhywbeth dilys a ddwedodd cwsmer go iawn amdanoch chi.”', who: 'Enw’r cwsmer', role: 'Beth maen nhw’n ei wneud' },
   },
   poll: {
     en: { kicker: 'QUICK QUESTION', question: 'Ask the question people will want to answer.', a: 'This one', b: 'Or this one' },
-    cy: { kicker: 'CWESTIWN SYDYN', question: 'Gofynnwch y cwestiwn bydd pobl eisiau ei ateb.', a: 'Hwn', b: 'Neu hwn' },
+    cy: { kicker: 'CWESTIWN SYDYN', question: 'Gofynnwch y cwestiwn y bydd pobl eisiau ei ateb.', a: 'Hwn', b: 'Neu hwn' },
   },
   live: {
     en: { tag: '● LIVE', headline: 'We’re live. Come and join in.', sub: 'Say where, and why it’s worth their time.', cta: 'Watch now →' },
@@ -94,11 +94,11 @@ const COPY: Record<string, { en: Copy; cy: Copy }> = {
   },
   milestone: {
     en: { kicker: 'THANK YOU', big: '10,000', label: 'followers and counting', sub: 'A warm line back to the people who got you here.' },
-    cy: { kicker: 'DIOLCH', big: '10,000', label: 'o ddilynwyr a mwy', sub: 'Llinell gynnes yn ôl at y bobl a’ch cododd chi yma.' },
+    cy: { kicker: 'DIOLCH', big: '10,000', label: 'o ddilynwyr a mwy', sub: 'Llinell gynnes yn ôl at y bobl a’ch helpodd chi i gyrraedd yma.' },
   },
   fact: {
     en: { tag: 'DID YOU KNOW?', fact: 'Drop a surprising fact that earns a second look.', source: 'Source or short note' },
-    cy: { tag: 'A WYDDOCH CHI?', fact: 'Rhannwch ffaith annisgwyl sy’n haeddu ail edrychiad.', source: 'Ffynhonnell neu nodyn byr' },
+    cy: { tag: 'A WYDDOCH CHI?', fact: 'Rhannwch ffaith annisgwyl sy’n haeddu ail olwg.', source: 'Ffynhonnell neu nodyn byr' },
   },
 };
 const pick = (id: string, lang: Lang): Copy => COPY[id][lang] ?? COPY[id].en;

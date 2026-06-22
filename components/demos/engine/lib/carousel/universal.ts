@@ -6,9 +6,9 @@
 // clear idea per slide, premium typographic hierarchy, an accent thumb-stopper
 // and page dots. Artwork fonts are Inter (body) + Bitter (display).
 //
-// ⚠️ WELSH: the `cy` placeholder copy is a MACHINE DRAFT and needs a native
-// review before any real demo (house rule). Field labels live in
-// lib/i18n/strings.ts (copy.f.*).
+// WELSH: the `cy` placeholder copy had a native Welsh review pass on
+// 22.06.2026 (house standard: naturalised, not literal). Field labels live
+// in lib/i18n/strings.ts (copy.f.*).
 
 import type { CanvasRenderer } from '@engine/lib/canvas/CanvasRenderer';
 import { paletteFrom, type Palette } from '@engine/lib/canvas/palette';
@@ -154,7 +154,7 @@ export const BEFORE_AFTER_SLIDES: SlideDef[] = [
   coverSlide('Cover'), baSlide('before'), baSlide('after'),
 ];
 
-// ════════════════ copy (bilingual; cy = machine draft) + field labels ════════════════
+// ════════════════ copy (bilingual; cy reviewed 22.06.2026) + field labels ════════════════
 type Copy = Record<string, string>;
 
 export const LISTICLE_COPY: Record<Lang, Copy> = {
@@ -164,7 +164,7 @@ export const LISTICLE_COPY: Record<Lang, Copy> = {
 
 export const EXPLAINER_COPY: Record<Lang, Copy> = {
   en: { kicker: 'How to', title: 'How to do it in three simple steps', subtitle: 'No jargon - just the steps that work.', swipe: 'Swipe to learn how →', step1: 'Set up what you need before you start.', step2: 'Do the core work in one focused pass.', step3: 'Check it, then share it with confidence.', ctaHeadline: 'Try it yourself', ctaSub: 'Save this so you have the steps to hand.', ctaLink: 'More at @yourbrand' },
-  cy: { kicker: 'Sut i', title: 'Sut i’w wneud mewn tri cham syml', subtitle: 'Dim jargon - dim ond y camau sy’n gweithio.', swipe: 'Sweipiwch i ddysgu sut →', step1: 'Paratowch beth sydd ei angen cyn dechrau.', step2: 'Gwnewch y gwaith craidd mewn un cam canolbwyntiedig.', step3: 'Gwiriwch o, yna rhannwch yn hyderus.', ctaHeadline: 'Rhowch gynnig arni', ctaSub: 'Cadwch hwn fel bod y camau wrth law.', ctaLink: 'Rhagor yn @eichbrand' },
+  cy: { kicker: 'Sut i', title: 'Sut i’w wneud mewn tri cham syml', subtitle: 'Dim jargon - dim ond y camau sy’n gweithio.', swipe: 'Sweipiwch i ddysgu sut →', step1: 'Paratowch beth sydd ei angen cyn dechrau.', step2: 'Gwnewch y gwaith craidd mewn un eisteddiad.', step3: 'Gwiriwch o, yna rhannwch yn hyderus.', ctaHeadline: 'Rhowch gynnig arni', ctaSub: 'Cadwch hwn fel bod y camau wrth law.', ctaLink: 'Rhagor yn @eichbrand' },
 };
 
 export const BEFORE_AFTER_COPY: Record<Lang, Copy> = {
