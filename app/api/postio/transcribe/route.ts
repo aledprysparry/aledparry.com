@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireGate, signJobToken, verifyJobToken } from '@/lib/postioGate';
+import { requireGate, signJobToken, verifyJobToken, jobTokensConfigured } from '@/lib/postioGate';
 
 // ═══ Postio M2b — transcription via Capsiynau's v1 API ═══
 // Postio transcribes a media URL into a Capsiynau project and reads the
@@ -79,6 +79,11 @@ export async function POST(req: NextRequest) {
   if (!configured()) {
     return NextResponse.json({ error: 'not_configured', message: 'Set CAPSIYNAU_API_URL and CAPSIYNAU_API_KEY.' }, { status: 503 });
   }
+  // Fail closed if secure job-token signing isn't configured, rather than
+  // issuing forgeable tokens (Codex #94).
+  if (!jobTokensConfigured()) {
+    return NextResponse.json({ error: 'not_configured', message: 'Set APP_GATE_SECRET to enable secure transcription.' }, { status: 503 });
+  }
   const { fileUrl, sourceLanguage } = (await req.json().catch(() => ({}))) as { fileUrl?: string; sourceLanguage?: string };
   if (!fileUrl || !isHttpUrl(fileUrl)) {
     return NextResponse.json({ error: 'bad_request', message: 'A valid http(s) fileUrl is required.' }, { status: 400 });
@@ -101,7 +106,7 @@ export async function POST(req: NextRequest) {
       if (createdProjectId) await deleteProject(createdProjectId);
       return NextResponse.json({ error: 'capsiynau_error', message: data?.message || data?.error || 'Transcribe request failed.' }, { status: r.status });
     }
-    return NextResponse.json({ jobId: signJobToken(data.jobId, projectId), status: data.status || 'queued' });
+    return NextResponse.json({ jobId: signJobToken(data.jobId, projectId, !!createdProjectId), status: data.status || 'queued' });
   } catch (e) {
     if (createdProjectId) await deleteProject(createdProjectId);
     return NextResponse.json({ error: 'fetch_failed', message: e instanceof Error ? e.message : 'failed' }, { status: 502 });
@@ -118,14 +123,18 @@ export async function GET(req: NextRequest) {
   // token (swapped projectId) is rejected rather than exporting another project.
   const verified = verifyJobToken(token);
   if (!verified?.projectId) return NextResponse.json({ error: 'bad_request', message: 'Invalid or expired job token.' }, { status: 400 });
-  const { jobId, projectId } = verified;
+  const { jobId, projectId, autoCreated } = verified;
   try {
     const sr = await fetch(`${BASE()}/api/v1/status?jobId=${encodeURIComponent(jobId)}`, { headers: headers(), cache: 'no-store' });
     const s = await sr.json().catch(() => ({}));
     if (!sr.ok) return NextResponse.json({ error: 'capsiynau_error', message: s?.message || 'Status check failed.' }, { status: sr.status });
     const status = String(s.status || 'processing').toLowerCase();
-    // Terminal failure: surface it immediately so the UI stops polling.
+    // Terminal failure: surface it immediately so the UI stops polling. Delete
+    // the project ONLY if THIS token says it was auto-provisioned - keyed off the
+    // signed flag, not the current env, so removing CAPSIYNAU_PROJECT_ID between
+    // issue and poll can never delete a shared fixed project (Codex #94/#95).
     if (FAILED.has(status)) {
+      if (autoCreated) await deleteProject(projectId);
       return NextResponse.json(
         { error: 'transcription_failed', status, message: s?.message || s?.error || 'Transcription failed.' },
         { status: 502 },
