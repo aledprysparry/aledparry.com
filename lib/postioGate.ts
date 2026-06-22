@@ -75,24 +75,34 @@ const JOB_SEP = '::';
 // falls back to the gate PASSWORD, which every unlocked Postio user types - so
 // in the shared-API-key context they could HMAC jobId::otherProjectId and still
 // export another project despite the signature. Require a dedicated server-only
-// APP_GATE_SECRET and fail CLOSED without it (Codex #94).
-const jobSecret = (): string | null => process.env.APP_GATE_SECRET || null;
+// APP_GATE_SECRET, and reject it if it equals the gate password / default,
+// otherwise the IDOR reopens by trying the password as the HMAC key (Codex #94/#95).
+const jobSecret = (): string | null => {
+  const s = process.env.APP_GATE_SECRET;
+  if (!s) return null;
+  if (s === (process.env.APP_GATE_PASSWORD || 'Qwerty123')) return null; // password-equivalent
+  if (s === 'postio-dev-secret') return null;                            // the dev default
+  return s;
+};
 
-/** True if secure job-token signing is configured. */
+/** True if secure job-token signing is configured (distinct server-only secret). */
 export function jobTokensConfigured(): boolean {
   return !!jobSecret();
 }
 
-export function signJobToken(jobId: string, projectId: string): string {
+// Token carries an explicit auto-provisioned flag so the poll endpoint can
+// decide cleanup from the SIGNED token, not the current env (which could change
+// between issue and poll across a redeploy) - Codex #95.
+export function signJobToken(jobId: string, projectId: string, autoCreated: boolean): string {
   const secret = jobSecret();
   if (!secret) throw new Error('APP_GATE_SECRET is required to issue secure job tokens.');
-  const payload = `${jobId}${JOB_SEP}${projectId}`;
+  const payload = `${autoCreated ? '1' : '0'}${JOB_SEP}${jobId}${JOB_SEP}${projectId}`;
   const sig = createHmac('sha256', secret).update(payload).digest('base64url');
   return `${payload}${JOB_SEP}${sig}`;
 }
 
 /** Verify + unpack a job token. Returns null if missing/tampered/not configured. */
-export function verifyJobToken(token: string | undefined | null): { jobId: string; projectId: string } | null {
+export function verifyJobToken(token: string | undefined | null): { jobId: string; projectId: string; autoCreated: boolean } | null {
   const secret = jobSecret();
   if (!secret || !token) return null;
   const cut = token.lastIndexOf(JOB_SEP);
@@ -101,9 +111,11 @@ export function verifyJobToken(token: string | undefined | null): { jobId: strin
   const sig = token.slice(cut + JOB_SEP.length);
   const expected = createHmac('sha256', secret).update(payload).digest('base64url');
   if (!safeSigEqual(sig, expected)) return null;
-  const split = payload.indexOf(JOB_SEP);
-  if (split === -1) return null;
-  return { jobId: payload.slice(0, split), projectId: payload.slice(split + JOB_SEP.length) };
+  const parts = payload.split(JOB_SEP);
+  if (parts.length !== 3) return null;
+  const [auto, jobId, projectId] = parts;
+  if (!jobId || !projectId) return null;
+  return { jobId, projectId, autoCreated: auto === '1' };
 }
 
 export const GATE_COOKIE = COOKIE;
