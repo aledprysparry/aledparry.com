@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutGrid, Search, Plus, Download, HardDrive, Film, ExternalLink,
-  Layers, Menu as MenuIcon, Sun, Moon, Monitor,
+  Layers, Menu as MenuIcon, Sun, Moon, Monitor, Settings as SettingsIcon,
 } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
@@ -34,68 +34,16 @@ const navItemClass = ({ isActive }: { isActive: boolean }) =>
       : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800'
   }`;
 
-// ── Appearance + language controls, shared by the desktop sidebar and the
-//    mobile settings sheet so both stay in lock-step. ──
-function AppearanceControls() {
-  const { t } = useI18n();
-  const { density, setDensity, theme, setTheme } = useSettings();
-  return (
-    <div className="space-y-3">
-      <div>
-        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{t('shell.theme')}</span>
-        <SegmentedControl
-          size="sm"
-          className="w-full justify-between"
-          label={t('shell.theme')}
-          value={theme}
-          onChange={setTheme}
-          options={[
-            { value: 'light', label: <Sun size={15} />, title: t('shell.themeLight') },
-            { value: 'dark', label: <Moon size={15} />, title: t('shell.themeDark') },
-            { value: 'system', label: <Monitor size={15} />, title: t('shell.themeSystem') },
-          ]}
-        />
-      </div>
-      <div>
-        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{t('shell.density')}</span>
-        <SegmentedControl
-          size="sm"
-          className="w-full justify-between"
-          label={t('shell.density')}
-          value={density}
-          onChange={setDensity}
-          options={[
-            { value: 'compact', label: t('shell.densityCompact') },
-            { value: 'comfortable', label: t('shell.densityComfortable') },
-            { value: 'touch', label: t('shell.densityTouch') },
-          ]}
-        />
-      </div>
-    </div>
-  );
-}
-
 export default function AppShell() {
-  const { brands, exportAll } = useStore();
-  const { t, lang, setLang } = useI18n();
+  const { brands } = useStore();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [brandsOpen, setBrandsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const filtered = brands.filter((b) => b.name.toLowerCase().includes(q.toLowerCase()));
 
   const addBrand = () => navigate('/new');
-
-  const backup = () => {
-    const blob = new Blob([exportAll()], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `graphics-engine-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   // Search field, reused in the sidebar and the mobile brand drawer.
   const searchField = (
@@ -165,42 +113,14 @@ export default function AppShell() {
         </div>
         <div className="mt-1 flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">{brandList()}</div>
 
-        <div className="space-y-3 border-t border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="space-y-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
           <Button variant="subtle" className="w-full" onClick={addBrand}>
             <Plus size={15} /> {t('shell.newBrand')}
           </Button>
-
-          <AppearanceControls />
-
-          {/* storage notice + backup */}
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
-              <HardDrive size={12} /> {t('shell.storageTitle')}
-            </div>
-            <p className="mt-1 text-[11px] leading-snug text-zinc-400 dark:text-zinc-500">{t('shell.storageBody')}</p>
-            <button onClick={backup} className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300">
-              <Download size={12} /> {t('shell.backup')}
-            </button>
-          </div>
-
-          {/* language toggle */}
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('shell.language')}</span>
-            <SegmentedControl
-              size="sm"
-              label={t('shell.language')}
-              value={lang}
-              onChange={setLang}
-              options={[
-                { value: 'en', label: 'EN' },
-                { value: 'cy', label: 'CY' },
-              ]}
-            />
-          </div>
-
-          <a href={MARKETING_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-zinc-400 transition-colors hover:text-violet-700 dark:text-zinc-500 dark:hover:text-violet-300">
-            {t('shell.aboutPostio')} <ExternalLink size={11} />
-          </a>
+          {/* Theme, density, language, backup + about now live on the Settings page. */}
+          <NavLink to="/settings" className={navItemClass}>
+            <SettingsIcon size={16} /> {t('shell.settings')}
+          </NavLink>
         </div>
       </aside>
 
@@ -229,7 +149,7 @@ export default function AppShell() {
         <BottomTab to="/clips" icon={<Film size={20} />} label={t('nav.clips')} />
         <BottomButton onClick={() => setBrandsOpen(true)} active={brandsOpen} icon={<Layers size={20} />} label={t('nav.brands')} />
         <BottomButton onClick={addBrand} icon={<Plus size={20} />} label={t('nav.newBrand')} />
-        <BottomButton onClick={() => setSettingsOpen(true)} active={settingsOpen} icon={<MenuIcon size={20} />} label={t('nav.more')} />
+        <BottomTab to="/settings" icon={<SettingsIcon size={20} />} label={t('shell.settings')} />
       </nav>
 
       {/* ── Mobile brand drawer ── */}
@@ -243,42 +163,6 @@ export default function AppShell() {
         </div>
       </Drawer>
 
-      {/* ── Mobile settings sheet ── */}
-      <Drawer open={settingsOpen} onClose={() => setSettingsOpen(false)} side="bottom" label={t('shell.settings')}>
-        <div className="space-y-5 p-4">
-          <div>
-            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{t('shell.appearance')}</span>
-            <AppearanceControls />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-200">{t('shell.language')}</span>
-            <SegmentedControl
-              label={t('shell.language')}
-              value={lang}
-              onChange={setLang}
-              options={[
-                { value: 'en', label: 'EN' },
-                { value: 'cy', label: 'CY' },
-              ]}
-            />
-          </div>
-
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-            <div className="flex items-center gap-1.5 text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
-              <HardDrive size={13} /> {t('shell.storageTitle')}
-            </div>
-            <p className="mt-1 text-[12px] leading-snug text-zinc-400 dark:text-zinc-500">{t('shell.storageBody')}</p>
-            <Button variant="subtle" className="mt-3 w-full" onClick={backup}>
-              <Download size={14} /> {t('shell.backup')}
-            </Button>
-          </div>
-
-          <a href={MARKETING_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-zinc-400 transition-colors hover:text-violet-700 dark:text-zinc-500 dark:hover:text-violet-300">
-            {t('shell.aboutPostio')} <ExternalLink size={12} />
-          </a>
-        </div>
-      </Drawer>
     </div>
   );
 }
