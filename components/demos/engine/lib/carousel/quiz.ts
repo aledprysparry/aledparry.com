@@ -100,7 +100,26 @@ const questionSlide: SlideDef = {
   },
 };
 
-// ── Slide 2: the answer ──
+// Count how many lines `text` wraps to at a given size (honours explicit \n),
+// so the answer frame can adapt to short vs longer answers.
+function countWrappedLines(r: CanvasRenderer, text: string, sizeFrac: number, font: string, weight: string, maxWidthFrac: number) {
+  const ctx = r.context;
+  ctx.font = `${weight} ${sizeFrac * r.W}px ${font}`;
+  const maxPx = maxWidthFrac * r.W;
+  let lines = 0;
+  for (const para of text.split('\n')) {
+    let line = '';
+    for (const word of para.split(' ')) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxPx && line) { lines++; line = word; }
+      else line = test;
+    }
+    lines++;
+  }
+  return Math.max(1, lines);
+}
+
+// ── Slide 2: the answer (adapts the frame to short vs longer answers) ──
 const answerSlide: SlideDef = {
   id: 'answer', label: 'Answer',
   draw(r, props) {
@@ -109,11 +128,31 @@ const answerSlide: SlideDef = {
     paintHalftoneBg(r);
     paintLogoCentred(r);
     goldTitle(r, (c.answerTitle || 'ATEB').toUpperCase(), 0.33, 0.088);
-    rule(r, 0.43, 0.82, WHITE, 0.0035);
+
+    const answer = c.answer || 'Your answer';
+    // Shrink slightly once the answer runs to several lines so "more info" fits.
+    const size = countWrappedLines(r, answer, 0.075, DISPLAY, '900', 0.82) > 2 ? 0.05 : 0.075;
+    const lh = size * 1.12;
+    const lines = countWrappedLines(r, answer, size, DISPLAY, '900', 0.82);
+    const blockH = lines * lh;
+
+    const topRule = 0.43;
+    const minBotRule = 0.74; // keeps the original frame for short answers
+    // Centre the block in the fixed frame when it fits; otherwise top-anchor it
+    // below the rule and push the bottom rule down to hug the text.
+    const center = (topRule + minBotRule) / 2;
+    let textTop = center - blockH / 2;
+    let botRule = minBotRule;
+    if (textTop < topRule + 0.05) {
+      textTop = topRule + 0.06;
+      botRule = textTop + blockH + 0.04;
+    }
+
+    rule(r, topRule, 0.82, WHITE, 0.0035);
     setShadow(r, 'rgba(8,3,34,0.4)', 0, 0.006, 0.0015);
-    r.drawTextWrapped(c.answer || 'Your answer', { x: 0.5, y: 0.535, size: 0.075, color: WHITE, weight: '900', align: 'center', font: DISPLAY, maxWidth: 0.82, lineHeight: 0.084, baseline: 'top' });
+    r.drawTextWrapped(answer, { x: 0.5, y: textTop, size, color: WHITE, weight: '900', align: 'center', font: DISPLAY, maxWidth: 0.82, lineHeight: lh, baseline: 'top' });
     clearShadow(r);
-    rule(r, 0.74, 0.82, WHITE, 0.0035);
+    rule(r, botRule, 0.82, WHITE, 0.0035);
   },
 };
 
@@ -197,7 +236,7 @@ export const QUIZ_FIELDS: CopyField[] = [
   { key: 'questionTitle', label: 'Question title', labelKey: 'copy.f.questionTitle' },
   { key: 'question', label: 'Question', labelKey: 'copy.f.question', multiline: true },
   { key: 'answerTitle', label: 'Answer title', labelKey: 'copy.f.answerTitle' },
-  { key: 'answer', label: 'Answer', labelKey: 'copy.f.answer' },
+  { key: 'answer', label: 'Answer', labelKey: 'copy.f.answer', multiline: true },
   { key: 'ctaText', label: 'App CTA text', labelKey: 'copy.f.ctaText', multiline: true },
   { key: 'url', label: 'Website / URL', labelKey: 'copy.field.url' },
 ];
