@@ -348,6 +348,9 @@ const STYLES = `
 .buan-js .buan-reveal{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);will-change:opacity,transform;}
 .buan-js .buan-reveal.is-in{opacity:1;transform:none;}
 .buan-root a:focus-visible,.buan-root button:focus-visible{outline:2px solid #0d9488;outline-offset:3px;border-radius:10px;}
+.buan-root ::selection{background:#0d9488;color:#fff;}
+html{scroll-padding-top:4.5rem;}
+@media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth;}}
 @keyframes buan-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 @keyframes buan-floatslow{0%,100%{transform:translateY(0) rotate(5deg)}50%{transform:translateY(-8px) rotate(5deg)}}
 @keyframes buan-pulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -556,13 +559,17 @@ function QrMark({ className = "" }: { className?: string }) {
 /* Refined phone mock used in the hero. */
 function PhoneMock({ t }: { t: Copy }) {
   return (
-    <div className="relative buan-float">
+    // Decorative product mockup: hidden from assistive tech so screen readers
+    // skip the illustrative menu/prices and reach the real copy.
+    <div className="relative buan-float" aria-hidden>
       {/* soft brand glow */}
-      <div className="absolute -inset-8 -z-10 rounded-full bg-teal-400/20 blur-3xl" aria-hidden />
+      <div className="absolute -inset-8 -z-10 rounded-full bg-teal-400/20 blur-3xl" />
       <div className="relative w-[15rem] rounded-[2.6rem] border-[11px] border-stone-900 bg-stone-900 shadow-2xl sm:w-[16.5rem]">
         {/* notch */}
-        <div className="absolute left-1/2 top-2 z-10 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/70" aria-hidden />
-        <div className="overflow-hidden rounded-[1.9rem] bg-white">
+        <div className="absolute left-1/2 top-2 z-10 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/70" />
+        <div className="relative overflow-hidden rounded-[1.9rem] bg-white">
+          {/* subtle screen sheen */}
+          <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-tr from-transparent via-transparent to-white/30" />
           <div className="bg-gradient-to-br from-teal-600 to-emerald-600 px-5 pb-5 pt-7 text-white">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold">{t.mock_business}</p>
@@ -584,16 +591,18 @@ function PhoneMock({ t }: { t: Copy }) {
                 className="flex items-center justify-between rounded-xl bg-stone-50 px-3 py-2.5 ring-1 ring-stone-900/5"
               >
                 <span className="text-sm font-medium text-stone-800">{name}</span>
-                <span className="text-sm font-semibold text-teal-700">{price}</span>
+                <span className="text-sm font-semibold tabular-nums text-teal-700">{price}</span>
               </div>
             ))}
             <div className="flex items-center justify-between pt-1 text-sm">
               <span className="text-stone-500">{t.mock_total}</span>
-              <span className="font-bold text-stone-900">£10.60</span>
+              <span className="font-bold tabular-nums text-stone-900">£10.60</span>
             </div>
             <div className="mt-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 py-3 text-center text-sm font-semibold text-white shadow-sm">
               {t.mock_pay}
             </div>
+            {/* home indicator */}
+            <div className="mx-auto mt-3 h-1 w-24 rounded-full bg-stone-300" />
           </div>
         </div>
       </div>
@@ -626,10 +635,12 @@ function LeadForm({ t }: { t: Copy }) {
 
     if (!name) {
       setErr(t.lead_err_name);
+      (form.querySelector("#buan-name") as HTMLInputElement | null)?.focus();
       return;
     }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setErr(t.lead_err_email);
+      (form.querySelector("#buan-email") as HTMLInputElement | null)?.focus();
       return;
     }
     setErr(null);
@@ -720,10 +731,10 @@ function LeadForm({ t }: { t: Copy }) {
       <button
         type="submit"
         disabled={sending}
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-teal-600 px-7 py-3.5 font-sans font-semibold text-white shadow-lg shadow-teal-600/20 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700 disabled:translate-y-0 disabled:opacity-60 sm:w-auto"
+        className="group mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-teal-600 px-7 py-3.5 font-sans font-semibold text-white shadow-lg shadow-teal-600/20 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700 disabled:translate-y-0 disabled:opacity-60 sm:w-auto"
       >
         {sending ? t.lead_sending : t.lead_submit}
-        {!sending && <Icon name="arrow" className="h-4 w-4" />}
+        {!sending && <Icon name="arrow" className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />}
       </button>
 
       <p className="mt-4 text-xs text-stone-500">{t.lead_privacy}</p>
@@ -809,7 +820,7 @@ export default function Buan() {
   );
 
   return (
-    <div lang={lang} className={`buan-root min-h-screen scroll-smooth bg-white font-sans text-stone-800 antialiased ${jsReady ? "buan-js" : ""}`}>
+    <div lang={lang} className={`buan-root min-h-screen bg-white font-sans text-stone-800 antialiased ${jsReady ? "buan-js" : ""}`}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
       {/* First-draft Welsh reviewer flag – visible on this review branch. */}
@@ -830,7 +841,11 @@ export default function Buan() {
 
           <nav className="hidden items-center gap-7 text-sm font-medium text-stone-600 md:flex">
             {navLinks.map(([href, label]) => (
-              <a key={href} href={href} className="relative transition hover:text-stone-900">
+              <a
+                key={href}
+                href={href}
+                className="relative transition hover:text-stone-900 after:absolute after:-bottom-1.5 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-teal-600 after:transition-transform after:duration-300 hover:after:scale-x-100"
+              >
                 {label}
               </a>
             ))}
@@ -908,15 +923,15 @@ export default function Buan() {
                 <span className="text-teal-600">{t.hero_title_b}</span>
               </h1>
               <p className="mt-6 text-xl font-medium text-stone-700">{t.hero_sub}</p>
-              <p className="mt-4 max-w-xl text-lg leading-relaxed text-stone-500">{t.hero_lede}</p>
+              <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-stone-500">{t.hero_lede}</p>
 
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <a
                   href="#early-access"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-teal-600 px-7 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/25 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700 hover:shadow-xl hover:shadow-teal-600/25"
+                  className="group inline-flex items-center justify-center gap-2 rounded-full bg-teal-600 px-7 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/25 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700 hover:shadow-xl hover:shadow-teal-600/25"
                 >
                   {t.hero_cta_primary}
-                  <Icon name="arrow" className="h-4 w-4" />
+                  <Icon name="arrow" className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </a>
                 <a
                   href="#how"
@@ -947,10 +962,10 @@ export default function Buan() {
           <div className="mx-auto max-w-content px-5 sm:px-6 lg:px-8">
             <Reveal className="max-w-2xl">
               <Eyebrow>{t.how_eyebrow}</Eyebrow>
-              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-balance text-[clamp(1.875rem,4vw,2.75rem)]">
                 {t.how_heading}
               </h2>
-              <p className="mt-3 text-lg text-stone-600">{t.how_sub}</p>
+              <p className="mt-3 text-pretty text-lg text-stone-600">{t.how_sub}</p>
             </Reveal>
 
             <div className="relative mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
@@ -974,10 +989,10 @@ export default function Buan() {
           <div className="mx-auto max-w-content px-5 sm:px-6 lg:px-8">
             <Reveal className="max-w-2xl">
               <Eyebrow>{t.uses_eyebrow}</Eyebrow>
-              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-balance text-[clamp(1.875rem,4vw,2.75rem)]">
                 {t.uses_heading}
               </h2>
-              <p className="mt-3 text-lg text-stone-600">{t.uses_sub}</p>
+              <p className="mt-3 text-pretty text-lg text-stone-600">{t.uses_sub}</p>
             </Reveal>
 
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -1001,7 +1016,7 @@ export default function Buan() {
           <div className="mx-auto max-w-content px-5 sm:px-6 lg:px-8">
             <Reveal className="max-w-2xl">
               <Eyebrow>{t.feat_eyebrow}</Eyebrow>
-              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-balance text-[clamp(1.875rem,4vw,2.75rem)]">
                 {t.feat_heading}
               </h2>
             </Reveal>
@@ -1031,10 +1046,10 @@ export default function Buan() {
           <div className="relative mx-auto grid max-w-content items-center gap-12 px-5 sm:px-6 lg:grid-cols-2 lg:px-8">
             <Reveal>
               <Eyebrow>{t.nw_eyebrow}</Eyebrow>
-              <h2 className="mt-4 font-serif font-bold tracking-tight text-[clamp(1.875rem,4vw,2.75rem)]">
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-balance text-[clamp(1.875rem,4vw,2.75rem)]">
                 {t.nw_heading}
               </h2>
-              <p className="mt-4 max-w-lg text-lg leading-relaxed text-stone-300">{t.nw_body}</p>
+              <p className="mt-4 max-w-lg text-pretty text-lg leading-relaxed text-stone-300">{t.nw_body}</p>
             </Reveal>
             <Reveal delay={120}>
               <ul className="space-y-3.5">
@@ -1061,10 +1076,10 @@ export default function Buan() {
               <div className="flex justify-center">
                 <Eyebrow>{t.price_eyebrow}</Eyebrow>
               </div>
-              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-balance text-[clamp(1.875rem,4vw,2.75rem)]">
                 {t.price_heading}
               </h2>
-              <p className="mt-3 text-lg text-stone-600">{t.price_sub}</p>
+              <p className="mt-3 text-pretty text-lg text-stone-600">{t.price_sub}</p>
             </Reveal>
 
             <Reveal delay={100} className="mx-auto mt-12 max-w-md">
@@ -1076,7 +1091,7 @@ export default function Buan() {
                   </span>
                   <div className="mt-5 flex items-end gap-2">
                     <span className="text-sm text-stone-500">{t.price_from}</span>
-                    <span className="font-serif text-6xl font-bold tracking-tight text-stone-900">{t.price_amount}</span>
+                    <span className="font-serif text-6xl font-bold tracking-tight tabular-nums text-stone-900">{t.price_amount}</span>
                     <span className="pb-1.5 text-stone-500">{t.price_per}</span>
                   </div>
                   <ul className="mt-7 space-y-3.5">
@@ -1091,10 +1106,10 @@ export default function Buan() {
                   </ul>
                   <a
                     href="#early-access"
-                    className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-teal-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/20 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700"
+                    className="group mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-teal-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/20 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700"
                   >
                     {t.price_cta}
-                    <Icon name="arrow" className="h-4 w-4" />
+                    <Icon name="arrow" className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </a>
                   <p className="mt-4 text-xs leading-relaxed text-stone-500">{t.price_disclaimer}</p>
                 </div>
@@ -1108,10 +1123,10 @@ export default function Buan() {
           <div className="mx-auto grid max-w-content gap-12 px-5 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
             <Reveal>
               <Eyebrow>{t.lead_eyebrow}</Eyebrow>
-              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-balance text-[clamp(1.875rem,4vw,2.75rem)]">
                 {t.lead_heading}
               </h2>
-              <p className="mt-4 max-w-md text-lg leading-relaxed text-stone-600">{t.lead_sub}</p>
+              <p className="mt-4 max-w-md text-pretty text-lg leading-relaxed text-stone-600">{t.lead_sub}</p>
               <div className="mt-8 hidden items-center gap-4 lg:flex">
                 <QrMark className="w-24" />
                 <p className="max-w-[12rem] text-sm italic text-stone-500">{t.hero_name_note}</p>
