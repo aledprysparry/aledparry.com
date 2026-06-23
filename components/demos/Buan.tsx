@@ -167,7 +167,7 @@ const COPY = {
     lead_success_b: "You're on the list. We'll be in touch as early access opens.",
     lead_again: "Send another",
     lead_privacy: "We'll only use your details to talk to you about Buan.",
-    lead_preview: "Preview: this form isn't connected to a backend yet, so entries aren't stored.",
+    lead_preview: "Preview: submissions reach a stub endpoint only and aren't stored yet.",
     lead_err_name: "Please add your name.",
     lead_err_email: "Please add a valid email.",
 
@@ -311,7 +311,7 @@ const COPY = {
     lead_success_b: "Rydych chi ar y rhestr. Byddwn mewn cysylltiad wrth i fynediad cynnar agor.",
     lead_again: "Anfon un arall",
     lead_privacy: "Byddwn ond yn defnyddio'ch manylion i siarad â chi am Buan.",
-    lead_preview: "Rhagolwg: nid yw'r ffurflen hon wedi'i chysylltu â chefnwedd eto, felly nid yw'r manylion yn cael eu cadw.",
+    lead_preview: "Rhagolwg: dim ond at bwynt terfyn dros dro mae'r ceisiadau'n mynd, ac nid ydyn nhw'n cael eu cadw eto.",
     lead_err_name: "Ychwanegwch eich enw os gwelwch yn dda.",
     lead_err_email: "Ychwanegwch e-bost dilys os gwelwch yn dda.",
 
@@ -379,7 +379,7 @@ function LeadForm({ t }: { t: Copy }) {
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
@@ -397,17 +397,25 @@ function LeadForm({ t }: { t: Copy }) {
     setErr(null);
     setSending(true);
 
-    // STUB: no backend wiring yet. We log the payload and simulate a send.
-    // A real implementation would POST to /api/buan-lead (or a CRM) here.
+    // STUB: posts to /api/buan-lead, which only logs server-side and returns
+    // 200 – nothing is persisted yet. We also log client-side and never block
+    // the confirmation on the request, so the form works even offline.
     const payload = Object.fromEntries(data.entries());
     // eslint-disable-next-line no-console
     console.log("[Buan] early-access lead (stub, not persisted):", payload);
+    try {
+      await fetch("/api/buan-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // No backend dependency – ignore network errors for this stub.
+    }
 
-    setTimeout(() => {
-      setSending(false);
-      setSent(true);
-      form.reset();
-    }, 600);
+    setSending(false);
+    setSent(true);
+    form.reset();
   };
 
   if (sent) {

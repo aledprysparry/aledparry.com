@@ -51,6 +51,7 @@ const CLIENT_VISUAL: Record<string, { from: string; to: string; mono: string }> 
   tinopolis: { from: "#d97706", to: "#fbbf24", mono: "T" },
   aledparry: { from: "#475569", to: "#94a3b8", mono: "AP" },
   msparc: { from: "#e11d48", to: "#fb7185", mono: "MS" },
+  buan: { from: "#0f766e", to: "#10b981", mono: "B" },
 };
 const FALLBACK_VISUAL = { from: "#475569", to: "#94a3b8", mono: "•" };
 
