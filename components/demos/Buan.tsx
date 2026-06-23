@@ -397,12 +397,10 @@ function LeadForm({ t }: { t: Copy }) {
     setErr(null);
     setSending(true);
 
-    // STUB: posts to /api/buan-lead, which only logs server-side and returns
-    // 200 – nothing is persisted yet. We also log client-side and never block
-    // the confirmation on the request, so the form works even offline.
+    // STUB: posts to /api/buan-lead, which only logs a non-PII breadcrumb and
+    // returns 200 – nothing is persisted yet. We never block the confirmation
+    // on the request, so the form still works offline. No PII is logged here.
     const payload = Object.fromEntries(data.entries());
-    // eslint-disable-next-line no-console
-    console.log("[Buan] early-access lead (stub, not persisted):", payload);
     try {
       await fetch("/api/buan-lead", {
         method: "POST",
