@@ -17,6 +17,7 @@ import { exportStrategyReport } from '@engine/lib/coach/report';
 import { refineVoiceProfile, voiceSummary } from '@engine/lib/coach/voice';
 import type { CoachBrief, StrategyData, StrategyPlayId } from '@engine/lib/model/types';
 import type { StringKey } from '@engine/lib/i18n/strings';
+import { CoachProgress } from './shared';
 
 const PLAY_ICON: Record<StrategyPlayId, JSX.Element> = {
   full_strategy: <Compass size={16} />, audience_psychology: <Brain size={16} />,
@@ -173,7 +174,7 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
         ))}
       </div>
 
-      {running && <Panel className="p-6"><p className="text-center text-[13px] text-zinc-500 dark:text-zinc-400">{t('coach.strategy.building')}…</p></Panel>}
+      {running && <CoachProgress steps={[t('coach.progress.s1'), t('coach.progress.s2'), t('coach.progress.s3'), t('coach.progress.s4')]} />}
 
       {result && (
         <Panel className="p-5">

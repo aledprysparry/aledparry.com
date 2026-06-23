@@ -733,6 +733,15 @@ export const STRINGS = {
     'coach.linked': 'Linked',
     'coach.strategy.createPost': 'Create post',
     'coach.strategy.draftCreated': 'Draft post created.',
+    // staged progress (perceived performance during AI calls)
+    'coach.progress.a1': 'Reading your post',
+    'coach.progress.a2': 'Scoring against your benchmarks',
+    'coach.progress.a3': 'Checking brand, accounts and performance',
+    'coach.progress.a4': 'Writing your recommendations',
+    'coach.progress.s1': 'Reading your brief',
+    'coach.progress.s2': 'Studying your brand and audience',
+    'coach.progress.s3': 'Drafting the plan',
+    'coach.progress.s4': 'Polishing the output',
     // benchmark module labels + descriptions
     'coach.bm.visual_clarity': 'Visual clarity',
     'coach.bm.visual_clarity.d': 'Is the main message instantly readable at a glance and on a small screen?',
@@ -1531,6 +1540,15 @@ export const STRINGS = {
     'coach.linked': 'Cysylltwyd',
     'coach.strategy.createPost': 'Creu postiad',
     'coach.strategy.draftCreated': 'Postiad drafft wedi’i greu.',
+    // staged progress (perceived performance during AI calls)
+    'coach.progress.a1': 'Darllen eich postiad',
+    'coach.progress.a2': 'Sgorio yn erbyn eich meincnodau',
+    'coach.progress.a3': 'Gwirio’r brand, cyfrifon a pherfformiad',
+    'coach.progress.a4': 'Ysgrifennu eich argymhellion',
+    'coach.progress.s1': 'Darllen eich briff',
+    'coach.progress.s2': 'Astudio eich brand a’ch cynulleidfa',
+    'coach.progress.s3': 'Drafftio’r cynllun',
+    'coach.progress.s4': 'Sgleinio’r allbwn',
     // benchmark module labels + descriptions
     'coach.bm.visual_clarity': 'Eglurder gweledol',
     'coach.bm.visual_clarity.d': 'A yw’r prif neges yn ddarllenadwy ar unwaith ac ar sgrin fach?',

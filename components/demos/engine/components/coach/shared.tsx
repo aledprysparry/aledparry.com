@@ -1,8 +1,8 @@
 // ═══ Postio Coach: shared UI building blocks ═══
 // Structured + scannable, never a chat UI. Light + dark, violet brand.
 
-import { useMemo, type ReactNode } from 'react';
-import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Lightbulb, ShieldAlert, Zap } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Lightbulb, Loader2, ShieldAlert, Zap } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import type { StringKey } from '@engine/lib/i18n/strings';
@@ -190,6 +190,39 @@ export function AnalysisResultView({ analysis, usedAI }: { analysis: Pick<PostAn
           {[...analysis.benchmarkResults].sort((a, b) => a.score - b.score).map((r) => <CategoryCard key={r.id} r={r} />)}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── staged progress (perceived performance for the ~20-30s AI calls) ──
+// Cycles through step labels with a moving bar so a long model call feels like
+// it is making progress instead of a frozen spinner.
+export function CoachProgress({ steps, title }: { steps: string[]; title?: string }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    setI(0);
+    const id = window.setInterval(() => setI((x) => (x < steps.length - 1 ? x + 1 : x)), 3200);
+    return () => window.clearInterval(id);
+  }, [steps.length]);
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="inline-flex items-center gap-2 text-[13px] font-semibold text-zinc-900 dark:text-zinc-50">
+        <Loader2 size={15} className="animate-spin text-violet-600 dark:text-violet-400" /> {title ?? steps[i]}
+      </p>
+      {/* indeterminate bar */}
+      <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+        <div className="h-full w-1/3 rounded-full bg-violet-500/80" style={{ animation: 'eng-coach-bar 1.4s ease-in-out infinite' }} />
+      </div>
+      <ul className="mt-3 space-y-1.5">
+        {steps.map((s, idx) => (
+          <li key={idx} className={`flex items-center gap-2 text-[12.5px] ${idx < i ? 'text-zinc-400 dark:text-zinc-500' : idx === i ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-300 dark:text-zinc-600'}`}>
+            {idx < i ? <Check size={13} className="shrink-0 text-emerald-500" /> : idx === i ? <Loader2 size={13} className="shrink-0 animate-spin text-violet-500" /> : <span className="ml-0.5 h-1 w-1 shrink-0 rounded-full bg-current" />}
+            {s}
+          </li>
+        ))}
+      </ul>
+      <style>{'@keyframes eng-coach-bar{0%{transform:translateX(-120%)}100%{transform:translateX(420%)}}'}</style>
     </div>
   );
 }
