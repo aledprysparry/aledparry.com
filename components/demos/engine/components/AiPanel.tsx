@@ -1,8 +1,13 @@
 import { useState } from 'react';
-import { Sparkles, Wand2, Check, Copy, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Sparkles, Wand2, Check, Copy, AlertTriangle, Gauge, ArrowUpRight, ArrowRight } from 'lucide-react';
 import { Button } from '@engine/components/ui';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
-import type { Brand } from '@engine/lib/model/types';
+import { useStore } from '@engine/lib/store/StoreProvider';
+import { extractPostText, runPostAnalysis } from '@engine/lib/coach/analysis';
+import { renderGraphicImage } from '@engine/lib/coach/actions';
+import { ScoreRing, useCoachConfig } from '@engine/components/coach/shared';
+import type { Brand, GeneratedGraphic, PostAnalysis } from '@engine/lib/model/types';
 
 type Task = 'improve' | 'autofill' | 'captions' | 'critique';
 
@@ -12,6 +17,8 @@ interface Props {
   textElements: { id: string; content: string }[];
   onApply: (id: string, text: string) => void;
   onAddText: (text: string) => void;
+  /** When provided, enables the structured Coach "Analyse" entry. */
+  graphic?: GeneratedGraphic;
 }
 
 async function callAgent(task: Task, payload: Record<string, unknown>): Promise<{ result?: Record<string, unknown>; error?: string }> {
@@ -30,8 +37,10 @@ async function callAgent(task: Task, payload: Record<string, unknown>): Promise<
   }
 }
 
-export default function AiPanel({ brand, platform, textElements, onApply, onAddText }: Props) {
+export default function AiPanel({ brand, platform, textElements, onApply, onAddText, graphic }: Props) {
   const { t } = useI18n();
+  const store = useStore();
+  const { enabledIds } = useCoachConfig(brand?.id ?? '');
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +49,32 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
   const [autofill, setAutofill] = useState<{ headline?: string; subheading?: string; cta?: string } | null>(null);
   const [captions, setCaptions] = useState<{ caption?: string; hashtags?: string[] } | null>(null);
   const [critique, setCritique] = useState<{ title: string; detail: string }[] | null>(null);
+  const [analysing, setAnalysing] = useState(false);
+  const [analysis, setAnalysis] = useState<{ data: Omit<PostAnalysis, 'id' | 'createdAt'>; usedAI: boolean } | null>(null);
 
   const brandPayload = { name: brand?.name, toneNotes: brand?.toneNotes, colours: brand?.colours, fonts: brand?.fonts };
   const texts = textElements.map((el) => el.content).filter(Boolean);
+
+  // Structured Coach analysis on the live (unsaved) editor text. Persists to
+  // the Coach so the result + recommendations also appear under Insights.
+  const analyse = async () => {
+    if (!graphic || !brand) return;
+    setAnalysing(true); setAnalysis(null); setError(null);
+    const image = await renderGraphicImage(graphic);
+    const r = await runPostAnalysis({
+      text: { lines: texts, joined: texts.join('\n') },
+      brand, platformName: platform, enabledIds,
+      referenceAccounts: store.referenceAccountsByBrand(brand.id),
+      performanceEntries: store.performanceByBrand(brand.id),
+      ids: { postId: graphic.id, brandId: brand.id },
+      templateName: store.getTemplate(graphic.templateId)?.name,
+      image: image ?? undefined,
+    });
+    store.saveAnalysis(r.analysis);
+    if (r.recommendations.length) store.saveRecommendations(r.recommendations);
+    setAnalysis({ data: r.analysis, usedAI: r.usedAI });
+    setAnalysing(false);
+  };
 
   const run = async (task: Task, extra: Record<string, unknown> = {}) => {
     setBusy(task); setError(null);
@@ -68,6 +100,35 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
         <div className="mt-4 space-y-4">
           {error === 'not_configured' && <p className="text-[12px] text-zinc-600 dark:text-zinc-300">{t('ai.notConfigured')}</p>}
           {error && error !== 'not_configured' && <p className="inline-flex items-center gap-1.5 text-[12px] text-red-600 dark:text-red-400"><AlertTriangle size={13} /> {t('ai.failed', { error })}</p>}
+
+          {/* structured Coach analysis (in-editor entry) */}
+          {graphic && brand && (
+            <div className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-500/20 dark:bg-zinc-900">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-zinc-800 dark:text-zinc-100"><Gauge size={14} className="text-violet-600 dark:text-violet-400" /> {t('ai.analyseTitle')}</span>
+                <Button variant="primary" disabled={analysing || texts.length === 0} onClick={analyse}><Sparkles size={13} /> {analysing ? t('coach.analysing') : t('ai.analyse')}</Button>
+              </div>
+              {!analysis && <p className="mt-1.5 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">{t('ai.analyseHint', { n: enabledIds.length })}</p>}
+              {analysis && (
+                <div className="mt-3 space-y-2.5">
+                  <div className="flex items-center gap-3">
+                    <ScoreRing score={analysis.data.overallScore} size={56} />
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-semibold text-zinc-900 dark:text-zinc-50">{t('coach.overallScore')}</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{analysis.usedAI ? t('coach.modelAI') : t('coach.modelOffline')}</p>
+                    </div>
+                  </div>
+                  {analysis.data.issues.slice(0, 2).map((s, i) => (
+                    <p key={i} className="inline-flex items-start gap-1.5 text-[11.5px] leading-relaxed text-amber-700 dark:text-amber-400"><AlertTriangle size={12} className="mt-0.5 shrink-0" /> {s}</p>
+                  ))}
+                  {analysis.data.actionPlan.quickWins.slice(0, 2).map((s, i) => (
+                    <p key={i} className="inline-flex items-start gap-1.5 text-[11.5px] leading-relaxed text-zinc-600 dark:text-zinc-300"><ArrowUpRight size={12} className="mt-0.5 shrink-0 text-violet-600 dark:text-violet-400" /> {s}</p>
+                  ))}
+                  <Link to={`/brands/${brand.id}`} className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-400">{t('ai.viewInCoach')} <ArrowRight size={12} /></Link>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* auto-fill */}
           <div>

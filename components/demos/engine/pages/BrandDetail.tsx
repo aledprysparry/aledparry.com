@@ -18,6 +18,7 @@ import { buildTemplateFromImage, type TemplateMode } from '@engine/lib/audit/tem
 import ElementPreview from '@engine/components/ElementPreview';
 import SlideCanvas from '@engine/components/SlideCanvas';
 import AnimatedCanvas from '@engine/components/AnimatedCanvas';
+import CoachSection from '@engine/components/coach/CoachSection';
 import { platformToRatio, kindBaseCopy } from '@engine/lib/templates/registry';
 import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
 import type { StringKey } from '@engine/lib/i18n/strings';
@@ -82,7 +83,7 @@ export default function BrandDetail() {
 
       {tab === 'content' && <ContentTab brandId={brandId} />}
       {tab === 'brand' && <BrandTab brandId={brandId} />}
-      {tab === 'insights' && <SocialTab brandId={brandId} />}
+      {tab === 'insights' && <CoachSection brandId={brandId} auditSlot={<SocialTab brandId={brandId} />} />}
     </div>
   );
 }

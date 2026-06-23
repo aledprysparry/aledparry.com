@@ -17,6 +17,17 @@ import type {
   Folder,
   AssetType,
   PlatformId,
+  AspirationalAccount,
+  PostAnalysis,
+  AIRecommendation,
+  PerformanceEntry,
+  PostPerformanceMetrics,
+  BenchmarkPreset,
+  CoachSettings,
+  AccountBenchmarkProfile,
+  CoachBrief,
+  StrategyArtifact,
+  StrategyPlayId,
 } from '@engine/lib/model/types';
 import { getKind } from '@engine/lib/templates/registry';
 import {
@@ -44,6 +55,15 @@ interface StoreState {
   graphics: GeneratedGraphic[];
   clips: Clip[];
   folders: Folder[];
+  // ── Postio Coach ──
+  referenceAccounts: AspirationalAccount[];
+  postAnalyses: PostAnalysis[];
+  aiRecommendations: AIRecommendation[];
+  performance: PerformanceEntry[];
+  coachPresets: BenchmarkPreset[];
+  coachSettings: CoachSettings[];
+  coachBriefs: CoachBrief[];
+  strategyArtifacts: StrategyArtifact[];
 }
 
 const MASTER_MIGRATION_KEY = 'cg.v1.masterMigrated';
@@ -190,7 +210,7 @@ function initialState(): StoreState {
     saveCollection('templates', templates);
     markSeeded();
     if (typeof localStorage !== 'undefined') localStorage.setItem(MASTER_MIGRATION_KEY, 'true');
-    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [] };
+    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [], referenceAccounts: [], postAnalyses: [], aiRecommendations: [], performance: [], coachPresets: [], coachSettings: [], coachBriefs: [], strategyArtifacts: [] };
   }
   let templates = loadCollection<Template>('templates');
   let graphics = loadCollection<GeneratedGraphic>('graphics');
@@ -212,6 +232,14 @@ function initialState(): StoreState {
     graphics,
     clips: loadCollection('clips'),
     folders: loadCollection('folders'),
+    referenceAccounts: loadCollection('referenceAccounts'),
+    postAnalyses: loadCollection('postAnalyses'),
+    aiRecommendations: loadCollection('aiRecommendations'),
+    performance: loadCollection('performance'),
+    coachPresets: loadCollection('coachPresets'),
+    coachSettings: loadCollection('coachSettings'),
+    coachBriefs: loadCollection('coachBriefs'),
+    strategyArtifacts: loadCollection('strategyArtifacts'),
   };
 }
 
@@ -271,6 +299,43 @@ export interface StoreApi extends StoreState {
   renameFolder: (id: string, name: string) => void;
   deleteFolder: (id: string) => void; // graphics inside become Unfiled
   foldersByBrand: (brandId: string) => Folder[];
+  // ── Postio Coach ──
+  // reference (aspirational) accounts
+  addReferenceAccount: (brandId: string, a: Omit<AspirationalAccount, 'id' | 'brandId' | 'createdAt' | 'updatedAt' | 'enabled'> & { enabled?: boolean }) => AspirationalAccount;
+  updateReferenceAccount: (id: string, patch: Partial<AspirationalAccount>) => void;
+  setReferenceProfile: (id: string, profile: AccountBenchmarkProfile) => void;
+  removeReferenceAccount: (id: string) => void;
+  referenceAccountsByBrand: (brandId: string) => AspirationalAccount[];
+  // post analyses
+  saveAnalysis: (a: Omit<PostAnalysis, 'id' | 'createdAt'>) => PostAnalysis;
+  deleteAnalysis: (id: string) => void;
+  analysesByBrand: (brandId: string) => PostAnalysis[];
+  analysesByPost: (postId: string) => PostAnalysis[];
+  latestAnalysis: (postId: string) => PostAnalysis | undefined;
+  // recommendations
+  saveRecommendations: (recs: Omit<AIRecommendation, 'id' | 'createdAt' | 'applied'>[]) => AIRecommendation[];
+  setRecommendationApplied: (id: string, applied: boolean) => void;
+  deleteRecommendation: (id: string) => void;
+  recommendationsByBrand: (brandId: string) => AIRecommendation[];
+  recommendationsByPost: (postId: string) => AIRecommendation[];
+  // performance
+  addPerformance: (brandId: string, entry: { postId?: string; label?: string; metrics: PostPerformanceMetrics; source?: PerformanceEntry['source'] }) => PerformanceEntry;
+  removePerformance: (id: string) => void;
+  performanceByBrand: (brandId: string) => PerformanceEntry[];
+  // benchmark presets
+  addPreset: (preset: Omit<BenchmarkPreset, 'id' | 'createdAt'>) => BenchmarkPreset;
+  deletePreset: (id: string) => void;
+  presetsByBrand: (brandId: string) => BenchmarkPreset[];
+  // per-brand coach settings (live benchmark toggles + active preset)
+  getCoachSettings: (brandId: string) => CoachSettings | undefined;
+  setCoachSettings: (brandId: string, patch: Partial<Omit<CoachSettings, 'id' | 'brandId' | 'updatedAt'>>) => CoachSettings;
+  // strategy: business brief + saved play artifacts
+  getBrief: (brandId: string) => CoachBrief | undefined;
+  setBrief: (brandId: string, patch: Partial<Omit<CoachBrief, 'id' | 'brandId' | 'updatedAt'>>) => CoachBrief;
+  saveStrategy: (a: Omit<StrategyArtifact, 'id' | 'createdAt'>) => StrategyArtifact;
+  deleteStrategy: (id: string) => void;
+  strategiesByBrand: (brandId: string) => StrategyArtifact[];
+  latestStrategy: (brandId: string, play: StrategyPlayId) => StrategyArtifact | undefined;
   // backup
   exportAll: () => string;
 }
@@ -334,6 +399,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('graphics', (g) => g.filter((x) => x.brandId !== id));
         update('clips', (c) => c.filter((x) => x.brandId !== id));
         update('folders', (f) => f.filter((x) => x.brandId !== id));
+        update('referenceAccounts', (r) => r.filter((x) => x.brandId !== id));
+        update('postAnalyses', (a) => a.filter((x) => x.brandId !== id));
+        update('aiRecommendations', (r) => r.filter((x) => x.brandId !== id));
+        update('performance', (p) => p.filter((x) => x.brandId !== id));
+        update('coachPresets', (p) => p.filter((x) => x.brandId !== id));
+        update('coachSettings', (s) => s.filter((x) => x.brandId !== id));
+        update('coachBriefs', (b) => b.filter((x) => x.brandId !== id));
+        update('strategyArtifacts', (a) => a.filter((x) => x.brandId !== id));
       },
       getBrand: (id) => state.brands.find((b) => b.id === id),
 
@@ -485,6 +558,105 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('clips', (c) => c.map((x) => (x.folderId === id ? { ...x, folderId: undefined } : x)));
       },
       foldersByBrand: (brandId) => state.folders.filter((f) => f.brandId === brandId),
+
+      // ── Postio Coach: reference (aspirational) accounts ──
+      addReferenceAccount: (brandId, a) => {
+        const t = now();
+        const acc: AspirationalAccount = {
+          id: newId('ref'), brandId, platform: a.platform, handle: a.handle.trim().replace(/^@/, ''),
+          displayName: a.displayName, url: a.url, notes: a.notes, profile: a.profile,
+          enabled: a.enabled ?? true, createdAt: t, updatedAt: t,
+        };
+        update('referenceAccounts', (x) => [acc, ...x]);
+        return acc;
+      },
+      updateReferenceAccount: (id, patch) =>
+        update('referenceAccounts', (x) => x.map((r) => (r.id === id ? { ...r, ...patch, updatedAt: now() } : r))),
+      setReferenceProfile: (id, profile) =>
+        update('referenceAccounts', (x) => x.map((r) => (r.id === id ? { ...r, profile, updatedAt: now() } : r))),
+      removeReferenceAccount: (id) => update('referenceAccounts', (x) => x.filter((r) => r.id !== id)),
+      referenceAccountsByBrand: (brandId) => state.referenceAccounts.filter((r) => r.brandId === brandId),
+
+      // ── Postio Coach: post analyses ──
+      saveAnalysis: (a) => {
+        const analysis: PostAnalysis = { ...a, id: newId('an'), createdAt: now() };
+        update('postAnalyses', (x) => [analysis, ...x]);
+        return analysis;
+      },
+      deleteAnalysis: (id) => update('postAnalyses', (x) => x.filter((a) => a.id !== id)),
+      analysesByBrand: (brandId) => state.postAnalyses.filter((a) => a.brandId === brandId),
+      analysesByPost: (postId) => state.postAnalyses.filter((a) => a.postId === postId),
+      latestAnalysis: (postId) =>
+        state.postAnalyses
+          .filter((a) => a.postId === postId)
+          .sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0],
+
+      // ── Postio Coach: recommendations ──
+      saveRecommendations: (recs) => {
+        const t = now();
+        const built: AIRecommendation[] = recs.map((r) => ({ ...r, id: newId('rec'), applied: false, createdAt: t }));
+        update('aiRecommendations', (x) => [...built, ...x]);
+        return built;
+      },
+      setRecommendationApplied: (id, applied) =>
+        update('aiRecommendations', (x) => x.map((r) => (r.id === id ? { ...r, applied } : r))),
+      deleteRecommendation: (id) => update('aiRecommendations', (x) => x.filter((r) => r.id !== id)),
+      recommendationsByBrand: (brandId) => state.aiRecommendations.filter((r) => r.brandId === brandId),
+      recommendationsByPost: (postId) => state.aiRecommendations.filter((r) => r.postId === postId),
+
+      // ── Postio Coach: performance ──
+      addPerformance: (brandId, entry) => {
+        const e: PerformanceEntry = {
+          id: newId('perf'), brandId, postId: entry.postId, label: entry.label,
+          metrics: entry.metrics, source: entry.source ?? 'manual', createdAt: now(),
+        };
+        update('performance', (x) => [e, ...x]);
+        return e;
+      },
+      removePerformance: (id) => update('performance', (x) => x.filter((p) => p.id !== id)),
+      performanceByBrand: (brandId) => state.performance.filter((p) => p.brandId === brandId),
+
+      // ── Postio Coach: benchmark presets ──
+      addPreset: (preset) => {
+        const p: BenchmarkPreset = { ...preset, id: newId('preset'), createdAt: now() };
+        update('coachPresets', (x) => [...x, p]);
+        return p;
+      },
+      deletePreset: (id) => update('coachPresets', (x) => x.filter((p) => p.id !== id)),
+      presetsByBrand: (brandId) => state.coachPresets.filter((p) => !p.brandId || p.brandId === brandId),
+
+      // ── Postio Coach: per-brand settings ──
+      getCoachSettings: (brandId) => state.coachSettings.find((s) => s.brandId === brandId),
+      setCoachSettings: (brandId, patch) => {
+        const existing = state.coachSettings.find((s) => s.brandId === brandId);
+        const next: CoachSettings = existing
+          ? { ...existing, ...patch, updatedAt: now() }
+          : { id: brandId, brandId, enabledBenchmarkIds: patch.enabledBenchmarkIds ?? [], activePresetId: patch.activePresetId, updatedAt: now() };
+        update('coachSettings', (x) => (existing ? x.map((s) => (s.brandId === brandId ? next : s)) : [...x, next]));
+        return next;
+      },
+
+      // ── Postio Coach: strategy ──
+      getBrief: (brandId) => state.coachBriefs.find((b) => b.brandId === brandId),
+      setBrief: (brandId, patch) => {
+        const existing = state.coachBriefs.find((b) => b.brandId === brandId);
+        const next: CoachBrief = existing
+          ? { ...existing, ...patch, updatedAt: now() }
+          : { id: brandId, brandId, niche: '', audience: '', goals: '', businessModel: '', ...patch, updatedAt: now() };
+        update('coachBriefs', (x) => (existing ? x.map((b) => (b.brandId === brandId ? next : b)) : [...x, next]));
+        return next;
+      },
+      saveStrategy: (a) => {
+        const art: StrategyArtifact = { ...a, id: newId('strat'), createdAt: now() };
+        update('strategyArtifacts', (x) => [art, ...x]);
+        return art;
+      },
+      deleteStrategy: (id) => update('strategyArtifacts', (x) => x.filter((a) => a.id !== id)),
+      strategiesByBrand: (brandId) => state.strategyArtifacts.filter((a) => a.brandId === brandId),
+      latestStrategy: (brandId, play) =>
+        state.strategyArtifacts
+          .filter((a) => a.brandId === brandId && a.play === play)
+          .sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0],
 
       // ── backup ──
       exportAll: () => exportSnapshot({ assets: state.assets }),

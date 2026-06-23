@@ -7,6 +7,7 @@ import { Button, Panel } from '@engine/components/ui';
 import { Tabs } from '@engine/components/primitives';
 import Stage from '@engine/components/Stage';
 import AiPanel from '@engine/components/AiPanel';
+import PreExportCheck from '@engine/components/coach/PreExportCheck';
 import { makeText, makeShape, makeImage, reorder } from '@engine/lib/freeform/elements';
 import { exportElements } from '@engine/lib/freeform/renderElements';
 import { registerFontAssets, fontAssetFamilies, fontFamilyFor } from '@engine/lib/freeform/fonts';
@@ -165,7 +166,9 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
             textElements={textElements}
             onApply={setElementContent}
             onAddText={(t) => addEl(makeText(t))}
+            graphic={graphic}
           />
+          <PreExportCheck graphic={graphic} brand={brand} platformName={preset.name} />
           <AssetPanel
             assets={assets}
             onPlace={(a) => placeAsset({ assetId: a.id, type: a.type, url: a.url })}

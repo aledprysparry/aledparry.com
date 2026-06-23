@@ -74,3 +74,16 @@ export async function exportElements(
   const blob = await r.exportBlob(mime, mime === 'image/jpeg' ? 0.92 : undefined);
   saveAs(blob, `${slug(name)}.${EXT[mime]}`);
 }
+
+// Render elements to a JPEG data URL (no download) - used by the Coach's
+// vision analysis so the model judges the actual rendered post, not just text.
+export async function renderElementsToDataURL(elements: GraphicElement[], ratio: RatioKey): Promise<string | null> {
+  try {
+    const canvas = document.createElement('canvas');
+    const r = new CanvasRenderer(canvas, ratio);
+    await drawElements(r, elements);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } catch {
+    return null;
+  }
+}

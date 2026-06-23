@@ -15,6 +15,15 @@ export const COLLECTIONS = [
   'graphics',
   'clips',
   'folders',
+  // ── Postio Coach ──
+  'referenceAccounts',
+  'postAnalyses',
+  'aiRecommendations',
+  'performance',
+  'coachPresets',
+  'coachSettings',
+  'coachBriefs',
+  'strategyArtifacts',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

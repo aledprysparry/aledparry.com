@@ -206,3 +206,240 @@ export interface PlatformPreset {
   slideCount?: { min: number; max: number };
   notes?: string;
 }
+
+// ═══ Postio Coach: structured AI content-coach layer ═══
+//
+// All Coach entities are brand-scoped and persisted through the same
+// Repository pattern as everything else (localStorage today, Supabase later
+// via lib/store). The shapes are deliberately backend-ready: stable string
+// ids, brandId on every record, ISO timestamps, no derived UI state baked in.
+// A "post" in Coach terms is a GeneratedGraphic, so postId === graphic id.
+
+export type Priority = 'low' | 'medium' | 'high';
+export type Confidence = 'low' | 'medium' | 'high';
+
+export type SocialPlatform =
+  | 'instagram'
+  | 'tiktok'
+  | 'facebook'
+  | 'linkedin'
+  | 'youtube'
+  | 'x';
+
+/** One scored benchmark category in a post analysis (spec #1). */
+export interface AnalysisCategoryResult {
+  id: string;
+  label: string;
+  enabled: boolean;
+  score: number; // 0-100
+  summary: string;
+  issue?: string;
+  recommendation: string;
+  priority: Priority;
+}
+
+/** The always-practical next steps for a post (spec #2). */
+export interface ActionPlan {
+  quickWins: string[];
+  recommendedEdits: string[];
+  experimentalIdeas: string[];
+  risks: string[];
+}
+
+/** A toggleable benchmark module the user can enable/disable (spec #3). */
+export interface BenchmarkSetting {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+}
+
+/** A saved set of enabled benchmarks, per brand or shared (spec #3). */
+export interface BenchmarkPreset {
+  id: ID;
+  name: string;
+  enabledBenchmarkIds: string[];
+  brandId?: ID;
+  /** Built-in presets ship with the app and cannot be deleted. */
+  builtIn?: boolean;
+  createdAt?: ISODate;
+}
+
+/** Per-brand persisted Coach configuration (live toggle state + active preset). */
+export interface CoachSettings {
+  id: ID; // === brandId (one settings record per brand)
+  brandId: ID;
+  enabledBenchmarkIds: string[];
+  activePresetId?: ID;
+  updatedAt: ISODate;
+}
+
+/** An account the user admires and wants to learn from (spec #4). */
+export interface AspirationalAccount {
+  id: ID;
+  brandId?: ID;
+  platform: SocialPlatform;
+  handle: string;
+  displayName?: string;
+  url?: string;
+  notes?: string;
+  enabled: boolean;
+  /** Cached patterns extracted by the Coach (not scraped — manual / model). */
+  profile?: AccountBenchmarkProfile;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+/** Extracted (never copied) patterns from a reference account (spec #4). */
+export interface AccountBenchmarkProfile {
+  accountId: string;
+  platform: string;
+  commonFormats: string[];
+  toneOfVoice: string[];
+  visualStyle: string[];
+  postingPatterns: string[];
+  recurringHooks: string[];
+  captionPatterns: string[];
+  ctaPatterns: string[];
+  highPerformingThemes: string[];
+  contentPillars: string[];
+  lessonsForUser: string[];
+}
+
+/** Raw performance numbers for a single post (spec #5). */
+export interface PostPerformanceMetrics {
+  impressions?: number;
+  reach?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  saves?: number;
+  clicks?: number;
+  watchTime?: number;
+  completionRate?: number;
+  engagementRate?: number;
+  postedAt?: string;
+  platform?: string;
+}
+
+/** A stored performance row: metrics for one (optionally linked) post. */
+export interface PerformanceEntry {
+  id: ID;
+  brandId: ID;
+  /** Linked graphic, when the numbers belong to a post made in Postio. */
+  postId?: ID;
+  /** A human label when the numbers are for an external/manual post. */
+  label?: string;
+  metrics: PostPerformanceMetrics;
+  /** Provenance of the numbers: manual entry, CSV import, or sample data. */
+  source: 'manual' | 'csv' | 'sample';
+  createdAt: ISODate;
+}
+
+/** One learning derived from the user's own performance history (spec #5). */
+export interface PerformanceInsight {
+  insight: string;
+  evidence: string;
+  recommendation: string;
+  confidence: Confidence;
+}
+
+/** A complete structured analysis of one post (spec #9). */
+export interface PostAnalysis {
+  id: ID;
+  postId: ID;
+  brandId: ID;
+  createdAt: ISODate;
+  overallScore: number; // 0-100
+  benchmarkResults: AnalysisCategoryResult[];
+  actionPlan: ActionPlan;
+  /** Top 3 strengths + top 3 issues, for a scannable headline. */
+  strengths: string[];
+  issues: string[];
+  /** Platform-specific notes for the intended platform. */
+  platformNotes?: string;
+  modelUsed: string;
+}
+
+export type AIRecommendationType =
+  | 'headline'
+  | 'caption'
+  | 'cta'
+  | 'visual'
+  | 'animation'
+  | 'platform'
+  | 'accessibility'
+  | 'timing';
+
+/** A single applicable suggestion produced by an analysis (spec #9). */
+export interface AIRecommendation {
+  id: ID;
+  postId: ID;
+  brandId: ID;
+  type: AIRecommendationType;
+  originalValue?: string;
+  suggestedValue: string;
+  reason: string;
+  priority: Priority;
+  applied: boolean;
+  /** When set, Apply writes suggestedValue into this text element. */
+  targetElementId?: ID;
+  createdAt: ISODate;
+}
+
+// ═══ Postio Coach: Strategy / Playbook layer ═══
+//
+// The reactive Coach scores existing posts; the Strategy layer is generative:
+// a one-time per-brand business brief feeds a set of "plays" (full strategy,
+// audience psychology, positioning, pillars, 30-day plan, scroll-stopping
+// post, monetization), each producing a saved, structured artifact. Outputs
+// feed the rest of the Coach (pillars -> plan -> draft -> Analyse -> learn).
+
+/** A per-brand business brief, reused by every Strategy play (the `[paste]`). */
+export interface CoachBrief {
+  id: ID; // === brandId (one brief per brand)
+  brandId: ID;
+  niche: string;
+  audience: string;
+  goals: string;
+  businessModel: string;
+  competitors?: string;
+  notes?: string;
+  updatedAt: ISODate;
+}
+
+export type StrategyPlayId =
+  | 'full_strategy'
+  | 'audience_psychology'
+  | 'authority_positioning'
+  | 'content_pillars'
+  | 'thirty_day_plan'
+  | 'scroll_post'
+  | 'monetization';
+
+/** A titled block of advice (bullets and/or prose). */
+export interface StrategySection {
+  heading: string;
+  body?: string;
+  bullets?: string[];
+}
+
+/** Discriminated artifact payload: each play renders one of these shapes. */
+export type StrategyData =
+  | { kind: 'sections'; summary?: string; sections: StrategySection[] }
+  | { kind: 'pillars'; summary?: string; pillars: { name: string; why: string; topics: string[] }[] }
+  | { kind: 'calendar'; summary?: string; days: { day: number; idea: string; format: string; angle: string; goal: string }[] }
+  | { kind: 'post'; hook: string; insight: string; cta: string; caption?: string; hashtags?: string[] };
+
+export type StrategyDataKind = StrategyData['kind'];
+
+/** A saved Strategy play output. */
+export interface StrategyArtifact {
+  id: ID;
+  brandId: ID;
+  play: StrategyPlayId;
+  title: string;
+  data: StrategyData;
+  modelUsed: string;
+  createdAt: ISODate;
+}
