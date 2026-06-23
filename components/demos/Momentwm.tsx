@@ -210,7 +210,7 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
   const [q, setQ] = useState("");
   const [min, setMin] = useState(0);
   const [win, setWin] = useState<"all" | "week" | "month" | "quarter" | "year">("all");
-  const [type, setType] = useState<"all" | "wikidata" | "dwb" | "welsh-collection">("all");
+  const [type, setType] = useState<"all" | "wikidata" | "dwb" | "welsh-collection" | "welsh-screen">("all");
   const [roundOnly, setRoundOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const { saves, mutate } = useSaves();
@@ -262,6 +262,7 @@ function RadarView({ onOpen }: { onOpen: (o: Opp) => void }) {
     { k: "wikidata", label: "Digwyddiadau" },
     { k: "dwb", label: "Pobl" },
     { k: "welsh-collection", label: "Casgliadau" },
+    { k: "welsh-screen", label: "Ffilm a TV" },
   ];
 
   const doRefresh = async () => {
