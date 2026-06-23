@@ -14,7 +14,7 @@ import { renderGraphicImage } from '@engine/lib/coach/actions';
 import { exportAnalysisReport } from '@engine/lib/coach/report';
 import { voiceSummary } from '@engine/lib/coach/voice';
 import type { PlatformId, PostAnalysis } from '@engine/lib/model/types';
-import { AnalysisResultView, ScoreBar, scoreTone, useCoachConfig } from './shared';
+import { AnalysisResultView, CoachProgress, ScoreBar, scoreTone, useCoachConfig } from './shared';
 
 export default function AnalysePanel({ brandId }: { brandId: string }) {
   const store = useStore();
@@ -89,7 +89,7 @@ export default function AnalysePanel({ brandId }: { brandId: string }) {
 
       {selected && <History postId={selected.id} />}
 
-      {busy && <Panel className="p-6"><p className="text-center text-[13px] text-zinc-500 dark:text-zinc-400">{t('coach.analysing')}…</p></Panel>}
+      {busy && <CoachProgress steps={[t('coach.progress.a1'), t('coach.progress.a2'), t('coach.progress.a3'), t('coach.progress.a4')]} />}
 
       {result && (
         <>
