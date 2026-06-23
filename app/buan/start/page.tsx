@@ -5,7 +5,7 @@ import { slugify, isValidSlug, isReservedSlug } from "@/lib/buan/config";
 
 /* Buan onboarding wizard (P2). Business basics -> unique link (slug) ->
    first location -> QR + go-live. Admin-facing; English for now (bilingual
-   admin is a follow-up — customer-facing pages are bilingual). Persists once
+   admin is a follow-up – customer-facing pages are bilingual). Persists once
    Supabase Auth + project are wired; until then it produces the slug + QR and
    simulates "create". */
 
@@ -77,7 +77,7 @@ export default function BuanOnboarding() {
         <div className="text-center">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-400 text-3xl text-emerald-950">✓</div>
           <h1 className="mt-4 text-2xl font-bold">Your Buan is ready</h1>
-          <p className="mt-1 text-stone-400">{bizName} — share your QR and start taking orders.</p>
+          <p className="mt-1 text-stone-400">{bizName} – share your QR and start taking orders.</p>
           <div className="mx-auto mt-6 inline-block rounded-xl bg-white p-4">
             <img src={qr(locUrl)} width={180} height={180} alt="QR code" />
           </div>

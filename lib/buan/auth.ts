@@ -1,8 +1,8 @@
-// Buan auth scaffold (P0) — interface + stub only.
+// Buan auth scaffold (P0) – interface + stub only.
 //
 // Real auth (business owners / staff logging in to the dashboard) will use
 // Supabase Auth. Wiring it properly adds the `@supabase/supabase-js` dependency
-// (or GoTrue REST calls) — that's a deliberate decision deferred past P0 so the
+// (or GoTrue REST calls) – that's a deliberate decision deferred past P0 so the
 // foundation stays dependency-free. For now this exposes the shape the rest of
 // the app codes against, returning "signed out" everywhere.
 

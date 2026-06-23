@@ -1,7 +1,7 @@
-// Buan data layer (P0) — multi-tenant access over Supabase PostgREST.
+// Buan data layer (P0) – multi-tenant access over Supabase PostgREST.
 //
 // Deliberately uses plain fetch (no @supabase/supabase-js) so P0 adds NO new
-// npm dependency — same approach proven in the Tanio store. Generalises the
+// npm dependency – same approach proven in the Tanio store. Generalises the
 // single-tenant Tanio store to business + location scope. Every function is
 // env-gated: with no Supabase config it returns empty/null so the app still
 // builds and renders a "not configured" placeholder.
@@ -101,7 +101,7 @@ export async function isSlugAvailable(slug: string): Promise<boolean> {
   return rows.length === 0;
 }
 
-// Create a business. Requires an authenticated owner (RLS) — wired once Supabase
+// Create a business. Requires an authenticated owner (RLS) – wired once Supabase
 // Auth lands; until then the onboarding wizard simulates the result.
 export async function createBusiness(input: {
   slug: string;

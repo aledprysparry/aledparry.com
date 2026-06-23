@@ -5,7 +5,7 @@ import { getBusinessBySlug, listLocations } from "@/lib/buan/api";
 
 export const dynamic = "force-dynamic";
 
-// Buan business page: buan.co/[business] — lists the business's locations.
+// Buan business page: buan.co/[business] – lists the business's locations.
 export default async function BusinessPage({
   params,
 }: {
