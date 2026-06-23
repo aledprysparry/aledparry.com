@@ -36,6 +36,19 @@ export interface DemoEntry {
 
 export const demos: DemoEntry[] = [
   {
+    clientSlug: "buan",
+    clientName: "Buan",
+    toolSlug: "buan",
+    toolName: "Buan",
+    description:
+      "The digital sales layer for physical businesses: customers scan a QR code, order and pay on their phone, and you take orders without the queue or the hardware. Bilingual marketing landing (Phase 1).",
+    descriptionCy:
+      "Yr haen werthu ddigidol ar gyfer busnesau go iawn: mae cwsmeriaid yn sganio cod QR, yn archebu ac yn talu ar eu ffôn, ac rydych chi'n cymryd archebion heb y ciw na'r caledwedd. Tudalen farchnata ddwyieithog (Cam 1).",
+    componentPath: "",
+    href: "/buan",
+    status: "demo",
+  },
+  {
     clientSlug: "momentwm",
     clientName: "Momentwm",
     toolSlug: "radar",

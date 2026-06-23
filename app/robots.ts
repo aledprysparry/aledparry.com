@@ -5,7 +5,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        // /app/buan is explicitly allowed (more specific than the /app/ block)
+        // so crawlers can follow its redirect to the canonical /buan landing.
+        allow: ["/", "/app/buan"],
         disallow: ["/app/", "/admin/", "/demos/"],
       },
     ],
