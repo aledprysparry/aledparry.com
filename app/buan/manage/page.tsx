@@ -40,6 +40,9 @@ export default function BuanManage() {
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [prep, setPrep] = useState("");
+  const [offerPct, setOfferPct] = useState("20");
+  const [offerActive, setOfferActive] = useState(false);
+  const inOffer = (it: Item) => offerActive && it.stockType === "limited" && it.qty > 0;
 
   function add(e: React.FormEvent) {
     e.preventDefault();
@@ -76,6 +79,24 @@ export default function BuanManage() {
           {outCount > 0 && <span className="rounded-full bg-red-500/15 px-3 py-1 text-red-300">{outCount} sold out</span>}
         </div>
 
+        {/* end-of-day offer */}
+        <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <div className="text-sm font-semibold text-amber-200">🕒 Closing soon?</div>
+          <p className="mt-0.5 text-xs text-stone-400">Clear remaining stock with a quick discount on your limited-stock items. Customers see it instantly on the menu.</p>
+          {offerActive ? (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm font-semibold text-amber-300">Live: {offerPct}% off remaining stock</span>
+              <button onClick={() => setOfferActive(false)} className="rounded border border-stone-700 px-3 py-1.5 text-xs hover:border-emerald-400">End offer</button>
+            </div>
+          ) : (
+            <div className="mt-3 flex items-center gap-2">
+              <input value={offerPct} onChange={(e) => setOfferPct(e.target.value)} inputMode="numeric" className={`${inp} w-20`} />
+              <span className="text-sm text-stone-400">% off</span>
+              <button onClick={() => setOfferActive(true)} className="ml-auto rounded-lg bg-amber-400 px-3 py-2 text-sm font-bold text-amber-950 hover:brightness-105">Launch offer</button>
+            </div>
+          )}
+        </div>
+
         {/* add item */}
         <form onSubmit={add} className="mt-5 rounded-xl border border-stone-800 bg-stone-900/60 p-4">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -100,7 +121,8 @@ export default function BuanManage() {
                     <div key={it.id} className={`rounded-lg border p-3 ${it.visible ? "border-stone-800 bg-stone-900" : "border-stone-800/60 bg-stone-900/40 opacity-60"}`}>
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="font-semibold">{it.name} <span className="ml-1 text-sm font-normal text-stone-400 tabular-nums">{money(it.price)}</span></div>
+                          <div className="font-semibold">{it.name} <span className="ml-1 text-sm font-normal text-stone-400 tabular-nums">{money(it.price)}</span>
+                            {inOffer(it) ? <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-300">{offerPct}% off</span> : null}</div>
                           <div className="text-xs text-stone-500">{it.prep > 0 ? `${it.prep} min prep` : "ready to go"}</div>
                         </div>
                         <div className="flex items-center gap-2">

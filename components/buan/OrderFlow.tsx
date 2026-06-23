@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { money } from "@/lib/buan/config";
 import { prepMinutesFrom, collectionSlots, quietest, labelFor } from "@/lib/buan/slots";
+import { effectivePrice, discountPct } from "@/lib/buan/offers";
+import type { Offer } from "@/lib/buan/offers";
 import type { Business, Location, Product, Stock } from "@/lib/buan/types";
 
 /* Buan customer ordering (P4-P6). Multi-tenant menu -> basket -> details +
@@ -58,9 +60,9 @@ function soldOut(p: Product) {
 }
 
 export default function OrderFlow({
-  business, location, menu, live,
+  business, location, menu, live, offers = [],
 }: {
-  business: Business; location: Location; menu: Product[]; live: boolean;
+  business: Business; location: Location; menu: Product[]; live: boolean; offers?: Offer[];
 }) {
   const [lang, setLang] = useState<Lang>("en");
   const [step, setStep] = useState<Step>("menu");
@@ -81,7 +83,7 @@ export default function OrderFlow({
       if (q === 0) delete n[id]; else n[id] = q;
       return n;
     });
-  const lines = Object.entries(cart).map(([id, qty]) => ({ id, name: byId[id]?.name ?? "", qty, price: byId[id]?.price ?? 0 }));
+  const lines = Object.entries(cart).map(([id, qty]) => ({ id, name: byId[id]?.name ?? "", qty, price: byId[id] ? effectivePrice(byId[id], offers) : 0 }));
   const total = lines.reduce((s, l) => s + l.qty * l.price, 0);
 
   const prepMins = prepMinutesFrom(Object.keys(cart).map((id) => byId[id]?.prep_time_mins ?? 0));
@@ -136,6 +138,7 @@ export default function OrderFlow({
             <div className="mt-3 space-y-2">
               {menu.map((p) => {
                 const s = stockOf(p); const out = soldOut(p);
+                const dp = discountPct(p.id, offers); const eff = effectivePrice(p, offers);
                 return (
                   <div key={p.id} className={`flex items-center gap-3 rounded-lg border border-stone-800 bg-stone-900 p-3 ${out ? "opacity-50" : ""}`}>
                     <div className="min-w-0 flex-1">
@@ -143,7 +146,15 @@ export default function OrderFlow({
                       {p.description ? <div className="truncate text-xs text-stone-500">{p.description}</div> : null}
                       {s?.type === "limited" && s.qty > 0 ? <div className="text-xs text-amber-400">{s.qty} {t.left}</div> : null}
                     </div>
-                    <div className="font-semibold tabular-nums text-emerald-400">{money(p.price)}</div>
+                    {dp > 0 ? (
+                      <div className="text-right">
+                        <div className="text-xs text-stone-500 line-through tabular-nums">{money(p.price)}</div>
+                        <div className="font-semibold tabular-nums text-emerald-400">{money(eff)}</div>
+                        <div className="text-[10px] font-bold uppercase text-amber-400">{dp}% off</div>
+                      </div>
+                    ) : (
+                      <div className="font-semibold tabular-nums text-emerald-400">{money(p.price)}</div>
+                    )}
                     {out ? (
                       <span className="text-xs font-semibold uppercase text-stone-500">{t.soldout}</span>
                     ) : (

@@ -8,6 +8,7 @@
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY, BUAN_LIVE } from "./config";
 import type { Business, Location, Product, Order, OrderStatus } from "./types";
+import type { Offer } from "./offers";
 
 function headers(extra: Record<string, string> = {}) {
   return {
@@ -180,5 +181,29 @@ export async function setStock(
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates" },
     body: JSON.stringify({ product_id: productId, type, qty }),
+  });
+}
+
+// ----- end-of-day offers (P7) -----
+
+export async function listActiveOffers(locationId: string): Promise<Offer[]> {
+  if (!BUAN_LIVE) return [];
+  const rows = await rest<{ id: string; product_ids: string[]; discount_pct: number }[]>(
+    `offers?location_id=eq.${locationId}&active=eq.true&select=id,product_ids,discount_pct`
+  );
+  return rows.map((r) => ({ id: r.id, productIds: r.product_ids ?? [], discountPct: r.discount_pct, active: true }));
+}
+
+export async function createOffer(input: {
+  business_id: string;
+  location_id: string;
+  product_ids: string[];
+  discount_pct: number;
+}): Promise<void> {
+  if (!BUAN_LIVE) return;
+  await rest(`offers`, {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ ...input, active: true }),
   });
 }
