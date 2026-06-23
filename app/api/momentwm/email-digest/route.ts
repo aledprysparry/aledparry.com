@@ -104,9 +104,9 @@ export async function GET(request: Request) {
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const to = process.env.DIGEST_EMAIL_TO || "Aled@aledparry.com";
+    const to = process.env.DIGEST_EMAIL_TO || "aled@aledparry.com";
     const { data, error } = await resend.emails.send({
-      from: "Momentwm <onboarding@resend.dev>",
+      from: "Momentwm <momentwm@aledparry.com>",
       to,
       subject: "Momentwm — pum uchaf yr wythnos a'r mis",
       html: buildHtml(),
