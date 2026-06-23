@@ -8,7 +8,10 @@ import { extractPostText, callCoach } from './analysis';
 
 const EMOJI_RE = /[←-⇿⌀-➿⬀-⯿]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
 const HASHTAG_RE = /#[A-Za-z0-9_À-ɏḀ-ỿ]+/g;
-const WELSH_HINTS = [' yn ', ' y ', ' a ', ' ein ', ' eich ', ' wedi ', ' am ', 'dd ', 'll', 'ŵ', ' â', ' i ', ' o '];
+// Welsh-distinctive tokens only - whole function words + diacritics that do not
+// collide with common English substrings (so an English brand is not misread as
+// Welsh). Deliberately drops ' a ' / ' y ' / 'll' / 'dd ' / ' i ' / ' o '.
+const WELSH_HINTS = [' yn ', ' yw ', ' wedi ', ' eich ', ' ein ', ' gyda ', ' mae ', ' hefyd ', ' sydd ', ' ond ', ' neu ', ' chi ', ' wrth ', ' iawn ', ' rhag', ' gan ', 'ŵ', 'ŷ', ' â ', ' ô'];
 const CTA_WORDS = ['shop', 'buy', 'learn', 'sign up', 'book', 'download', 'join', 'follow', 'comment', 'save', 'share', 'tap', 'click', 'discover', 'register', 'get', 'dysgwch', 'cofrestrwch', 'archebwch', 'dilynwch', 'rhannwch', 'prynwch', 'ymunwch'];
 const STOP = new Set(['the', 'a', 'an', 'to', 'of', 'and', 'for', 'in', 'on', 'is', 'are', 'your', 'you', 'we', 'our', 'with', 'this', 'that', 'it', 'at', 'be', 'or', 'yn', 'y', 'a', 'i', 'o', 'am', 'ein', 'eich', 'mae', 'yw']);
 
@@ -32,12 +35,12 @@ export function deriveVoiceProfile(graphics: GeneratedGraphic[]): DerivedVoice {
   const welshScore = WELSH_HINTS.filter((h) => low.includes(h)).length;
   const hasEnglish = /\b(the|and|you|your|with|for)\b/i.test(all);
   const language: VoiceProfile['language'] = !sampleCount ? 'unknown'
-    : welshScore >= 3 && hasEnglish ? 'bilingual'
-    : welshScore >= 3 ? 'cy'
+    : welshScore >= 2 && hasEnglish ? 'bilingual'
+    : welshScore >= 2 ? 'cy'
     : 'en';
 
   const ctaHits = CTA_WORDS.filter((w) => low.includes(` ${w}`)).length;
-  const ctaStyle = ctaHits >= 2 ? 'direct CTAs' : questionCount >= sampleCount ? 'questions that invite replies' : 'soft invitations';
+  const ctaStyle = ctaHits >= 2 ? 'direct CTAs' : (sampleCount > 0 && questionCount >= sampleCount) ? 'questions that invite replies' : 'soft invitations';
 
   const emojiUsage: VoiceProfile['emojiUsage'] = emojiPerPost >= 2 ? 'heavy' : emojiPerPost >= 0.4 ? 'light' : 'none';
   const hashtagStyle: VoiceProfile['hashtagStyle'] = tagPerPost >= 6 ? 'many' : tagPerPost >= 1 ? 'few' : 'none';
@@ -77,7 +80,7 @@ export function voiceSummary(p: VoiceProfile | undefined): string {
 /** AI-refine on top of the deterministic profile (falls back to deterministic). */
 export async function refineVoiceProfile(graphics: GeneratedGraphic[], brand: Brand | undefined): Promise<{ profile: DerivedVoice; usedAI: boolean }> {
   const base = deriveVoiceProfile(graphics);
-  const posts = graphics.map((g) => extractPostText(g).joined).filter(Boolean).slice(0, 20);
+  const posts = graphics.map((g) => extractPostText(g).joined).filter((s) => s.trim().length > 0).slice(0, 20);
   if (posts.length < 2) return { profile: base, usedAI: false };
   const { result } = await callCoach<Partial<DerivedVoice>>('coach-voice', {
     brand: brand ? { name: brand.name, toneNotes: brand.toneNotes } : undefined,
