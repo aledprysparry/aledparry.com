@@ -9,7 +9,8 @@
    marketing site is independent of the product build. This file
    is a self-contained bilingual (EN/CY) landing experience with
    its own copy dictionary + language toggle, matching Tanio's
-   bilingual approach. Rendered with the site's Tailwind tokens.
+   bilingual approach. Rendered with the site's Tailwind tokens
+   plus a small scoped <style> block for motion + gradient text.
 
    Sections: hero · how-it-works (3 steps) · use-cases grid ·
    key features · "No website? No problem" · flexible pricing
@@ -22,7 +23,7 @@
    A slim notice bar surfaces this in-product on this branch.
    ============================================================ */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const DEFAULT_LANG = "en";
 const LANG_KEY = "buan_lang";
@@ -40,9 +41,11 @@ const COPY = {
     nav_uses: "Use cases",
     nav_pricing: "Pricing",
     nav_cta: "Get early access",
-    back: "aledparry.com",
+    menu_open: "Open menu",
+    menu_close: "Close menu",
 
     // hero
+    hero_pill: "Early access now open",
     hero_eyebrow: "The digital sales layer for physical businesses",
     hero_title_a: "Sell faster.",
     hero_title_b: "Queue less.",
@@ -52,15 +55,18 @@ const COPY = {
     hero_cta_primary: "Get early access",
     hero_cta_secondary: "See how it works",
     hero_name_note: "Buan (adj.) – Welsh for fast.",
+    hero_chips: ["No app to download", "No hardware", "Pay on phone"],
 
     // phone mock
     mock_business: "Caffi Buan",
     mock_tagline: "Scan · order · collect",
+    mock_live: "Live",
     mock_item1: "Flat White",
     mock_item2: "Bacon Roll",
     mock_item3: "Blueberry Muffin",
     mock_total: "Total",
     mock_pay: "Order & pay",
+    mock_scan: "Scan to order",
 
     // how it works
     how_eyebrow: "How it works",
@@ -103,15 +109,16 @@ const COPY = {
     feat_eyebrow: "What's included",
     feat_heading: "Everything you need to start selling",
     feat: [
-      ["📲", "QR ordering & payment", "Customers pay on their phone. Nothing to download."],
-      ["📋", "Live orders dashboard", "See orders as they arrive and move them through to done."],
-      ["🍽️", "Your own menu or catalogue", "Add items, prices, photos and options in minutes."],
-      ["🏴", "Bilingual by default", "Welsh and English, switchable for every customer."],
-      ["📱", "Works on any phone", "No app, no hardware, no card reader required."],
-      ["💷", "Simple, flexible pricing", "A low monthly cost while we test together."],
-    ] as [string, string, string][],
+      ["QR ordering & payment", "Customers pay on their phone. Nothing to download."],
+      ["Live orders dashboard", "See orders as they arrive and move them through to done."],
+      ["Your own menu or catalogue", "Add items, prices, photos and options in minutes."],
+      ["Bilingual by default", "Welsh and English, switchable for every customer."],
+      ["Works on any phone", "No app, no hardware, no card reader required."],
+      ["Simple, flexible pricing", "A low monthly cost while we test together."],
+    ] as [string, string][],
 
     // no website
+    nw_eyebrow: "No barriers",
     nw_heading: "No website? No problem.",
     nw_body:
       "Buan is your storefront. Your QR code is a working shop your customers can order from today – no domain, no design project, no developer. Already have a website? Add Buan to it with a single link.",
@@ -184,9 +191,11 @@ const COPY = {
     nav_uses: "Defnyddiau",
     nav_pricing: "Prisio",
     nav_cta: "Mynediad cynnar",
-    back: "aledparry.com",
+    menu_open: "Agor dewislen",
+    menu_close: "Cau dewislen",
 
     // hero
+    hero_pill: "Mynediad cynnar ar agor nawr",
     hero_eyebrow: "Yr haen werthu ddigidol ar gyfer busnesau go iawn",
     hero_title_a: "Gwerthu'n gyflymach.",
     hero_title_b: "Ciwio'n llai.",
@@ -196,15 +205,18 @@ const COPY = {
     hero_cta_primary: "Cael mynediad cynnar",
     hero_cta_secondary: "Gweld sut mae'n gweithio",
     hero_name_note: "Buan (ans.) – cyflym.",
+    hero_chips: ["Dim ap i'w lawrlwytho", "Dim caledwedd", "Talu ar ffôn"],
 
     // phone mock
     mock_business: "Caffi Buan",
     mock_tagline: "Sganio · archebu · casglu",
+    mock_live: "Byw",
     mock_item1: "Flat White",
     mock_item2: "Rholyn Bacwn",
     mock_item3: "Myffin Llus",
     mock_total: "Cyfanswm",
     mock_pay: "Archebu a thalu",
+    mock_scan: "Sganiwch i archebu",
 
     // how it works
     how_eyebrow: "Sut mae'n gweithio",
@@ -247,15 +259,16 @@ const COPY = {
     feat_eyebrow: "Beth sydd wedi'i gynnwys",
     feat_heading: "Popeth sydd ei angen arnoch i ddechrau gwerthu",
     feat: [
-      ["📲", "Archebu a thalu drwy QR", "Mae cwsmeriaid yn talu ar eu ffôn. Dim byd i'w lawrlwytho."],
-      ["📋", "Dangosfwrdd archebion byw", "Gwelwch archebion wrth iddyn nhw gyrraedd a'u symud drwodd."],
-      ["🍽️", "Eich bwydlen neu gatalog eich hun", "Ychwanegwch eitemau, prisiau, lluniau a dewisiadau mewn munudau."],
-      ["🏴", "Dwyieithog o'r dechrau", "Cymraeg a Saesneg, i'w newid ar gyfer pob cwsmer."],
-      ["📱", "Yn gweithio ar unrhyw ffôn", "Dim ap, dim caledwedd, dim darllenydd cardiau."],
-      ["💷", "Prisio syml, hyblyg", "Cost fisol isel wrth i ni brofi gyda'n gilydd."],
-    ] as [string, string, string][],
+      ["Archebu a thalu drwy QR", "Mae cwsmeriaid yn talu ar eu ffôn. Dim byd i'w lawrlwytho."],
+      ["Dangosfwrdd archebion byw", "Gwelwch archebion wrth iddyn nhw gyrraedd a'u symud drwodd."],
+      ["Eich bwydlen neu gatalog eich hun", "Ychwanegwch eitemau, prisiau, lluniau a dewisiadau mewn munudau."],
+      ["Dwyieithog o'r dechrau", "Cymraeg a Saesneg, i'w newid ar gyfer pob cwsmer."],
+      ["Yn gweithio ar unrhyw ffôn", "Dim ap, dim caledwedd, dim darllenydd cardiau."],
+      ["Prisio syml, hyblyg", "Cost fisol isel wrth i ni brofi gyda'n gilydd."],
+    ] as [string, string][],
 
     // no website
+    nw_eyebrow: "Dim rhwystrau",
     nw_heading: "Dim gwefan? Dim problem.",
     nw_body:
       "Buan yw eich siop. Mae eich cod QR yn siop weithredol y gall eich cwsmeriaid archebu ohoni heddiw – dim parth, dim prosiect dylunio, dim datblygwr. Gwefan gennych chi'n barod? Ychwanegwch Buan ati gydag un ddolen.",
@@ -325,27 +338,196 @@ const COPY = {
 type Copy = (typeof COPY)[Lang];
 
 /* ---------------------------------------------------------------- */
+/*  Scoped styles: motion, gradient text, button shine               */
+/*  (reduced-motion friendly)                                        */
+/* ---------------------------------------------------------------- */
+const STYLES = `
+.buan-grad-text{background-image:linear-gradient(120deg,#0f766e 0%,#14b8a6 45%,#10b981 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.buan-reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);will-change:opacity,transform;}
+.buan-reveal.is-in{opacity:1;transform:none;}
+.buan-shine{position:relative;overflow:hidden;}
+.buan-shine::after{content:"";position:absolute;top:0;left:-160%;width:55%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-18deg);transition:left .7s cubic-bezier(.16,1,.3,1);}
+.buan-shine:hover::after{left:170%;}
+@keyframes buan-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes buan-floatslow{0%,100%{transform:translateY(0) rotate(6deg)}50%{transform:translateY(-8px) rotate(6deg)}}
+@keyframes buan-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: no-preference){
+  .buan-float{animation:buan-float 6.5s ease-in-out infinite;}
+  .buan-float-slow{animation:buan-floatslow 7.5s ease-in-out infinite;}
+  .buan-pulse{animation:buan-pulse 2s ease-in-out infinite;}
+}
+@media (prefers-reduced-motion: reduce){
+  .buan-reveal{opacity:1;transform:none;transition:none;}
+  .buan-shine::after{display:none;}
+}
+`;
+
+/* ---------------------------------------------------------------- */
+/*  Inline line-icon set (premium, consistent stroke)                */
+/* ---------------------------------------------------------------- */
+function Icon({ name, className = "h-6 w-6" }: { name: string; className?: string }) {
+  const paths: Record<string, React.ReactNode> = {
+    coffee: (
+      <>
+        <path d="M5 8h11v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8Z" />
+        <path d="M16 9h2.5a2 2 0 0 1 0 4H16" />
+        <path d="M8 3.5c0 1-1 1.3-1 2.2M11.5 3.5c0 1-1 1.3-1 2.2" />
+        <path d="M5 20.5h11" />
+      </>
+    ),
+    building: (
+      <>
+        <path d="M4 20.5V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v15.5" />
+        <path d="M13 9h6a1 1 0 0 1 1 1v10.5" />
+        <path d="M3 20.5h18" />
+        <path d="M7 8h2M7 12h2M7 16h2M16 12.5h1M16 16h1" />
+      </>
+    ),
+    bolt: <path d="M12.5 3 6 13h4.5l-1 8L17 11h-4.5l0-8Z" />,
+    ticket: (
+      <>
+        <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h13A1.5 1.5 0 0 1 20 8.5v1a2 2 0 0 0 0 4v1a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 14.5v-1a2 2 0 0 0 0-4v-1Z" />
+        <path d="M11 7.5v9" strokeDasharray="2 2" />
+      </>
+    ),
+    bag: (
+      <>
+        <path d="M6.5 8h11l-.8 11.2a1.5 1.5 0 0 1-1.5 1.4H8.8a1.5 1.5 0 0 1-1.5-1.4L6.5 8Z" />
+        <path d="M9 8V7a3 3 0 0 1 6 0v1" />
+      </>
+    ),
+    briefcase: (
+      <>
+        <rect x="3.5" y="7.5" width="17" height="12" rx="1.5" />
+        <path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5" />
+        <path d="M3.5 13h17" />
+      </>
+    ),
+    qr: (
+      <>
+        <rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.2" />
+        <rect x="14" y="3.5" width="6.5" height="6.5" rx="1.2" />
+        <rect x="3.5" y="14" width="6.5" height="6.5" rx="1.2" />
+        <path d="M14 14v2.2M16.6 14v3M19.2 14.6v1.4M14 18.8h2M17.6 18.8h2.9M20.5 16.4v4" />
+      </>
+    ),
+    dashboard: (
+      <>
+        <rect x="3.5" y="4" width="17" height="16" rx="2" />
+        <path d="M3.5 9h17M9 9v11" />
+      </>
+    ),
+    menu: (
+      <>
+        <rect x="6" y="5" width="12" height="16" rx="1.5" />
+        <path d="M9 4.5h6a1 1 0 0 1 1 1V6H8v-.5a1 1 0 0 1 1-1Z" />
+        <path d="M9 10h6M9 13.5h6M9 17h3.5" />
+      </>
+    ),
+    globe: (
+      <>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M3.5 12h17" />
+        <path d="M12 3.5c2.6 2.4 2.6 14.6 0 17M12 3.5c-2.6 2.4-2.6 14.6 0 17" />
+      </>
+    ),
+    phone: (
+      <>
+        <rect x="7" y="3.5" width="10" height="17" rx="2" />
+        <path d="M10.5 17.5h3" />
+      </>
+    ),
+    pound: (
+      <>
+        <path d="M8 20h9" />
+        <path d="M9.5 20c1.6-1.4 1.8-3.2 1.8-5V9.2A3.2 3.2 0 0 1 17 8" />
+        <path d="M7.5 13.5h6" />
+      </>
+    ),
+    check: <path d="M5 12.5 9.5 17 19 7" />,
+    arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  };
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      {paths[name]}
+    </svg>
+  );
+}
+
+const USE_ICONS = ["coffee", "building", "bolt", "ticket", "bag", "briefcase"];
+const FEAT_ICONS = ["qr", "dashboard", "menu", "globe", "phone", "pound"];
+
+/* ---------------------------------------------------------------- */
+/*  Reveal-on-scroll wrapper (IntersectionObserver)                  */
+/* ---------------------------------------------------------------- */
+function Reveal({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+    const ob = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            setInView(true);
+            ob.disconnect();
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
+    );
+    ob.observe(el);
+    return () => ob.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`buan-reveal ${inView ? "is-in" : ""} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- */
 /*  Small building blocks                                            */
 /* ---------------------------------------------------------------- */
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-sans font-semibold uppercase tracking-[0.18em] text-teal-700">
+    <span className="inline-flex items-center gap-2 text-xs font-sans font-semibold uppercase tracking-[0.2em] text-teal-700">
+      <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
       {children}
-    </p>
-  );
-}
-
-function StepNumber({ n }: { n: number }) {
-  return (
-    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-teal-600 font-sans text-lg font-bold text-white">
-      {n}
     </span>
   );
 }
 
 /* Decorative QR-style grid – purely visual, not a real code. */
-function QrMark() {
-  // A small deterministic pattern so it reads as a QR without encoding anything.
+function QrMark({ className = "" }: { className?: string }) {
   const cells = [
     1, 1, 1, 0, 1, 0, 1, 1,
     1, 0, 1, 0, 0, 1, 0, 1,
@@ -359,14 +541,70 @@ function QrMark() {
   return (
     <div
       aria-hidden
-      className="grid grid-cols-8 gap-0.5 rounded-lg bg-white p-2 shadow-sm ring-1 ring-stone-200"
+      className={`grid grid-cols-8 gap-[3px] rounded-2xl bg-white p-3 shadow-lg ring-1 ring-stone-900/5 ${className}`}
     >
       {cells.map((c, i) => (
         <span
           key={i}
-          className={`h-2 w-2 rounded-[1px] ${c ? "bg-stone-900" : "bg-transparent"}`}
+          className={`h-2.5 w-2.5 rounded-[2px] ${c ? "bg-stone-900" : "bg-stone-100"}`}
         />
       ))}
+    </div>
+  );
+}
+
+/* Refined phone mock used in the hero. */
+function PhoneMock({ t }: { t: Copy }) {
+  return (
+    <div className="relative buan-float">
+      {/* soft brand glow */}
+      <div className="absolute -inset-8 -z-10 rounded-full bg-teal-400/20 blur-3xl" aria-hidden />
+      <div className="relative w-[15rem] rounded-[2.6rem] border-[11px] border-stone-900 bg-stone-900 shadow-2xl sm:w-[16.5rem]">
+        {/* notch */}
+        <div className="absolute left-1/2 top-2 z-10 h-1.5 w-16 -translate-x-1/2 rounded-full bg-black/70" aria-hidden />
+        <div className="overflow-hidden rounded-[1.9rem] bg-white">
+          <div className="bg-gradient-to-br from-teal-600 to-emerald-600 px-5 pb-5 pt-7 text-white">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold">{t.mock_business}</p>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold">
+                <span className="buan-pulse h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                {t.mock_live}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-teal-50/90">{t.mock_tagline}</p>
+          </div>
+          <div className="space-y-2.5 px-5 py-5">
+            {[
+              [t.mock_item1, "£3.20"],
+              [t.mock_item2, "£4.50"],
+              [t.mock_item3, "£2.90"],
+            ].map(([name, price]) => (
+              <div
+                key={name}
+                className="flex items-center justify-between rounded-xl bg-stone-50 px-3 py-2.5 ring-1 ring-stone-900/5"
+              >
+                <span className="text-sm font-medium text-stone-800">{name}</span>
+                <span className="text-sm font-semibold text-teal-700">{price}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between pt-1 text-sm">
+              <span className="text-stone-500">{t.mock_total}</span>
+              <span className="font-bold text-stone-900">£10.60</span>
+            </div>
+            <div className="mt-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 py-3 text-center text-sm font-semibold text-white shadow-sm">
+              {t.mock_pay}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* floating QR card */}
+      <div className="buan-float-slow absolute -bottom-7 -right-5 sm:-right-9">
+        <QrMark className="w-28" />
+        <p className="mt-1 text-center text-[10px] font-semibold uppercase tracking-wider text-stone-500">
+          {t.mock_scan}
+        </p>
+      </div>
     </div>
   );
 }
@@ -418,16 +656,16 @@ function LeadForm({ t }: { t: Copy }) {
 
   if (sent) {
     return (
-      <div className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-stone-200 sm:p-10">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-teal-50 text-2xl">
-          ✓
+      <div className="flex min-h-[22rem] flex-col items-center justify-center rounded-3xl bg-white p-8 text-center shadow-xl shadow-teal-900/5 ring-1 ring-stone-900/5 sm:p-10">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30">
+          <Icon name="check" className="h-8 w-8" />
         </div>
-        <h3 className="font-serif text-2xl text-stone-900">{t.lead_success_t}</h3>
-        <p className="mt-2 text-stone-600">{t.lead_success_b}</p>
+        <h3 className="font-serif text-2xl font-bold text-stone-900">{t.lead_success_t}</h3>
+        <p className="mt-2 max-w-xs text-stone-600">{t.lead_success_b}</p>
         <button
           type="button"
           onClick={() => setSent(false)}
-          className="mt-6 text-sm font-medium text-teal-700 underline underline-offset-4 hover:text-teal-800"
+          className="mt-6 text-sm font-medium text-teal-700 underline underline-offset-4 transition hover:text-teal-800"
         >
           {t.lead_again}
         </button>
@@ -436,64 +674,56 @@ function LeadForm({ t }: { t: Copy }) {
   }
 
   const inputCls =
-    "w-full rounded-lg border border-stone-300 bg-white px-4 py-3 text-stone-900 placeholder:text-stone-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30";
+    "w-full rounded-xl border border-stone-300/80 bg-white px-4 py-3 text-stone-900 shadow-sm transition placeholder:text-stone-400 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/15";
+  const labelCls = "mb-1.5 block text-sm font-medium text-stone-700";
 
   return (
     <form
       onSubmit={onSubmit}
       noValidate
-      className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-200 sm:p-8"
+      className="rounded-3xl bg-white p-6 shadow-xl shadow-teal-900/5 ring-1 ring-stone-900/5 sm:p-8"
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-1">
-          <label htmlFor="buan-name" className="mb-1.5 block text-sm font-medium text-stone-700">
-            {t.lead_name}
-          </label>
+        <div>
+          <label htmlFor="buan-name" className={labelCls}>{t.lead_name}</label>
           <input id="buan-name" name="name" type="text" autoComplete="name" placeholder={t.lead_name_ph} className={inputCls} />
         </div>
-        <div className="sm:col-span-1">
-          <label htmlFor="buan-business" className="mb-1.5 block text-sm font-medium text-stone-700">
-            {t.lead_business}
-          </label>
+        <div>
+          <label htmlFor="buan-business" className={labelCls}>{t.lead_business}</label>
           <input id="buan-business" name="business" type="text" placeholder={t.lead_business_ph} className={inputCls} />
         </div>
-        <div className="sm:col-span-1">
-          <label htmlFor="buan-email" className="mb-1.5 block text-sm font-medium text-stone-700">
-            {t.lead_email}
-          </label>
+        <div>
+          <label htmlFor="buan-email" className={labelCls}>{t.lead_email}</label>
           <input id="buan-email" name="email" type="email" autoComplete="email" placeholder={t.lead_email_ph} className={inputCls} />
         </div>
-        <div className="sm:col-span-1">
-          <label htmlFor="buan-type" className="mb-1.5 block text-sm font-medium text-stone-700">
-            {t.lead_type}
-          </label>
+        <div>
+          <label htmlFor="buan-type" className={labelCls}>{t.lead_type}</label>
           <select id="buan-type" name="businessType" defaultValue="" className={inputCls}>
-            <option value="" disabled>
-              {t.lead_type_ph}
-            </option>
+            <option value="" disabled>{t.lead_type_ph}</option>
             {t.lead_type_options.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
+              <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
         </div>
         <div className="sm:col-span-2">
-          <label htmlFor="buan-message" className="mb-1.5 block text-sm font-medium text-stone-700">
-            {t.lead_message}
-          </label>
+          <label htmlFor="buan-message" className={labelCls}>{t.lead_message}</label>
           <textarea id="buan-message" name="message" rows={3} placeholder={t.lead_message_ph} className={inputCls} />
         </div>
       </div>
 
-      {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
+      {err && (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+          {err}
+        </p>
+      )}
 
       <button
         type="submit"
         disabled={sending}
-        className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-teal-600 px-6 py-3.5 font-sans font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60 sm:w-auto"
+        className="buan-shine mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-3.5 font-sans font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:shadow-teal-600/30 disabled:opacity-60 sm:w-auto"
       >
         {sending ? t.lead_sending : t.lead_submit}
+        {!sending && <Icon name="arrow" className="h-4 w-4" />}
       </button>
 
       <p className="mt-4 text-xs text-stone-500">{t.lead_privacy}</p>
@@ -507,6 +737,7 @@ function LeadForm({ t }: { t: Copy }) {
 /* ---------------------------------------------------------------- */
 export default function Buan() {
   const [lang, setLangState] = useState<Lang>(DEFAULT_LANG);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(LANG_KEY) as Lang | null;
@@ -525,286 +756,376 @@ export default function Buan() {
 
   const t = COPY[lang];
 
-  const uses: [string, string, string][] = [
-    ["🍽️", t.use_hospitality_t, t.use_hospitality_b],
-    ["🏢", t.use_workplace_t, t.use_workplace_b],
-    ["⚡", t.use_ev_t, t.use_ev_b],
-    ["🎪", t.use_events_t, t.use_events_b],
-    ["🛍️", t.use_retail_t, t.use_retail_b],
-    ["🛠️", t.use_service_t, t.use_service_b],
+  const navLinks: [string, string][] = [
+    ["#how", t.nav_how],
+    ["#uses", t.nav_uses],
+    ["#pricing", t.nav_pricing],
   ];
 
+  const uses: [string, string, string][] = [
+    [USE_ICONS[0], t.use_hospitality_t, t.use_hospitality_b],
+    [USE_ICONS[1], t.use_workplace_t, t.use_workplace_b],
+    [USE_ICONS[2], t.use_ev_t, t.use_ev_b],
+    [USE_ICONS[3], t.use_events_t, t.use_events_b],
+    [USE_ICONS[4], t.use_retail_t, t.use_retail_b],
+    [USE_ICONS[5], t.use_service_t, t.use_service_b],
+  ];
+
+  const steps: [string, string][] = [
+    [t.how_s1_t, t.how_s1_b],
+    [t.how_s2_t, t.how_s2_b],
+    [t.how_s3_t, t.how_s3_b],
+  ];
+
+  const LangToggle = ({ light = false }: { light?: boolean }) => (
+    <div
+      className={`inline-flex overflow-hidden rounded-full border ${light ? "border-white/20" : "border-stone-300"}`}
+      role="group"
+      aria-label="Language / Iaith"
+    >
+      {(["en", "cy"] as Lang[]).map((l) => (
+        <button
+          key={l}
+          onClick={() => setLang(l)}
+          lang={l}
+          aria-pressed={lang === l}
+          className={`px-3 py-1 text-xs font-bold transition ${
+            lang === l
+              ? "bg-teal-600 text-white"
+              : light
+                ? "text-white/70 hover:text-white"
+                : "text-stone-500 hover:text-stone-900"
+          }`}
+        >
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div lang={lang} className="min-h-screen bg-stone-50 font-sans text-stone-800">
+    <div lang={lang} className="min-h-screen scroll-smooth bg-white font-sans text-stone-800 antialiased">
+      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+
       {/* First-draft Welsh reviewer flag – visible on this review branch. */}
       <div className="bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900">
         {t.reviewFlag}
       </div>
 
       {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-stone-200 bg-stone-50/90 backdrop-blur">
-        <div className="mx-auto flex max-w-content items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 font-serif text-lg font-bold text-white">
+      <header className="sticky top-0 z-40 border-b border-stone-200/70 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-content items-center justify-between gap-3 px-5 py-3.5 sm:px-6 lg:px-8">
+          <a href="#top" className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-emerald-600 font-serif text-lg font-bold text-white shadow-sm">
               B
             </span>
             <span className="font-serif text-xl font-bold tracking-tight text-stone-900">Buan</span>
-          </div>
+          </a>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium text-stone-600 md:flex">
-            <a href="#how" className="hover:text-stone-900">{t.nav_how}</a>
-            <a href="#uses" className="hover:text-stone-900">{t.nav_uses}</a>
-            <a href="#pricing" className="hover:text-stone-900">{t.nav_pricing}</a>
+          <nav className="hidden items-center gap-7 text-sm font-medium text-stone-600 md:flex">
+            {navLinks.map(([href, label]) => (
+              <a key={href} href={href} className="relative transition hover:text-stone-900">
+                {label}
+              </a>
+            ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <div className="inline-flex overflow-hidden rounded-full border border-stone-300" role="group" aria-label="Language / Iaith">
-              <button
-                onClick={() => setLang("en")}
-                className={`px-3 py-1 text-xs font-bold transition ${lang === "en" ? "bg-teal-600 text-white" : "text-stone-500 hover:text-stone-900"}`}
-              >
-                EN
-              </button>
-              <button
-                onClick={() => setLang("cy")}
-                lang="cy"
-                className={`px-3 py-1 text-xs font-bold transition ${lang === "cy" ? "bg-teal-600 text-white" : "text-stone-500 hover:text-stone-900"}`}
-              >
-                CY
-              </button>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <LangToggle />
             <a
               href="#early-access"
-              className="hidden rounded-lg bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 sm:inline-flex"
+              className="hidden rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 sm:inline-flex"
             >
               {t.nav_cta}
             </a>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label={menuOpen ? t.menu_close : t.menu_open}
+              aria-expanded={menuOpen}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-stone-700 transition hover:bg-stone-100 md:hidden"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-5 w-5" aria-hidden>
+                {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+              </svg>
+            </button>
           </div>
         </div>
-      </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-teal-50 via-stone-50 to-emerald-50" />
-        <div className="mx-auto grid max-w-content items-center gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-2">
-          <div>
-            <Eyebrow>{t.hero_eyebrow}</Eyebrow>
-            <h1 className="mt-4 font-serif text-5xl font-bold leading-[1.05] tracking-tight text-stone-900 sm:text-6xl">
-              {t.hero_title_a}
-              <br />
-              <span className="text-teal-600">{t.hero_title_b}</span>
-            </h1>
-            <p className="mt-4 text-xl font-medium text-stone-700">{t.hero_sub}</p>
-            <p className="mt-5 max-w-lg text-lg leading-relaxed text-stone-600">{t.hero_lede}</p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+        {/* Mobile menu */}
+        {menuOpen && (
+          <div className="border-t border-stone-200/70 bg-white md:hidden">
+            <nav className="mx-auto flex max-w-content flex-col gap-1 px-5 py-3">
+              {navLinks.map(([href, label]) => (
+                <a
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-lg px-2 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+                >
+                  {label}
+                </a>
+              ))}
               <a
                 href="#early-access"
-                className="inline-flex items-center justify-center rounded-lg bg-teal-600 px-7 py-3.5 font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-700 hover:shadow-lg"
+                onClick={() => setMenuOpen(false)}
+                className="mt-1 rounded-xl bg-stone-900 px-4 py-2.5 text-center text-sm font-semibold text-white"
               >
-                {t.hero_cta_primary}
+                {t.nav_cta}
               </a>
-              <a
-                href="#how"
-                className="inline-flex items-center justify-center rounded-lg border border-stone-300 bg-white px-7 py-3.5 font-semibold text-stone-800 transition hover:border-stone-400"
-              >
-                {t.hero_cta_secondary}
-              </a>
-            </div>
-            <p className="mt-5 text-sm italic text-stone-500">{t.hero_name_note}</p>
+            </nav>
+          </div>
+        )}
+      </header>
+
+      <main id="top">
+        {/* Hero */}
+        <section className="relative overflow-hidden">
+          {/* layered background */}
+          <div className="absolute inset-0 -z-10" aria-hidden>
+            <div className="absolute inset-0 bg-gradient-to-b from-teal-50/80 via-white to-white" />
+            <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-teal-300/30 blur-3xl" />
+            <div className="absolute -right-20 top-10 h-80 w-80 rounded-full bg-emerald-300/25 blur-3xl" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(15,23,42,0.05)_1px,transparent_0)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
           </div>
 
-          {/* Phone + QR mock */}
-          <div className="relative mx-auto flex w-full max-w-sm items-center justify-center">
-            <div className="relative w-64 rounded-[2.5rem] border-[10px] border-stone-900 bg-white shadow-2xl">
-              <div className="rounded-t-[1.8rem] bg-teal-600 px-5 pb-4 pt-6 text-white">
-                <p className="text-sm font-bold">{t.mock_business}</p>
-                <p className="text-xs text-teal-100">{t.mock_tagline}</p>
+          <div className="mx-auto grid max-w-content items-center gap-12 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:px-8 lg:py-28">
+            <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50/80 px-3.5 py-1.5 text-xs font-semibold text-teal-700 shadow-sm">
+                <span className="buan-pulse h-1.5 w-1.5 rounded-full bg-teal-500" />
+                {t.hero_pill}
+              </span>
+              <p className="mt-5 text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">
+                {t.hero_eyebrow}
+              </p>
+              <h1 className="mt-3 font-serif font-bold leading-[1.02] tracking-tight text-stone-900 text-[clamp(2.75rem,7vw,4.75rem)]">
+                {t.hero_title_a}
+                <br />
+                <span className="buan-grad-text">{t.hero_title_b}</span>
+              </h1>
+              <p className="mt-5 text-xl font-medium text-stone-700">{t.hero_sub}</p>
+              <p className="mt-4 max-w-xl text-lg leading-relaxed text-stone-600">{t.hero_lede}</p>
+
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <a
+                  href="#early-access"
+                  className="buan-shine inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-7 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-600/30"
+                >
+                  {t.hero_cta_primary}
+                  <Icon name="arrow" className="h-4 w-4" />
+                </a>
+                <a
+                  href="#how"
+                  className="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white/70 px-7 py-3.5 font-semibold text-stone-800 backdrop-blur transition hover:border-stone-400 hover:bg-white"
+                >
+                  {t.hero_cta_secondary}
+                </a>
               </div>
-              <div className="space-y-2.5 px-5 py-5">
-                {[
-                  [t.mock_item1, "£3.20"],
-                  [t.mock_item2, "£4.50"],
-                  [t.mock_item3, "£2.90"],
-                ].map(([name, price]) => (
-                  <div key={name} className="flex items-center justify-between rounded-lg bg-stone-100 px-3 py-2.5">
-                    <span className="text-sm font-medium text-stone-800">{name}</span>
-                    <span className="text-sm font-semibold text-teal-700">{price}</span>
-                  </div>
-                ))}
-                <div className="flex items-center justify-between pt-1 text-sm">
-                  <span className="text-stone-500">{t.mock_total}</span>
-                  <span className="font-bold text-stone-900">£10.60</span>
-                </div>
-                <div className="mt-2 rounded-lg bg-teal-600 py-2.5 text-center text-sm font-semibold text-white">
-                  {t.mock_pay}
-                </div>
-              </div>
-            </div>
-            <div className="absolute -bottom-4 -right-2 rotate-6 sm:-right-4">
-              <QrMark />
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* How it works */}
-      <section id="how" className="scroll-mt-20 border-t border-stone-200 bg-white py-16 sm:py-24">
-        <div className="mx-auto max-w-content px-4 sm:px-6">
-          <div className="max-w-2xl">
-            <Eyebrow>{t.how_eyebrow}</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
-              {t.how_heading}
-            </h2>
-            <p className="mt-3 text-lg text-stone-600">{t.how_sub}</p>
-          </div>
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
-            {[
-              [1, t.how_s1_t, t.how_s1_b],
-              [2, t.how_s2_t, t.how_s2_b],
-              [3, t.how_s3_t, t.how_s3_b],
-            ].map(([n, title, body]) => (
-              <div key={n as number} className="relative">
-                <StepNumber n={n as number} />
-                <h3 className="mt-4 font-serif text-xl font-bold text-stone-900">{title as string}</h3>
-                <p className="mt-2 leading-relaxed text-stone-600">{body as string}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Use cases */}
-      <section id="uses" className="scroll-mt-20 border-t border-stone-200 bg-stone-50 py-16 sm:py-24">
-        <div className="mx-auto max-w-content px-4 sm:px-6">
-          <div className="max-w-2xl">
-            <Eyebrow>{t.uses_eyebrow}</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
-              {t.uses_heading}
-            </h2>
-            <p className="mt-3 text-lg text-stone-600">{t.uses_sub}</p>
-          </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {uses.map(([emoji, title, body]) => (
-              <div key={title} className="rounded-2xl bg-white p-6 ring-1 ring-stone-200 transition hover:-translate-y-1 hover:shadow-md">
-                <div className="text-3xl">{emoji}</div>
-                <h3 className="mt-4 font-serif text-lg font-bold text-stone-900">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-stone-600">{body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="border-t border-stone-200 bg-white py-16 sm:py-24">
-        <div className="mx-auto max-w-content px-4 sm:px-6">
-          <div className="max-w-2xl">
-            <Eyebrow>{t.feat_eyebrow}</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
-              {t.feat_heading}
-            </h2>
-          </div>
-          <div className="mt-10 grid gap-x-10 gap-y-6 sm:grid-cols-2">
-            {t.feat.map(([emoji, title, body]) => (
-              <div key={title} className="flex gap-4">
-                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-teal-50 text-xl">
-                  {emoji}
-                </span>
-                <div>
-                  <h3 className="font-semibold text-stone-900">{title}</h3>
-                  <p className="mt-0.5 text-sm leading-relaxed text-stone-600">{body}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* No website? No problem */}
-      <section className="border-t border-stone-200 bg-stone-900 py-16 text-white sm:py-24">
-        <div className="mx-auto grid max-w-content items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
-          <div>
-            <h2 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">{t.nw_heading}</h2>
-            <p className="mt-4 max-w-lg text-lg leading-relaxed text-stone-300">{t.nw_body}</p>
-          </div>
-          <ul className="space-y-4">
-            {[t.nw_point1, t.nw_point2, t.nw_point3].map((p) => (
-              <li key={p} className="flex items-center gap-3 rounded-xl bg-stone-800/70 px-5 py-4">
-                <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-teal-500 text-sm font-bold text-stone-900">
-                  ✓
-                </span>
-                <span className="font-medium text-stone-100">{p}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="scroll-mt-20 border-t border-stone-200 bg-stone-50 py-16 sm:py-24">
-        <div className="mx-auto max-w-content px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <Eyebrow>{t.price_eyebrow}</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
-              {t.price_heading}
-            </h2>
-            <p className="mt-3 text-lg text-stone-600">{t.price_sub}</p>
-          </div>
-
-          <div className="mx-auto mt-12 max-w-md rounded-3xl bg-white p-8 shadow-sm ring-1 ring-stone-200 sm:p-10">
-            <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
-              {t.price_tag}
-            </span>
-            <div className="mt-5 flex items-end gap-2">
-              <span className="text-sm text-stone-500">{t.price_from}</span>
-              <span className="font-serif text-5xl font-bold text-stone-900">{t.price_amount}</span>
-              <span className="pb-1 text-stone-500">{t.price_per}</span>
-            </div>
-            <ul className="mt-6 space-y-3">
-              {t.price_bullets.map((b) => (
-                <li key={b} className="flex items-start gap-3 text-stone-700">
-                  <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-teal-100 text-xs font-bold text-teal-700">
-                    ✓
+              <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2">
+                {t.hero_chips.map((chip) => (
+                  <span key={chip} className="inline-flex items-center gap-1.5 text-sm text-stone-600">
+                    <Icon name="check" className="h-4 w-4 text-teal-600" />
+                    {chip}
                   </span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-            <a
-              href="#early-access"
-              className="mt-8 inline-flex w-full items-center justify-center rounded-lg bg-teal-600 px-6 py-3.5 font-semibold text-white transition hover:bg-teal-700"
-            >
-              {t.price_cta}
-            </a>
-            <p className="mt-4 text-xs leading-relaxed text-stone-500">{t.price_disclaimer}</p>
-          </div>
-        </div>
-      </section>
+                ))}
+              </div>
+            </Reveal>
 
-      {/* Early access lead form */}
-      <section id="early-access" className="scroll-mt-20 border-t border-stone-200 bg-white py-16 sm:py-24">
-        <div className="mx-auto grid max-w-content gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16">
-          <div>
-            <Eyebrow>{t.lead_eyebrow}</Eyebrow>
-            <h2 className="mt-3 font-serif text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
-              {t.lead_heading}
-            </h2>
-            <p className="mt-4 max-w-md text-lg leading-relaxed text-stone-600">{t.lead_sub}</p>
-            <div className="mt-8 hidden items-center gap-4 lg:flex">
-              <QrMark />
-              <p className="max-w-[12rem] text-sm text-stone-500">{t.hero_name_note}</p>
+            <Reveal delay={120} className="flex justify-center lg:justify-end">
+              <PhoneMock t={t} />
+            </Reveal>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section id="how" className="scroll-mt-24 border-t border-stone-100 bg-white py-20 sm:py-28">
+          <div className="mx-auto max-w-content px-5 sm:px-6 lg:px-8">
+            <Reveal className="max-w-2xl">
+              <Eyebrow>{t.how_eyebrow}</Eyebrow>
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+                {t.how_heading}
+              </h2>
+              <p className="mt-3 text-lg text-stone-600">{t.how_sub}</p>
+            </Reveal>
+
+            <div className="relative mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
+              {/* connecting line on desktop */}
+              <div className="absolute left-0 right-0 top-7 hidden h-px bg-gradient-to-r from-teal-200 via-teal-200 to-transparent md:block" aria-hidden />
+              {steps.map(([title, body], i) => (
+                <Reveal key={title} delay={i * 120} className="relative">
+                  <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-600 font-serif text-xl font-bold text-white shadow-lg shadow-teal-600/20 ring-4 ring-white">
+                    {i + 1}
+                  </div>
+                  <h3 className="mt-5 font-serif text-xl font-bold text-stone-900">{title}</h3>
+                  <p className="mt-2 leading-relaxed text-stone-600">{body}</p>
+                </Reveal>
+              ))}
             </div>
           </div>
-          <LeadForm t={t} />
-        </div>
-      </section>
+        </section>
+
+        {/* Use cases */}
+        <section id="uses" className="scroll-mt-24 border-t border-stone-100 bg-stone-50 py-20 sm:py-28">
+          <div className="mx-auto max-w-content px-5 sm:px-6 lg:px-8">
+            <Reveal className="max-w-2xl">
+              <Eyebrow>{t.uses_eyebrow}</Eyebrow>
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+                {t.uses_heading}
+              </h2>
+              <p className="mt-3 text-lg text-stone-600">{t.uses_sub}</p>
+            </Reveal>
+
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {uses.map(([icon, title, body], i) => (
+                <Reveal key={title} delay={(i % 3) * 90}>
+                  <div className="group h-full rounded-2xl bg-white p-6 shadow-sm ring-1 ring-stone-900/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-900/5 hover:ring-teal-200">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-700 transition group-hover:bg-teal-600 group-hover:text-white">
+                      <Icon name={icon} className="h-6 w-6" />
+                    </div>
+                    <h3 className="mt-5 font-serif text-lg font-bold text-stone-900">{title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-stone-600">{body}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section className="border-t border-stone-100 bg-white py-20 sm:py-28">
+          <div className="mx-auto max-w-content px-5 sm:px-6 lg:px-8">
+            <Reveal className="max-w-2xl">
+              <Eyebrow>{t.feat_eyebrow}</Eyebrow>
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+                {t.feat_heading}
+              </h2>
+            </Reveal>
+
+            <div className="mt-12 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+              {t.feat.map(([title, body], i) => (
+                <Reveal key={title} delay={(i % 3) * 90} className="flex gap-4">
+                  <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 text-teal-700 ring-1 ring-teal-100">
+                    <Icon name={FEAT_ICONS[i]} className="h-6 w-6" />
+                  </span>
+                  <div>
+                    <h3 className="font-semibold text-stone-900">{title}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-stone-600">{body}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* No website? No problem */}
+        <section className="relative overflow-hidden bg-stone-950 py-20 text-white sm:py-28">
+          <div className="absolute inset-0 -z-0" aria-hidden>
+            <div className="absolute -right-24 top-0 h-96 w-96 rounded-full bg-teal-600/25 blur-3xl" />
+            <div className="absolute -left-20 bottom-0 h-80 w-80 rounded-full bg-emerald-600/20 blur-3xl" />
+          </div>
+          <div className="relative mx-auto grid max-w-content items-center gap-12 px-5 sm:px-6 lg:grid-cols-2 lg:px-8">
+            <Reveal>
+              <Eyebrow>{t.nw_eyebrow}</Eyebrow>
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-[clamp(1.875rem,4vw,2.75rem)]">
+                {t.nw_heading}
+              </h2>
+              <p className="mt-4 max-w-lg text-lg leading-relaxed text-stone-300">{t.nw_body}</p>
+            </Reveal>
+            <Reveal delay={120}>
+              <ul className="space-y-3.5">
+                {[t.nw_point1, t.nw_point2, t.nw_point3].map((p) => (
+                  <li
+                    key={p}
+                    className="flex items-center gap-3.5 rounded-2xl bg-white/5 px-5 py-4 ring-1 ring-white/10 backdrop-blur"
+                  >
+                    <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-emerald-400 text-stone-900">
+                      <Icon name="check" className="h-4 w-4" />
+                    </span>
+                    <span className="font-medium text-stone-100">{p}</span>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="scroll-mt-24 border-t border-stone-100 bg-stone-50 py-20 sm:py-28">
+          <div className="mx-auto max-w-content px-5 sm:px-6 lg:px-8">
+            <Reveal className="mx-auto max-w-2xl text-center">
+              <div className="flex justify-center">
+                <Eyebrow>{t.price_eyebrow}</Eyebrow>
+              </div>
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+                {t.price_heading}
+              </h2>
+              <p className="mt-3 text-lg text-stone-600">{t.price_sub}</p>
+            </Reveal>
+
+            <Reveal delay={100} className="mx-auto mt-12 max-w-md">
+              {/* gradient ring wrapper */}
+              <div className="rounded-[1.75rem] bg-gradient-to-br from-teal-500/40 via-emerald-500/30 to-transparent p-px shadow-xl shadow-teal-900/10">
+                <div className="rounded-[1.7rem] bg-white p-8 sm:p-10">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
+                    {t.price_tag}
+                  </span>
+                  <div className="mt-5 flex items-end gap-2">
+                    <span className="text-sm text-stone-500">{t.price_from}</span>
+                    <span className="font-serif text-6xl font-bold tracking-tight text-stone-900">{t.price_amount}</span>
+                    <span className="pb-1.5 text-stone-500">{t.price_per}</span>
+                  </div>
+                  <ul className="mt-7 space-y-3.5">
+                    {t.price_bullets.map((b) => (
+                      <li key={b} className="flex items-start gap-3 text-stone-700">
+                        <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-teal-100 text-teal-700">
+                          <Icon name="check" className="h-3.5 w-3.5" />
+                        </span>
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <a
+                    href="#early-access"
+                    className="buan-shine mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:shadow-teal-600/30"
+                  >
+                    {t.price_cta}
+                    <Icon name="arrow" className="h-4 w-4" />
+                  </a>
+                  <p className="mt-4 text-xs leading-relaxed text-stone-500">{t.price_disclaimer}</p>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* Early access lead form */}
+        <section id="early-access" className="scroll-mt-24 border-t border-stone-100 bg-white py-20 sm:py-28">
+          <div className="mx-auto grid max-w-content gap-12 px-5 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
+            <Reveal>
+              <Eyebrow>{t.lead_eyebrow}</Eyebrow>
+              <h2 className="mt-4 font-serif font-bold tracking-tight text-stone-900 text-[clamp(1.875rem,4vw,2.75rem)]">
+                {t.lead_heading}
+              </h2>
+              <p className="mt-4 max-w-md text-lg leading-relaxed text-stone-600">{t.lead_sub}</p>
+              <div className="mt-8 hidden items-center gap-4 lg:flex">
+                <QrMark className="w-24" />
+                <p className="max-w-[12rem] text-sm italic text-stone-500">{t.hero_name_note}</p>
+              </div>
+            </Reveal>
+            <Reveal delay={120}>
+              <LeadForm t={t} />
+            </Reveal>
+          </div>
+        </section>
+      </main>
 
       {/* Footer */}
-      <footer className="border-t border-stone-800 bg-stone-900 py-12 text-stone-400">
-        <div className="mx-auto max-w-content px-4 sm:px-6">
+      <footer className="border-t border-white/10 bg-stone-950 py-12 text-stone-400">
+        <div className="mx-auto max-w-content px-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600 font-serif text-base font-bold text-white">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-emerald-600 font-serif text-base font-bold text-white">
                 B
               </span>
               <div>
@@ -812,18 +1133,12 @@ export default function Buan() {
                 <p className="text-xs">{t.foot_tagline}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-stone-500">{t.foot_lang}:</span>
-              <button onClick={() => setLang("en")} className={lang === "en" ? "font-bold text-white" : "hover:text-white"}>
-                EN
-              </button>
-              <span className="text-stone-600">·</span>
-              <button onClick={() => setLang("cy")} lang="cy" className={lang === "cy" ? "font-bold text-white" : "hover:text-white"}>
-                CY
-              </button>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-stone-500">{t.foot_lang}</span>
+              <LangToggle light />
             </div>
           </div>
-          <p className="mt-6 max-w-2xl text-xs leading-relaxed text-stone-500">{t.foot_note}</p>
+          <p className="mt-8 max-w-2xl text-xs leading-relaxed text-stone-500">{t.foot_note}</p>
         </div>
       </footer>
     </div>

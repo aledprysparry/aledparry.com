@@ -1,9 +1,14 @@
 import { Metadata } from "next";
-import BuanLoader from "./loader";
+import Buan from "@/components/demos/Buan";
 
 // Canonical, indexable home for the Buan marketing landing. Lives at the
 // top level (not under /app, which robots.ts disallows) so search crawlers
 // can index it. /app/buan redirects here for any legacy/showcase links.
+//
+// Server-rendered: the Buan component is a client component but keeps all
+// browser APIs (localStorage, IntersectionObserver) inside effects, so it
+// SSRs cleanly. That puts real marketing copy in the initial HTML (good for
+// SEO and first paint) rather than a client-only loading state.
 export const metadata: Metadata = {
   title: "Buan – Sell faster. Queue less.",
   description:
@@ -12,5 +17,5 @@ export const metadata: Metadata = {
 };
 
 export default function BuanMarketingPage() {
-  return <BuanLoader />;
+  return <Buan />;
 }
