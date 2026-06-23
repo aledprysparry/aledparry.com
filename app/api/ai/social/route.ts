@@ -15,7 +15,7 @@ const MODEL = 'claude-sonnet-4-6';
 const CLIP_TRANSCRIPT_LIMIT = 12000;
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy' | 'coach-voice';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy' | 'coach-voice' | 'intent-detect' | 'intent-plan';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
@@ -51,6 +51,15 @@ interface Body {
   pillars?: string[];
   // the brand's learned voice summary (coach-strategy + coach-analyse) - keep output in this voice
   voice?: string;
+  // ── Postio Voice AI (intent -> output) ──
+  // intent-detect: the outcome the user described (reuses `topic`), plus the
+  // generator kinds this brand can actually make, so candidates only ever name
+  // a real kind. `kindSpecs` gives the model each kind's human label + blurb.
+  kindSpecs?: { kind: string; label: string; blurb: string; outputClass: string }[];
+  // intent-plan: the chosen candidate + the copy fields its generator needs, so
+  // the plan returns ready-to-use copy keyed by the real field keys.
+  candidate?: { generatorKind: string; format: string; outputClass?: string };
+  copyFields?: { key: string; label: string }[];
 }
 
 // Strategy plays -> the structured shape + intent the model must return.
@@ -188,6 +197,32 @@ Be specific ("Move the strongest phrase to line 1, cut the caption ~30%, add a c
         user: `Play: ${spec.intent}\n\nBusiness brief:\n${briefBlock || '(sparse - infer sensibly and keep advice general where the brief is thin)'}${refBlock}${perfBlock}${topicBlock}${pillarBlock}\n\nReturn JSON exactly in this shape (no extra keys):\n${shape}`,
       };
     }
+    case 'intent-detect': {
+      // The reframe: the user describes an OUTCOME, not a content type. Infer the
+      // goal, then propose 2-3 formats drawn ONLY from this brand's real kinds.
+      const specs = (b.kindSpecs ?? []).filter((k) => k && k.kind);
+      const kindList = specs.map((k) => `- ${k.kind} ("${k.label}", ${k.outputClass}): ${k.blurb}`).join('\n')
+        || '- universal-listicle ("Listicle", carousel): a numbered, save-worthy list';
+      const voiceBlock = b.voice ? `\n\n${b.voice}` : '';
+      return {
+        system: `You are Postio's intent engine. The user tells you an OUTCOME they want to achieve, never a content type. Work out what they are trying to ACHIEVE (the goal and who it is for), then propose 2-3 concrete formats that would achieve it. Each candidate's "generatorKind" MUST be one of the kinds provided, exactly. Never invent statistics or facts. Match the language of the input (reply in Welsh if the input is in Welsh). Never use em-dashes (the "—" character); use a hyphen, a comma, or rephrase. Respond with ONLY valid JSON, no markdown, no commentary.`,
+        user: `${brandCtx}${voiceBlock}\n\nThe user wants: "${b.topic || ''}".\n\nAvailable generator kinds (use ONLY these exact ids as generatorKind):\n${kindList}\n\nReturn JSON: {"goal":"what they are trying to achieve, one line","audience":"who it is for, or \\"\\"","language":"en|cy|bilingual","reasoning":"why you read the goal this way (one or two sentences)","candidates":[{"id":"c1","format":"short human label for the format","generatorKind":"one of the exact ids above","outputClass":"carousel|still|animated|clip","why":"one line: why this format serves the goal","confidence":0-100}]} - 2 or 3 candidates, strongest first.`,
+      };
+    }
+    case 'intent-plan': {
+      // The chosen candidate -> ready-to-use copy keyed by the generator's real
+      // field keys, with reasoning and 1-2 alternative options. Ask for missing
+      // info ONLY when it is blocking and cannot be inferred.
+      const c = b.candidate ?? { generatorKind: '', format: '' };
+      const fields = (b.copyFields ?? []).filter((f) => f && f.key);
+      const fieldList = fields.map((f) => `- ${f.key}: ${f.label}`).join('\n') || '- title: the headline';
+      const keysCsv = fields.map((f) => f.key).join(', ');
+      const voiceBlock = b.voice ? `\n\n${b.voice}` : '';
+      return {
+        system: `You are Postio's planning agent. Given the user's goal and the chosen format, write ready-to-use copy for EVERY required field of that format, in the brand's voice. Also give your reasoning and 1-2 alternative headline options the user could pick instead. Ask for missing information ONLY when it is genuinely blocking and cannot be inferred (set blocking:true); otherwise infer sensibly. Never invent statistics, fake quotes, testimonials or guarantees. Match the language of the input (reply in Welsh if the input is in Welsh). Never use em-dashes (the "—" character); use a hyphen, a comma, or rephrase. Respond with ONLY valid JSON, no markdown, no commentary.`,
+        user: `${brandCtx}${voiceBlock}\n\nThe user wants: "${b.topic || ''}".\nChosen format: ${c.format} (generatorKind: ${c.generatorKind}).\n\nFill these fields (use these exact keys in "copy"):\n${fieldList}\n\nReturn JSON: {"reasoning":"why you wrote it this way, one or two sentences","copy":{${keysCsv ? `"${fields[0].key}":"...", ...one entry for every key above` : '"title":"..."'}},"options":[{"id":"B","label":"short label e.g. punchier hook","copy":{"title":"alt title","kicker":"alt kicker"}}],"missingInfo":[{"id":"platform","question":"a single short question","blocking":false,"options":["Instagram","Facebook","LinkedIn"]}]}\nReturn at most 2 options and only genuinely-blocking missingInfo (often an empty array).`,
+      };
+    }
     default:
       return { system: base, user: 'Return JSON: {}' };
   }
@@ -199,6 +234,8 @@ function coachMaxTokens(task: Body['task']): number {
   if (task === 'coach-strategy') return 3600; // the 30-day calendar is large
   if (task === 'coach-account' || task === 'coach-performance') return 1600;
   if (task === 'clip-analysis') return 2200;
+  if (task === 'intent-plan') return 2400; // ready-to-use copy for every field + options
+  if (task === 'intent-detect') return 1000;
   return 1200;
 }
 

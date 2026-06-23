@@ -3,6 +3,7 @@ import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
 import { Menu, useOverlay } from '@engine/components/primitives';
+import VoiceAIPanel from '@engine/components/voiceai/VoiceAIPanel';
 import { Plus, ArrowRight, Pencil, Trash2 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -44,6 +45,8 @@ export default function Dashboard() {
         </div>
         {brands.length > 0 && <Button className="self-start sm:self-auto" onClick={addBrand}><Plus size={15} /> {t('shell.newBrand')}</Button>}
       </header>
+
+      {brands.length > 0 && <VoiceAIPanel />}
 
       {brands.length === 0 ? (
         <EmptyState
