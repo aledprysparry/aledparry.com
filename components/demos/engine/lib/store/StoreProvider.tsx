@@ -100,7 +100,7 @@ function migrateMaster(templates: Template[], graphics: GeneratedGraphic[]): { t
 const ANIMATED_SCOPE_KEY = 'cg.v1.animatedTplScoped';
 // Brand-specific (non-universal) branded kinds. A brand that owns one of these
 // is a "client" brand that legitimately keeps its animated caption.
-const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard', 'cwis-quiz', 'cwis-top-groups']);
+const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard', 'cwis-quiz', 'cwis-top-groups', 'cwis-poll']);
 
 // One-time: add the "Question of the day" (cwis-quiz) template to brands that
 // already own a Cwis-painted kind (the leaderboard/scoreboard) - i.e. the Cwis
@@ -165,6 +165,35 @@ function ensureTopGroupsForCwis(templates: Template[]): Template[] | null {
       supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions,
       // empty master: cwis-top-groups has defaultCopyByLang, so copy follows the language
       master: { copy: {} },
+      createdAt: now(),
+    }];
+    changed = true;
+  }
+  if (!changed) return null;
+  saveCollection('templates', next);
+  return next;
+}
+
+// Generic one-time seed: add a Cwis-painted kind to brands that already own a
+// Cwis kind (the Cwis brand seeded before this kind existed). Fresh installs
+// get it via buildSeed. Used for kinds added after the original seed.
+function ensureBrandedKindForCwis(templates: Template[], kindId: string, seedKey: string): Template[] | null {
+  if (typeof localStorage === 'undefined' || localStorage.getItem(seedKey) === 'true') return null;
+  localStorage.setItem(seedKey, 'true');
+  const kind = getKind(kindId);
+  if (!kind) return null;
+  const cwisBrandIds = Array.from(new Set(
+    templates.filter((t) => t.kind === 'quizbookbiz-leaderboard' || t.kind === 'cwis-weekly-scoreboard' || t.kind === 'cwis-quiz').map((t) => t.brandId),
+  ));
+  const owns = new Set(templates.filter((t) => t.kind === kindId).map((t) => t.brandId));
+  let next = templates;
+  let changed = false;
+  for (const brandId of cwisBrandIds) {
+    if (owns.has(brandId)) continue;
+    next = [...next, {
+      id: newId('tpl'), brandId, name: kind.name, type: kind.type, kind: kind.id,
+      supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions,
+      master: { copy: {} }, // defaultCopyByLang kinds follow the app language
       createdAt: now(),
     }];
     changed = true;
@@ -256,6 +285,8 @@ function initialState(): StoreState {
   if (withQuiz) templates = withQuiz;
   const withTopGroups = ensureTopGroupsForCwis(templates);
   if (withTopGroups) templates = withTopGroups;
+  const withPoll = ensureBrandedKindForCwis(templates, 'cwis-poll', 'cg.v1.pollKindSeeded');
+  if (withPoll) templates = withPoll;
   const delang = delangBakedMaster(templates);
   if (delang) templates = delang;
   return {

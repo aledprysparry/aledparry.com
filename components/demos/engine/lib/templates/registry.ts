@@ -14,6 +14,7 @@ import { parseLeaderboardText, SAMPLE_CSV, type ParseResult } from '@engine/lib/
 import { SCOREBOARD_SLIDES, SCOREBOARD_COPY, SCOREBOARD_SAMPLE } from '@engine/lib/carousel/scoreboard';
 import { QUIZ_SLIDES, QUIZ_COPY, QUIZ_FIELDS } from '@engine/lib/carousel/quiz';
 import { TOP_GROUPS_SLIDES, TOP_GROUPS_COPY, TOP_GROUPS_FIELDS, TOP_GROUPS_SAMPLE, parseTopGroups } from '@engine/lib/carousel/topGroups';
+import { POLL_SLIDES, POLL_COPY, POLL_FIELDS } from '@engine/lib/carousel/poll';
 import { ANIMATED_COPY, ANIMATED_COPY_FIELDS, UNIVERSAL_ANIMATED_COPY } from '@engine/lib/carousel/animated';
 import { defaultPostElements } from '@engine/lib/freeform/elements';
 import { STILL_BUILDERS, applyBrandPaint } from '@engine/lib/freeform/stillTemplates';
@@ -183,6 +184,22 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     dataHint: 'Three lists under # headings (biggest, then 10/10, then average): one "group name, number" per line, top 5 each.',
     dataHintKey: 'tg.dataHint',
     parse: parseTopGroups,
+  },
+  'cwis-poll': {
+    id: 'cwis-poll',
+    name: 'Poll',
+    nameKey: 'cwis-poll.name',
+    descKey: 'cwis-poll.desc',
+    type: 'still',
+    editor: 'carousel',
+    // Brand-specific (Cwis paint), seeded to the Cwis brand only.
+    description: 'An interactive poll still: a question and three numbered options for a feed or Story poll (vote in the comments).',
+    supportedPlatforms: ['instagram-square', 'instagram-feed', 'instagram-carousel', 'facebook', 'instagram-story'],
+    dimensions: { width: 1080, height: 1080 },
+    slides: POLL_SLIDES,
+    defaultCopy: POLL_COPY.en as Record<string, string>,
+    defaultCopyByLang: POLL_COPY,
+    copyFields: POLL_FIELDS,
   },
   'animated-caption': {
     id: 'animated-caption',
