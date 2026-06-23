@@ -210,9 +210,14 @@ export default function GraphicEditor() {
             </button>
           </div>
           <Panel className="bg-zinc-100 p-4 dark:bg-zinc-800/40 sm:p-5">
-            <div className="flex snap-x gap-5 overflow-x-auto pb-3">
+            {/* Slides wrap into a responsive grid (no horizontal scroll): column
+                count adapts to the ratio so tall stories pack tighter than wide
+                landscape slides. */}
+            <div className={slides.length === 1
+              ? `mx-auto ${ratio === 'story' ? 'max-w-[260px]' : ratio === 'landscape' ? 'max-w-2xl' : 'max-w-md'}`
+              : `grid gap-5 ${ratio === 'story' ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4' : ratio === 'landscape' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'}`}>
               {slides.map((slide, i) => (
-                <div key={slide.id} className="shrink-0 snap-start" style={{ width: ratio === 'story' ? 200 : ratio === 'landscape' ? 320 : ratio === 'square' ? 240 : 260 }}>
+                <div key={slide.id}>
                   <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{i + 1}. {slide.label}</div>
                   <div className="relative overflow-hidden rounded-xl border border-zinc-200 shadow-sm shadow-zinc-900/[0.04] dark:border-zinc-700">
                     <SlideCanvas slide={slide} index={i} rows={rows} copy={copy} slideCount={slides.length} ratio={ratio} brand={carBrand} imageUrls={imageUrls} />
