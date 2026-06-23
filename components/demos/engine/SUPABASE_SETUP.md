@@ -24,13 +24,20 @@ create table if not exists socialdesk.cg_templates        (id text primary key, 
 create table if not exists socialdesk.cg_graphics         (id text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists socialdesk.cg_clips            (id text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists socialdesk.cg_folders          (id text primary key, data jsonb not null, updated_at timestamptz default now());
+-- Coach layer (analysis settings, briefs, strategy artifacts, learned voice).
+-- Without these the collections sync silently no-ops (errors are swallowed),
+-- so they save locally but never reach the backend (Codex #97).
+create table if not exists socialdesk.cg_coach_settings    (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_coach_briefs      (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_strategy_artifacts(id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_voice_profiles    (id text primary key, data jsonb not null, updated_at timestamptz default now());
 
 -- POC access: open via the anon key (one shared workspace, no login).
 -- Replace with auth + per-user RLS before real multi-user.
 do $$
 declare t text;
 begin
-  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_clips','cg_folders']
+  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_clips','cg_folders','cg_coach_settings','cg_coach_briefs','cg_strategy_artifacts','cg_voice_profiles']
   loop
     execute format('alter table socialdesk.%I enable row level security', t);
     execute format('drop policy if exists anon_all on socialdesk.%I', t);
