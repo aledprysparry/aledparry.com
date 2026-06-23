@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Upload, FileSpreadsheet, Check } from 'lucide-react';
 import { fileToText } from '@engine/lib/carousel/parseLeaderboard';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
+import type { StringKey } from '@engine/lib/i18n/strings';
 
 interface Props {
   value: string;
@@ -10,9 +11,11 @@ interface Props {
   error: string | null;
   rowCount: number;
   onLoadSample: () => void;
+  /** Per-kind format hint (bilingual); falls back to the generic leaderboard hint. */
+  hintKey?: StringKey;
 }
 
-export default function DataInput({ value, onChange, warnings, error, rowCount, onLoadSample }: Props) {
+export default function DataInput({ value, onChange, warnings, error, rowCount, onLoadSample, hintKey }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
 
@@ -62,7 +65,7 @@ export default function DataInput({ value, onChange, warnings, error, rowCount, 
         className="h-56 w-full resize-y rounded-xl border border-zinc-200 bg-white px-4 py-3 font-mono text-[13px] leading-relaxed text-zinc-800 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-violet-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
       />
 
-      <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{t('data.hint', { cols: t('data.cols') })}</p>
+      <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{hintKey ? t(hintKey) : t('data.hint', { cols: t('data.cols') })}</p>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-[13px] text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">

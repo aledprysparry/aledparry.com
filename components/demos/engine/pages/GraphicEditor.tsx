@@ -160,7 +160,7 @@ export default function GraphicEditor() {
           {/* Data paste only for data-driven kinds; copy-only carousels skip it. */}
           {kind.parse && (
             <Panel className="p-5">
-              <DataInput value={rawText} onChange={(t) => setInputs({ rawText: t })} warnings={warnings} error={error} rowCount={rows.length} onLoadSample={() => setInputs({ rawText: kind.sampleData })} />
+              <DataInput value={rawText} onChange={(t) => setInputs({ rawText: t })} warnings={warnings} error={error} rowCount={rows.length} onLoadSample={() => setInputs({ rawText: kind.sampleData })} hintKey={kind.dataHintKey} />
             </Panel>
           )}
           <Panel className="p-5">

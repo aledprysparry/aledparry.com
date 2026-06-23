@@ -13,6 +13,7 @@ import { SLIDES, DEFAULT_COPY } from '@engine/lib/carousel/template';
 import { parseLeaderboardText, SAMPLE_CSV, type ParseResult } from '@engine/lib/carousel/parseLeaderboard';
 import { SCOREBOARD_SLIDES, SCOREBOARD_COPY, SCOREBOARD_SAMPLE } from '@engine/lib/carousel/scoreboard';
 import { QUIZ_SLIDES, QUIZ_COPY, QUIZ_FIELDS } from '@engine/lib/carousel/quiz';
+import { TOP_GROUPS_SLIDES, TOP_GROUPS_COPY, TOP_GROUPS_FIELDS, TOP_GROUPS_SAMPLE, parseTopGroups } from '@engine/lib/carousel/topGroups';
 import { ANIMATED_COPY, ANIMATED_COPY_FIELDS, UNIVERSAL_ANIMATED_COPY } from '@engine/lib/carousel/animated';
 import { defaultPostElements } from '@engine/lib/freeform/elements';
 import { STILL_BUILDERS, applyBrandPaint } from '@engine/lib/freeform/stillTemplates';
@@ -54,6 +55,9 @@ export interface TemplateKind {
   imageSlots?: { key: string; label: string; labelKey?: StringKey }[];
   sampleData?: string;
   dataHint?: string;
+  /** Bilingual override for the data-box format hint (i18n key). When set, the
+   *  editor shows t(dataHintKey) instead of the generic leaderboard hint. */
+  dataHintKey?: StringKey;
   parse?: (text: string) => ParseResult;
   // freeform kinds. Brand paint: colours + language, plus the brand's fonts
   // (fonts[0] → display) and logo URL (small corner mark) where available.
@@ -158,6 +162,27 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     defaultCopyByLang: QUIZ_COPY,
     copyFields: QUIZ_FIELDS,
     imageSlots: [{ key: 'questionMedia', label: 'Question image', labelKey: 'copy.f.questionImage' }],
+  },
+  'cwis-top-groups': {
+    id: 'cwis-top-groups',
+    name: 'Top Groups',
+    nameKey: 'cwis-top-groups.name',
+    descKey: 'cwis-top-groups.desc',
+    type: 'carousel',
+    editor: 'carousel',
+    // Brand-specific (Cwis paint), seeded to the Cwis brand only - never
+    // auto-offered to other brands (see BRANDED_KINDS in StoreProvider).
+    description: 'A five-slide group leaderboard: cover, biggest groups, most 10/10 this week, best average score, and an app call-to-action.',
+    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'instagram-square', 'facebook', 'instagram-story'],
+    dimensions: { width: 1080, height: 1350 },
+    slides: TOP_GROUPS_SLIDES,
+    defaultCopy: TOP_GROUPS_COPY.en as Record<string, string>,
+    defaultCopyByLang: TOP_GROUPS_COPY,
+    copyFields: TOP_GROUPS_FIELDS,
+    sampleData: TOP_GROUPS_SAMPLE,
+    dataHint: 'Three lists under # headings (biggest, then 10/10, then average): one "group name, number" per line, top 5 each.',
+    dataHintKey: 'tg.dataHint',
+    parse: parseTopGroups,
   },
   'animated-caption': {
     id: 'animated-caption',

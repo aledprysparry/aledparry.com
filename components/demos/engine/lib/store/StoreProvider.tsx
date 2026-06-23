@@ -100,7 +100,7 @@ function migrateMaster(templates: Template[], graphics: GeneratedGraphic[]): { t
 const ANIMATED_SCOPE_KEY = 'cg.v1.animatedTplScoped';
 // Brand-specific (non-universal) branded kinds. A brand that owns one of these
 // is a "client" brand that legitimately keeps its animated caption.
-const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard', 'cwis-quiz']);
+const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard', 'cwis-quiz', 'cwis-top-groups']);
 
 // One-time: add the "Question of the day" (cwis-quiz) template to brands that
 // already own a Cwis-painted kind (the leaderboard/scoreboard) - i.e. the Cwis
@@ -133,6 +133,37 @@ function ensureQuizForCwis(templates: Template[]): Template[] | null {
       id: newId('tpl'), brandId, name: kind.name, type: kind.type, kind: kind.id,
       supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions,
       // empty master: cwis-quiz has defaultCopyByLang, so copy follows the language
+      master: { copy: {} },
+      createdAt: now(),
+    }];
+    changed = true;
+  }
+  if (!changed) return null;
+  saveCollection('templates', next);
+  return next;
+}
+
+// One-time: add the "Top Groups" (cwis-top-groups) template to brands that
+// already own a Cwis-painted kind - i.e. the Cwis brand seeded before this
+// kind existed. Fresh installs get it via buildSeed.
+const TOP_GROUPS_SEED_KEY = 'cg.v1.topGroupsKindSeeded';
+function ensureTopGroupsForCwis(templates: Template[]): Template[] | null {
+  if (typeof localStorage === 'undefined' || localStorage.getItem(TOP_GROUPS_SEED_KEY) === 'true') return null;
+  localStorage.setItem(TOP_GROUPS_SEED_KEY, 'true');
+  const kind = getKind('cwis-top-groups');
+  if (!kind) return null;
+  const cwisBrandIds = Array.from(new Set(
+    templates.filter((t) => t.kind === 'quizbookbiz-leaderboard' || t.kind === 'cwis-weekly-scoreboard' || t.kind === 'cwis-quiz').map((t) => t.brandId),
+  ));
+  const owns = new Set(templates.filter((t) => t.kind === 'cwis-top-groups').map((t) => t.brandId));
+  let next = templates;
+  let changed = false;
+  for (const brandId of cwisBrandIds) {
+    if (owns.has(brandId)) continue;
+    next = [...next, {
+      id: newId('tpl'), brandId, name: kind.name, type: kind.type, kind: kind.id,
+      supportedPlatforms: kind.supportedPlatforms, dimensions: kind.dimensions,
+      // empty master: cwis-top-groups has defaultCopyByLang, so copy follows the language
       master: { copy: {} },
       createdAt: now(),
     }];
@@ -223,6 +254,8 @@ function initialState(): StoreState {
   if (scoped) templates = scoped;
   const withQuiz = ensureQuizForCwis(templates);
   if (withQuiz) templates = withQuiz;
+  const withTopGroups = ensureTopGroupsForCwis(templates);
+  if (withTopGroups) templates = withTopGroups;
   const delang = delangBakedMaster(templates);
   if (delang) templates = delang;
   return {
