@@ -21,6 +21,8 @@ export function isReservedSlug(s: string): boolean {
 
 export function slugify(s: string): string {
   return (s || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // strip diacritics: café -> cafe, ŵ -> w, â -> a
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")

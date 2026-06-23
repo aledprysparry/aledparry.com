@@ -88,3 +88,48 @@ export async function setOrderStatus(id: string, status: OrderStatus): Promise<v
     body: JSON.stringify({ status }),
   });
 }
+
+// ----- onboarding (P2) -----
+
+// Is a (format-valid, non-reserved) slug free? With no DB we cannot check, so
+// the scaffold optimistically treats it as available.
+export async function isSlugAvailable(slug: string): Promise<boolean> {
+  if (!BUAN_LIVE) return true;
+  const rows = await rest<{ id: string }[]>(
+    `businesses?slug=eq.${encodeURIComponent(slug)}&select=id&limit=1`
+  );
+  return rows.length === 0;
+}
+
+// Create a business. Requires an authenticated owner (RLS) — wired once Supabase
+// Auth lands; until then the onboarding wizard simulates the result.
+export async function createBusiness(input: {
+  slug: string;
+  name: string;
+  category?: string;
+  contact_email?: string;
+  owner_id: string;
+}): Promise<Business | null> {
+  if (!BUAN_LIVE) return null;
+  const rows = await rest<Business[]>(`businesses`, {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(input),
+  });
+  return rows[0] ?? null;
+}
+
+export async function createLocation(input: {
+  business_id: string;
+  slug: string;
+  name: string;
+  address?: string;
+}): Promise<Location | null> {
+  if (!BUAN_LIVE) return null;
+  const rows = await rest<Location[]>(`locations`, {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(input),
+  });
+  return rows[0] ?? null;
+}
