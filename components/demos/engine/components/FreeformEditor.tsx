@@ -44,8 +44,19 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
 
   // persist when selection-affecting structural ops happen (add/delete/reorder handled inline)
   useEffect(() => { setElements(graphic.slides?.[0]?.elements ?? []); /* eslint-disable-next-line */ }, [graphic.id]);
-  // register uploaded brand fonts so text elements can use + export them
-  useEffect(() => { registerFontAssets(assets).then(() => setElements((e) => [...e])); /* eslint-disable-next-line */ }, [assets]);
+  // Register uploaded brand fonts so text elements can use + export them.
+  // Keyed on a STABLE font-asset signature, not the `assets` array - which
+  // assetsByBrand rebuilds (.filter) on every render, so depending on it re-ran
+  // this effect every render, and the unconditional setElements in .then fed an
+  // infinite re-render loop that froze the editor on asset-heavy brands. Now it
+  // runs only when the font set changes, and repaints only if a NEW font loaded.
+  const fontAssetKey = assets.filter((a) => a.type === 'font').map((a) => a.id).join('|');
+  useEffect(() => {
+    let live = true;
+    registerFontAssets(assets).then((added) => { if (live && added) setElements((e) => [...e]); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fontAssetKey]);
 
   const selected = elements.find((e) => e.id === selectedId) || null;
 
