@@ -133,3 +133,52 @@ export async function createLocation(input: {
   });
   return rows[0] ?? null;
 }
+
+// ----- menu & stock management (P3) -----
+
+// Menu for the business dashboard (includes hidden items, unlike getMenu).
+export async function getMenuForManagement(locationId: string): Promise<Product[]> {
+  if (!BUAN_LIVE) return [];
+  return rest<Product[]>(
+    `products?location_id=eq.${locationId}&select=*,stock(*)&order=category.asc,name.asc`
+  );
+}
+
+export async function createProduct(
+  input: Partial<Product> & { business_id: string; location_id: string; name: string; price: number }
+): Promise<Product | null> {
+  if (!BUAN_LIVE) return null;
+  const rows = await rest<Product[]>(`products`, {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(input),
+  });
+  return rows[0] ?? null;
+}
+
+export async function updateProduct(id: string, patch: Partial<Product>): Promise<void> {
+  if (!BUAN_LIVE) return;
+  await rest(`products?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  if (!BUAN_LIVE) return;
+  await rest(`products?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+// Upsert a product's stock row.
+export async function setStock(
+  productId: string,
+  type: "unlimited" | "limited" | "out",
+  qty = 0
+): Promise<void> {
+  if (!BUAN_LIVE) return;
+  await rest(`stock`, {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates" },
+    body: JSON.stringify({ product_id: productId, type, qty }),
+  });
+}
