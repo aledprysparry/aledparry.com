@@ -45,7 +45,7 @@ export const demos: DemoEntry[] = [
     descriptionCy:
       "Yr haen werthu ddigidol ar gyfer busnesau go iawn: mae cwsmeriaid yn sganio cod QR, yn archebu ac yn talu ar eu ffôn, ac rydych chi'n cymryd archebion heb y ciw na'r caledwedd. Tudalen farchnata ddwyieithog (Cam 1).",
     componentPath: "",
-    href: "/app/buan",
+    href: "/buan",
     status: "demo",
   },
   {
