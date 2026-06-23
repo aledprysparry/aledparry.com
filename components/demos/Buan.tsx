@@ -342,23 +342,23 @@ type Copy = (typeof COPY)[Lang];
 /*  (reduced-motion friendly)                                        */
 /* ---------------------------------------------------------------- */
 const STYLES = `
-.buan-grad-text{background-image:linear-gradient(120deg,#0f766e 0%,#14b8a6 45%,#10b981 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
-.buan-reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);will-change:opacity,transform;}
-.buan-reveal.is-in{opacity:1;transform:none;}
-.buan-shine{position:relative;overflow:hidden;}
-.buan-shine::after{content:"";position:absolute;top:0;left:-160%;width:55%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-18deg);transition:left .7s cubic-bezier(.16,1,.3,1);}
-.buan-shine:hover::after{left:170%;}
+/* Reveal stays fully visible unless JS is active, so no-JS / pre-hydration
+   never hides content. Only once .buan-js is set do elements start hidden
+   and animate in on scroll. */
+.buan-js .buan-reveal{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);will-change:opacity,transform;}
+.buan-js .buan-reveal.is-in{opacity:1;transform:none;}
+.buan-root a:focus-visible,.buan-root button:focus-visible{outline:2px solid #0d9488;outline-offset:3px;border-radius:10px;}
 @keyframes buan-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-@keyframes buan-floatslow{0%,100%{transform:translateY(0) rotate(6deg)}50%{transform:translateY(-8px) rotate(6deg)}}
+@keyframes buan-floatslow{0%,100%{transform:translateY(0) rotate(5deg)}50%{transform:translateY(-8px) rotate(5deg)}}
 @keyframes buan-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.buan-float-slow{transform:rotate(5deg);}
 @media (prefers-reduced-motion: no-preference){
   .buan-float{animation:buan-float 6.5s ease-in-out infinite;}
   .buan-float-slow{animation:buan-floatslow 7.5s ease-in-out infinite;}
   .buan-pulse{animation:buan-pulse 2s ease-in-out infinite;}
 }
 @media (prefers-reduced-motion: reduce){
-  .buan-reveal{opacity:1;transform:none;transition:none;}
-  .buan-shine::after{display:none;}
+  .buan-js .buan-reveal{opacity:1;transform:none;transition:none;}
 }
 `;
 
@@ -720,7 +720,7 @@ function LeadForm({ t }: { t: Copy }) {
       <button
         type="submit"
         disabled={sending}
-        className="buan-shine mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-3.5 font-sans font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:shadow-teal-600/30 disabled:opacity-60 sm:w-auto"
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-teal-600 px-7 py-3.5 font-sans font-semibold text-white shadow-lg shadow-teal-600/20 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700 disabled:translate-y-0 disabled:opacity-60 sm:w-auto"
       >
         {sending ? t.lead_sending : t.lead_submit}
         {!sending && <Icon name="arrow" className="h-4 w-4" />}
@@ -738,6 +738,11 @@ function LeadForm({ t }: { t: Copy }) {
 export default function Buan() {
   const [lang, setLangState] = useState<Lang>(DEFAULT_LANG);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [jsReady, setJsReady] = useState(false);
+
+  // Marks JS as active so the reveal animations arm only when they can run.
+  // Without this, no-JS visitors would see permanently hidden content.
+  useEffect(() => setJsReady(true), []);
 
   useEffect(() => {
     const saved = localStorage.getItem(LANG_KEY) as Lang | null;
@@ -804,11 +809,12 @@ export default function Buan() {
   );
 
   return (
-    <div lang={lang} className="min-h-screen scroll-smooth bg-white font-sans text-stone-800 antialiased">
+    <div lang={lang} className={`buan-root min-h-screen scroll-smooth bg-white font-sans text-stone-800 antialiased ${jsReady ? "buan-js" : ""}`}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
 
       {/* First-draft Welsh reviewer flag – visible on this review branch. */}
-      <div className="bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900">
+      <div className="flex items-center justify-center gap-2 border-b border-amber-200/70 bg-amber-50 px-4 py-1.5 text-center text-xs font-medium text-amber-800">
+        <span className="h-1.5 w-1.5 flex-none rounded-full bg-amber-400" aria-hidden />
         {t.reviewFlag}
       </div>
 
@@ -834,7 +840,7 @@ export default function Buan() {
             <LangToggle />
             <a
               href="#early-access"
-              className="hidden rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 sm:inline-flex"
+              className="hidden rounded-full bg-stone-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 sm:inline-flex"
             >
               {t.nav_cta}
             </a>
@@ -869,7 +875,7 @@ export default function Buan() {
               <a
                 href="#early-access"
                 onClick={() => setMenuOpen(false)}
-                className="mt-1 rounded-xl bg-stone-900 px-4 py-2.5 text-center text-sm font-semibold text-white"
+                className="mt-1 rounded-full bg-stone-900 px-4 py-2.5 text-center text-sm font-semibold text-white"
               >
                 {t.nav_cta}
               </a>
@@ -890,39 +896,37 @@ export default function Buan() {
           </div>
 
           <div className="mx-auto grid max-w-content items-center gap-12 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:px-8 lg:py-28">
-            <Reveal>
+            {/* Hero renders instantly (no reveal) for an immediate first paint. */}
+            <div>
               <span className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50/80 px-3.5 py-1.5 text-xs font-semibold text-teal-700 shadow-sm">
                 <span className="buan-pulse h-1.5 w-1.5 rounded-full bg-teal-500" />
                 {t.hero_pill}
               </span>
-              <p className="mt-5 text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">
-                {t.hero_eyebrow}
-              </p>
-              <h1 className="mt-3 font-serif font-bold leading-[1.02] tracking-tight text-stone-900 text-[clamp(2.75rem,7vw,4.75rem)]">
+              <h1 className="mt-6 font-serif font-bold leading-[1.0] tracking-[-0.02em] text-stone-900 text-[clamp(2.75rem,7vw,4.75rem)]">
                 {t.hero_title_a}
                 <br />
-                <span className="buan-grad-text">{t.hero_title_b}</span>
+                <span className="text-teal-600">{t.hero_title_b}</span>
               </h1>
-              <p className="mt-5 text-xl font-medium text-stone-700">{t.hero_sub}</p>
-              <p className="mt-4 max-w-xl text-lg leading-relaxed text-stone-600">{t.hero_lede}</p>
+              <p className="mt-6 text-xl font-medium text-stone-700">{t.hero_sub}</p>
+              <p className="mt-4 max-w-xl text-lg leading-relaxed text-stone-500">{t.hero_lede}</p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <a
                   href="#early-access"
-                  className="buan-shine inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-7 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-teal-600/30"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-teal-600 px-7 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/25 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700 hover:shadow-xl hover:shadow-teal-600/25"
                 >
                   {t.hero_cta_primary}
                   <Icon name="arrow" className="h-4 w-4" />
                 </a>
                 <a
                   href="#how"
-                  className="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white/70 px-7 py-3.5 font-semibold text-stone-800 backdrop-blur transition hover:border-stone-400 hover:bg-white"
+                  className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white/70 px-7 py-3.5 font-semibold text-stone-800 backdrop-blur transition duration-200 hover:border-stone-400 hover:bg-white"
                 >
                   {t.hero_cta_secondary}
                 </a>
               </div>
 
-              <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2">
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2.5">
                 {t.hero_chips.map((chip) => (
                   <span key={chip} className="inline-flex items-center gap-1.5 text-sm text-stone-600">
                     <Icon name="check" className="h-4 w-4 text-teal-600" />
@@ -930,11 +934,11 @@ export default function Buan() {
                   </span>
                 ))}
               </div>
-            </Reveal>
+            </div>
 
-            <Reveal delay={120} className="flex justify-center lg:justify-end">
+            <div className="flex justify-center lg:justify-end">
               <PhoneMock t={t} />
-            </Reveal>
+            </div>
           </div>
         </section>
 
@@ -1087,7 +1091,7 @@ export default function Buan() {
                   </ul>
                   <a
                     href="#early-access"
-                    className="buan-shine mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/20 transition hover:shadow-teal-600/30"
+                    className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-teal-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-teal-600/20 transition duration-200 hover:-translate-y-0.5 hover:bg-teal-700"
                   >
                     {t.price_cta}
                     <Icon name="arrow" className="h-4 w-4" />
@@ -1138,7 +1142,7 @@ export default function Buan() {
               <LangToggle light />
             </div>
           </div>
-          <p className="mt-8 max-w-2xl text-xs leading-relaxed text-stone-500">{t.foot_note}</p>
+          <p className="mt-8 max-w-2xl text-xs leading-relaxed text-stone-400">{t.foot_note}</p>
         </div>
       </footer>
     </div>
