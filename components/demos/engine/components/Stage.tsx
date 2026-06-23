@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import type { GraphicElement } from '@engine/lib/model/types';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   onSelect: (id: string | null) => void;
   onChange: (next: GraphicElement[]) => void; // live (during drag)
   onCommit: () => void; // persist (drag end / edit end)
+  onDelete?: (id: string) => void; // remove an element (bin handle on the box)
   onDropAsset?: (payload: { assetId: string; type: string; url: string }, x: number, y: number) => void;
   showSafe?: boolean;
   safeInsets?: { top: string; right: string; bottom: string; left: string };
@@ -21,9 +23,10 @@ type DragState = {
   startY: number;
   startPos: { x: number; y: number };
   startSize: { width: number; height: number };
+  startFont: number; // text fontSize at drag start, for proportional resize
 };
 
-export default function Stage({ elements, width, height, selectedId, onSelect, onChange, onCommit, onDropAsset, showSafe, safeInsets }: Props) {
+export default function Stage({ elements, width, height, selectedId, onSelect, onChange, onCommit, onDelete, onDropAsset, showSafe, safeInsets }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -41,6 +44,17 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
           if (d.mode === 'move') {
             return { ...el, position: { x: clamp(d.startPos.x + dx, 0, 1 - el.size.width), y: clamp(d.startPos.y + dy, 0, 1 - el.size.height) } };
           }
+          // Text: corner-drag UNIFORMLY scales the element (box + font together)
+          // so the text grows with the box, the way every design tool behaves.
+          if (el.type === 'text') {
+            const ratio = clamp((d.startSize.width + dx) / d.startSize.width, 0.15, 6);
+            return {
+              ...el,
+              size: { width: clamp(d.startSize.width * ratio, 0.04, 1), height: clamp(d.startSize.height * ratio, 0.03, 1) },
+              style: { ...el.style, fontSize: clamp(d.startFont * ratio, 0.012, 0.4) },
+            };
+          }
+          // Shapes / images: independent width + height resize (unchanged).
           return { ...el, size: { width: clamp(d.startSize.width + dx, 0.04, 1), height: clamp(d.startSize.height + dy, 0.03, 1) } };
         }),
       );
@@ -63,7 +77,11 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
     if (el.type === 'background' || editingId === el.id) return;
     e.stopPropagation();
     onSelect(el.id);
-    drag.current = { id: el.id, mode, startX: e.clientX, startY: e.clientY, startPos: { ...el.position }, startSize: { ...el.size } };
+    drag.current = {
+      id: el.id, mode, startX: e.clientX, startY: e.clientY,
+      startPos: { ...el.position }, startSize: { ...el.size },
+      startFont: ((el.style as Record<string, unknown> | undefined)?.fontSize as number) ?? 0.05,
+    };
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -135,15 +153,20 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
                   color: (s.color as string) ?? '#fff',
                   fontFamily: `${(s.fontFamily as string) ?? 'Inter'}, sans-serif`,
                   fontWeight: (s.fontWeight as string) ?? '600',
+                  fontStyle: (s.fontStyle as string) ?? 'normal',
                   fontSize: `${((s.fontSize as number) ?? 0.05) * 100}cqi`,
                   textAlign: ((s.align as 'left' | 'center' | 'right') ?? 'left'),
                   lineHeight: String((s.lineHeight as number) ?? 1.2),
+                  // Honour manual line breaks (\n) in the preview the way the
+                  // canvas export already does, instead of collapsing them.
+                  whiteSpace: 'pre-wrap',
                   overflow: 'visible',
                 }}
               >
                 {el.content}
               </div>
               {selected && <ResizeHandle onDown={(e) => startDrag(e, el, 'resize')} />}
+              {selected && onDelete && <DeleteHandle onClick={() => onDelete(el.id)} />}
             </div>
           );
         }
@@ -151,6 +174,7 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
           return (
             <div key={el.id} className={`${common} ${ring}`} style={{ ...box, background: (s.fill as string) ?? '#6366f1', borderRadius: `${((s.radius as number) ?? 0) * 100}cqi` }} onPointerDown={(e) => startDrag(e, el, 'move')}>
               {selected && <ResizeHandle onDown={(e) => startDrag(e, el, 'resize')} />}
+              {selected && onDelete && <DeleteHandle onClick={() => onDelete(el.id)} />}
             </div>
           );
         }
@@ -159,6 +183,7 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
           <div key={el.id} className={`${common} ${ring}`} style={box} onPointerDown={(e) => startDrag(e, el, 'move')}>
             <img src={el.content} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: ((s.fit as 'cover' | 'contain') ?? 'contain'), borderRadius: `${((s.radius as number) ?? 0) * 100}cqi`, pointerEvents: 'none' }} />
             {selected && <ResizeHandle onDown={(e) => startDrag(e, el, 'resize')} />}
+            {selected && onDelete && <DeleteHandle onClick={() => onDelete(el.id)} />}
           </div>
         );
       })}
@@ -180,6 +205,23 @@ function ResizeHandle({ onDown }: { onDown: (e: React.PointerEvent) => void }) {
     >
       <span className="block h-3.5 w-3.5 rounded-full border-2 border-violet-500 bg-white dark:bg-zinc-900" />
     </span>
+  );
+}
+
+// Bin control at the top-right of the selected element's box (Canva-style).
+// stopPropagation on pointerdown so it deletes instead of starting a drag.
+function DeleteHandle({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      title="Delete"
+      aria-label="Delete element"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className="absolute -top-2.5 -right-2.5 grid h-6 w-6 place-items-center rounded-full border-2 border-violet-500 bg-white text-zinc-600 shadow-sm transition-colors hover:border-red-400 hover:bg-red-50 hover:text-red-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-red-950/40"
+    >
+      <Trash2 size={12} />
+    </button>
   );
 }
 

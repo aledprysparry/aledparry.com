@@ -43,6 +43,7 @@ export async function drawElements(r: CanvasRenderer, elements: GraphicElement[]
         x: anchorX, y: el.position.y, size: fontSize,
         color: (s.color as string) ?? '#ffffff',
         weight: (s.fontWeight as string) ?? '600',
+        italic: s.fontStyle === 'italic',
         font: (s.fontFamily as string) ?? 'Inter',
         align, baseline: 'top', maxWidth: el.size.width,
         lineHeight: fontSize * ((s.lineHeight as number) ?? 1.2),

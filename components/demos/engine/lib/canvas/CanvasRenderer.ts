@@ -34,6 +34,8 @@ export interface TextOptions {
   size: number;
   color?: string;
   weight?: string;
+  /** Italicise the text (canvas font-style prefix). */
+  italic?: boolean;
   align?: CanvasTextAlign;
   baseline?: CanvasTextBaseline;
   font?: string;
@@ -145,12 +147,13 @@ export class CanvasRenderer {
     const fontSize = opts.size * this.W;
     const font = opts.font ?? DEFAULT_FONT;
     const weight = opts.weight ?? '400';
+    const style = opts.italic ? 'italic ' : '';
     const maxPx = opts.maxWidth ? opts.maxWidth * this.W : undefined;
 
     this.ctx.fillStyle = opts.color ?? '#000000';
     this.ctx.textAlign = opts.align ?? 'left';
     this.ctx.textBaseline = opts.baseline ?? 'top';
-    this.ctx.font = `${weight} ${fontSize}px ${font}`;
+    this.ctx.font = `${style}${weight} ${fontSize}px ${font}`;
     this.ctx.letterSpacing = opts.letterSpacing ? `${opts.letterSpacing * this.W}px` : '0px';
 
     if (maxPx) {
@@ -158,7 +161,7 @@ export class CanvasRenderer {
       let currentSize = fontSize;
       while (this.ctx.measureText(text).width > maxPx && currentSize > 8) {
         currentSize -= 1;
-        this.ctx.font = `${weight} ${currentSize}px ${font}`;
+        this.ctx.font = `${style}${weight} ${currentSize}px ${font}`;
       }
     }
 
@@ -179,13 +182,14 @@ export class CanvasRenderer {
     const fontSize = opts.size * this.W;
     const font = opts.font ?? DEFAULT_FONT;
     const weight = opts.weight ?? '400';
+    const style = opts.italic ? 'italic ' : '';
     const maxPx = (opts.maxWidth ?? 0.9) * this.W;
     const lineHeight = (opts.lineHeight ?? opts.size * 1.4) * this.W;
 
     this.ctx.fillStyle = opts.color ?? '#000000';
     this.ctx.textAlign = opts.align ?? 'left';
     this.ctx.textBaseline = opts.baseline ?? 'top';
-    this.ctx.font = `${weight} ${fontSize}px ${font}`;
+    this.ctx.font = `${style}${weight} ${fontSize}px ${font}`;
     this.ctx.letterSpacing = opts.letterSpacing ? `${opts.letterSpacing * this.W}px` : '0px';
 
     const startY = y;

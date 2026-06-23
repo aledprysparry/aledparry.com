@@ -163,7 +163,7 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
           </div>
           <div className="rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-800/40 sm:p-6">
             <div className="mx-auto w-full" style={{ maxWidth: `min(100%, ${ratio === 'landscape' ? 720 : ratio === 'story' ? 380 : ratio === 'square' ? 460 : 520}px)` }}>
-              <Stage elements={elements} width={dims.w} height={dims.h} selectedId={selectedId} onSelect={setSelectedId} onChange={setElements} onCommit={() => commit()} onDropAsset={placeAsset} showSafe={showSafe} safeInsets={safeInsets} />
+              <Stage elements={elements} width={dims.w} height={dims.h} selectedId={selectedId} onSelect={setSelectedId} onChange={setElements} onCommit={() => commit()} onDelete={(id) => { update(elements.filter((e) => e.id !== id)); if (selectedId === id) setSelectedId(null); }} onDropAsset={placeAsset} showSafe={showSafe} safeInsets={safeInsets} />
             </div>
           </div>
           <p className="mt-3 text-center text-[12px] text-zinc-400 dark:text-zinc-500">{t('ff.dragHint')}</p>
@@ -215,6 +215,18 @@ export default function FreeformEditor({ graphic }: { graphic: GeneratedGraphic 
                     <select value={(sStyle.fontWeight as string) ?? '700'} onChange={(e) => patchStyle({ fontWeight: e.target.value })} className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-[13px] text-zinc-800 focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
                       {['400', '500', '600', '700', '800', '900'].map((w) => <option key={w} value={w}>{w}</option>)}
                     </select>
+                  </Field>
+                  <Field label={t('ff.style')}>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => patchStyle({ fontWeight: Number((sStyle.fontWeight as string) ?? '700') >= 700 ? '400' : '700' })}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-[14px] font-bold ${Number((sStyle.fontWeight as string) ?? '700') >= 700 ? 'border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-500 dark:bg-violet-500/15 dark:text-violet-300' : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'}`}
+                      >B</button>
+                      <button
+                        onClick={() => patchStyle({ fontStyle: sStyle.fontStyle === 'italic' ? 'normal' : 'italic' })}
+                        className={`flex-1 rounded-lg border px-2 py-2 text-[14px] italic ${sStyle.fontStyle === 'italic' ? 'border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-500 dark:bg-violet-500/15 dark:text-violet-300' : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300'}`}
+                      >I</button>
+                    </div>
                   </Field>
                   <Field label={t('ff.align')}>
                     <div className="flex gap-1">
