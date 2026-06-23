@@ -69,7 +69,7 @@ function buildHtml(): string {
     <div style="max-width:620px;margin:0 auto;padding:32px 24px 48px;">
       <div style="font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#b23a2e;font-weight:600;">Momentwm</div>
       <h1 style="font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:30px;color:#211e19;margin:6px 0 2px;">Pum uchaf yr wythnos</h1>
-      <p style="font-size:15px;color:#6f675b;margin:0 0 6px;">Penblwyddi a charreg-filltir Cymreig sydd ar y gorwel &mdash; amser i gynllunio.</p>
+      <p style="font-size:15px;color:#6f675b;margin:0 0 6px;">Penblwyddi a cherrig milltir Cymreig sydd ar y gorwel. Amser i gynllunio.</p>
       ${section("Yr wythnos nesaf", week, "Dim dyddiad pendant yr wythnos nesaf. Edrychwch ar y mis.")}
       ${section("Yn ystod y mis", month, "Dim byd pendant eto y mis hwn.")}
       <p style="margin:34px 0 0;font-size:13px;color:#9c9486;">
