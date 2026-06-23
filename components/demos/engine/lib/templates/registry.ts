@@ -193,7 +193,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     type: 'still',
     editor: 'carousel',
     // Brand-specific (Cwis paint), seeded to the Cwis brand only.
-    description: 'An interactive poll still: a question and three numbered options for a feed or Story poll (vote in the comments).',
+    description: 'An interactive poll still: just the question on-brand, with clear space below for Instagram’s native poll sticker (the options live in the sticker).',
     supportedPlatforms: ['instagram-square', 'instagram-feed', 'instagram-carousel', 'facebook', 'instagram-story'],
     dimensions: { width: 1080, height: 1080 },
     slides: POLL_SLIDES,
