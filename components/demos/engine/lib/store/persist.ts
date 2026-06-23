@@ -24,6 +24,7 @@ export const COLLECTIONS = [
   'coachSettings',
   'coachBriefs',
   'strategyArtifacts',
+  'voiceProfiles',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

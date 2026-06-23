@@ -363,7 +363,7 @@ export function deriveRecommendations(
 }
 
 // ── AI client ──────────────────────────────────────────────────────────
-export type CoachTask = 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy';
+export type CoachTask = 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy' | 'coach-voice';
 
 // ── cost guardrail ──────────────────────────────────────────────────────
 // Every coach call hits a paid model, so cap calls per day and cache identical
@@ -455,6 +455,8 @@ export interface RunAnalysisParams {
   templateName?: string;
   /** A rendered JPEG/PNG data URL of the post, for vision-based scoring. */
   image?: string;
+  /** The brand's learned voice summary. */
+  voice?: string;
 }
 
 export interface RunAnalysisResult {
@@ -481,6 +483,7 @@ export async function runPostAnalysis(p: RunAnalysisParams): Promise<RunAnalysis
     performanceSummary: performanceSummaryFrom(p.performanceEntries),
     templateName: p.templateName,
     images: p.image ? [p.image] : undefined,
+    voice: p.voice,
   });
 
   if (result && Array.isArray(result.results) && result.results.length) {

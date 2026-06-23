@@ -25,6 +25,7 @@ const TABLE: Record<CollectionName, string> = {
   coachSettings: 'cg_coach_settings',
   coachBriefs: 'cg_coach_briefs',
   strategyArtifacts: 'cg_strategy_artifacts',
+  voiceProfiles: 'cg_voice_profiles',
 };
 
 interface HasId { id: string }

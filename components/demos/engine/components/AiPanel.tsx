@@ -6,6 +6,7 @@ import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { extractPostText, runPostAnalysis } from '@engine/lib/coach/analysis';
 import { renderGraphicImage } from '@engine/lib/coach/actions';
+import { voiceSummary } from '@engine/lib/coach/voice';
 import { ScoreRing, useCoachConfig } from '@engine/components/coach/shared';
 import type { Brand, GeneratedGraphic, PostAnalysis } from '@engine/lib/model/types';
 
@@ -69,6 +70,7 @@ export default function AiPanel({ brand, platform, textElements, onApply, onAddT
       ids: { postId: graphic.id, brandId: brand.id },
       templateName: store.getTemplate(graphic.templateId)?.name,
       image: image ?? undefined,
+      voice: voiceSummary(store.getVoiceProfile(brand.id)),
     });
     store.saveAnalysis(r.analysis);
     if (r.recommendations.length) store.saveRecommendations(r.recommendations);

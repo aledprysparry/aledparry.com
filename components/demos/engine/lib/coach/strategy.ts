@@ -55,6 +55,8 @@ export interface RunStrategyParams {
   topic?: string;
   /** thirty_day_plan: feed existing pillars so the calendar uses them. */
   pillars?: string[];
+  /** The brand's learned voice summary. */
+  voice?: string;
 }
 
 export interface RunStrategyResult {
@@ -73,6 +75,7 @@ export async function runStrategy(p: RunStrategyParams): Promise<RunStrategyResu
     performanceSummary: performanceSummaryFrom(p.performanceEntries),
     topic: p.topic,
     pillars: p.pillars,
+    voice: p.voice,
   });
 
   const normalised = result ? normalise(kind, result) : null;
