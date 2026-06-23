@@ -182,6 +182,7 @@ const COPY = {
     foot_tagline: "The digital sales layer for physical businesses.",
     foot_note: "Buan is an early-stage product concept. Pricing and features are indicative and subject to change.",
     foot_lang: "Iaith",
+    foot_staff: "Staff sign in",
   },
 
   cy: {
@@ -332,6 +333,7 @@ const COPY = {
     foot_tagline: "Yr haen werthu ddigidol ar gyfer busnesau go iawn.",
     foot_note: "Mae Buan yn gysyniad cynnyrch cynnar. Mae prisio a nodweddion yn rhai dangosol ac yn agored i newid.",
     foot_lang: "Iaith",
+    foot_staff: "Mewngofnodi staff",
   },
 };
 
@@ -1157,7 +1159,16 @@ export default function Buan() {
               <LangToggle light />
             </div>
           </div>
-          <p className="mt-8 max-w-2xl text-xs leading-relaxed text-stone-400">{t.foot_note}</p>
+          <div className="mt-8 flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-2xl text-xs leading-relaxed text-stone-400">{t.foot_note}</p>
+            <a
+              href="/buan/login"
+              className="inline-flex flex-none items-center gap-1.5 text-xs font-medium text-stone-400 transition hover:text-white"
+            >
+              {t.foot_staff}
+              <Icon name="arrow" className="h-3.5 w-3.5" />
+            </a>
+          </div>
         </div>
       </footer>
     </div>
