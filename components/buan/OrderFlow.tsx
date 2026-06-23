@@ -7,20 +7,23 @@ import type { Business, Location, Product, Stock } from "@/lib/buan/types";
 /* Buan customer ordering (P4). Multi-tenant menu -> basket -> details ->
    place order -> confirmation. Bilingual EN/CY (customer-facing). Posts to
    /api/buan/order (persists when Supabase is wired; simulates otherwise).
-   Payment is P5 and collection slots are P6 — flagged, not yet built.
+   Payment is P5 and collection slots are P6 – flagged, not yet built.
    Welsh is FIRST-DRAFT, flagged for native review. */
 
 type Lang = "en" | "cy";
-type Step = "menu" | "details" | "done";
+type Step = "menu" | "details" | "pay" | "done";
 
 const T = {
   en: {
     sub: "Order & collect", q: "What can we get you?", subtotal: "Subtotal",
     add_details: "Add your details →", where: "Almost done",
     name: "Your name", name_ph: "e.g. Sioned", contact: "Phone or email (for updates)",
-    place: "Place order", placing: "Placing…", back: "← Back to menu",
-    soldout: "Sold out", left: "left", note: "Payment and collection times arrive next (P5/P6).",
-    done_h: "Order received!", done_sub: "Thanks {name} — we're on it.",
+    to_pay: "Continue to payment →", back: "← Back to menu",
+    pay_h: "Payment", total_pay: "Total to pay", card_label: "Card number (demo, not charged)",
+    pay_btn: "Pay {total}", paying: "Processing…", back_details: "← Back",
+    pay_note: "No real payment is taken. This simulates a successful charge.",
+    soldout: "Sold out", left: "left", note: "Collection time slots arrive next (P6).",
+    done_h: "Order received!", done_sub: "Thanks {name}, we're on it.",
     order_line: "Order {id} · {total}", another: "Order again",
     welsh: "Welsh is a first draft, pending native review.",
   },
@@ -28,9 +31,12 @@ const T = {
     sub: "Archebu a chasglu", q: "Beth gawn ni i chi?", subtotal: "Is-gyfanswm",
     add_details: "Ychwanegu eich manylion →", where: "Bron yna",
     name: "Eich enw", name_ph: "e.e. Sioned", contact: "Ffôn neu e-bost (ar gyfer diweddariadau)",
-    place: "Gosod archeb", placing: "Yn gosod…", back: "← Yn ôl i'r fwydlen",
-    soldout: "Wedi gwerthu allan", left: "ar ôl", note: "Bydd talu ac amseroedd casglu yn cyrraedd nesaf (P5/P6).",
-    done_h: "Archeb wedi dod i law!", done_sub: "Diolch {name} — rydyn ni wrthi.",
+    to_pay: "Ymlaen i dalu →", back: "← Yn ôl i'r fwydlen",
+    pay_h: "Talu", total_pay: "Cyfanswm i'w dalu", card_label: "Rhif cerdyn (demo, dim tâl)",
+    pay_btn: "Talu {total}", paying: "Yn prosesu…", back_details: "← Yn ôl",
+    pay_note: "Ni chodir tâl go iawn. Mae hyn yn dynwared taliad llwyddiannus.",
+    soldout: "Wedi gwerthu allan", left: "ar ôl", note: "Bydd slotiau amser casglu yn cyrraedd nesaf (P6).",
+    done_h: "Archeb wedi dod i law!", done_sub: "Diolch {name}, rydyn ni wrthi.",
     order_line: "Archeb {id} · {total}", another: "Archebu eto",
     welsh: "Drafft cyntaf yw'r Gymraeg, yn aros am adolygiad iaith gyntaf.",
   },
@@ -152,8 +158,23 @@ export default function OrderFlow({
             <label className="mb-1 block"><span className="mb-1 block text-sm text-stone-400">{t.contact}</span>
               <input className={inp} value={contact} onChange={(e) => setContact(e.target.value)} /></label>
             <p className="mt-3 rounded-lg border border-stone-800 bg-stone-950 px-3 py-2 text-xs text-stone-500">{t.note}</p>
-            <button disabled={!name.trim() || placing} onClick={place} className="mt-4 w-full rounded-lg bg-emerald-400 px-4 py-3 font-bold text-emerald-950 hover:brightness-105 disabled:opacity-40">{placing ? t.placing : t.place}</button>
+            <button disabled={!name.trim()} onClick={() => setStep("pay")} className="mt-4 w-full rounded-lg bg-emerald-400 px-4 py-3 font-bold text-emerald-950 hover:brightness-105 disabled:opacity-40">{t.to_pay}</button>
             <button onClick={() => setStep("menu")} className="mt-2 w-full rounded-lg border border-stone-700 px-4 py-3 font-semibold hover:border-emerald-400">{t.back}</button>
+          </div>
+        )}
+
+        {step === "pay" && (
+          <div className="mt-7 rounded-xl border border-stone-800 bg-stone-900 p-5">
+            <h2 className="mb-4 text-lg font-bold">{t.pay_h}</h2>
+            <div className="flex justify-between border-b border-stone-800 pb-3 text-sm">
+              <span className="text-stone-400">{t.total_pay}</span>
+              <span className="font-bold tabular-nums">{money(total)}</span>
+            </div>
+            <label className="mb-1 mt-4 block"><span className="mb-1 block text-sm text-stone-400">{t.card_label}</span>
+              <input className={inp} defaultValue="4242 4242 4242 4242" inputMode="numeric" /></label>
+            <button disabled={placing} onClick={place} className="mt-4 w-full rounded-lg bg-emerald-400 px-4 py-3 font-bold text-emerald-950 hover:brightness-105 disabled:opacity-40">{placing ? t.paying : fill(t.pay_btn, { total: money(total) })}</button>
+            <button onClick={() => setStep("details")} className="mt-2 w-full rounded-lg border border-stone-700 px-4 py-3 font-semibold hover:border-emerald-400">{t.back_details}</button>
+            <p className="mt-3 text-center text-xs text-stone-500">{t.pay_note}</p>
           </div>
         )}
 
@@ -161,7 +182,7 @@ export default function OrderFlow({
           <div className="mt-10 rounded-xl border border-stone-800 bg-stone-900 p-6 text-center">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-400 text-3xl text-emerald-950">✓</div>
             <h2 className="mt-4 text-xl font-bold">{t.done_h}</h2>
-            <p className="mt-1 text-stone-400">{fill(t.done_sub, { name: name || "" }).replace(/\s+—/, " —")}</p>
+            <p className="mt-1 text-stone-400">{fill(t.done_sub, { name: name || "" })}</p>
             <p className="mt-3 text-sm text-stone-500">{fill(t.order_line, { id: placed.id, total: money(placed.total) })}</p>
             <button onClick={reset} className="mt-6 w-full rounded-lg border border-stone-700 px-4 py-3 font-semibold hover:border-emerald-400">{t.another}</button>
           </div>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { HEADLINE_PRICE } from "@/lib/buan/pricing";
 
 /* Buan marketing landing (P1). Bilingual EN/CY (toggle, persisted).
-   Welsh is FIRST-DRAFT — flagged for native review before launch. */
+   Welsh is FIRST-DRAFT – flagged for native review before launch. */
 
 type Lang = "en" | "cy";
 
@@ -31,8 +32,8 @@ const T = {
     lead_h: "Be an early business on Buan",
     lead_email: "Your email", lead_biz: "Business name", lead_type: "Business type (e.g. café)",
     lead_send: "Request early access", lead_sending: "Sending…",
-    lead_ok: "Thanks — we'll be in touch.", lead_err: "Something went wrong. Try again.",
-    footer: "Buan — the digital sales layer for physical businesses.",
+    lead_ok: "Thanks – we'll be in touch.", lead_err: "Something went wrong. Try again.",
+    footer: "Buan – the digital sales layer for physical businesses.",
     welsh_note: "Welsh shown is a first draft, pending native review.",
   },
   cy: {
@@ -58,8 +59,8 @@ const T = {
     lead_h: "Byddwch yn un o fusnesau cynnar Buan",
     lead_email: "Eich e-bost", lead_biz: "Enw'r busnes", lead_type: "Math o fusnes (e.e. caffi)",
     lead_send: "Gofyn am fynediad cynnar", lead_sending: "Yn anfon…",
-    lead_ok: "Diolch — fe fyddwn ni mewn cysylltiad.", lead_err: "Aeth rhywbeth o'i le. Rhowch gynnig arall.",
-    footer: "Buan — yr haen werthu ddigidol i fusnesau go iawn.",
+    lead_ok: "Diolch – fe fyddwn ni mewn cysylltiad.", lead_err: "Aeth rhywbeth o'i le. Rhowch gynnig arall.",
+    footer: "Buan – yr haen werthu ddigidol i fusnesau go iawn.",
     welsh_note: "Drafft cyntaf yw'r Gymraeg, yn aros am adolygiad gan siaradwr iaith gyntaf.",
   },
 } as const;
@@ -161,6 +162,8 @@ export default function BuanMarketing() {
       <section className="mx-auto max-w-3xl px-6 py-12 text-center">
         <h2 className="text-2xl font-bold">{t.pricing_h}</h2>
         <p className="mx-auto mt-3 max-w-xl text-stone-300">{t.pricing_p}</p>
+        <p className="mt-4 text-lg font-bold">From {HEADLINE_PRICE}</p>
+        <a href="/buan/pricing" className="mt-2 inline-block text-sm text-emerald-400 hover:underline">See full pricing →</a>
       </section>
 
       {/* Lead capture */}
