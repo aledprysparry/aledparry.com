@@ -22,6 +22,7 @@ export async function POST(req: Request) {
     items: d.items,
     total: d.total ?? 0,
     status: "new",
+    collection_slot: d.collection_slot ?? null,
     customer_name: d.customer_name ?? null,
     customer_contact: d.customer_contact ?? null,
     placed_at: new Date().toISOString(),

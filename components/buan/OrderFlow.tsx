@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { money } from "@/lib/buan/config";
+import { prepMinutesFrom, collectionSlots, quietest, labelFor } from "@/lib/buan/slots";
 import type { Business, Location, Product, Stock } from "@/lib/buan/types";
 
-/* Buan customer ordering (P4). Multi-tenant menu -> basket -> details ->
-   place order -> confirmation. Bilingual EN/CY (customer-facing). Posts to
-   /api/buan/order (persists when Supabase is wired; simulates otherwise).
-   Payment is P5 and collection slots are P6 – flagged, not yet built.
+/* Buan customer ordering (P4-P6). Multi-tenant menu -> basket -> details +
+   collection slot -> payment -> confirmation. Bilingual EN/CY (customer-facing).
+   Posts to /api/buan/order (persists when Supabase is wired; simulates otherwise).
+   Prep estimate + staggered slots + busy-slot nudge from lib/buan/slots.
    Welsh is FIRST-DRAFT, flagged for native review. */
 
 type Lang = "en" | "cy";
@@ -22,7 +23,9 @@ const T = {
     pay_h: "Payment", total_pay: "Total to pay", card_label: "Card number (demo, not charged)",
     pay_btn: "Pay {total}", paying: "Processing…", back_details: "← Back",
     pay_note: "No real payment is taken. This simulates a successful charge.",
-    soldout: "Sold out", left: "left", note: "Collection time slots arrive next (P6).",
+    soldout: "Sold out", left: "left",
+    collect_h: "Collection time", ready_in: "Ready in about {n} min", busy_tag: "busy",
+    nudge: "{t} looks busy. {alt} will be quicker.", collect_label: "Collect at {t}",
     done_h: "Order received!", done_sub: "Thanks {name}, we're on it.",
     order_line: "Order {id} · {total}", another: "Order again",
     welsh: "Welsh is a first draft, pending native review.",
@@ -35,7 +38,9 @@ const T = {
     pay_h: "Talu", total_pay: "Cyfanswm i'w dalu", card_label: "Rhif cerdyn (demo, dim tâl)",
     pay_btn: "Talu {total}", paying: "Yn prosesu…", back_details: "← Yn ôl",
     pay_note: "Ni chodir tâl go iawn. Mae hyn yn dynwared taliad llwyddiannus.",
-    soldout: "Wedi gwerthu allan", left: "ar ôl", note: "Bydd slotiau amser casglu yn cyrraedd nesaf (P6).",
+    soldout: "Wedi gwerthu allan", left: "ar ôl",
+    collect_h: "Amser casglu", ready_in: "Yn barod mewn tua {n} munud", busy_tag: "prysur",
+    nudge: "Mae {t} yn brysur. Bydd {alt} yn gynt.", collect_label: "Casglu am {t}",
     done_h: "Archeb wedi dod i law!", done_sub: "Diolch {name}, rydyn ni wrthi.",
     order_line: "Archeb {id} · {total}", another: "Archebu eto",
     welsh: "Drafft cyntaf yw'r Gymraeg, yn aros am adolygiad iaith gyntaf.",
@@ -63,7 +68,9 @@ export default function OrderFlow({
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
   const [placing, setPlacing] = useState(false);
-  const [placed, setPlaced] = useState<{ id: string; total: number } | null>(null);
+  const [placed, setPlaced] = useState<{ id: string; total: number; slot: string } | null>(null);
+  const [nowMs] = useState(() => Date.now());
+  const [slot, setSlot] = useState("");
   const t = T[lang];
   const byId = useMemo(() => Object.fromEntries(menu.map((m) => [m.id, m])), [menu]);
 
@@ -77,6 +84,12 @@ export default function OrderFlow({
   const lines = Object.entries(cart).map(([id, qty]) => ({ id, name: byId[id]?.name ?? "", qty, price: byId[id]?.price ?? 0 }));
   const total = lines.reduce((s, l) => s + l.qty * l.price, 0);
 
+  const prepMins = prepMinutesFrom(Object.keys(cart).map((id) => byId[id]?.prep_time_mins ?? 0));
+  const slots = useMemo(() => collectionSlots(prepMins, 5, nowMs), [prepMins, nowMs]);
+  const selectedSlot = slot || quietest(slots)?.iso || "";
+  const quiet = quietest(slots);
+  const selectedBusy = slots.find((s) => s.iso === selectedSlot)?.busy ?? false;
+
   async function place() {
     setPlacing(true);
     try {
@@ -86,19 +99,20 @@ export default function OrderFlow({
         body: JSON.stringify({
           business_id: business.id, location_id: location.id,
           items: lines, total, customer_name: name.trim(), customer_contact: contact.trim(),
+          collection_slot: selectedSlot,
         }),
       });
       const j = await res.json();
-      setPlaced({ id: j.order?.id ?? "BN0000", total });
+      setPlaced({ id: j.order?.id ?? "BN0000", total, slot: labelFor(selectedSlot, slots) });
       setStep("done");
     } catch {
-      setPlaced({ id: "BN0000", total });
+      setPlaced({ id: "BN0000", total, slot: labelFor(selectedSlot, slots) });
       setStep("done");
     } finally {
       setPlacing(false);
     }
   }
-  const reset = () => { setCart({}); setName(""); setContact(""); setPlaced(null); setStep("menu"); };
+  const reset = () => { setCart({}); setName(""); setContact(""); setSlot(""); setPlaced(null); setStep("menu"); };
 
   return (
     <div className="min-h-screen bg-stone-950 px-6 py-10 text-stone-100">
@@ -157,7 +171,23 @@ export default function OrderFlow({
               <input className={inp} value={name} onChange={(e) => setName(e.target.value)} placeholder={t.name_ph} /></label>
             <label className="mb-1 block"><span className="mb-1 block text-sm text-stone-400">{t.contact}</span>
               <input className={inp} value={contact} onChange={(e) => setContact(e.target.value)} /></label>
-            <p className="mt-3 rounded-lg border border-stone-800 bg-stone-950 px-3 py-2 text-xs text-stone-500">{t.note}</p>
+            <div className="mt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-stone-400">{t.collect_h}</span>
+                {prepMins > 0 ? <span className="text-xs text-stone-500">{fill(t.ready_in, { n: String(prepMins) })}</span> : null}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {slots.map((sl) => (
+                  <button key={sl.iso} onClick={() => setSlot(sl.iso)}
+                    className={`rounded-lg border px-3 py-2 text-sm ${selectedSlot === sl.iso ? "border-emerald-400 bg-emerald-400/10 text-emerald-300" : "border-stone-700 text-stone-300 hover:border-emerald-400"}`}>
+                    {sl.label}{sl.busy ? <span className="ml-1 text-[10px] uppercase text-amber-400">{t.busy_tag}</span> : null}
+                  </button>
+                ))}
+              </div>
+              {selectedBusy && quiet ? (
+                <p className="mt-2 text-xs text-amber-300">{fill(t.nudge, { t: labelFor(selectedSlot, slots), alt: quiet.label })}</p>
+              ) : null}
+            </div>
             <button disabled={!name.trim()} onClick={() => setStep("pay")} className="mt-4 w-full rounded-lg bg-emerald-400 px-4 py-3 font-bold text-emerald-950 hover:brightness-105 disabled:opacity-40">{t.to_pay}</button>
             <button onClick={() => setStep("menu")} className="mt-2 w-full rounded-lg border border-stone-700 px-4 py-3 font-semibold hover:border-emerald-400">{t.back}</button>
           </div>
@@ -184,6 +214,7 @@ export default function OrderFlow({
             <h2 className="mt-4 text-xl font-bold">{t.done_h}</h2>
             <p className="mt-1 text-stone-400">{fill(t.done_sub, { name: name || "" })}</p>
             <p className="mt-3 text-sm text-stone-500">{fill(t.order_line, { id: placed.id, total: money(placed.total) })}</p>
+            {placed.slot ? <div className="mt-3 inline-block rounded-full border border-emerald-500 bg-emerald-500/10 px-4 py-1.5 text-sm font-semibold text-emerald-300">{fill(t.collect_label, { t: placed.slot })}</div> : null}
             <button onClick={reset} className="mt-6 w-full rounded-lg border border-stone-700 px-4 py-3 font-semibold hover:border-emerald-400">{t.another}</button>
           </div>
         )}
