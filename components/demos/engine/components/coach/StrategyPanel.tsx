@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Sparkles, Save, Copy, Compass, Brain, Crown, Columns3, CalendarDays, Megaphone, BadgePoundSterling, PenLine, FileDown,
+  Sparkles, Save, Copy, Compass, Brain, Crown, Columns3, CalendarDays, Megaphone, BadgePoundSterling, PenLine, FileDown, Mic, RefreshCw,
 } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
@@ -14,6 +14,7 @@ import { Button, Panel, Badge, TextInput } from '@engine/components/ui';
 import { STRATEGY_PLAYS, runStrategy, briefIsReady } from '@engine/lib/coach/strategy';
 import { createDraftFromIdea } from '@engine/lib/coach/actions';
 import { exportStrategyReport } from '@engine/lib/coach/report';
+import { refineVoiceProfile, voiceSummary } from '@engine/lib/coach/voice';
 import type { CoachBrief, StrategyData, StrategyPlayId } from '@engine/lib/model/types';
 import type { StringKey } from '@engine/lib/i18n/strings';
 
@@ -55,6 +56,18 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
   const [running, setRunning] = useState<StrategyPlayId | null>(null);
   const [topic, setTopic] = useState('');
   const [result, setResult] = useState<{ play: StrategyPlayId; data: StrategyData; usedAI: boolean } | null>(null);
+  const voice = store.getVoiceProfile(brandId);
+  const [learningVoice, setLearningVoice] = useState(false);
+
+  const learnVoice = async () => {
+    const graphics = store.graphicsByBrand(brandId);
+    if (!graphics.length) { toast({ message: t('coach.voice.noPosts') }); return; }
+    setLearningVoice(true);
+    const { profile, usedAI } = await refineVoiceProfile(graphics, brand);
+    store.setVoiceProfile(brandId, profile);
+    setLearningVoice(false);
+    toast({ message: usedAI ? t('coach.voice.learnedAI') : t('coach.voice.learnedOffline') });
+  };
 
   const ready = briefIsReady({ ...brief, id: brandId, brandId, updatedAt: '' });
   const set = (k: keyof typeof brief, v: string) => setBriefState((b) => ({ ...b, [k]: v }));
@@ -68,7 +81,7 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
     setRunning(play); setResult(null);
     const pillarsArtifact = store.latestStrategy(brandId, 'content_pillars');
     const pillars = pillarsArtifact?.data.kind === 'pillars' ? pillarsArtifact.data.pillars.map((x) => x.name) : undefined;
-    const r = await runStrategy({ play, brief: savedBrief, brand, referenceAccounts: refs, performanceEntries: perf, topic: play === 'scroll_post' ? topic : undefined, pillars });
+    const r = await runStrategy({ play, brief: savedBrief, brand, referenceAccounts: refs, performanceEntries: perf, topic: play === 'scroll_post' ? topic : undefined, pillars, voice: voiceSummary(voice) });
     store.saveStrategy({ brandId, play, title: t(`coach.play.${play}` as StringKey), data: r.data, modelUsed: r.usedAI ? 'claude' : 'deterministic' });
     setResult({ play, data: r.data, usedAI: r.usedAI });
     setRunning(null);
@@ -105,6 +118,33 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
           <Button variant="subtle" onClick={saveBrief}><Save size={14} /> {t('coach.strategy.saveBrief')}</Button>
           {!ready && <span className="text-[12px] text-amber-600 dark:text-amber-400">{t('coach.strategy.fillBrief')}</span>}
         </div>
+      </Panel>
+
+      {/* brand voice (learned from past posts) */}
+      <Panel className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-zinc-900 dark:text-zinc-50"><Mic size={15} className="text-violet-600 dark:text-violet-400" /> {t('coach.voice.title')}</span>
+          <Button variant="subtle" disabled={learningVoice} onClick={learnVoice}><RefreshCw size={13} /> {learningVoice ? t('coach.voice.learning') : voice ? t('coach.voice.refresh') : t('coach.voice.learn')}</Button>
+        </div>
+        {voice ? (
+          <div className="mt-3 space-y-2">
+            <div className="flex flex-wrap gap-1.5">
+              {voice.toneAdjectives.map((a, i) => <Badge key={i} tone="accent">{a}</Badge>)}
+              <Badge tone="muted">{voice.language === 'cy' ? 'Cymraeg' : voice.language === 'bilingual' ? 'CY + EN' : 'English'}</Badge>
+              <Badge tone="muted">~{voice.avgWordsPerPost} {t('coach.voice.words')}</Badge>
+              <Badge tone="muted">{t('coach.voice.emoji')}: {voice.emojiUsage}</Badge>
+            </div>
+            {voice.signaturePhrases.length > 0 && (
+              <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{t('coach.voice.phrases')}: {voice.signaturePhrases.map((p) => `"${p}"`).join(', ')}</p>
+            )}
+            <ul className="space-y-1">
+              {voice.doList.slice(0, 4).map((d, i) => <li key={i} className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-zinc-700 dark:text-zinc-200"><span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-violet-500" /> {d}</li>)}
+            </ul>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{t('coach.voice.basis', { n: voice.sampleCount })} {voice.modelUsed === 'deterministic' ? t('coach.offlineShort') : 'AI'}. {t('coach.voice.fedIn')}</p>
+          </div>
+        ) : (
+          <p className="mt-2 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">{t('coach.voice.intro')}</p>
+        )}
       </Panel>
 
       {/* plays */}

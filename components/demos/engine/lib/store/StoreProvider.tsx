@@ -28,6 +28,7 @@ import type {
   CoachBrief,
   StrategyArtifact,
   StrategyPlayId,
+  VoiceProfile,
 } from '@engine/lib/model/types';
 import { getKind } from '@engine/lib/templates/registry';
 import {
@@ -64,6 +65,7 @@ interface StoreState {
   coachSettings: CoachSettings[];
   coachBriefs: CoachBrief[];
   strategyArtifacts: StrategyArtifact[];
+  voiceProfiles: VoiceProfile[];
 }
 
 const MASTER_MIGRATION_KEY = 'cg.v1.masterMigrated';
@@ -210,7 +212,7 @@ function initialState(): StoreState {
     saveCollection('templates', templates);
     markSeeded();
     if (typeof localStorage !== 'undefined') localStorage.setItem(MASTER_MIGRATION_KEY, 'true');
-    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [], referenceAccounts: [], postAnalyses: [], aiRecommendations: [], performance: [], coachPresets: [], coachSettings: [], coachBriefs: [], strategyArtifacts: [] };
+    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [], referenceAccounts: [], postAnalyses: [], aiRecommendations: [], performance: [], coachPresets: [], coachSettings: [], coachBriefs: [], strategyArtifacts: [], voiceProfiles: [] };
   }
   let templates = loadCollection<Template>('templates');
   let graphics = loadCollection<GeneratedGraphic>('graphics');
@@ -240,6 +242,7 @@ function initialState(): StoreState {
     coachSettings: loadCollection('coachSettings'),
     coachBriefs: loadCollection('coachBriefs'),
     strategyArtifacts: loadCollection('strategyArtifacts'),
+    voiceProfiles: loadCollection('voiceProfiles'),
   };
 }
 
@@ -336,6 +339,9 @@ export interface StoreApi extends StoreState {
   deleteStrategy: (id: string) => void;
   strategiesByBrand: (brandId: string) => StrategyArtifact[];
   latestStrategy: (brandId: string, play: StrategyPlayId) => StrategyArtifact | undefined;
+  // brand voice profile (derived from past posts)
+  getVoiceProfile: (brandId: string) => VoiceProfile | undefined;
+  setVoiceProfile: (brandId: string, profile: Omit<VoiceProfile, 'id' | 'brandId' | 'updatedAt'>) => VoiceProfile;
   // backup
   exportAll: () => string;
 }
@@ -407,6 +413,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('coachSettings', (s) => s.filter((x) => x.brandId !== id));
         update('coachBriefs', (b) => b.filter((x) => x.brandId !== id));
         update('strategyArtifacts', (a) => a.filter((x) => x.brandId !== id));
+        update('voiceProfiles', (v) => v.filter((x) => x.brandId !== id));
       },
       getBrand: (id) => state.brands.find((b) => b.id === id),
 
@@ -657,6 +664,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         state.strategyArtifacts
           .filter((a) => a.brandId === brandId && a.play === play)
           .sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0],
+
+      // ── Postio Coach: brand voice ──
+      getVoiceProfile: (brandId) => state.voiceProfiles.find((v) => v.brandId === brandId),
+      setVoiceProfile: (brandId, profile) => {
+        const existing = state.voiceProfiles.find((v) => v.brandId === brandId);
+        const next: VoiceProfile = { ...profile, id: brandId, brandId, updatedAt: now() };
+        update('voiceProfiles', (x) => (existing ? x.map((v) => (v.brandId === brandId ? next : v)) : [...x, next]));
+        return next;
+      },
 
       // ── backup ──
       exportAll: () => exportSnapshot({ assets: state.assets }),

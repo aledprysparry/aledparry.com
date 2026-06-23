@@ -15,7 +15,7 @@ const MODEL = 'claude-sonnet-4-6';
 const CLIP_TRANSCRIPT_LIMIT = 12000;
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy' | 'coach-voice';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
@@ -49,6 +49,8 @@ interface Body {
   play?: string;
   strategyBrief?: { niche?: string; audience?: string; goals?: string; businessModel?: string; competitors?: string; notes?: string };
   pillars?: string[];
+  // the brand's learned voice summary (coach-strategy + coach-analyse) - keep output in this voice
+  voice?: string;
 }
 
 // Strategy plays -> the structured shape + intent the model must return.
@@ -130,8 +132,9 @@ function buildPrompt(b: Body): { system: string; user: string } {
         : '';
       const perfBlock = b.performanceSummary ? `\n\nWhat has worked for this user before:\n${b.performanceSummary.slice(0, 800)}` : '';
       const tplBlock = b.templateName ? `\n\nCurrent template: ${b.templateName}.` : '';
+      const voiceBlock = b.voice ? `\n\n${b.voice}` : '';
       return {
-        system: `${COACH_SYSTEM} ${brandCtx}`,
+        system: `${COACH_SYSTEM} ${brandCtx}${voiceBlock}`,
         user: `Analyse this post for ${b.platform || 'Instagram'}. Score ONLY these benchmark modules (use their exact ids):\n${modList}${refBlock}${perfBlock}${tplBlock}\n\nReturn JSON exactly:
 {"overallScore":0-100,
  "results":[{"id":"module_id","score":0-100,"summary":"what you noticed (one line)","issue":"the problem, or omit if none","recommendation":"what to change + the expected benefit","priority":"low|medium|high"}],
@@ -141,6 +144,12 @@ function buildPrompt(b: Body): { system: string; user: string } {
  "platformNotes":"one line of platform-specific guidance",
  "recommendations":[{"type":"headline|caption|cta|visual|animation|platform|accessibility|timing","originalValue":"current text if relevant","suggestedValue":"the concrete replacement or action","reason":"why + expected benefit","priority":"low|medium|high"}]}
 Be specific ("Move the strongest phrase to line 1, cut the caption ~30%, add a closing question"), never vague.\n\nPost text (each line is a separate text element):\n${texts.map((t, i) => `${i + 1}. ${t}`).join('\n') || '(no text on the post yet)'}`,
+      };
+    }
+    case 'coach-voice': {
+      return {
+        system: `${COACH_SYSTEM} You analyse a brand's OWN past posts to capture its established voice, so future content sounds like them. Base everything on the supplied posts; do not invent. Match the posts' language.`,
+        user: `From the brand's past posts below, capture their voice. Return JSON: {"toneAdjectives":["3-4 adjectives"],"ctaStyle":"how they ask for action","signaturePhrases":["recurring words/phrases they actually use"],"doList":["3-5 specific dos to keep their voice consistent"]}.\n\nPosts:\n${(b.texts ?? []).filter(Boolean).slice(0, 20).map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
       };
     }
     case 'coach-account': {
@@ -173,8 +182,9 @@ Be specific ("Move the strongest phrase to line 1, cut the caption ~30%, add a c
       const perfBlock = b.performanceSummary ? `\n\nWhat has worked for them before:\n${b.performanceSummary.slice(0, 800)}` : '';
       const topicBlock = b.play === 'scroll_post' && b.topic ? `\n\nTopic for the post: ${b.topic}` : '';
       const pillarBlock = b.play === 'thirty_day_plan' && b.pillars?.length ? `\n\nUse these content pillars across the 30 days: ${b.pillars.join(', ')}.` : '';
+      const voiceBlock = b.voice ? `\n\n${b.voice}` : '';
       return {
-        system: `${COACH_SYSTEM} You are also a social media strategist who has built brands from zero to a large, engaged following. Be specific and practical, never generic. Do not invent fake statistics, testimonials or guarantees. ${brandCtx}`,
+        system: `${COACH_SYSTEM} You are also a social media strategist who has built brands from zero to a large, engaged following. Be specific and practical, never generic. Do not invent fake statistics, testimonials or guarantees. ${brandCtx}${voiceBlock}`,
         user: `Play: ${spec.intent}\n\nBusiness brief:\n${briefBlock || '(sparse - infer sensibly and keep advice general where the brief is thin)'}${refBlock}${perfBlock}${topicBlock}${pillarBlock}\n\nReturn JSON exactly in this shape (no extra keys):\n${shape}`,
       };
     }

@@ -443,3 +443,24 @@ export interface StrategyArtifact {
   modelUsed: string;
   createdAt: ISODate;
 }
+
+/**
+ * A brand's learned voice, derived from its past posts. Fed into every
+ * generative play + analysis so the Coach writes in the brand's own voice.
+ */
+export interface VoiceProfile {
+  id: ID; // === brandId
+  brandId: ID;
+  language: 'en' | 'cy' | 'bilingual' | 'unknown';
+  toneAdjectives: string[];
+  avgWordsPerPost: number;
+  emojiUsage: 'none' | 'light' | 'heavy';
+  hashtagStyle: 'none' | 'few' | 'many';
+  ctaStyle: string;
+  signaturePhrases: string[];
+  doList: string[];
+  /** How many posts informed this profile. */
+  sampleCount: number;
+  modelUsed: string;
+  updatedAt: ISODate;
+}

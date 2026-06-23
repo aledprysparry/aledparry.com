@@ -12,6 +12,7 @@ import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { extractPostText, runPostAnalysis, coachUsage } from '@engine/lib/coach/analysis';
 import { renderGraphicImage } from '@engine/lib/coach/actions';
 import { exportAnalysisReport } from '@engine/lib/coach/report';
+import { voiceSummary } from '@engine/lib/coach/voice';
 import type { PlatformId, PostAnalysis } from '@engine/lib/model/types';
 import { AnalysisResultView, ScoreBar, scoreTone, useCoachConfig } from './shared';
 
@@ -46,6 +47,7 @@ export default function AnalysePanel({ brandId }: { brandId: string }) {
       text: extractPostText(selected), brand, platformName, enabledIds,
       referenceAccounts: refs, performanceEntries: perf,
       ids: { postId: selected.id, brandId }, templateName, image: image ?? undefined,
+      voice: voiceSummary(store.getVoiceProfile(brandId)),
     });
     store.saveAnalysis(r.analysis);
     if (r.recommendations.length) store.saveRecommendations(r.recommendations);
