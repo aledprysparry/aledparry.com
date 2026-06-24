@@ -31,13 +31,19 @@ create table if not exists socialdesk.cg_coach_settings    (id text primary key,
 create table if not exists socialdesk.cg_coach_briefs      (id text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists socialdesk.cg_strategy_artifacts(id text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists socialdesk.cg_voice_profiles    (id text primary key, data jsonb not null, updated_at timestamptz default now());
+-- Voice AI layer (intent-to-output). The intent bar persists a session per
+-- interaction and an approval signal per human decision (the learning data).
+-- Review drafts stay in-session in M-V1; their table will be added when they
+-- are persisted. Same shape + sync pattern as every collection above.
+create table if not exists socialdesk.cg_intent_sessions   (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_approval_signals  (id text primary key, data jsonb not null, updated_at timestamptz default now());
 
 -- POC access: open via the anon key (one shared workspace, no login).
 -- Replace with auth + per-user RLS before real multi-user.
 do $$
 declare t text;
 begin
-  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_clips','cg_folders','cg_coach_settings','cg_coach_briefs','cg_strategy_artifacts','cg_voice_profiles']
+  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_clips','cg_folders','cg_coach_settings','cg_coach_briefs','cg_strategy_artifacts','cg_voice_profiles','cg_intent_sessions','cg_approval_signals']
   loop
     execute format('alter table socialdesk.%I enable row level security', t);
     execute format('drop policy if exists anon_all on socialdesk.%I', t);
