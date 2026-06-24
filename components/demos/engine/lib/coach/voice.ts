@@ -17,9 +17,14 @@ const STOP = new Set(['the', 'a', 'an', 'to', 'of', 'and', 'for', 'in', 'on', 'i
 
 type DerivedVoice = Omit<VoiceProfile, 'id' | 'brandId' | 'updatedAt'>;
 
-/** Deterministic voice profile from the brand's posts. Always works offline. */
-export function deriveVoiceProfile(graphics: GeneratedGraphic[]): DerivedVoice {
-  const posts = graphics.map((g) => extractPostText(g).joined).filter((s) => s.trim().length > 0);
+/** Deterministic voice profile from the brand's posts. Always works offline.
+ *  `resolveCopy` (optional) supplies each graphic's effective/rendered copy so
+ *  inherited template copy is learned from, not just per-graphic overrides. */
+export function deriveVoiceProfile(
+  graphics: GeneratedGraphic[],
+  resolveCopy?: (g: GeneratedGraphic) => Record<string, string>,
+): DerivedVoice {
+  const posts = graphics.map((g) => extractPostText(g, resolveCopy?.(g)).joined).filter((s) => s.trim().length > 0);
   const sampleCount = posts.length;
   const all = posts.join('\n');
   const words = all.split(/\s+/).filter(Boolean);
@@ -78,9 +83,13 @@ export function voiceSummary(p: VoiceProfile | undefined): string {
 }
 
 /** AI-refine on top of the deterministic profile (falls back to deterministic). */
-export async function refineVoiceProfile(graphics: GeneratedGraphic[], brand: Brand | undefined): Promise<{ profile: DerivedVoice; usedAI: boolean }> {
-  const base = deriveVoiceProfile(graphics);
-  const posts = graphics.map((g) => extractPostText(g).joined).filter((s) => s.trim().length > 0).slice(0, 20);
+export async function refineVoiceProfile(
+  graphics: GeneratedGraphic[],
+  brand: Brand | undefined,
+  resolveCopy?: (g: GeneratedGraphic) => Record<string, string>,
+): Promise<{ profile: DerivedVoice; usedAI: boolean }> {
+  const base = deriveVoiceProfile(graphics, resolveCopy);
+  const posts = graphics.map((g) => extractPostText(g, resolveCopy?.(g)).joined).filter((s) => s.trim().length > 0).slice(0, 20);
   if (posts.length < 2) return { profile: base, usedAI: false };
   const { result } = await callCoach<Partial<DerivedVoice>>('coach-voice', {
     brand: brand ? { name: brand.name, toneNotes: brand.toneNotes } : undefined,
