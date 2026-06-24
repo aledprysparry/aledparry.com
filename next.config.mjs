@@ -28,6 +28,15 @@ const nextConfig = {
         destination: 'https://cwis-creator-hub.vercel.app/:path*',
         permanent: false,
       },
+      // Buan moved to its own standalone app. Bounce the marketing landing
+      // to the standalone deployment. Temporary (permanent: false) so it can
+      // be repointed to buan.co once that domain is live. Only /buan exactly
+      // is redirected – sub-routes stay on the app/buan/* tree for now.
+      {
+        source: '/buan',
+        destination: 'https://buan-aled-parrys-projects.vercel.app',
+        permanent: false,
+      },
     ];
   },
 };
