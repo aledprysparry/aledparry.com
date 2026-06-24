@@ -131,11 +131,18 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
         const ring = selected ? 'outline outline-2 outline-violet-500' : 'hover:outline hover:outline-1 hover:outline-zinc-300';
         if (el.type === 'text') {
           const editing = editingId === el.id;
+          // Text boxes auto-grow to wrap their content. The stored size.height
+          // is only a floor (minHeight) so an empty box stays grabbable; the
+          // real height comes from the text itself, so extra lines never spill
+          // past the selection outline or the resize / delete handles. This
+          // also matches the export, which wraps text from the top regardless
+          // of box height (see renderElements.drawTextWrapped).
+          const textBox: React.CSSProperties = { ...box, height: 'auto', minHeight: `${el.size.height * 100}%` };
           return (
             <div
               key={el.id}
               className={`${common} ${ring}`}
-              style={box}
+              style={textBox}
               onPointerDown={(e) => startDrag(e, el, 'move')}
               onDoubleClick={() => { onSelect(el.id); setEditingId(el.id); }}
             >
@@ -145,11 +152,27 @@ export default function Stage({ elements, width, height, selectedId, onSelect, o
                 onBlur={(e) => {
                   setEditingId(null);
                   const text = e.currentTarget.innerText;
-                  onChange(elements.map((x) => (x.id === el.id ? { ...x, content: text } : x)));
+                  // Persist the wrapped height back to the model so overlap /
+                  // safe-area checks see the true box, and a reload keeps it.
+                  const stageEl = ref.current;
+                  const boxEl = e.currentTarget.parentElement;
+                  let nextHeight: number | null = null;
+                  if (stageEl && boxEl) {
+                    const sh = stageEl.getBoundingClientRect().height;
+                    const bh = boxEl.getBoundingClientRect().height;
+                    if (sh > 0) nextHeight = clamp(bh / sh, 0.03, 1);
+                  }
+                  onChange(
+                    elements.map((x) =>
+                      x.id === el.id
+                        ? { ...x, content: text, size: nextHeight != null ? { ...x.size, height: nextHeight } : x.size }
+                        : x,
+                    ),
+                  );
                   onCommit();
                 }}
                 style={{
-                  width: '100%', height: '100%', outline: 'none', cursor: editing ? 'text' : 'inherit',
+                  width: '100%', height: 'auto', outline: 'none', cursor: editing ? 'text' : 'inherit',
                   color: (s.color as string) ?? '#fff',
                   fontFamily: `${(s.fontFamily as string) ?? 'Inter'}, sans-serif`,
                   fontWeight: (s.fontWeight as string) ?? '600',
