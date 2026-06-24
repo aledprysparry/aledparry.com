@@ -34,7 +34,10 @@ const nextConfig = {
       // is redirected – sub-routes stay on the app/buan/* tree for now.
       {
         source: '/buan',
-        destination: 'https://buan-aled-parrys-projects.vercel.app',
+        // Public production URL of the standalone Buan project. The previous
+        // team-alias (buan-aled-parrys-projects.vercel.app) is gated by Vercel
+        // Deployment Protection (403 for every visitor), which broke /buan.
+        destination: 'https://buan-snowy.vercel.app',
         permanent: false,
       },
     ];
