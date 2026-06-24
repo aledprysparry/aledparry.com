@@ -220,7 +220,37 @@ intentionally commoditizes the loop so adoption is frictionless; we earn on ever
 
 ## 4. Monetization levers
 
-Five levers, deliberately stacked so a business can pay us in whatever way suits it:
+### Recommended model (from owner pricing discussion, 2026-06-24)
+
+Buan is **not a marketplace** (see §3), so it must not price like one. Three coherent levers, aligned
+with the "your shop, not a marketplace" promise that is now live on the landing page:
+
+1. **Per-location subscription = the engine.** One predictable monthly cost per location (tiered
+   Free / Pro / Business). This is the **primary** revenue, not the transaction fee. Scales with the
+   customer's footprint; gives predictable MRR.
+2. **Card fee thin and honest: ~2-3% all-in, tapering to ~0% on higher tiers. Cash = free.** Frame it
+   as "card processing at cost plus a small platform fee", **never** "commission". Cash orders still
+   flow through Buan (ordering, queue, collection code, analytics) at no transaction cost; the
+   per-location sub still applies because they are using the software.
+3. **Add-ons for expansion.** Keep the base price low for acquisition; charge for what costs us money
+   per use (SMS, AI, payouts) or delivers brand/scale/insight (see lever 4 + §2). **Replace any
+   upfront "join fee" with optional paid onboarding** (done-for-you setup, poster pack) - a mandatory
+   join fee is friction on acquisition, the opposite of what a land-grab freemium needs.
+
+**Why a flat 10% commission was rejected:** card processing actually costs ~1.5-2%; **10% is Just Eat
+/ Deliveroo marketplace-commission territory** and directly contradicts §3 and the live landing copy.
+It can also exceed a café's net margin (hospitality runs thin), so we would be taking more than the
+business earns on those sales. Owners do this maths in the first meeting:
+
+| Card fee on £2,000/week card sales | Per week | Per year |
+|---|---|---|
+| 10% (rejected) | £200 | £10,400 |
+| ~2-3% (recommended, processing + thin margin) | £40-60 | ~£2,000-3,000 |
+| ~1.5% (pass-through only) | £30 | £1,560 |
+
+Keep the cut thin; earn on the per-location subscription + add-ons. All figures are ranges to confirm.
+
+**The five levers in detail** (deliberately stacked so a business can pay us in whatever way suits it):
 
 1. **Subscription tier (primary).** Free / Pro / Business / Enterprise per §1. Predictable MRR.
    Pro is the volume revenue tier; Business is the expansion tier.
@@ -238,10 +268,11 @@ Five levers, deliberately stacked so a business can pay us in whatever way suits
    pack, bespoke integration builds (Enterprise). Low-frequency, high-margin, and a relationship
    on-ramp.
 
-**Pricing posture:** keep it *flexible* through MVP (BUAN_BUILD_PLAN open decision #2). Launch with
-**simple Free + small per-order fee** and *announce* Pro/Business so the upgrade path is visible from
-day one. Lock the per-order taper and the Pro price before P5 (payments). All numbers above are
-ranges to confirm — do not publish them.
+**Pricing posture:** keep it *flexible* through MVP (BUAN_BUILD_PLAN open decision #2). Launch with a
+**per-location subscription (real Free tier) + a thin card fee (~2-3%, cash free)** and *announce*
+Pro/Business so the upgrade path is visible from day one. Lock the per-location price, the card-fee
+taper and the Pro price before P5 (payments). All numbers above are ranges to confirm - do not
+publish them. **Do not price like a marketplace** - it breaks the §3 moat.
 
 ---
 
@@ -298,8 +329,8 @@ than a *constraint*. 🏴 Welsh review on every public string before any of this
 
 These extend BUAN_BUILD_PLAN §8. Resolve the starred ones before the phase noted:
 
-1. **Per-order fee taper** — exact %s per tier, and whether Free is fee-only or also capped on
-   volume. ⭐ Before **P5**.
+1. **Per-location price + card-fee taper** — the monthly per-location price per tier, and the card-fee
+   taper (~2-3% → ~0%). Direction set (see §4 recommended model); confirm exact numbers. ⭐ Before **P5**.
 2. **Pro price point** — ~£15 vs ~£29 changes the whole funnel. ⭐ Before **P5**.
 3. **Custom-domain mechanics** — Vercel domains API vs manual; who pays for the cert/renewal
    (absorbed vs add-on). Before **P2** (custom domain is a P2⏩ Pro feature).
