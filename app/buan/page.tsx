@@ -25,6 +25,9 @@ const T = {
     why: ["Setup in minutes", "No app required", "Reduce queues", "Live stock management", "Multiple locations", "Timed collection slots", "End-of-day offers", "Works on any phone"],
     uses_h: "Built for anywhere people buy quickly",
     uses: ["Cafés & coffee shops", "Office & workplace catering", "EV charging stops", "Events & festivals", "Pop-ups & market stalls", "Service businesses"],
+    own_h: "Your shop, not a marketplace",
+    own_p: "Buan is bespoke to your business. Customers order directly from you, on your own branded page – never from a list where your competitors sit one tap away. No marketplace, no rivals beside you, no commission skimming every sale the way it would on a Just Eat or a Deliveroo. You keep the customer, the brand and the relationship.",
+    own_chips: ["Your brand, start to finish", "No competitors beside you", "No marketplace commission"],
     nowebsite_h: "No website? No problem.",
     nowebsite_p: "Already have a website? Buan can use it to set up your ordering page fast. No website yet? Buan gives you a hosted ordering page with its own QR code and URL.",
     pricing_h: "Simple monthly pricing",
@@ -52,6 +55,9 @@ const T = {
     why: ["Sefydlu mewn munudau", "Dim angen ap", "Llai o giwiau", "Rheoli stoc byw", "Sawl lleoliad", "Slotiau casglu ar amser", "Cynigion diwedd dydd", "Gweithio ar unrhyw ffôn"],
     uses_h: "Wedi'i wneud ar gyfer unrhyw le mae pobl yn prynu'n gyflym",
     uses: ["Caffis a siopau coffi", "Arlwyo swyddfa a gweithle", "Mannau gwefru cerbydau trydan", "Digwyddiadau a gwyliau", "Siopau dros dro a stondinau", "Busnesau gwasanaeth"],
+    own_h: "Eich siop chi, nid marchnad",
+    own_p: "Mae Buan yn bwrpasol i'ch busnes chi. Mae cwsmeriaid yn archebu'n uniongyrchol gennych chi, ar eich tudalen eich hun – nid o restr lle mae'ch cystadleuwyr un tap i ffwrdd. Dim marchnad, dim cystadleuwyr wrth eich ymyl, dim comisiwn yn cael ei gymryd o bob gwerthiant fel ar Just Eat neu Deliveroo. Chi sy'n cadw'r cwsmer, y brand a'r berthynas.",
+    own_chips: ["Eich brand, o'r dechrau i'r diwedd", "Dim cystadleuwyr wrth eich ymyl", "Dim comisiwn marchnad"],
     nowebsite_h: "Dim gwefan? Dim problem.",
     nowebsite_p: "Gwefan gennych eisoes? Gall Buan ei defnyddio i sefydlu'ch tudalen archebu'n gyflym. Dim gwefan eto? Mae Buan yn rhoi tudalen archebu i chi gyda'i chod QR a'i URL ei hun.",
     pricing_h: "Prisio misol syml",
@@ -148,6 +154,18 @@ export default function BuanMarketing() {
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           {t.uses.map((u) => (
             <div key={u} className="rounded-xl border border-stone-800 bg-stone-900 p-5 font-medium">{u}</div>
+          ))}
+        </div>
+      </section>
+
+      {/* Your shop, not a marketplace */}
+      <section className="mx-auto max-w-3xl px-6 py-12 text-center">
+        <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">Buan.app</p>
+        <h2 className="mt-3 text-2xl font-bold">{t.own_h}</h2>
+        <p className="mx-auto mt-3 max-w-2xl text-stone-300">{t.own_p}</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          {t.own_chips.map((c) => (
+            <span key={c} className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300">{c}</span>
           ))}
         </div>
       </section>
