@@ -85,7 +85,7 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
     setRunning(play); setResult(null);
     const pillarsArtifact = store.latestStrategy(brandId, 'content_pillars');
     const pillars = pillarsArtifact?.data.kind === 'pillars' ? pillarsArtifact.data.pillars.map((x) => x.name) : undefined;
-    const r = await runStrategy({ play, brief: savedBrief, brand, referenceAccounts: refs, performanceEntries: perf, topic: play === 'scroll_post' ? topic : undefined, pillars, voice: voiceSummary(voice) });
+    const r = await runStrategy({ play, brief: savedBrief, brand, referenceAccounts: refs, performanceEntries: perf, topic: play === 'scroll_post' ? topic : undefined, pillars, voice: voiceSummary(voice), voiceProfile: voice });
     store.saveStrategy({ brandId, play, title: t(`coach.play.${play}` as StringKey), data: r.data, modelUsed: r.usedAI ? 'claude' : 'deterministic' });
     setResult({ play, data: r.data, usedAI: r.usedAI });
     setRunning(null);
