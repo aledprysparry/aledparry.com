@@ -382,6 +382,9 @@ export interface AIRecommendation {
   reason: string;
   priority: Priority;
   applied: boolean;
+  /** false for instructional/guidance rows (offline fallbacks) that must not be
+   *  written onto the canvas via Apply. Undefined = applyable (Codex #96). */
+  applyable?: boolean;
   /** When set, Apply writes suggestedValue into this text element. */
   targetElementId?: ID;
   createdAt: ISODate;

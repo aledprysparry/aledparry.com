@@ -15,6 +15,7 @@ import { STRATEGY_PLAYS, runStrategy, briefIsReady } from '@engine/lib/coach/str
 import { createDraftFromIdea } from '@engine/lib/coach/actions';
 import { exportStrategyReport } from '@engine/lib/coach/report';
 import { refineVoiceProfile, voiceSummary } from '@engine/lib/coach/voice';
+import { extractPostText } from '@engine/lib/coach/analysis';
 import type { CoachBrief, StrategyData, StrategyPlayId } from '@engine/lib/model/types';
 import type { StringKey } from '@engine/lib/i18n/strings';
 import { CoachProgress } from './shared';
@@ -61,7 +62,9 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
   const [learningVoice, setLearningVoice] = useState(false);
 
   const learnVoice = async () => {
-    const graphics = store.graphicsByBrand(brandId);
+    // Only posts with extractable copy can teach a voice - image-only/freeform
+    // posts with no text would store a bogus 0-sample profile (Codex #97).
+    const graphics = store.graphicsByBrand(brandId).filter((g) => extractPostText(g).joined.trim());
     if (!graphics.length) { toast({ message: t('coach.voice.noPosts') }); return; }
     setLearningVoice(true);
     const { profile, usedAI } = await refineVoiceProfile(graphics, brand);

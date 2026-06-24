@@ -53,6 +53,9 @@ const CTA_WORDS = [
   'dysgwch', 'cofrestrwch', 'archebwch', 'dilynwch', 'rhannwch', 'prynwch',
   'ymunwch', 'lawrlwythwch', 'darganfyddwch',
 ];
+// Whole-word match so 'get'/'learn' don't fire on 'getting'/'learning' (Codex
+// #96). All CTA words are ASCII, so \b is safe (no `u` flag needed). Built once.
+const CTA_RE = new RegExp(`\\b(${CTA_WORDS.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'i');
 // Emoji: BMP symbol ranges + any astral (surrogate-pair) char. Avoids the `u`
 // flag so tsc is happy under the default target.
 const EMOJI_RE = /[←-⇿⌀-➿⬀-⯿]|[\uD800-\uDBFF][\uDC00-\uDFFF]/;
@@ -93,7 +96,7 @@ export function postFeatures(
     words: joined.split(/\s+/).filter(Boolean).length,
     lineCount: text.lines.length,
     longestLine: text.lines.reduce((m, l) => Math.max(m, l.length), 0),
-    hasCTA: CTA_WORDS.some((w) => low.includes(` ${w}`)),
+    hasCTA: CTA_RE.test(joined),
     hasQuestion: joined.includes('?'),
     hasEmoji: EMOJI_RE.test(joined),
     hasHashtag: HASHTAG_RE.test(joined),
@@ -342,8 +345,11 @@ export function deriveRecommendations(
 ): Omit<AIRecommendation, 'id' | 'createdAt' | 'applied'>[] {
   const recs: Omit<AIRecommendation, 'id' | 'createdAt' | 'applied'>[] = [];
   const byId = Object.fromEntries(analysis.benchmarkResults.map((r) => [r.id, r]));
+  // These drafts are instructional guidance ("Open with a short..."), not real
+  // values to write onto the canvas, so they're never applyable - Apply must not
+  // paste this text into the post (Codex #96). The AI path produces applyable recs.
   const push = (type: AIRecommendation['type'], suggestedValue: string, reason: string, priority: Priority, originalValue?: string) =>
-    recs.push({ postId: analysis.postId, brandId: analysis.brandId, type, suggestedValue, reason, priority, originalValue });
+    recs.push({ postId: analysis.postId, brandId: analysis.brandId, type, suggestedValue, reason, priority, originalValue, applyable: false });
 
   if (byId.hook_strength && byId.hook_strength.score < 75)
     push('headline', 'Open with a short, specific line (a number, a question, or a bold claim).', byId.hook_strength.recommendation, byId.hook_strength.priority, text.lines[0]);

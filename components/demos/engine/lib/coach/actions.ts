@@ -25,7 +25,8 @@ interface StoreLike {
 }
 
 // Only these recommendation types map to an on-canvas edit.
-export function isApplyable(rec: Pick<AIRecommendation, 'type' | 'suggestedValue'>): boolean {
+export function isApplyable(rec: Pick<AIRecommendation, 'type' | 'suggestedValue' | 'applyable'>): boolean {
+  if (rec.applyable === false) return false; // instructional/offline guidance row
   if (!rec.suggestedValue.trim()) return false;
   return rec.type === 'headline' || rec.type === 'cta';
 }

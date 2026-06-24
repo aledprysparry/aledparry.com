@@ -35,7 +35,7 @@ function parseColour(c: string | undefined): [number, number, number] | null {
 }
 function luminance([r, g, b]: [number, number, number]): number {
   const ch = [r, g, b].map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
-  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.4116 * ch[2];
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]; // WCAG blue coefficient (was 0.4116; Codex #96)
 }
 function contrast(a: [number, number, number], b: [number, number, number]): number {
   const la = luminance(a), lb = luminance(b);
