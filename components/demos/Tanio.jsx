@@ -202,8 +202,8 @@ function LangToggle() {
   const { lang, setLang } = useI18n();
   return (
     <div className="langtoggle" role="group" aria-label="Language">
-      <button className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>EN</button>
-      <button className={lang === "cy" ? "on" : ""} onClick={() => setLang("cy")}>CY</button>
+      <button lang="en" className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>English</button>
+      <button lang="cy" className={lang === "cy" ? "on" : ""} onClick={() => setLang("cy")}>Cymraeg</button>
     </div>
   );
 }

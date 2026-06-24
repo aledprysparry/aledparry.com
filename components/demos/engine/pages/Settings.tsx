@@ -82,8 +82,8 @@ export default function Settings() {
               value={lang}
               onChange={setLang}
               options={[
-                { value: 'en', label: 'EN' },
-                { value: 'cy', label: 'CY' },
+                { value: 'en', label: 'English' },
+                { value: 'cy', label: 'Cymraeg' },
               ]}
             />
           </Row>
