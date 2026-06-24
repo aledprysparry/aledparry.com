@@ -15,6 +15,7 @@ import type {
   StrategySection,
   AspirationalAccount,
   PerformanceEntry,
+  VoiceProfile,
 } from '@engine/lib/model/types';
 import { callCoach, referenceLessonsFrom, performanceSummaryFrom } from './analysis';
 
@@ -55,8 +56,10 @@ export interface RunStrategyParams {
   topic?: string;
   /** thirty_day_plan: feed existing pillars so the calendar uses them. */
   pillars?: string[];
-  /** The brand's learned voice summary. */
+  /** The brand's learned voice summary (a string, injected into the AI prompt). */
   voice?: string;
+  /** The brand's learned voice profile (structured, biases the offline fallback). */
+  voiceProfile?: VoiceProfile;
 }
 
 export interface RunStrategyResult {
@@ -115,6 +118,47 @@ function normalise(kind: StrategyDataKind, raw: unknown): StrategyData | null {
   return { kind: 'post', hook, insight: str(r.insight), cta: str(r.cta), caption: r.caption ? str(r.caption) : undefined, hashtags: arr(r.hashtags) };
 }
 
+// ── voice flavouring for the offline fallback ──
+// Turns a learned VoiceProfile into small, deterministic copy nudges so the
+// offline output reflects the brand's tone, recurring phrases and CTA style,
+// the way the AI path does via the prompt. Neutral (no-op) when no voice.
+interface VoiceFlavour {
+  hasVoice: boolean;
+  /** Tone prefix for advisory summaries, '' when no voice learned. */
+  toneLead: string;
+  /** Tone adjectives joined, '' when none. */
+  tone: string;
+  /** The brand's learned CTA style label, '' when none. */
+  ctaStyleLabel: string;
+  /** A reminder bullet to reuse the brand's phrases, '' when none. */
+  phrasesNote: string;
+  /** A CTA line in the brand's learned style (neutral when no voice). */
+  cta: (subject: string) => string;
+}
+
+// A CTA line phrased to match the brand's learned CTA style.
+function ctaInVoice(style: string, subject: string): string {
+  const s = (style || '').toLowerCase();
+  if (s.includes('question')) return `What is holding you back with ${subject}? Drop a comment and tell me.`;
+  if (s.includes('direct') || s.includes('cta')) return `Ready to move on ${subject}? Take the next step today.`;
+  if (s.includes('soft') || s.includes('invitation')) return `If ${subject} is on your mind, come and say hello whenever you are ready.`;
+  return `Add one clear CTA toward ${subject}.`;
+}
+
+function voiceFlavour(v?: VoiceProfile): VoiceFlavour {
+  const has = !!(v && v.sampleCount);
+  const tone = has ? v!.toneAdjectives.slice(0, 2).join(', ') : '';
+  const phrases = has ? v!.signaturePhrases : [];
+  return {
+    hasVoice: has,
+    toneLead: tone ? `In your ${tone} voice: ` : '',
+    tone,
+    ctaStyleLabel: has ? v!.ctaStyle : '',
+    phrasesNote: phrases.length ? `Lean on your recurring phrases: ${phrases.join(', ')}.` : '',
+    cta: (subject) => (has ? ctaInVoice(v!.ctaStyle, subject) : `Add one clear CTA toward ${subject}.`),
+  };
+}
+
 // ── deterministic, brief-aware offline fallback ──
 function offlineStrategy(p: RunStrategyParams): StrategyData {
   const b = p.brief;
@@ -122,63 +166,67 @@ function offlineStrategy(p: RunStrategyParams): StrategyData {
   const audience = b.audience.trim() || 'your audience';
   const goal = b.goals.trim() || 'grow and convert your audience';
   const model = b.businessModel.trim() || 'your offer';
+  const vf = voiceFlavour(p.voiceProfile);
   const sec = (heading: string, body: string, bullets: string[]): StrategySection => ({ heading, body, bullets });
 
   switch (p.play) {
     case 'full_strategy':
-      return { kind: 'sections', summary: `A starter strategy for ${niche}, aimed at ${audience}, built around the goal to ${goal}.`, sections: [
+      return { kind: 'sections', summary: `${vf.toneLead}A starter strategy for ${niche}, aimed at ${audience}, built around the goal to ${goal}.`, sections: [
         sec('Brand positioning', `Own a clear spot in ${niche}.`, [`Position as the practical, trustworthy choice for ${audience}.`, 'Pick one promise you can repeat in every post.', 'Use a consistent palette, type and tone so the feed is recognisable at a glance.']),
-        sec('Content direction', 'Lead with value, not announcements.', ['Teach one useful thing per post.', 'Show proof (results, behind the scenes, client wins).', 'Have a point of view that filters in the right people.']),
+        sec('Content direction', 'Lead with value, not announcements.', ['Teach one useful thing per post.', 'Show proof (results, behind the scenes, client wins).', 'Have a point of view that filters in the right people.', ...(vf.phrasesNote ? [vf.phrasesNote] : [])]),
         sec('Audience targeting', `Speak directly to ${audience}.`, ['Name their problem in the first line.', 'Mirror their words, not industry jargon.', 'Engage in comments and DMs to compound reach.']),
-        sec('Monetization', `Turn attention into ${model}.`, ['Offer a low-friction first step.', 'Warm the audience with proof before the ask.', 'Add one clear CTA per week toward the offer.']),
+        sec('Monetization', `Turn attention into ${model}.`, ['Offer a low-friction first step.', 'Warm the audience with proof before the ask.', vf.cta(model)]),
       ] };
     case 'audience_psychology':
-      return { kind: 'sections', summary: `What ${audience} feel and do, turned into angles.`, sections: [
+      return { kind: 'sections', summary: `${vf.toneLead}What ${audience} feel and do, turned into angles.`, sections: [
         sec('Frustrations', `What annoys ${audience} daily.`, ['Wasting time on things that do not move the needle.', 'Conflicting advice and overwhelm.', 'Feeling behind everyone else.']),
         sec('Desires', 'What they secretly want.', ['A simple, proven path.', 'To look credible to their peers.', `Real results in ${niche} without burning out.`]),
         sec('Fears', 'What holds them back.', ['Looking foolish for trying.', 'Wasting money on the wrong thing.', 'Starting and not finishing.']),
         sec('Daily content habits', 'How they scroll.', ['Short attention, mute on.', 'Save useful posts for later.', 'Trust people who show, not just tell.']),
-        sec('Messaging angles', 'Use these to stop the scroll.', ['Name the frustration in line one.', 'Promise the desire, then prove it.', 'Reframe a common myth in your space.']),
+        sec('Messaging angles', 'Use these to stop the scroll.', ['Name the frustration in line one.', 'Promise the desire, then prove it.', 'Reframe a common myth in your space.', ...(vf.phrasesNote ? [vf.phrasesNote] : [])]),
         sec('Content topics', 'Ready to post.', [`The 3 mistakes ${audience} make in ${niche}.`, 'A before/after with the steps between.', 'A myth you used to believe, and what is true.']),
       ] };
     case 'authority_positioning':
-      return { kind: 'sections', summary: `How to become the go-to name in ${niche}.`, sections: [
+      return { kind: 'sections', summary: `${vf.toneLead}How to become the go-to name in ${niche}.`, sections: [
         sec('Your edge', 'What only you can claim.', ['Combine your background with your niche in one line.', 'Lean into the angle competitors avoid.']),
         sec('Positioning statement', 'Repeat this everywhere.', [`The go-to for ${audience} who want results in ${niche} without the fluff.`]),
-        sec('Differentiators', 'Make the choice obvious.', ['A signature method or framework with a name.', 'A consistent visual identity.', 'Proof posted regularly.']),
+        sec('Differentiators', 'Make the choice obvious.', ['A signature method or framework with a name.', 'A consistent visual identity.', 'Proof posted regularly.', ...(vf.tone ? [`Keep your ${vf.tone} voice consistent across every post.`] : [])]),
         sec('Proof to build', 'Earn the authority.', ['Document wins and case studies.', 'Share strong, specific opinions.', 'Show your process in public.']),
       ] };
     case 'content_pillars':
-      return { kind: 'pillars', summary: `Five pillars for ${niche}.`, pillars: [
+      return { kind: 'pillars', summary: `${vf.toneLead}Five pillars for ${niche}.`, pillars: [
         { name: 'Educate', why: `Teaching builds trust with ${audience} and earns saves.`, topics: ['How-to in 5 steps', 'A common mistake and the fix', 'A quick framework'] },
         { name: 'Proof', why: 'Results and stories make the promise believable.', topics: ['Before and after', 'A client win', 'A myth busted with evidence'] },
         { name: 'Behind the scenes', why: 'Humanises the brand and builds connection.', topics: ['How you work', 'A day in the life', 'A lesson learned'] },
         { name: 'Point of view', why: 'Opinions filter in the right people and spark comments.', topics: ['An unpopular take', 'What you would never do', 'What the industry gets wrong'] },
-        { name: 'Offers', why: `Moves ${audience} toward ${model}.`, topics: ['Who the offer is for', 'A testimonial', 'A clear invitation'] },
+        { name: 'Offers', why: `Moves ${audience} toward ${model}${vf.ctaStyleLabel ? ` with ${vf.ctaStyleLabel}` : ''}.`, topics: ['Who the offer is for', 'A testimonial', 'A clear invitation'] },
       ] };
     case 'thirty_day_plan': {
       const pillars = p.pillars?.length ? p.pillars : ['Educate', 'Proof', 'Behind the scenes', 'Point of view', 'Offers'];
       const formats = ['Carousel', 'Reel', 'Single image', 'Story', 'Reel'];
       const goals = ['Trust', 'Reach', 'Trust', 'Reach', 'Sell'];
-      const days = Array.from({ length: 30 }, (_, i) => ({
-        day: i + 1,
-        idea: `${pillars[i % pillars.length]}: ${ideaFor(pillars[i % pillars.length], niche)}`,
-        format: formats[i % formats.length],
-        angle: angleFor(pillars[i % pillars.length], audience),
-        goal: goals[i % goals.length],
-      }));
-      return { kind: 'calendar', summary: `A 30-day plan for ${niche}, cycling your pillars.`, days };
+      const days = Array.from({ length: 30 }, (_, i) => {
+        const pillar = pillars[i % pillars.length];
+        return {
+          day: i + 1,
+          idea: `${pillar}: ${ideaFor(pillar, niche)}`,
+          format: formats[i % formats.length],
+          angle: angleFor(pillar, audience, vf),
+          goal: goals[i % goals.length],
+        };
+      });
+      return { kind: 'calendar', summary: `${vf.toneLead}A 30-day plan for ${niche}, cycling your pillars.`, days };
     }
     case 'scroll_post': {
       const topic = (p.topic || '').trim() || `getting started in ${niche}`;
-      return { kind: 'post', hook: `Most ${audience} get ${topic} wrong. Here is the fix.`, insight: `The shortcut: focus on the one step that actually moves the needle for ${topic}, and ignore the rest until it is working.`, cta: 'Save this for later, and comment your biggest blocker so I can help.', caption: `${topic} does not have to be complicated. Steal this and let me know how it goes.`, hashtags: ['#tips', '#howto'] };
+      return { kind: 'post', hook: `Most ${audience} get ${topic} wrong. Here is the fix.`, insight: `The shortcut: focus on the one step that actually moves the needle for ${topic}, and ignore the rest until it is working.`, cta: vf.cta(topic), caption: `${topic} does not have to be complicated. Steal this and let me know how it goes.`, hashtags: ['#tips', '#howto'] };
     }
     case 'monetization':
-      return { kind: 'sections', summary: `Turn ${audience} into buyers of ${model}.`, sections: [
+      return { kind: 'sections', summary: `${vf.toneLead}Turn ${audience} into buyers of ${model}.`, sections: [
         sec('Offer ideas', 'Build an offer ladder.', ['A free lead magnet (checklist or mini-guide).', 'A low-cost entry offer.', 'A core paid offer or service.']),
         sec('Pricing structure', 'Make the next step easy.', ['Anchor with the core offer.', 'Add a clear entry price to remove risk.', 'Bundle for higher value where it fits.']),
-        sec('Content angles that sell', 'Move follower to buyer.', ['Show the transformation, not the features.', 'Handle one objection per week.', 'Post proof, then invite.']),
-        sec('Next step', 'This week.', ['Publish the lead magnet.', 'Add one CTA toward it.', 'DM warm leads who engage.']),
+        sec('Content angles that sell', 'Move follower to buyer.', ['Show the transformation, not the features.', 'Handle one objection per week.', 'Post proof, then invite.', ...(vf.phrasesNote ? [vf.phrasesNote] : [])]),
+        sec('Next step', 'This week.', ['Publish the lead magnet.', vf.cta(model), 'DM warm leads who engage.']),
       ] };
     default:
       return { kind: 'sections', sections: [sec('Strategy', 'Fill in your brief for tailored advice.', [])] };
@@ -195,7 +243,8 @@ function ideaFor(pillar: string, niche: string): string {
   };
   return map[pillar] || `a useful tip in ${niche}`;
 }
-function angleFor(pillar: string, audience: string): string {
+function angleFor(pillar: string, audience: string, vf?: VoiceFlavour): string {
+  if (pillar === 'Offers' && vf?.ctaStyleLabel) return `Invite using your ${vf.ctaStyleLabel}`;
   const map: Record<string, string> = {
     Educate: `Teach ${audience} one quick win`,
     Proof: 'Make the promise believable',
