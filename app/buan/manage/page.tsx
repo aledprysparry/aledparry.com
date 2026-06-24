@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { money } from "@/lib/buan/config";
+import ManageNav from "@/components/buan/ManageNav";
 
 /* Buan menu manager (P3). Business-side product + stock management:
    add/edit/remove items, categories, visibility, and live stock
@@ -70,7 +71,7 @@ export default function BuanManage() {
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center justify-between">
           <a href="/buan" className="text-lg font-extrabold tracking-tight">Buan</a>
-          <span className="text-sm text-stone-400">Menu</span>
+          <ManageNav active="menu" />
         </div>
 
         <div className="mt-4 flex gap-3 text-xs">
