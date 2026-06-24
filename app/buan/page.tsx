@@ -103,9 +103,10 @@ export default function BuanMarketing() {
         <div className="flex items-center gap-4">
           <div className="flex overflow-hidden rounded-full border border-stone-700 text-xs font-bold">
             {(["en", "cy"] as Lang[]).map((l) => (
-              <button key={l} onClick={() => setLang(l)}
+              <button key={l} onClick={() => setLang(l)} lang={l} aria-pressed={l === lang}
+                aria-label={l === "cy" ? "Newid i'r Gymraeg" : "Switch to English"}
                 className={l === lang ? "bg-emerald-400 px-3 py-1 text-emerald-950" : "px-3 py-1 text-stone-400"}>
-                {l.toUpperCase()}
+                {l === "cy" ? "Cymraeg" : "English"}
               </button>
             ))}
           </div>
