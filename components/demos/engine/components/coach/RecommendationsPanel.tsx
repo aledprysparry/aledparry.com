@@ -54,6 +54,11 @@ export default function RecommendationsPanel({ brandId }: { brandId: string }) {
     return <EmptyState title={t('coach.noRecsTitle')} hint={t('coach.noRecsHint')} />;
   }
 
+  // Skip recs whose graphic was deleted (orphan rows linked to a NotFound
+  // editor and can't be applied). Base the empty state on what's actually
+  // visible so an all-orphan brand sees guidance, not a dead tab (Codex #96/#101).
+  const visiblePosts = byPost.filter(([postId]) => store.getGraphic(postId));
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -61,9 +66,8 @@ export default function RecommendationsPanel({ brandId }: { brandId: string }) {
         <Button variant="ghost" onClick={() => setShowApplied((s) => !s)}>{showApplied ? t('coach.hideApplied') : t('coach.showApplied')}</Button>
       </div>
 
-      {/* Skip recommendations whose graphic was deleted - their rows linked to a
-          NotFound editor and couldn't be applied (Codex #96). */}
-      {byPost.filter(([postId]) => store.getGraphic(postId)).map(([postId, list]) => (
+      {visiblePosts.length === 0 && <EmptyState title={t('coach.noRecsTitle')} hint={t('coach.noRecsHint')} />}
+      {visiblePosts.map(([postId, list]) => (
         <div key={postId}>
           <div className="mb-2 flex items-center justify-between gap-2">
             <Link to={`/graphics/${postId}`} className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-zinc-700 hover:text-violet-700 dark:text-zinc-200 dark:hover:text-violet-300">
