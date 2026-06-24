@@ -134,7 +134,7 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
           <div className="mt-3 space-y-2">
             <div className="flex flex-wrap gap-1.5">
               {voice.toneAdjectives.map((a, i) => <Badge key={i} tone="accent">{a}</Badge>)}
-              <Badge tone="muted">{voice.language === 'cy' ? 'Cymraeg' : voice.language === 'bilingual' ? 'CY + EN' : 'English'}</Badge>
+              <Badge tone="muted">{voice.language === 'cy' ? 'Cymraeg' : voice.language === 'bilingual' ? 'Cymraeg + English' : 'English'}</Badge>
               <Badge tone="muted">~{voice.avgWordsPerPost} {t('coach.voice.words')}</Badge>
               <Badge tone="muted">{t('coach.voice.emoji')}: {voice.emojiUsage}</Badge>
             </div>
