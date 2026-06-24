@@ -88,9 +88,19 @@ export async function GET(request: Request) {
   }
 
   // Only Vercel cron (or a manual call with the right secret) may actually send.
-  const isCron = request.headers.get("x-vercel-cron") === "1";
-  const secretOk = !!process.env.CRON_SECRET && url.searchParams.get("secret") === process.env.CRON_SECRET;
-  if (!isCron && !secretOk) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 401 });
+  // The x-vercel-cron header is client-supplied and spoofable, so it must NOT be
+  // trusted on its own - anyone could curl it to fire a real Resend send. Require
+  // the Authorization: Bearer $CRON_SECRET that Vercel attaches to cron requests
+  // when CRON_SECRET is set, or the manual ?secret= (Codex security finding).
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    // Fail closed: without a secret we can't distinguish real cron from a forged
+    // header, so refuse to send rather than allow spoofable triggering.
+    return NextResponse.json({ ok: false, reason: "not_configured", message: "Set CRON_SECRET to enable the digest send." }, { status: 503 });
+  }
+  const authOk = request.headers.get("authorization") === `Bearer ${cronSecret}`;
+  const secretOk = url.searchParams.get("secret") === cronSecret;
+  if (!authOk && !secretOk) return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 401 });
 
   // Weekly: a daily cron, but only email on Mondays (so it works on any plan).
   const force = url.searchParams.get("force") === "1";
