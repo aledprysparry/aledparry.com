@@ -4,7 +4,7 @@
 // to Supabase later, reimplement the action bodies against an async
 // repository - the component API (useStore) stays identical.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type {
   Brand,
   BrandAsset,
@@ -414,6 +414,18 @@ const StoreContext = createContext<StoreApi | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<StoreState>(initialState);
+  // Mirror of `state` kept in lockstep with every write so action methods read
+  // pending writes synchronously: a createGraphic issued right after a
+  // createTemplate (in the same tick) sees the new template instead of the
+  // stale React snapshot. The reactive spread `...state` below still drives
+  // rendering; method bodies read live data via stateRef.current.
+  const stateRef = useRef<StoreState>(state);
+  // setState that also advances the ref, so a later read in the same tick is
+  // consistent regardless of whether the write came from `update` or a hydration.
+  const commit = useCallback((next: StoreState) => {
+    stateRef.current = next;
+    setState(next);
+  }, []);
 
   // When Supabase is configured it is the source of truth (shareable,
   // cross-device): load all collections on mount. Otherwise stay
@@ -422,29 +434,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let alive = true;
     if (supabaseConfigured()) {
       loadAllFromSupabase().then((data) => {
-        if (alive && data) setState((s) => ({ ...s, ...data } as StoreState));
+        if (alive && data) commit({ ...stateRef.current, ...data } as StoreState);
       });
     } else {
       loadAssetsIDB().then((assets) => {
-        if (alive && assets.length) setState((s) => (s.assets.length ? s : { ...s, assets }));
+        if (alive && assets.length && !stateRef.current.assets.length) commit({ ...stateRef.current, assets });
       });
     }
     return () => { alive = false; };
-  }, []);
+  }, [commit]);
 
   const update = useCallback(
     <K extends CollectionName>(name: K, updater: (items: StoreState[K]) => StoreState[K]) => {
-      setState((prev) => {
-        const nextItems = updater(prev[name]);
-        // local cache (offline-friendly) ...
-        if (name === 'assets') saveAssetsIDB(nextItems as BrandAsset[]);
-        else saveCollection(name, nextItems);
-        // ... + mirror to Supabase when configured
-        if (supabaseConfigured()) syncCollectionToSupabase(name, nextItems as { id: string }[]);
-        return { ...prev, [name]: nextItems } as StoreState;
-      });
+      // Read the latest committed state from the ref (not the closed-over
+      // snapshot) so back-to-back writes in one tick chain correctly.
+      const prev = stateRef.current;
+      const nextItems = updater(prev[name]);
+      // local cache (offline-friendly) ...
+      if (name === 'assets') saveAssetsIDB(nextItems as BrandAsset[]);
+      else saveCollection(name, nextItems);
+      // ... + mirror to Supabase when configured
+      if (supabaseConfigured()) syncCollectionToSupabase(name, nextItems as { id: string }[]);
+      commit({ ...prev, [name]: nextItems } as StoreState);
     },
-    [],
+    [commit],
   );
 
   const api = useMemo<StoreApi>(() => {
@@ -479,7 +492,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('strategyArtifacts', (a) => a.filter((x) => x.brandId !== id));
         update('voiceProfiles', (v) => v.filter((x) => x.brandId !== id));
       },
-      getBrand: (id) => state.brands.find((b) => b.id === id),
+      getBrand: (id) => stateRef.current.brands.find((b) => b.id === id),
 
       // ── assets ──
       addAsset: (brandId, a) => {
@@ -494,7 +507,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('assets', (x) => x.filter((a) => a.id !== id));
         update('brands', (b) => b.map((br) => ({ ...br, logos: br.logos.filter((l) => l !== id) })));
       },
-      assetsByBrand: (brandId) => state.assets.filter((a) => a.brandId === brandId),
+      assetsByBrand: (brandId) => stateRef.current.assets.filter((a) => a.brandId === brandId),
 
       // ── social ──
       addSocialAccount: (brandId, s) => {
@@ -509,14 +522,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateSocialAudit: (id, patch) => {
         update('socialAccounts', (x) => x.map((a) => (a.id === id ? { ...a, ...patch } : a)));
       },
-      socialByBrand: (brandId) => state.socialAccounts.filter((s) => s.brandId === brandId),
+      socialByBrand: (brandId) => stateRef.current.socialAccounts.filter((s) => s.brandId === brandId),
 
       // ── template styles ──
       addTemplateStyle: (brandId, s) => {
         const style: TemplateStyle = { id: newId('style'), brandId, createdAt: now(), ...s };
         update('templateStyles', (x) => [...x, style]);
       },
-      stylesByBrand: (brandId) => state.templateStyles.filter((s) => s.brandId === brandId),
+      stylesByBrand: (brandId) => stateRef.current.templateStyles.filter((s) => s.brandId === brandId),
 
       // ── templates ──
       createTemplate: (brandId, kindId, name, opts) => {
@@ -535,18 +548,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateTemplateMaster: (id, copyPatch) =>
         update('templates', (x) => x.map((t) => (t.id === id ? { ...t, master: { ...t.master, copy: { ...t.master?.copy, ...copyPatch } } } : t))),
       deleteTemplate: (id) => update('templates', (x) => x.filter((t) => t.id !== id)),
-      templatesByBrand: (brandId) => state.templates.filter((t) => t.brandId === brandId),
-      getTemplate: (id) => state.templates.find((t) => t.id === id),
+      templatesByBrand: (brandId) => stateRef.current.templates.filter((t) => t.brandId === brandId),
+      getTemplate: (id) => stateRef.current.templates.find((t) => t.id === id),
 
       // ── graphics ──
       createGraphic: (brandId, templateId, opts) => {
-        const tpl = state.templates.find((t) => t.id === templateId);
+        const tpl = stateRef.current.templates.find((t) => t.id === templateId);
         const kind = tpl && getKind(tpl.kind);
         if (!tpl || !kind) return undefined;
-        const brand = state.brands.find((b) => b.id === brandId);
+        const brand = stateRef.current.brands.find((b) => b.id === brandId);
         const t = now();
         const defaultName = `${kind.name} - ${new Date().toLocaleDateString('en-GB')}`;
-        const existingNames = state.graphics.filter((g) => g.brandId === brandId).map((g) => g.name);
+        const existingNames = stateRef.current.graphics.filter((g) => g.brandId === brandId).map((g) => g.name);
         const base = {
           id: newId('gfx'),
           brandId,
@@ -559,7 +572,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         };
         // Generated templates bake their starter layout into seedElements;
         // clone with fresh ids so each graphic owns its elements.
-        const logoUrl = (state.assets.find((a) => a.id === brand?.logos?.[0]) ?? state.assets.find((a) => a.type === 'logo' && a.brandId === brandId))?.url;
+        const logoUrl = (stateRef.current.assets.find((a) => a.id === brand?.logos?.[0]) ?? stateRef.current.assets.find((a) => a.type === 'logo' && a.brandId === brandId))?.url;
         const seed = tpl.seedElements?.length
           ? tpl.seedElements.map((el) => ({ ...el, id: newId('el') }))
           : kind.defaultElements?.(brand?.colours, loadLang(), brand?.fonts, logoUrl) ?? [];
@@ -576,23 +589,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteGraphic: (id) => update('graphics', (x) => x.filter((g) => g.id !== id)),
       restoreGraphic: (g) => update('graphics', (x) => (x.some((y) => y.id === g.id) ? x : [g, ...x])),
       duplicateGraphic: (id) => {
-        const src = state.graphics.find((g) => g.id === id);
+        const src = stateRef.current.graphics.find((g) => g.id === id);
         if (!src) return undefined;
         const t = now();
-        const existingNames = state.graphics.filter((g) => g.brandId === src.brandId).map((g) => g.name);
+        const existingNames = stateRef.current.graphics.filter((g) => g.brandId === src.brandId).map((g) => g.name);
         const copy: GeneratedGraphic = { ...src, id: newId('gfx'), name: uniqueName(`${src.name} (copy)`, existingNames), createdAt: t, updatedAt: t };
         update('graphics', (x) => [copy, ...x]);
         return copy;
       },
       moveGraphicToFolder: (id, folderId) =>
         update('graphics', (x) => x.map((g) => (g.id === id ? { ...g, folderId: folderId ?? undefined, updatedAt: now() } : g))),
-      graphicsByBrand: (brandId) => state.graphics.filter((g) => g.brandId === brandId),
-      getGraphic: (id) => state.graphics.find((g) => g.id === id),
+      graphicsByBrand: (brandId) => stateRef.current.graphics.filter((g) => g.brandId === brandId),
+      getGraphic: (id) => stateRef.current.graphics.find((g) => g.id === id),
 
       // ── clips (mirror graphics: brand-scoped, folder-organised) ──
       createClip: (brandId, clip, opts) => {
         const t = now();
-        const existingNames = state.clips.filter((c) => c.brandId === brandId).map((c) => c.name);
+        const existingNames = stateRef.current.clips.filter((c) => c.brandId === brandId).map((c) => c.name);
         const c: Clip = {
           ...clip,
           id: newId('clip'),
@@ -611,12 +624,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       restoreClip: (c) => update('clips', (x) => (x.some((y) => y.id === c.id) ? x : [c, ...x])),
       moveClipToFolder: (id, folderId) =>
         update('clips', (x) => x.map((c) => (c.id === id ? { ...c, folderId: folderId ?? undefined, updatedAt: now() } : c))),
-      clipsByBrand: (brandId) => state.clips.filter((c) => c.brandId === brandId),
-      getClip: (id) => state.clips.find((c) => c.id === id),
+      clipsByBrand: (brandId) => stateRef.current.clips.filter((c) => c.brandId === brandId),
+      getClip: (id) => stateRef.current.clips.find((c) => c.id === id),
 
       // ── folders ──
       createFolder: (brandId, name) => {
-        const existing = state.folders.filter((f) => f.brandId === brandId).map((f) => f.name);
+        const existing = stateRef.current.folders.filter((f) => f.brandId === brandId).map((f) => f.name);
         const folder: Folder = { id: newId('folder'), brandId, name: uniqueName(name.trim() || 'New folder', existing), createdAt: now() };
         update('folders', (f) => [...f, folder]);
         return folder;
@@ -628,7 +641,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('graphics', (g) => g.map((x) => (x.folderId === id ? { ...x, folderId: undefined } : x)));
         update('clips', (c) => c.map((x) => (x.folderId === id ? { ...x, folderId: undefined } : x)));
       },
-      foldersByBrand: (brandId) => state.folders.filter((f) => f.brandId === brandId),
+      foldersByBrand: (brandId) => stateRef.current.folders.filter((f) => f.brandId === brandId),
 
       // ── Postio Coach: reference (aspirational) accounts ──
       addReferenceAccount: (brandId, a) => {
@@ -646,7 +659,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setReferenceProfile: (id, profile) =>
         update('referenceAccounts', (x) => x.map((r) => (r.id === id ? { ...r, profile, updatedAt: now() } : r))),
       removeReferenceAccount: (id) => update('referenceAccounts', (x) => x.filter((r) => r.id !== id)),
-      referenceAccountsByBrand: (brandId) => state.referenceAccounts.filter((r) => r.brandId === brandId),
+      referenceAccountsByBrand: (brandId) => stateRef.current.referenceAccounts.filter((r) => r.brandId === brandId),
 
       // ── Postio Coach: post analyses ──
       saveAnalysis: (a) => {
@@ -655,10 +668,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return analysis;
       },
       deleteAnalysis: (id) => update('postAnalyses', (x) => x.filter((a) => a.id !== id)),
-      analysesByBrand: (brandId) => state.postAnalyses.filter((a) => a.brandId === brandId),
-      analysesByPost: (postId) => state.postAnalyses.filter((a) => a.postId === postId),
+      analysesByBrand: (brandId) => stateRef.current.postAnalyses.filter((a) => a.brandId === brandId),
+      analysesByPost: (postId) => stateRef.current.postAnalyses.filter((a) => a.postId === postId),
       latestAnalysis: (postId) =>
-        state.postAnalyses
+        stateRef.current.postAnalyses
           .filter((a) => a.postId === postId)
           .sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0],
 
@@ -672,8 +685,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setRecommendationApplied: (id, applied) =>
         update('aiRecommendations', (x) => x.map((r) => (r.id === id ? { ...r, applied } : r))),
       deleteRecommendation: (id) => update('aiRecommendations', (x) => x.filter((r) => r.id !== id)),
-      recommendationsByBrand: (brandId) => state.aiRecommendations.filter((r) => r.brandId === brandId),
-      recommendationsByPost: (postId) => state.aiRecommendations.filter((r) => r.postId === postId),
+      recommendationsByBrand: (brandId) => stateRef.current.aiRecommendations.filter((r) => r.brandId === brandId),
+      recommendationsByPost: (postId) => stateRef.current.aiRecommendations.filter((r) => r.postId === postId),
 
       // ── Postio Coach: performance ──
       addPerformance: (brandId, entry) => {
@@ -685,7 +698,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return e;
       },
       removePerformance: (id) => update('performance', (x) => x.filter((p) => p.id !== id)),
-      performanceByBrand: (brandId) => state.performance.filter((p) => p.brandId === brandId),
+      performanceByBrand: (brandId) => stateRef.current.performance.filter((p) => p.brandId === brandId),
 
       // ── Postio Coach: benchmark presets ──
       addPreset: (preset) => {
@@ -694,12 +707,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return p;
       },
       deletePreset: (id) => update('coachPresets', (x) => x.filter((p) => p.id !== id)),
-      presetsByBrand: (brandId) => state.coachPresets.filter((p) => !p.brandId || p.brandId === brandId),
+      presetsByBrand: (brandId) => stateRef.current.coachPresets.filter((p) => !p.brandId || p.brandId === brandId),
 
       // ── Postio Coach: per-brand settings ──
-      getCoachSettings: (brandId) => state.coachSettings.find((s) => s.brandId === brandId),
+      getCoachSettings: (brandId) => stateRef.current.coachSettings.find((s) => s.brandId === brandId),
       setCoachSettings: (brandId, patch) => {
-        const existing = state.coachSettings.find((s) => s.brandId === brandId);
+        const existing = stateRef.current.coachSettings.find((s) => s.brandId === brandId);
         const next: CoachSettings = existing
           ? { ...existing, ...patch, updatedAt: now() }
           : { id: brandId, brandId, enabledBenchmarkIds: patch.enabledBenchmarkIds ?? [], activePresetId: patch.activePresetId, updatedAt: now() };
@@ -708,9 +721,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
 
       // ── Postio Coach: strategy ──
-      getBrief: (brandId) => state.coachBriefs.find((b) => b.brandId === brandId),
+      getBrief: (brandId) => stateRef.current.coachBriefs.find((b) => b.brandId === brandId),
       setBrief: (brandId, patch) => {
-        const existing = state.coachBriefs.find((b) => b.brandId === brandId);
+        const existing = stateRef.current.coachBriefs.find((b) => b.brandId === brandId);
         const next: CoachBrief = existing
           ? { ...existing, ...patch, updatedAt: now() }
           : { id: brandId, brandId, niche: '', audience: '', goals: '', businessModel: '', ...patch, updatedAt: now() };
@@ -723,23 +736,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return art;
       },
       deleteStrategy: (id) => update('strategyArtifacts', (x) => x.filter((a) => a.id !== id)),
-      strategiesByBrand: (brandId) => state.strategyArtifacts.filter((a) => a.brandId === brandId),
+      strategiesByBrand: (brandId) => stateRef.current.strategyArtifacts.filter((a) => a.brandId === brandId),
       latestStrategy: (brandId, play) =>
-        state.strategyArtifacts
+        stateRef.current.strategyArtifacts
           .filter((a) => a.brandId === brandId && a.play === play)
           .sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0],
 
       // ── Postio Coach: brand voice ──
-      getVoiceProfile: (brandId) => state.voiceProfiles.find((v) => v.brandId === brandId),
+      getVoiceProfile: (brandId) => stateRef.current.voiceProfiles.find((v) => v.brandId === brandId),
       setVoiceProfile: (brandId, profile) => {
-        const existing = state.voiceProfiles.find((v) => v.brandId === brandId);
+        const existing = stateRef.current.voiceProfiles.find((v) => v.brandId === brandId);
         const next: VoiceProfile = { ...profile, id: brandId, brandId, updatedAt: now() };
         update('voiceProfiles', (x) => (existing ? x.map((v) => (v.brandId === brandId ? next : v)) : [...x, next]));
         return next;
       },
 
       // ── backup ──
-      exportAll: () => exportSnapshot({ assets: state.assets }),
+      exportAll: () => exportSnapshot({ assets: stateRef.current.assets }),
     };
   }, [state, update]);
 
