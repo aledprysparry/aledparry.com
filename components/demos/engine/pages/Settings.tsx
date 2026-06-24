@@ -82,8 +82,10 @@ export default function Settings() {
               value={lang}
               onChange={setLang}
               options={[
-                { value: 'en', label: 'English' },
-                { value: 'cy', label: 'Cymraeg' },
+                // Native language name carries its own lang so screen readers
+                // pronounce it correctly (WCAG 3.1.2). No EN/CY abbreviations.
+                { value: 'en', label: <span lang="en">English</span> },
+                { value: 'cy', label: <span lang="cy">Cymraeg</span> },
               ]}
             />
           </Row>
