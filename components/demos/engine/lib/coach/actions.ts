@@ -24,9 +24,19 @@ interface StoreLike {
   updateGraphic: (id: string, patch: Partial<GeneratedGraphic>) => void;
 }
 
+// Instructional fallback copy from deriveRecommendations. Rows saved BEFORE the
+// `applyable` flag existed load with applyable===undefined, so classify the known
+// guidance strings here too - else legacy headline/cta rows still let Apply paste
+// "Open with a short..." onto the canvas (Codex #101).
+const LEGACY_FALLBACK_VALUES = new Set([
+  'Open with a short, specific line (a number, a question, or a bold claim).',
+  'Add one clear CTA, e.g. "Save this for later" or "Book your place".',
+]);
+
 // Only these recommendation types map to an on-canvas edit.
 export function isApplyable(rec: Pick<AIRecommendation, 'type' | 'suggestedValue' | 'applyable'>): boolean {
   if (rec.applyable === false) return false; // instructional/offline guidance row
+  if (LEGACY_FALLBACK_VALUES.has(rec.suggestedValue.trim())) return false; // legacy guidance
   if (!rec.suggestedValue.trim()) return false;
   return rec.type === 'headline' || rec.type === 'cta';
 }

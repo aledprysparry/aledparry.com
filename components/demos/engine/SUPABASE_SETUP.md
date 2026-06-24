@@ -37,13 +37,21 @@ create table if not exists socialdesk.cg_voice_profiles    (id text primary key,
 -- are persisted. Same shape + sync pattern as every collection above.
 create table if not exists socialdesk.cg_intent_sessions   (id text primary key, data jsonb not null, updated_at timestamptz default now());
 create table if not exists socialdesk.cg_approval_signals  (id text primary key, data jsonb not null, updated_at timestamptz default now());
+-- Reactive Coach (scores existing posts): reference accounts, analyses,
+-- recommendations, performance history, presets - also mirrored by
+-- supabaseSync.TABLE, so missing tables silently no-op too (Codex #101).
+create table if not exists socialdesk.cg_reference_accounts(id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_post_analyses     (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_ai_recommendations(id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_performance       (id text primary key, data jsonb not null, updated_at timestamptz default now());
+create table if not exists socialdesk.cg_coach_presets     (id text primary key, data jsonb not null, updated_at timestamptz default now());
 
 -- POC access: open via the anon key (one shared workspace, no login).
 -- Replace with auth + per-user RLS before real multi-user.
 do $$
 declare t text;
 begin
-  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_clips','cg_folders','cg_coach_settings','cg_coach_briefs','cg_strategy_artifacts','cg_voice_profiles','cg_intent_sessions','cg_approval_signals']
+  foreach t in array array['cg_brands','cg_assets','cg_social_accounts','cg_template_styles','cg_templates','cg_graphics','cg_clips','cg_folders','cg_coach_settings','cg_coach_briefs','cg_strategy_artifacts','cg_voice_profiles','cg_intent_sessions','cg_approval_signals','cg_reference_accounts','cg_post_analyses','cg_ai_recommendations','cg_performance','cg_coach_presets']
   loop
     execute format('alter table socialdesk.%I enable row level security', t);
     execute format('drop policy if exists anon_all on socialdesk.%I', t);
