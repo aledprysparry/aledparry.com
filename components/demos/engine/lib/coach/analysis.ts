@@ -27,7 +27,16 @@ import { localPerformanceInsights } from './mock';
 // ── post text extraction ──────────────────────────────────────────────
 // A "post" is a GeneratedGraphic. Pull every editable line of text out of it,
 // whichever editor produced it (freeform slides or kind inputs).
-export function extractPostText(graphic: GeneratedGraphic): { lines: string[]; joined: string } {
+//
+// For kind/inputs graphics, pass `resolvedCopy` (the effectiveCopyForGraphic
+// merge of kind defaults + template master + this graphic's overrides) so the
+// Coach scores the text the post actually renders, not just the per-graphic
+// overrides. Without it we fall back to overrides alone, which is empty for a
+// graphic that inherits everything from its template.
+export function extractPostText(
+  graphic: GeneratedGraphic,
+  resolvedCopy?: Record<string, string>,
+): { lines: string[]; joined: string } {
   const lines: string[] = [];
   if (graphic.slides?.length) {
     for (const slide of graphic.slides) {
@@ -37,8 +46,8 @@ export function extractPostText(graphic: GeneratedGraphic): { lines: string[]; j
     }
   }
   if (!lines.length && graphic.inputs) {
-    const overrides = (graphic.inputs.copyOverrides as Record<string, string>) ?? {};
-    for (const v of Object.values(overrides)) if (typeof v === 'string' && v.trim()) lines.push(v.trim());
+    const copy = resolvedCopy ?? (graphic.inputs.copyOverrides as Record<string, string>) ?? {};
+    for (const v of Object.values(copy)) if (typeof v === 'string' && v.trim()) lines.push(v.trim());
     const raw = graphic.inputs.rawText;
     if (typeof raw === 'string' && raw.trim()) lines.push(...raw.split('\n').map((s) => s.trim()).filter(Boolean));
   }
@@ -265,14 +274,17 @@ function scoreModule(id: string, f: PostFeatures): ModuleScore {
 }
 
 // Build a full deterministic analysis (no AI). modelUsed = "deterministic".
+// `resolvedCopy` threads through to extractPostText so inherited template copy
+// is scored, not just per-graphic overrides.
 export function localAnalysis(
   graphic: GeneratedGraphic,
   brand: Brand | undefined,
   platform: string,
   enabledIds: string[],
   ctx: { hasReferenceAccounts: boolean; hasPerformance: boolean },
+  resolvedCopy?: Record<string, string>,
 ): Omit<PostAnalysis, 'id' | 'createdAt'> {
-  return localAnalysisFromText(extractPostText(graphic), brand, platform, enabledIds, ctx, {
+  return localAnalysisFromText(extractPostText(graphic, resolvedCopy), brand, platform, enabledIds, ctx, {
     postId: graphic.id, brandId: graphic.brandId,
   });
 }

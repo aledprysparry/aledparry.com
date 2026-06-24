@@ -18,6 +18,10 @@ export interface CheckItem {
 }
 
 const CTA_WORDS = ['shop', 'buy', 'learn', 'sign up', 'book', 'download', 'join', 'follow', 'comment', 'save', 'share', 'tap', 'click', 'discover', 'register', 'get', 'dysgwch', 'cofrestrwch', 'archebwch', 'dilynwch', 'rhannwch', 'prynwch', 'ymunwch'];
+// Whole-word match (like analysis.ts) so a CTA word is found wherever it sits -
+// start of a line, after a newline, or mid-sentence - not only when preceded by
+// a literal space. All CTA words are ASCII, so \b is safe (no `u` flag needed).
+const CTA_RE = new RegExp(`\\b(${CTA_WORDS.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'i');
 
 // ── colour parsing + WCAG contrast ──
 function parseColour(c: string | undefined): [number, number, number] | null {
@@ -49,13 +53,15 @@ function allElements(graphic: GeneratedGraphic): GraphicElement[] {
   return graphic.slides?.flatMap((s) => s.elements) ?? [];
 }
 
-export function preExportCheck(graphic: GeneratedGraphic, brand: Brand | undefined, platformName: string): CheckItem[] {
+// `resolvedCopy` (effectiveCopyForGraphic) lets the text checks see inherited
+// template copy on kind/inputs graphics, not just per-graphic overrides.
+export function preExportCheck(graphic: GeneratedGraphic, brand: Brand | undefined, platformName: string, resolvedCopy?: Record<string, string>): CheckItem[] {
   const items: CheckItem[] = [];
   const els = allElements(graphic);
   const texts = els.filter((e) => e.type === 'text');
   const bg = els.find((e) => e.type === 'background');
   const bgColour = parseColour(bg?.style?.fill as string | undefined);
-  const text = extractPostText(graphic);
+  const text = extractPostText(graphic, resolvedCopy);
 
   // text too small (fontSize is a fraction of canvas width)
   const tiny = texts.filter((e) => typeof e.style?.fontSize === 'number' && (e.style.fontSize as number) < 0.028).length;
@@ -73,8 +79,7 @@ export function preExportCheck(graphic: GeneratedGraphic, brand: Brand | undefin
   }
 
   // weak / missing CTA
-  const low = ` ${text.joined.toLowerCase()} `;
-  if (text.joined && !CTA_WORDS.some((w) => low.includes(` ${w}`))) items.push({ id: 'weakCta', severity: 'warn', key: 'review.chk.weakCta' });
+  if (text.joined && !CTA_RE.test(text.joined)) items.push({ id: 'weakCta', severity: 'warn', key: 'review.chk.weakCta' });
 
   // too much text
   const totalChars = text.joined.replace(/\s/g, '').length;

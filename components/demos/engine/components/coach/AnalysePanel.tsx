@@ -10,6 +10,7 @@ import { useOverlay } from '@engine/components/primitives';
 import { Button, Panel, Badge, EmptyState } from '@engine/components/ui';
 import { PLATFORM_PRESETS } from '@engine/lib/platforms/presets';
 import { extractPostText, runPostAnalysis, coachUsage } from '@engine/lib/coach/analysis';
+import { effectiveCopyForGraphic } from '@engine/lib/carousel/copy';
 import { renderGraphicImage } from '@engine/lib/coach/actions';
 import { exportAnalysisReport } from '@engine/lib/coach/report';
 import { voiceSummary } from '@engine/lib/coach/voice';
@@ -18,7 +19,7 @@ import { AnalysisResultView, CoachProgress, ScoreBar, scoreTone, useCoachConfig 
 
 export default function AnalysePanel({ brandId }: { brandId: string }) {
   const store = useStore();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useOverlay();
   const { enabledIds } = useCoachConfig(brandId);
   const graphics = store.graphicsByBrand(brandId);
@@ -41,10 +42,14 @@ export default function AnalysePanel({ brandId }: { brandId: string }) {
     if (!selected) return;
     setBusy(true); setResult(null);
     const platformName = PLATFORM_PRESETS[(selected.platformPresetId ?? 'instagram-feed') as PlatformId]?.name ?? 'Instagram';
-    const templateName = store.getTemplate(selected.templateId)?.name;
+    const template = store.getTemplate(selected.templateId);
+    const templateName = template?.name;
+    // Score the copy the post actually renders (kind defaults + master +
+    // overrides), not just this graphic's per-field overrides.
+    const resolvedCopy = effectiveCopyForGraphic(selected, template, lang);
     const image = await renderGraphicImage(selected);
     const r = await runPostAnalysis({
-      text: extractPostText(selected), brand, platformName, enabledIds,
+      text: extractPostText(selected, resolvedCopy), brand, platformName, enabledIds,
       referenceAccounts: refs, performanceEntries: perf,
       ids: { postId: selected.id, brandId }, templateName, image: image ?? undefined,
       voice: voiceSummary(store.getVoiceProfile(brandId)),

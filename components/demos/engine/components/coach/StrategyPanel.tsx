@@ -16,7 +16,8 @@ import { createDraftFromIdea } from '@engine/lib/coach/actions';
 import { exportStrategyReport } from '@engine/lib/coach/report';
 import { refineVoiceProfile, voiceSummary } from '@engine/lib/coach/voice';
 import { extractPostText } from '@engine/lib/coach/analysis';
-import type { CoachBrief, StrategyData, StrategyPlayId } from '@engine/lib/model/types';
+import { effectiveCopyForGraphic } from '@engine/lib/carousel/copy';
+import type { CoachBrief, GeneratedGraphic, StrategyData, StrategyPlayId } from '@engine/lib/model/types';
 import type { StringKey } from '@engine/lib/i18n/strings';
 import { CoachProgress } from './shared';
 
@@ -38,7 +39,7 @@ const EXAMPLE_BRIEF: { niche: string; audience: string; goals: string; businessM
 
 export default function StrategyPanel({ brandId }: { brandId: string }) {
   const store = useStore();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useOverlay();
   const navigate = useNavigate();
   const brand = store.getBrand(brandId);
@@ -61,13 +62,17 @@ export default function StrategyPanel({ brandId }: { brandId: string }) {
   const voice = store.getVoiceProfile(brandId);
   const [learningVoice, setLearningVoice] = useState(false);
 
+  // Resolve each graphic's rendered copy (kind defaults + master + overrides)
+  // so inherited template copy is learned from, not just per-graphic overrides.
+  const resolveCopy = (g: GeneratedGraphic) => effectiveCopyForGraphic(g, store.getTemplate(g.templateId), lang);
+
   const learnVoice = async () => {
     // Only posts with extractable copy can teach a voice - image-only/freeform
     // posts with no text would store a bogus 0-sample profile (Codex #97).
-    const graphics = store.graphicsByBrand(brandId).filter((g) => extractPostText(g).joined.trim());
+    const graphics = store.graphicsByBrand(brandId).filter((g) => extractPostText(g, resolveCopy(g)).joined.trim());
     if (!graphics.length) { toast({ message: t('coach.voice.noPosts') }); return; }
     setLearningVoice(true);
-    const { profile, usedAI } = await refineVoiceProfile(graphics, brand);
+    const { profile, usedAI } = await refineVoiceProfile(graphics, brand, resolveCopy);
     store.setVoiceProfile(brandId, profile);
     setLearningVoice(false);
     toast({ message: usedAI ? t('coach.voice.learnedAI') : t('coach.voice.learnedOffline') });

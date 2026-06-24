@@ -4,6 +4,8 @@
 import { useState } from 'react';
 import { ShieldCheck, AlertTriangle, Info, XCircle, Check } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
+import { useStore } from '@engine/lib/store/StoreProvider';
+import { effectiveCopyForGraphic } from '@engine/lib/carousel/copy';
 import { Panel, Button } from '@engine/components/ui';
 import { preExportCheck, severityRank, type CheckItem, type CheckSeverity } from '@engine/lib/coach/preExport';
 import type { Brand, GeneratedGraphic } from '@engine/lib/model/types';
@@ -16,11 +18,14 @@ const ICON: Record<CheckSeverity, JSX.Element> = {
 };
 
 export default function PreExportCheck({ graphic, brand, platformName }: { graphic: GeneratedGraphic; brand?: Brand; platformName: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const store = useStore();
   const [items, setItems] = useState<CheckItem[] | null>(null);
 
   const run = () => {
-    const out = preExportCheck(graphic, brand, platformName).sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
+    // Score the copy the post renders (kind defaults + master + overrides).
+    const resolvedCopy = effectiveCopyForGraphic(graphic, store.getTemplate(graphic.templateId), lang);
+    const out = preExportCheck(graphic, brand, platformName, resolvedCopy).sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
     setItems(out);
   };
 
