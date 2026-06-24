@@ -1353,9 +1353,9 @@ function LangToggle({ compact=false }) {
   const { viewLang, setViewLang } = useLang();
   return (
     <div className="lang-toggle">
-      {[["CY","🏴󠁧󠁢󠁷󠁬󠁳󠁿 Cymraeg"],["EN","🇬🇧 English"]].map(([k,l])=>(
-        <button key={k} className={`lang-btn${viewLang===k?" active":""}`} onClick={()=>setViewLang(k)}>
-          {compact ? (k==="CY"?"🏴󠁧󠁢󠁷󠁬󠁳󠁿":"🇬🇧") : l}
+      {[["CY","cy","Cymraeg"],["EN","en","English"]].map(([k,lc,l])=>(
+        <button key={k} lang={lc} className={`lang-btn${viewLang===k?" active":""}`} onClick={()=>setViewLang(k)}>
+          {l}
         </button>
       ))}
     </div>
