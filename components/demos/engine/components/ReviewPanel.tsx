@@ -12,11 +12,15 @@ interface Props {
   copy: CarouselCopy;
   ratio: RatioKey;
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
+  /** Whether this kind uses leaderboard rows. Copy-only kinds (e.g. the weekly
+   *  post / quiz / poll) have no rows, so the rows preflight must not fire its
+   *  "no leaderboard rows" warning on them. */
+  needsRows?: boolean;
 }
 
 // "Review & fit": deterministic preflight (instant) + an AI vision review of
 // the rendered slides for the current format.
-export default function ReviewPanel({ slides, rows, copy, ratio, brand }: Props) {
+export default function ReviewPanel({ slides, rows, copy, ratio, brand, needsRows = true }: Props) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [pre, setPre] = useState<string[] | null>(null);
@@ -25,7 +29,7 @@ export default function ReviewPanel({ slides, rows, copy, ratio, brand }: Props)
 
   const run = async () => {
     setBusy(true); setAi(null); setNote(null);
-    setPre(preflight(rows));
+    setPre(needsRows ? preflight(rows) : []);
     try {
       const carBrand = brand?.colours?.length ? { name: brand.name, colours: brand.colours, fonts: brand.fonts } : undefined;
       const thumbs = await renderSlideThumbs(slides, rows, copy, ratio, 540, carBrand);
