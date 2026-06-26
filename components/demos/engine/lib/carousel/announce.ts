@@ -60,13 +60,13 @@ const announceSlide: SlideDef = {
     // Background + logo stay STATIC the whole time - never fade (that flickers).
     r.clear();
     paintBg(r);
-    paintLogoLeft(r, L, 0.07, 0.085);
+    paintLogoLeft(r, L, 0.06, 0.115);
 
     // Hook - bounces up into place (overshoot), the lead beat.
     const tH = win(0, 0.5);
     withA(easeOut(tH / 0.7), () => {
       setShadow(r, 'rgba(22,9,66,0.5)', 0.005, 0.009, 0.002);
-      r.drawTextWrapped(c.hook || 'Barod i chwarae?', { x: L, y: 0.21 - (1 - easeOutBack(tH)) * 0.05, size: 0.115, color: GOLD, weight: '900', align: 'left', font: DISPLAY, maxWidth: 0.5, lineHeight: 0.118, baseline: 'top' });
+      r.drawTextWrapped(c.hook || 'Barod i chwarae?', { x: L, y: 0.23 - (1 - easeOutBack(tH)) * 0.05, size: 0.092, color: GOLD, weight: '900', align: 'left', font: DISPLAY, maxWidth: 0.48, lineHeight: 0.096, baseline: 'top' });
       clearShadow(r);
     });
 
