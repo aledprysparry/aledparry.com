@@ -51,7 +51,7 @@ export function clearShadow(r: CanvasRenderer) {
 /** Royal-indigo halftone background: the brand image if dropped in, else synthetic. */
 export function paintHalftoneBg(r: CanvasRenderer) {
   const bg = brandImage('bgPurple');
-  if (bg) {
+  if (bg && bg.naturalWidth > 0) {
     r.drawImage(bg, { x: 0, y: 0, width: 1, height: 1, fit: 'cover' });
     return;
   }

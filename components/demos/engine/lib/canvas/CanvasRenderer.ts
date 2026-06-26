@@ -217,6 +217,11 @@ export class CanvasRenderer {
   }
 
   drawImage(img: HTMLImageElement, opts: ImageOptions): void {
+    // Defensive: a missing, still-loading, or non-image value would make the
+    // native ctx.drawImage throw ("not of type HTMLImageElement") and take the
+    // whole canvas render down. Skip the draw instead so the rest of the slide
+    // (text, fallbacks) still paints.
+    if (!img || !(img as HTMLImageElement).naturalWidth) return;
     const dx = opts.x * this.W;
     const dy = opts.y * this.H;
     const dw = opts.width * this.W;
