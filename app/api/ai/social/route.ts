@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireGate } from '@/lib/postioGate';
+import { runCreativeJudgement, defaultRevisePrompt, type CompleteFn } from '@engine/lib/creative/judge';
+import { hookFirstBlock, scorecardShape, ANGLE_BANK } from '@engine/lib/creative/guide';
 
 // AI Social Media Agent for the graphics engine. Tasks: improve copy,
 // auto-fill from a topic, captions + hashtags, design critique. Calls
@@ -15,7 +17,7 @@ const MODEL = 'claude-sonnet-4-6';
 const CLIP_TRANSCRIPT_LIMIT = 12000;
 
 interface Body {
-  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy' | 'coach-voice' | 'intent-detect' | 'intent-plan';
+  task: 'improve' | 'autofill' | 'captions' | 'critique' | 'review-layout' | 'clip-analysis' | 'social-copy' | 'template-from-image' | 'coach-analyse' | 'coach-account' | 'coach-performance' | 'coach-strategy' | 'coach-voice' | 'intent-detect' | 'intent-plan' | 'creative-learn';
   brand?: { name?: string; toneNotes?: string; colours?: string[]; fonts?: string[] };
   platform?: string;
   texts?: string[];
@@ -60,6 +62,19 @@ interface Body {
   // the plan returns ready-to-use copy keyed by the real field keys.
   candidate?: { generatorKind: string; format: string; outputClass?: string };
   copyFields?: { key: string; label: string }[];
+  // ── creative-judgement learning loop ──
+  // intent-detect / intent-plan / autofill: the brand's learned creative rubric,
+  // already rendered to a prompt block (lib/creative/profile.creativeProfileSummary),
+  // injected so generation makes this brand's proven moves.
+  creativeProfile?: string;
+  // creative-learn: the packed approval signals to distil + whether any carry
+  // real engagement (decides the profile's basis).
+  learnRows?: {
+    decision: 'approved' | 'edited' | 'rejected';
+    angle?: string; scores?: Record<string, number>;
+    draftHook?: string; finalHook?: string; platform?: string; language?: string; engagement?: string;
+  }[];
+  hasPerformance?: boolean;
 }
 
 // Strategy plays -> the structured shape + intent the model must return.
@@ -204,9 +219,11 @@ Be specific ("Move the strongest phrase to line 1, cut the caption ~30%, add a c
       const kindList = specs.map((k) => `- ${k.kind} ("${k.label}", ${k.outputClass}): ${k.blurb}`).join('\n')
         || '- universal-listicle ("Listicle", carousel): a numbered, save-worthy list';
       const voiceBlock = b.voice ? `\n\n${b.voice}` : '';
+      const profileBlock = b.creativeProfile ? `\n\n${b.creativeProfile}` : '';
+      const anglesLine = ANGLE_BANK.map((a) => a.name).join(', ');
       return {
-        system: `You are Postio's intent engine. The user tells you an OUTCOME they want to achieve, never a content type. Work out what they are trying to ACHIEVE (the goal and who it is for), then propose 2-3 concrete formats that would achieve it. Each candidate's "generatorKind" MUST be one of the kinds provided, exactly. Never invent statistics or facts. Match the language of the input (reply in Welsh if the input is in Welsh). Never use em-dashes (the "—" character); use a hyphen, a comma, or rephrase. Respond with ONLY valid JSON, no markdown, no commentary.`,
-        user: `${brandCtx}${voiceBlock}\n\nThe user wants: "${b.topic || ''}".\n\nAvailable generator kinds (use ONLY these exact ids as generatorKind):\n${kindList}\n\nReturn JSON: {"goal":"what they are trying to achieve, one line","audience":"who it is for, or \\"\\"","language":"en|cy|bilingual","reasoning":"why you read the goal this way (one or two sentences)","candidates":[{"id":"c1","format":"short human label for the format","generatorKind":"one of the exact ids above","outputClass":"carousel|still|animated|clip","why":"one line: why this format serves the goal","confidence":0-100}]} - 2 or 3 candidates, strongest first.`,
+        system: `You are Postio's intent engine, and a social producer first. The user tells you an OUTCOME they want to achieve, never a content type. Work out what they are trying to ACHIEVE (the goal and who it is for), then propose 2-3 concrete formats that would achieve it with a SCROLL-STOPPING hook, not a feature list or a flat description. Think hook first, design after. Each candidate's "generatorKind" MUST be one of the kinds provided, exactly. Never invent statistics or facts. Match the language of the input (reply in Welsh if the input is in Welsh). Never use em-dashes (the "—" character); use a hyphen, a comma, or rephrase. Respond with ONLY valid JSON, no markdown, no commentary.`,
+        user: `${brandCtx}${voiceBlock}${profileBlock}\n\nThe user wants: "${b.topic || ''}".\n\nAvailable generator kinds (use ONLY these exact ids as generatorKind):\n${kindList}\n\nFor each candidate, frame "why" around the HOOK it would open with (the reason someone stops scrolling), not the topic it covers. Lean on angles like: ${anglesLine}.\n\nReturn JSON: {"goal":"what they are trying to achieve, one line","audience":"who it is for, or \\"\\"","language":"en|cy|bilingual","reasoning":"why you read the goal this way (one or two sentences)","candidates":[{"id":"c1","format":"short human label for the format","generatorKind":"one of the exact ids above","outputClass":"carousel|still|animated|clip","why":"one line: the hook this format would open with, and why it serves the goal","confidence":0-100}]} - 2 or 3 candidates, strongest first.`,
       };
     }
     case 'intent-plan': {
@@ -223,6 +240,30 @@ Be specific ("Move the strongest phrase to line 1, cut the caption ~30%, add a c
         user: `${brandCtx}${voiceBlock}\n\nThe user wants: "${b.topic || ''}".\nChosen format: ${c.format} (generatorKind: ${c.generatorKind}).\n\nFill these fields (use these exact keys in "copy"):\n${fieldList}\n\nReturn JSON: {"reasoning":"why you wrote it this way, one or two sentences","copy":{${keysCsv ? `"${fields[0].key}":"...", ...one entry for every key above` : '"title":"..."'}},"options":[{"id":"B","label":"short label e.g. punchier hook","copy":{"title":"alt title","kicker":"alt kicker"}}],"missingInfo":[{"id":"platform","question":"a single short question","blocking":false,"options":["Instagram","Facebook","LinkedIn"]}]}\nReturn at most 2 options and only genuinely-blocking missingInfo (often an empty array).`,
       };
     }
+    case 'creative-learn': {
+      // Distil a brand's approval signals (+ real engagement when present) into a
+      // learned creative rubric. The single highest-value signal is the diff
+      // between draftHook (what the AI wrote) and finalHook (what the human
+      // shipped); a rejection or a heavy rewrite of a high-scored draft also
+      // tells us the self-score over-rated that dimension (Stage 3 calibration).
+      const rows = (b.learnRows ?? []).slice(0, 60);
+      const perf = Boolean(b.hasPerformance);
+      const perfRule = perf
+        ? 'Some rows include real audience engagement. Weight those most heavily, and fill "audienceInsights" with what the numbers show actually landed.'
+        : 'No real engagement is attached yet, so learn ONLY from the human approve/edit/reject decisions and the hook diffs. Leave "audienceInsights" as an empty array.';
+      return {
+        system: `You are Postio's creative-learning analyst. From a brand's own feedback log you distil what genuinely works FOR THIS BRAND, so future posts make its proven moves instead of generic guesses. Be specific and evidence-based; quote real hook phrases from the data. Never invent patterns the data does not support - if the log is thin, return short, cautious lists. ${perfRule} Match the language of the brand's hooks where you quote them (keep Welsh in Welsh). Never use em-dashes (the "—" character); use a hyphen, a comma, or rephrase. Respond with ONLY valid JSON, no markdown, no commentary.`,
+        user: `${brandCtx}\n\nFeedback log (newest first). decision = what the human did; angle = the angle the draft used; scores = the AI's own 0-10 self-scores; draftHook = the hook the AI wrote; finalHook = the hook the human actually shipped (if it differs, the AI's hook was rewritten); engagement = real audience response when present:\n${JSON.stringify(rows)}\n\nReturn JSON exactly:
+{"winningAngles":["angles that get approved or perform well, most reliable first"],
+ "losingAngles":["angles that get rewritten or rejected"],
+ "keptHooks":["hook phrasings the human kept as-is, quoted"],
+ "rewrittenHooks":["hook phrasings the human rewrote or killed, quoted"],
+ "audienceInsights":["what real engagement shows landed, or [] if none"],
+ "scoreCalibration":[{"dimension":"hook|clarity|shareability|welshTone|cta","note":"how the self-score drifts from human reality, e.g. 'over-scores hook by ~2: drafts it rated 9 were often rewritten'"}],
+ "summary":"one tight paragraph of guidance the generator can follow to make this brand's proven moves"}
+Base every item on the log; use [] for anything the data does not support.`,
+      };
+    }
     default:
       return { system: base, user: 'Return JSON: {}' };
   }
@@ -236,6 +277,7 @@ function coachMaxTokens(task: Body['task']): number {
   if (task === 'clip-analysis') return 2200;
   if (task === 'intent-plan') return 2400; // ready-to-use copy for every field + options
   if (task === 'intent-detect') return 1000;
+  if (task === 'creative-learn') return 1800; // a brand's learned creative rubric
   return 1200;
 }
 
@@ -246,6 +288,81 @@ function parseJSON(text: string): unknown {
     if (m) { try { return JSON.parse(m[0]); } catch { /* fallthrough */ } }
     return null;
   }
+}
+
+// One Anthropic round-trip wired for the creative-judgement loop: returns the
+// parsed JSON object, or null on any error / unparseable output (the loop then
+// keeps its best earlier draft; a null FIRST draft makes the caller fall through
+// to the single-shot path, so behaviour degrades gracefully).
+function makeComplete(apiKey: string): CompleteFn {
+  return async ({ system, user, maxTokens }) => {
+    let res: Response;
+    try {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
+      });
+    } catch { return null; }
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => null);
+    const parsed = parseJSON(data?.content?.[0]?.text ?? '');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
+  };
+}
+
+// Creative-judged generation: intent-plan + autofill go hook-first, self-score,
+// and auto-revise the concept until every dimension clears the bar (or the
+// budget is spent, when the best attempt is returned with an honest scorecard).
+// Returns null to fall through to the existing single-shot path.
+async function runJudgedTask(b: Body, apiKey: string): Promise<NextResponse | null> {
+  const complete = makeComplete(apiKey);
+  const brand = b.brand ?? {};
+  const brandCtx = `Brand: ${brand.name || 'Unnamed'}. Tone: ${brand.toneNotes || 'clear, modern'}. Platform: ${b.platform || 'Instagram'}.`;
+  const voiceBlock = b.voice ? `\n\n${b.voice}` : '';
+  // The learned creative rubric for this brand, injected so generation makes its
+  // proven moves (Stage 1/2) and scores stricter where it has drifted (Stage 3).
+  const profileBlock = b.creativeProfile ? `\n\n${b.creativeProfile}` : '';
+
+  if (b.task === 'intent-plan') {
+    const c = b.candidate ?? { generatorKind: '', format: '' };
+    const fields = (b.copyFields ?? []).filter((f) => f && f.key);
+    const fieldList = fields.map((f) => `- ${f.key}: ${f.label}`).join('\n') || '- title: the headline';
+    const keysCsv = fields.map((f) => f.key).join(', ');
+    const firstKey = fields[0]?.key || 'title';
+    const systemSuffix = `You are Postio's planning agent. Output ready-to-use copy keyed by the generator's real field keys, your reasoning, 1-2 alternative options, only genuinely-blocking missingInfo, and an honest creative scorecard. The FIRST field (the cover or headline) MUST be the hook, not a description. For a carousel, slide 1 earns the swipe and the final field is one clear action. Never invent statistics, fake quotes, testimonials or guarantees.${profileBlock}`;
+    const buildDraftUser = () =>
+      `${brandCtx}${voiceBlock}\n\nThe user wants: "${b.topic || ''}".\nChosen format: ${c.format} (generatorKind: ${c.generatorKind}).\n\n${hookFirstBlock()}\n\nFill these fields (use these exact keys in "copy"):\n${fieldList}\n\nReturn JSON: {"reasoning":"why this hook works, one or two sentences","copy":{${keysCsv ? `"${firstKey}":"...", ...one entry for EVERY key above` : '"title":"..."'}},"options":[{"id":"B","label":"short label e.g. punchier hook","copy":{"${firstKey}":"alt"}}],"missingInfo":[{"id":"platform","question":"a single short question","blocking":false,"options":["Instagram","Facebook","LinkedIn"]}],${scorecardShape()}}\nAt most 2 options and only genuinely-blocking missingInfo (often an empty array).`;
+    const judged = await runCreativeJudgement({ complete, buildDraftUser, buildReviseUser: defaultRevisePrompt, maxTokens: 2400, systemSuffix });
+    if (!judged) return null;
+    const r = judged.result;
+    const rawCopy = (r.copy && typeof r.copy === 'object') ? (r.copy as Record<string, unknown>) : {};
+    const copy: Record<string, string> = {};
+    for (const [k, v] of Object.entries(rawCopy)) if (typeof v === 'string') copy[k] = v;
+    const plan = {
+      reasoning: typeof r.reasoning === 'string' ? r.reasoning : '',
+      copy,
+      options: Array.isArray(r.options) ? r.options : [],
+      missingInfo: Array.isArray(r.missingInfo) ? r.missingInfo : [],
+      creative: { scores: judged.scores, concept: judged.concept, angle: judged.angle, passed: judged.passed, revisions: judged.revisions },
+    };
+    return NextResponse.json({ task: 'intent-plan', result: plan });
+  }
+
+  // autofill: copy for a single social still, judged the same way.
+  const systemSuffix = `Draft punchy post copy for one social still. headline = the hook (scroll-stopping, not descriptive). Include an honest creative scorecard.${profileBlock}`;
+  const buildDraftUser = () =>
+    `${brandCtx}${voiceBlock}\n\n${hookFirstBlock()}\n\nDraft post copy for this topic: "${b.topic || ''}".\nReturn JSON: {"headline":"short punchy hook headline","subheading":"one supporting line","cta":"short call to action","reasoning":"why this hook works, one line",${scorecardShape()}}.`;
+  const judged = await runCreativeJudgement({ complete, buildDraftUser, buildReviseUser: defaultRevisePrompt, maxTokens: 1000, systemSuffix });
+  if (!judged) return null;
+  const r = judged.result;
+  const result = {
+    headline: (typeof r.headline === 'string' && r.headline) || judged.concept || '',
+    subheading: typeof r.subheading === 'string' ? r.subheading : '',
+    cta: typeof r.cta === 'string' ? r.cta : '',
+    creative: { scores: judged.scores, concept: judged.concept, angle: judged.angle, passed: judged.passed, revisions: judged.revisions },
+  };
+  return NextResponse.json({ task: 'autofill', result });
 }
 
 export async function POST(req: NextRequest) {
@@ -342,6 +459,14 @@ Return JSON: {"name":"short template name, 2-4 words","elements":[ ...elements b
       const result = parseJSON(vdata?.content?.[0]?.text ?? '');
       if (!result) return NextResponse.json({ error: 'parse_failed' }, { status: 502 });
       return NextResponse.json({ task: 'template-from-image', result });
+    }
+
+    // ── creative-judgement: hook-first generation that self-scores + auto-revises.
+    // intent-plan + autofill go through the loop; null falls through to the
+    // single-shot path below (so a transient API hiccup still produces copy).
+    if (body.task === 'intent-plan' || body.task === 'autofill') {
+      const judged = await runJudgedTask(body, apiKey);
+      if (judged) return judged;
     }
 
     const { system, user } = buildPrompt(body);

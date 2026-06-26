@@ -18,10 +18,11 @@ import { effectiveCopy, graphicOverrides } from '@engine/lib/carousel/copy';
 import { exportZip } from '@engine/lib/carousel/exportCarousel';
 import { voiceSummary } from '@engine/lib/coach/voice';
 import { newId, now } from '@engine/lib/store/persist';
-import { detectIntent, planIntent, AiError } from './client';
-import { upsertSession, addSignal } from './persist';
+import { detectIntent, planIntent, learnCreative, AiError } from './client';
+import { upsertSession, addSignal, reconcileSignals, getCreativeProfile, upsertCreativeProfile } from './persist';
+import { creativeProfileSummary, packLearnRows, shouldLearn, hasPerformance } from '@engine/lib/creative/profile';
 import type {
-  IntentSession, IntentResult, IntentCandidate, IntentPlan, IntentState, IntentLang,
+  IntentSession, IntentResult, IntentCandidate, IntentPlan, IntentState, IntentLang, CreativeProfile,
 } from './types';
 
 // M-V1 routes to the two brand-agnostic universal carousels only (the agreed
@@ -32,6 +33,15 @@ export const MV1_KINDS = ['universal-listicle', 'universal-explainer'];
 const CY_TOKENS = /\b(mae|wedi|eich|ein|gyda|sydd|ond|neu|chi|wrth|iawn|am|yn|dim|isio|moyn|dwi)\b/i;
 function guessLang(text: string): IntentLang {
   return CY_TOKENS.test(text) ? 'cy' : 'en';
+}
+
+// Did the human change the copy the AI proposed? Used to log a draft as "edited"
+// (an option swap counts) so the learning loop can see what got rewritten.
+function copyDiffers(a?: Record<string, string>, b?: Record<string, string>): boolean {
+  if (!a || !b) return false;
+  const keys = Array.from(new Set([...Object.keys(a), ...Object.keys(b)]));
+  for (const k of keys) if ((a[k] ?? '') !== (b[k] ?? '')) return true;
+  return false;
 }
 
 function kindSpecs() {
@@ -78,6 +88,7 @@ export interface OrchestratorView {
   graphicId?: string;
   notice?: string;     // a soft, human-readable note (e.g. running offline)
   error?: string;
+  learning?: boolean;  // a background re-learn from feedback is in flight
 }
 
 export function useOrchestrator(brandId: string) {
@@ -90,10 +101,18 @@ export function useOrchestrator(brandId: string) {
   // create the template, we stash the request and finish generation in an
   // effect once the next render's store reflects it.
   const [pendingGen, setPendingGen] = useState<{ templateId: string; name: string; plan: IntentPlan; usedAI: boolean; notice?: string } | null>(null);
+  // The brand's learned creative rubric. Loaded (not generated) on brand change,
+  // injected into every generation, and refreshed after a re-learn. No AI call on
+  // mount - learning only fires off the back of real feedback.
+  const [profile, setProfile] = useState<CreativeProfile | undefined>(undefined);
 
   // Persist the session as a pure side-effect of it changing, never inside a
   // state updater (which can run during render).
   useEffect(() => { if (session) upsertSession(session); }, [session]);
+
+  // Load the learned profile for whichever brand is in scope.
+  useEffect(() => { setProfile(getCreativeProfile(brandId)); }, [brandId]);
+  const profileSummary = creativeProfileSummary(profile);
 
   const patchSession = useCallback((patch: Partial<IntentSession>) => {
     setSession((prev) => (prev ? { ...prev, ...patch, updatedAt: now() } : prev));
@@ -120,7 +139,7 @@ export function useOrchestrator(brandId: string) {
     setView({ state: 'detecting', usedAI: false });
     let detected: IntentResult; let usedAI = true; let notice: string | undefined;
     try {
-      detected = await detectIntent({ text: trimmed, brand: ctx, voice, kindSpecs: kindSpecs() });
+      detected = await detectIntent({ text: trimmed, brand: ctx, voice, creativeProfile: profileSummary || undefined, kindSpecs: kindSpecs() });
       // Only ever offer M-V1 kinds, whatever the model returns.
       detected.candidates = detected.candidates.filter((c) => MV1_KINDS.includes(c.generatorKind)).slice(0, 3);
       if (!detected.candidates.length) detected = localDetect(trimmed);
@@ -130,7 +149,7 @@ export function useOrchestrator(brandId: string) {
     }
     patchSession({ state: 'awaiting-pick', detected });
     setView({ state: 'awaiting-pick', usedAI, detected, notice });
-  }, [brandId, store, patchSession]);
+  }, [brandId, store, patchSession, profileSummary]);
 
   // 2. PICK A CANDIDATE (approval gate #1) -> 3. PLAN -> 4/5. GENERATE
   const pick = useCallback(async (candidate: IntentCandidate) => {
@@ -146,7 +165,7 @@ export function useOrchestrator(brandId: string) {
 
     let plan: IntentPlan; let usedAI = true; let notice: string | undefined;
     try {
-      plan = await planIntent({ text, candidate, copyFields: fields, brand: ctx, voice });
+      plan = await planIntent({ text, candidate, copyFields: fields, brand: ctx, voice, creativeProfile: profileSummary || undefined });
       if (!plan.copy || !Object.keys(plan.copy).length) plan = localPlan(text, candidate.generatorKind, lang);
     } catch (e) {
       plan = localPlan(text, candidate.generatorKind, lang); usedAI = false;
@@ -170,7 +189,7 @@ export function useOrchestrator(brandId: string) {
     if (!tpl) { setView((v) => ({ ...v, state: 'error', error: 'Could not create template.' })); return; }
     setView((v) => ({ ...v, state: 'generating', usedAI, plan, notice }));
     setPendingGen({ templateId: tpl.id, name, plan, usedAI, notice });
-  }, [brandId, session, store, lang, patchSession]);
+  }, [brandId, session, store, lang, patchSession, profileSummary]);
 
   // Finish generation once the just-created template is visible in store state.
   useEffect(() => {
@@ -195,18 +214,65 @@ export function useOrchestrator(brandId: string) {
     setView((v) => ({ ...v, chosenOptionId: optionId }));
   }, [view.graphicId, view.plan, store]);
 
+  // Re-distil this brand's creative rubric from its feedback log. Fires
+  // automatically once enough NEW decisions have landed (off the back of real
+  // feedback, never on mount), and can be forced from the UI. Offline or AI
+  // error -> skips silently and the existing profile stays in use.
+  const learn = useCallback(async (force = false) => {
+    // Reconcile finalCopy against the live graphics first, so edits made in the
+    // editor after approval feed the rubric (captured without touching the editor).
+    const getCopy = (gid: string) => store.getGraphic?.(gid)?.inputs?.copyOverrides as Record<string, string> | undefined;
+    const signals = reconcileSignals(brandId, getCopy);
+    const current = getCreativeProfile(brandId);
+    if (!force && !shouldLearn(signals, current)) return;
+    if (!signals.length) return;
+    const brand = store.getBrand(brandId);
+    const ctx = brand ? { name: brand.name, toneNotes: brand.toneNotes, colours: brand.colours, fonts: brand.fonts } : undefined;
+    const perf = hasPerformance(signals);
+    setView((v) => ({ ...v, learning: true }));
+    try {
+      const body = await learnCreative({ brand: ctx, learnRows: packLearnRows(signals), hasPerformance: perf });
+      const next: CreativeProfile = {
+        brandId, updatedAt: now(), sampleSize: signals.length, basis: perf ? 'both' : 'human',
+        winningAngles: Array.isArray(body.winningAngles) ? body.winningAngles : [],
+        losingAngles: Array.isArray(body.losingAngles) ? body.losingAngles : [],
+        keptHooks: Array.isArray(body.keptHooks) ? body.keptHooks : [],
+        rewrittenHooks: Array.isArray(body.rewrittenHooks) ? body.rewrittenHooks : [],
+        audienceInsights: Array.isArray(body.audienceInsights) ? body.audienceInsights : [],
+        scoreCalibration: Array.isArray(body.scoreCalibration) ? body.scoreCalibration : [],
+        summary: typeof body.summary === 'string' ? body.summary : '',
+      };
+      upsertCreativeProfile(next);
+      setProfile(next);
+    } catch { /* offline or AI error: keep the current profile in use */ }
+    finally { setView((v) => ({ ...v, learning: false })); }
+  }, [brandId, store]);
+
   // 6/7. APPROVE / REJECT (approval gate #2) -> learning signal
   const finish = useCallback((decision: 'approved' | 'rejected') => {
     const goal = view.detected?.goal ?? '';
     const kind = view.detected?.candidates.find((c) => c.id === view.chosenCandidateId)?.generatorKind ?? '';
+    const draftCopy = view.plan?.copy;
+    // What the human has at approve time (option swaps are reflected here).
+    // Edits made later in the editor are folded in at learn-time by
+    // reconcileSignals, which re-reads the live graphic copy.
+    const finalCopy = view.graphicId
+      ? (store.getGraphic?.(view.graphicId)?.inputs?.copyOverrides as Record<string, string> | undefined)
+      : undefined;
+    const edited = decision === 'approved' && (Boolean(view.chosenOptionId) || copyDiffers(draftCopy, finalCopy));
     addSignal({
       id: newId('sig'), brandId, sessionId: session?.id ?? '', graphicId: view.graphicId,
-      decision: decision === 'approved' && view.chosenOptionId ? 'edited' : decision,
+      decision: edited ? 'edited' : decision,
       chosenOptionId: view.chosenOptionId, intentGoal: goal, generatorKind: kind, createdAt: now(),
+      creative: view.plan?.creative,
+      draftCopy, finalCopy,
+      language: view.detected?.language,
     });
     patchSession({ state: decision });
     setView((v) => ({ ...v, state: decision }));
-  }, [brandId, session, view, patchSession]);
+    // Re-learn in the background if enough fresh feedback has now accrued.
+    void learn();
+  }, [brandId, session, view, store, patchSession, learn]);
 
   // Optional direct export, reusing the editor's exact recipe.
   const exportDraft = useCallback(async () => {
@@ -223,5 +289,10 @@ export function useOrchestrator(brandId: string) {
     await exportZip(kind.slides as any, [], copy as any, 'image/png', g.name, ratio, carBrand as any, {});
   }, [view.graphicId, store, lang]);
 
-  return { view, detect, pick, applyOption, approve: () => finish('approved'), reject: () => finish('rejected'), exportDraft, reset };
+  return {
+    view, detect, pick, applyOption,
+    approve: () => finish('approved'), reject: () => finish('rejected'),
+    exportDraft, reset,
+    profile, learn: () => learn(true),
+  };
 }

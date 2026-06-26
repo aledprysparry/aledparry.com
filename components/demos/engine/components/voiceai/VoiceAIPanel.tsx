@@ -11,6 +11,7 @@ import { Button, Panel, Badge } from '@engine/components/ui';
 import { Sparkles, ArrowRight, Check, X, Pencil, Download, RotateCcw } from 'lucide-react';
 import { useOrchestrator } from '@engine/lib/voiceai/orchestrator';
 import type { IntentCandidate } from '@engine/lib/voiceai/types';
+import { SCORE_KEYS } from '@engine/lib/creative/guide';
 
 export default function VoiceAIPanel() {
   const store = useStore();
@@ -18,7 +19,7 @@ export default function VoiceAIPanel() {
   const { brands } = store;
   const [brandId, setBrandId] = useState<string>(brands[0]?.id ?? '');
   const [text, setText] = useState('');
-  const { view, detect, pick, applyOption, approve, reject, exportDraft, reset } = useOrchestrator(brandId);
+  const { view, detect, pick, applyOption, approve, reject, exportDraft, reset, profile, learn } = useOrchestrator(brandId);
   const navigate = useNavigate();
 
   if (!brands.length) return null; // brand-first: nothing to scope intent to yet
@@ -67,6 +68,21 @@ export default function VoiceAIPanel() {
                 {busy ? t('va.thinking') : <>{t('va.continue')} <ArrowRight size={15} /></>}
               </Button>
             </div>
+
+            {/* ── learning indicator: it gets better from your approve/edit/reject ── */}
+            {(profile || view.learning) ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/30">
+                <span className="flex items-center gap-1.5 text-[12px] text-zinc-500 dark:text-zinc-400">
+                  <Sparkles size={12} className="text-violet-500" />
+                  {view.learning ? t('va.learn.learning') : t('va.learn.tuned', { n: profile!.sampleSize })}
+                </span>
+                {profile && !view.learning && (
+                  <button onClick={learn} className="text-[12px] font-semibold text-violet-600 underline-offset-2 hover:underline dark:text-violet-400">{t('va.learn.refresh')}</button>
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 text-[12px] text-zinc-400">{t('va.learn.hint')}</p>
+            )}
           </div>
         )}
 
@@ -116,6 +132,40 @@ export default function VoiceAIPanel() {
               <p className="text-[12px] font-semibold text-zinc-400">{t('va.why')}</p>
               <p className="mt-0.5 text-[13px] text-zinc-600 dark:text-zinc-300">{view.plan.reasoning}</p>
             </div>
+
+            {/* ── creative-judgement scorecard: hook-first verdict before posting ── */}
+            {view.plan.creative && (
+              <div className="mt-3 rounded-xl border border-zinc-100 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-violet-600 dark:text-violet-400">
+                    <Sparkles size={13} /> {t('va.creative.kicker')}
+                  </div>
+                  <Badge tone={view.plan.creative.passed ? 'accent' : 'muted'}>
+                    {view.plan.creative.passed ? t('va.creative.passed') : t('va.creative.working')}
+                  </Badge>
+                </div>
+                {view.plan.creative.concept && (
+                  <p className="mt-2 text-[13px] text-zinc-700 dark:text-zinc-200">
+                    <span className="font-semibold text-zinc-400">{t('va.creative.concept')}: </span>{view.plan.creative.concept}
+                  </p>
+                )}
+                <div className="mt-2.5 grid grid-cols-5 gap-1.5">
+                  {SCORE_KEYS.map((k) => {
+                    const val = view.plan!.creative!.scores[k];
+                    const pass = val >= 8;
+                    return (
+                      <div key={k} className={`rounded-lg border px-1 py-1.5 text-center ${pass ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10' : 'border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10'}`}>
+                        <div className={`text-[15px] font-bold tabular-nums ${pass ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>{val}</div>
+                        <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t(`va.creative.s.${k}`)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {view.plan.creative.revisions > 0 && (
+                  <p className="mt-2 text-[12px] text-zinc-400">{t('va.creative.revised', { n: view.plan.creative.revisions })}</p>
+                )}
+              </div>
+            )}
 
             {/* the generated copy fields, read-only preview */}
             <dl className="mt-3 space-y-1.5">

@@ -6,7 +6,8 @@
 // (the same offline-resilience pattern Coach uses), keeping the slice demoable
 // without the client-area cookie or an API key set.
 
-import type { IntentResult, IntentPlan, IntentCandidate } from './types';
+import type { IntentResult, IntentPlan, IntentCandidate, CreativeProfile } from './types';
+import type { LearnRow } from '@engine/lib/creative/profile';
 
 export class AiError extends Error {
   constructor(public reason: 'unauthorized' | 'not_configured' | 'parse_failed' | 'network', message?: string) {
@@ -43,6 +44,7 @@ export function detectIntent(input: {
   text: string;
   brand?: BrandCtx;
   voice?: string;
+  creativeProfile?: string;
   kindSpecs: { kind: string; label: string; blurb: string; outputClass: string }[];
 }): Promise<IntentResult> {
   return call<IntentResult>({
@@ -50,6 +52,7 @@ export function detectIntent(input: {
     topic: input.text,
     brand: input.brand,
     voice: input.voice,
+    creativeProfile: input.creativeProfile,
     kindSpecs: input.kindSpecs,
   });
 }
@@ -60,6 +63,7 @@ export function planIntent(input: {
   copyFields: { key: string; label: string }[];
   brand?: BrandCtx;
   voice?: string;
+  creativeProfile?: string;
 }): Promise<IntentPlan> {
   return call<IntentPlan>({
     task: 'intent-plan',
@@ -68,5 +72,24 @@ export function planIntent(input: {
     copyFields: input.copyFields,
     brand: input.brand,
     voice: input.voice,
+    creativeProfile: input.creativeProfile,
+  });
+}
+
+// Distil a brand's feedback log into a learned creative rubric. Returns the
+// profile body (brandId/updatedAt/sampleSize/basis are stamped by the caller).
+export type LearnedProfileBody = Omit<CreativeProfile, 'brandId' | 'updatedAt' | 'sampleSize' | 'basis'>;
+export function learnCreative(input: {
+  brand?: BrandCtx;
+  platform?: string;
+  learnRows: LearnRow[];
+  hasPerformance: boolean;
+}): Promise<LearnedProfileBody> {
+  return call<LearnedProfileBody>({
+    task: 'creative-learn',
+    brand: input.brand,
+    platform: input.platform,
+    learnRows: input.learnRows,
+    hasPerformance: input.hasPerformance,
   });
 }
