@@ -54,11 +54,24 @@ export interface PlanOption {
   copy: Record<string, string>;
 }
 
+// The creative-judgement verdict attached to a judged plan: the self-scores per
+// dimension, the one-line concept/hook the draft was built around, the angle
+// used, whether every dimension cleared the bar, and how many concept rewrites
+// it took. Optional so offline drafts (no AI) and older sessions stay valid.
+export interface CreativeReport {
+  scores: { hook: number; clarity: number; shareability: number; welshTone: number; cta: number };
+  concept: string;
+  angle: string;
+  passed: boolean;
+  revisions: number;
+}
+
 export interface IntentPlan {
   reasoning: string;
   copy: Record<string, string>;     // keyed by the generator's real copyField keys
   options: PlanOption[];
   missingInfo: MissingInfo[];
+  creative?: CreativeReport;
 }
 
 export interface IntentSession {
