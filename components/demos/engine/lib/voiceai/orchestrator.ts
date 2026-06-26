@@ -253,8 +253,9 @@ export function useOrchestrator(brandId: string) {
     const goal = view.detected?.goal ?? '';
     const kind = view.detected?.candidates.find((c) => c.id === view.chosenCandidateId)?.generatorKind ?? '';
     const draftCopy = view.plan?.copy;
-    // What the human actually has in front of them at approve time (option swaps
-    // are reflected here). Editor edits made AFTER opening are a later increment.
+    // What the human has at approve time (option swaps are reflected here).
+    // Edits made later in the editor are folded in at learn-time by
+    // reconcileSignals, which re-reads the live graphic copy.
     const finalCopy = view.graphicId
       ? (store.getGraphic?.(view.graphicId)?.inputs?.copyOverrides as Record<string, string> | undefined)
       : undefined;
