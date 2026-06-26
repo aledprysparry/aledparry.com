@@ -20,6 +20,12 @@ const IMAGE_MANIFEST = {
   bgPurple: '/app/cwis/bg-purple.png',
   bgCyan: '/app/cwis/bg-cyan.png',
   bgYellow: '/app/cwis/bg-yellow.png',
+  // Phone mockups for the "Weekly welcome" (cwis-announce) post. Drop the two
+  // PNGs into /public/app/cwis/ and they light up: phoneScoreboard is the
+  // default hero (the live scoreboard); phonePlaceholder is the empty-phone
+  // frame shown when no image is set yet.
+  phoneScoreboard: '/app/cwis/phone-scoreboard.png',
+  phonePlaceholder: '/app/cwis/phone-placeholder.png',
 } as const;
 
 export type BrandImageKey = keyof typeof IMAGE_MANIFEST;
@@ -30,6 +36,8 @@ const images: Record<BrandImageKey, BrandImage> = {
   bgPurple: { img: null, ready: false },
   bgCyan: { img: null, ready: false },
   bgYellow: { img: null, ready: false },
+  phoneScoreboard: { img: null, ready: false },
+  phonePlaceholder: { img: null, ready: false },
 };
 
 /** Synchronous accessor for use inside a slide's draw(). */
