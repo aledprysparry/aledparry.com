@@ -100,7 +100,7 @@ function migrateMaster(templates: Template[], graphics: GeneratedGraphic[]): { t
 const ANIMATED_SCOPE_KEY = 'cg.v1.animatedTplScoped';
 // Brand-specific (non-universal) branded kinds. A brand that owns one of these
 // is a "client" brand that legitimately keeps its animated caption.
-const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard', 'cwis-quiz', 'cwis-top-groups', 'cwis-poll']);
+const BRANDED_KINDS = new Set(['quizbookbiz-leaderboard', 'cwis-weekly-scoreboard', 'cwis-quiz', 'cwis-top-groups', 'cwis-poll', 'cwis-announce']);
 
 // One-time: add the "Question of the day" (cwis-quiz) template to brands that
 // already own a Cwis-painted kind (the leaderboard/scoreboard) - i.e. the Cwis
@@ -287,6 +287,8 @@ function initialState(): StoreState {
   if (withTopGroups) templates = withTopGroups;
   const withPoll = ensureBrandedKindForCwis(templates, 'cwis-poll', 'cg.v1.pollKindSeeded');
   if (withPoll) templates = withPoll;
+  const withAnnounce = ensureBrandedKindForCwis(templates, 'cwis-announce', 'cg.v1.announceKindSeeded');
+  if (withAnnounce) templates = withAnnounce;
   const delang = delangBakedMaster(templates);
   if (delang) templates = delang;
   return {
