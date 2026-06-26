@@ -198,7 +198,7 @@ export default function GraphicEditor() {
               </div>
             </Panel>
           ) : null}
-          <ReviewPanel slides={slides} rows={rows} copy={copy} ratio={ratio} brand={store.getBrand(graphic.brandId)} />
+          <ReviewPanel slides={slides} rows={rows} copy={copy} ratio={ratio} brand={store.getBrand(graphic.brandId)} needsRows={!!kind.parse} />
           <PreExportCheck graphic={graphic} brand={store.getBrand(graphic.brandId)} platformName={preset.name} />
         </div>
 
