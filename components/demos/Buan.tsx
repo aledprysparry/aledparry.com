@@ -531,17 +531,18 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* Decorative QR-style grid – purely visual, not a real code. */
+/* Decorative QR-style grid – purely visual, not a real code. The dark modules
+   subtly form a "B" (Buan); the scattered outer cells keep the QR texture. */
 function QrMark({ className = "" }: { className?: string }) {
   const cells = [
-    1, 1, 1, 0, 1, 0, 1, 1,
-    1, 0, 1, 0, 0, 1, 0, 1,
-    1, 0, 1, 1, 1, 0, 1, 1,
-    0, 1, 0, 1, 0, 1, 0, 0,
-    1, 1, 1, 0, 1, 1, 1, 0,
-    0, 0, 1, 1, 0, 0, 1, 1,
-    1, 1, 0, 1, 1, 0, 1, 0,
-    1, 0, 1, 0, 1, 1, 0, 1,
+    0, 1, 1, 1, 1, 0, 0, 1,
+    0, 1, 0, 0, 0, 1, 0, 0,
+    1, 1, 0, 0, 0, 1, 0, 1,
+    0, 1, 1, 1, 1, 0, 0, 0,
+    0, 1, 0, 0, 0, 1, 0, 1,
+    1, 1, 0, 0, 0, 0, 1, 0,
+    0, 1, 0, 0, 0, 1, 0, 1,
+    0, 1, 1, 1, 1, 1, 0, 0,
   ];
   return (
     <div
