@@ -76,7 +76,7 @@ export interface TemplateKind {
 
 // Universal still platforms (every still adapts across these ratios).
 const STILL_PLATFORMS: PlatformId[] = [
-  'instagram-feed', 'instagram-story', 'instagram-carousel', 'facebook', 'linkedin', 'x', 'tiktok',
+  'instagram-feed', 'instagram-square', 'instagram-story', 'instagram-carousel', 'facebook', 'linkedin', 'x', 'tiktok',
 ];
 
 // Metadata for the universal still library. The renderer is the matching
@@ -125,7 +125,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     editor: 'carousel',
     description:
       'Cover, places 1-5, 6-10, winner spotlight and a call-to-action, from a pasted/CSV/XLSX leaderboard.',
-    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'instagram-story', 'facebook'],
+    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'instagram-square', 'instagram-story', 'facebook'],
     dimensions: { width: 1080, height: 1350 },
     slides: SLIDES,
     defaultCopy: DEFAULT_COPY as unknown as Record<string, string>,
@@ -239,7 +239,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     // one, so a new brand never inherits another client's animated caption.
     // Same rule as the Cwis scoreboard/leaderboard (#74).
     description: 'A short looping caption clip – a bold statement that animates in, exported as WebM. Brand-styled motion for Reels, TikTok and Shorts.',
-    supportedPlatforms: ['instagram-story', 'tiktok', 'instagram-feed', 'facebook'],
+    supportedPlatforms: ['instagram-story', 'tiktok', 'instagram-feed', 'instagram-square', 'facebook'],
     dimensions: { width: 1080, height: 1920 },
     defaultCopy: ANIMATED_COPY,
     copyFields: ANIMATED_COPY_FIELDS,
@@ -251,7 +251,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     editor: 'freeform',
     universal: true,
     description: 'A blank, editable canvas - add text, shapes, logos and images, and edit everything in place.',
-    supportedPlatforms: ['instagram-feed', 'instagram-story', 'instagram-carousel', 'facebook', 'linkedin', 'x', 'tiktok'],
+    supportedPlatforms: ['instagram-feed', 'instagram-square', 'instagram-story', 'instagram-carousel', 'facebook', 'linkedin', 'x', 'tiktok'],
     dimensions: { width: 1080, height: 1350 },
     defaultElements: (colours) => defaultPostElements(colours),
   },
@@ -265,7 +265,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     editor: 'carousel',
     universal: true,
     description: 'A cover, three big-number points and a call-to-action - a save-worthy numbered list.',
-    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'facebook', 'linkedin'],
+    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'instagram-square', 'facebook', 'linkedin'],
     dimensions: { width: 1080, height: 1350 },
     slides: LISTICLE_SLIDES,
     defaultCopy: LISTICLE_COPY.en,
@@ -281,7 +281,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     editor: 'carousel',
     universal: true,
     description: 'A cover, three numbered steps with a progress bar and a call-to-action - a how-to in five slides.',
-    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'facebook', 'linkedin'],
+    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'instagram-square', 'facebook', 'linkedin'],
     dimensions: { width: 1080, height: 1350 },
     slides: EXPLAINER_SLIDES,
     defaultCopy: EXPLAINER_COPY.en,
@@ -297,7 +297,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     editor: 'carousel',
     universal: true,
     description: 'A cover plus a before slide and an after slide - a three-slide transformation story.',
-    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'facebook', 'linkedin'],
+    supportedPlatforms: ['instagram-carousel', 'instagram-feed', 'instagram-square', 'facebook', 'linkedin'],
     dimensions: { width: 1080, height: 1350 },
     slides: BEFORE_AFTER_SLIDES,
     defaultCopy: BEFORE_AFTER_COPY.en,
@@ -314,7 +314,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     editor: 'animated',
     universal: true,
     description: 'A bold statement that animates in on your brand colour - a looping caption for Reels, TikTok and Shorts.',
-    supportedPlatforms: ['instagram-story', 'tiktok', 'instagram-feed', 'facebook'],
+    supportedPlatforms: ['instagram-story', 'tiktok', 'instagram-feed', 'instagram-square', 'facebook'],
     dimensions: { width: 1080, height: 1920 },
     defaultCopy: UNIVERSAL_ANIMATED_COPY.en,
     defaultCopyByLang: UNIVERSAL_ANIMATED_COPY,
