@@ -18,7 +18,14 @@ function pickMime(): string {
   }
   return 'video/webm';
 }
-const easeOut = (t: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
+const clamp01 = (t: number) => Math.max(0, Math.min(1, t));
+const easeOut = (t: number) => 1 - Math.pow(1 - clamp01(t), 3);
+// Overshoot ease (back-out): pops past the target then settles - the punch
+// that makes a slide grab attention instead of politely fading in.
+const easeOutBack = (t: number) => {
+  const c1 = 1.70158, c3 = c1 + 1, x = clamp01(t);
+  return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+};
 
 export interface SlidesAnimatedOpts {
   slides: SlideDef[];
@@ -38,17 +45,20 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
   await ensureFonts();
   const images = await loadSlideImages(imageUrls);
 
-  // Render each slide once to its own offscreen bitmap (static).
+  // Pre-render static bitmaps for slides that DON'T self-animate. Self-animating
+  // slides are drawn live each frame (see the tick) so they move their own
+  // elements over a static background instead of fading the whole image.
   const bitmaps = slides.map((slide, i) => {
+    if (slide.selfAnimates) return null;
     const c = document.createElement('canvas');
     const r = new CanvasRenderer(c, ratio);
     slide.draw(r, { rows, copy, slideCount: slides.length, index: i, brand, images });
     return c;
   });
 
-  const W = bitmaps[0].width, H = bitmaps[0].height;
   const out = document.createElement('canvas');
-  out.width = W; out.height = H;
+  const outR = new CanvasRenderer(out, ratio); // live renderer for self-animating slides
+  const W = out.width, H = out.height;
   const ctx = out.getContext('2d')!;
   const stream = out.captureStream(fps);
   const rec = new MediaRecorder(stream, { mimeType: pickMime(), videoBitsPerSecond: 8_000_000 });
@@ -70,20 +80,35 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
       if (el >= total) { rec.stop(); resolve(); return; }
       const idx = Math.min(slides.length - 1, Math.floor(el / perSlideMs));
       const local = (el - idx * perSlideMs) / perSlideMs; // 0..1 within this slide
-      const reveal = easeOut(local / 0.28);
+      const slide = slides[idx];
+      // Self-animating slide: draw it LIVE with an entrance progress that settles
+      // by ~45% of the slide then holds. The slide keeps its background static
+      // and moves its own elements, so there is no whole-image fade / flicker.
+      if (slide.selfAnimates) {
+        slide.draw(outR, { rows, copy, slideCount: slides.length, index: idx, brand, images, anim: { t: easeOut(local / 0.45) } });
+        requestAnimationFrame(tick);
+        return;
+      }
       const isLast = idx === slides.length - 1;
-      // every asset fades out to transition to the next - EXCEPT the last one,
-      // which holds (no fade) so the sequence pauses on it.
+      // Punchy entrance, not a fade: pop in (overshoot scale) + slide up from
+      // an alternating side, snap the fade in fast, then whoosh out to the next
+      // slide (the last one holds). Social motion = the hook.
+      const inT = clamp01(local / 0.30);
+      const pop = easeOutBack(inT);                       // overshoots ~1.07 then settles
+      const alphaIn = easeOut(local / 0.12);              // fast, snappy fade-in
       const outp = (slides.length > 1 && !isLast) ? easeOut((local - 0.85) / 0.15) : 0;
-      const alpha = Math.max(0, reveal * (1 - outp));
-      const scale = 0.985 + 0.015 * reveal;
+      const alpha = Math.max(0, alphaIn * (1 - outp));
+      const dir = idx % 2 === 0 ? -1 : 1;                 // alternate side per slide
+      const scale = (0.8 + 0.2 * pop) * (1 - 0.06 * outp);
+      const tx = (1 - pop) * dir * 0.05 * W + outp * dir * 0.04 * W;
+      const ty = (1 - easeOut(inT)) * 0.07 * H - outp * 0.03 * H;
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = fadeBg;
       ctx.fillRect(0, 0, W, H);
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.translate(W / 2, H / 2); ctx.scale(scale, scale); ctx.translate(-W / 2, -H / 2);
-      ctx.drawImage(bitmaps[idx], 0, 0);
+      ctx.translate(W / 2 + tx, H / 2 + ty); ctx.scale(scale, scale); ctx.translate(-W / 2, -H / 2);
+      ctx.drawImage(bitmaps[idx]!, 0, 0);
       ctx.restore();
       requestAnimationFrame(tick);
     };
