@@ -103,4 +103,40 @@ export interface ApprovalSignal {
   intentGoal: string;
   generatorKind: string;
   createdAt: string;
+  // ── learning substrate (added with the creative-judgement loop) ──
+  // The creative verdict the draft carried, so we can later ask "do FOMO posts
+  // get approved more than Reset?" and "did the human keep my hook?".
+  creative?: CreativeReport;
+  // What the AI produced vs what the human actually shipped. The DIFF between
+  // these is the single highest-value learning signal: it shows exactly what the
+  // model got wrong, in the human's own words. Both are keyed by copyField keys.
+  draftCopy?: Record<string, string>;
+  finalCopy?: Record<string, string>;
+  platform?: string;
+  language?: IntentLang;
+  // Stage 2: real audience response, backfilled once analytics are connected.
+  // Left undefined until an engagement source calls recordEngagement(). One free
+  // record so any platform's metric names drop in (likes/saves/shares/...).
+  engagement?: { summary?: string; metrics?: Record<string, number> };
+}
+
+// The per-brand learned creative rubric: distilled from the approval signals
+// (and real engagement when present) by the `creative-learn` task, then injected
+// back into the generator's system prompt so it makes THIS brand's proven moves
+// instead of generic guesses. Parallel to the Coach voice profile; backend-ready
+// (flat, brand-scoped, one jsonb row at M0).
+export interface CreativeProfile {
+  brandId: string;
+  updatedAt: string;
+  sampleSize: number;               // how many signals it was distilled from
+  basis: 'human' | 'performance' | 'both';  // what it actually learned from
+  winningAngles: string[];          // angles that get approved / perform well
+  losingAngles: string[];           // angles that get rewritten / rejected
+  keptHooks: string[];              // hook patterns the human keeps as-is
+  rewrittenHooks: string[];         // hook patterns the human kills or rewrites
+  audienceInsights: string[];       // only from real performance (Stage 2)
+  // Stage 3: where the self-score drifts from human reality, so the next
+  // generation scores stricter on the dimensions it tends to inflate.
+  scoreCalibration: { dimension: string; note: string }[];
+  summary: string;                  // one injection-ready paragraph of guidance
 }

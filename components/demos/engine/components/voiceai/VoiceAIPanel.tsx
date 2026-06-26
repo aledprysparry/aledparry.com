@@ -19,7 +19,7 @@ export default function VoiceAIPanel() {
   const { brands } = store;
   const [brandId, setBrandId] = useState<string>(brands[0]?.id ?? '');
   const [text, setText] = useState('');
-  const { view, detect, pick, applyOption, approve, reject, exportDraft, reset } = useOrchestrator(brandId);
+  const { view, detect, pick, applyOption, approve, reject, exportDraft, reset, profile, learn } = useOrchestrator(brandId);
   const navigate = useNavigate();
 
   if (!brands.length) return null; // brand-first: nothing to scope intent to yet
@@ -68,6 +68,21 @@ export default function VoiceAIPanel() {
                 {busy ? t('va.thinking') : <>{t('va.continue')} <ArrowRight size={15} /></>}
               </Button>
             </div>
+
+            {/* ── learning indicator: it gets better from your approve/edit/reject ── */}
+            {(profile || view.learning) ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/30">
+                <span className="flex items-center gap-1.5 text-[12px] text-zinc-500 dark:text-zinc-400">
+                  <Sparkles size={12} className="text-violet-500" />
+                  {view.learning ? t('va.learn.learning') : t('va.learn.tuned', { n: profile!.sampleSize })}
+                </span>
+                {profile && !view.learning && (
+                  <button onClick={learn} className="text-[12px] font-semibold text-violet-600 underline-offset-2 hover:underline dark:text-violet-400">{t('va.learn.refresh')}</button>
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 text-[12px] text-zinc-400">{t('va.learn.hint')}</p>
+            )}
           </div>
         )}
 

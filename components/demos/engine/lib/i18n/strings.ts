@@ -81,6 +81,10 @@ export const STRINGS = {
     'va.creative.s.shareability': 'Shareability',
     'va.creative.s.welshTone': 'Welsh tone',
     'va.creative.s.cta': 'CTA',
+    'va.learn.tuned': 'Tuned from {n} approvals',
+    'va.learn.learning': 'Learning from your feedback...',
+    'va.learn.refresh': 'Improve from feedback',
+    'va.learn.hint': 'Approve, edit or reject a few drafts and it learns what works for this brand.',
     'dash.brandNamePrompt': 'Brand name',
     // ── onboarding ──
     'onb.kicker': 'New brand',
@@ -930,6 +934,10 @@ export const STRINGS = {
     'va.creative.s.shareability': 'Gwerth rhannu',
     'va.creative.s.welshTone': 'Naws Gymraeg',
     'va.creative.s.cta': 'Galwad i weithredu',
+    'va.learn.tuned': 'Wedi’i diwnio o {n} cymeradwyaeth',
+    'va.learn.learning': 'Yn dysgu o’ch adborth...',
+    'va.learn.refresh': 'Gwella o adborth',
+    'va.learn.hint': 'Cymeradwywch, golygwch neu wrthodwch ambell ddrafft ac mae’n dysgu beth sy’n gweithio i’r brand hwn.',
     'dash.brandNamePrompt': 'Enw’r brand',
     // ── onboarding (drafft — angen adolygiad Cymraeg brodorol) ──
     'onb.kicker': 'Brand newydd',
