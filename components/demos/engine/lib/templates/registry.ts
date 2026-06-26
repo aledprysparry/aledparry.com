@@ -15,6 +15,7 @@ import { SCOREBOARD_SLIDES, SCOREBOARD_COPY, SCOREBOARD_SAMPLE } from '@engine/l
 import { QUIZ_SLIDES, QUIZ_COPY, QUIZ_FIELDS } from '@engine/lib/carousel/quiz';
 import { TOP_GROUPS_SLIDES, TOP_GROUPS_COPY, TOP_GROUPS_FIELDS, TOP_GROUPS_SAMPLE, parseTopGroups } from '@engine/lib/carousel/topGroups';
 import { POLL_SLIDES, POLL_COPY, POLL_FIELDS } from '@engine/lib/carousel/poll';
+import { ANNOUNCE_SLIDES, ANNOUNCE_COPY, ANNOUNCE_FIELDS } from '@engine/lib/carousel/announce';
 import { ANIMATED_COPY, ANIMATED_COPY_FIELDS, UNIVERSAL_ANIMATED_COPY } from '@engine/lib/carousel/animated';
 import { defaultPostElements } from '@engine/lib/freeform/elements';
 import { STILL_BUILDERS, applyBrandPaint } from '@engine/lib/freeform/stillTemplates';
@@ -163,6 +164,23 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     defaultCopyByLang: QUIZ_COPY,
     copyFields: QUIZ_FIELDS,
     imageSlots: [{ key: 'questionMedia', label: 'Question image', labelKey: 'copy.f.questionImage' }],
+  },
+  'cwis-announce': {
+    id: 'cwis-announce',
+    name: 'Weekly welcome',
+    type: 'still',
+    editor: 'carousel',
+    // Brand-specific (Cwis paint), seeded to the Cwis brand only (see
+    // BRANDED_KINDS in StoreProvider). A single announcement still with an
+    // app-image slot the user clicks to replace in the editor.
+    description: 'A single on-brand "new week, come and play" post: hook, welcome, an app-image slot and a call to action.',
+    supportedPlatforms: ['instagram-square', 'instagram-feed', 'instagram-story', 'facebook'],
+    dimensions: { width: 1080, height: 1080 },
+    slides: ANNOUNCE_SLIDES,
+    defaultCopy: ANNOUNCE_COPY.en,
+    defaultCopyByLang: ANNOUNCE_COPY,
+    copyFields: ANNOUNCE_FIELDS,
+    imageSlots: [{ key: 'appShot', label: 'Llun yr ap' }],
   },
   'cwis-top-groups': {
     id: 'cwis-top-groups',

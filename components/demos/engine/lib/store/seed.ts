@@ -39,6 +39,6 @@ export function buildSeed(): SeedData {
   };
   return {
     brands: [brand],
-    templates: [templateForKind('quizbookbiz-leaderboard'), templateForKind('cwis-quiz'), templateForKind('cwis-top-groups'), templateForKind('cwis-poll'), templateForKind('animated-caption')],
+    templates: [templateForKind('quizbookbiz-leaderboard'), templateForKind('cwis-quiz'), templateForKind('cwis-top-groups'), templateForKind('cwis-poll'), templateForKind('cwis-announce'), templateForKind('animated-caption')],
   };
 }
