@@ -132,7 +132,7 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     editor: 'carousel',
     description:
       'Branded "Last week\'s leaderboard" still: gold/silver/bronze top 3 (Welsh ordinals) + places 4-10, from pasted/CSV/XLSX data.',
-    supportedPlatforms: ['instagram-feed', 'instagram-carousel', 'facebook', 'linkedin'],
+    supportedPlatforms: ['instagram-feed', 'instagram-square', 'instagram-carousel', 'facebook', 'linkedin'],
     dimensions: { width: 1080, height: 1350 },
     slides: SCOREBOARD_SLIDES,
     defaultCopy: SCOREBOARD_COPY,
