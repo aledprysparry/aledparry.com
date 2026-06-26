@@ -32,8 +32,8 @@ export default function CreateGraphic() {
   const kind = template && getKind(template.kind);
 
   const platforms = useMemo<PlatformId[]>(
-    () => (template ? template.supportedPlatforms : []),
-    [template],
+    () => (kind ? kind.supportedPlatforms : []),
+    [kind],
   );
   const [platform, setPlatform] = useState<PlatformId>(platforms[0] || 'instagram-carousel');
   const [folderId, setFolderId] = useState<string>(params.get('folder') || '');
@@ -76,7 +76,7 @@ export default function CreateGraphic() {
                         const name = k?.nameKey ? t(k.nameKey) : tp.name;
                         const desc = k?.descKey ? t(k.descKey) : k?.description;
                         return (
-                          <button key={tp.id} onClick={() => { setTemplateId(tp.id); setPlatform(tp.supportedPlatforms[0] || 'instagram-carousel'); }} className="text-left">
+                          <button key={tp.id} onClick={() => { setTemplateId(tp.id); setPlatform(k?.supportedPlatforms[0] || 'instagram-carousel'); }} className="text-left">
                             <Panel className={`p-4 transition-colors ${active ? 'border-violet-400 ring-1 ring-violet-400/40 dark:border-violet-500' : 'hover:border-zinc-300 dark:hover:border-zinc-700'}`}>
                               <div className="flex items-center justify-between">
                                 <span className="text-[15px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{name}</span>
