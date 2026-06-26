@@ -160,7 +160,7 @@ export default function GraphicEditor() {
             onChange={(e) => store.updateGraphic(graphic.id, { platformPresetId: e.target.value as PlatformId })}
             className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[13px] text-zinc-800 focus:border-violet-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
           >
-            {template.supportedPlatforms.map((p) => <option key={p} value={p}>{PLATFORM_PRESETS[p].name}</option>)}
+            {kind.supportedPlatforms.map((p) => <option key={p} value={p}>{PLATFORM_PRESETS[p].name}</option>)}
           </select>
           {kind.toFreeform && (
             <Button variant="subtle" onClick={unlockToFreeform} title={t('editor.unlockHint')}><Unlock size={15} /> {t('editor.unlock')}</Button>
