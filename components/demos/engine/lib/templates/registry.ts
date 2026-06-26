@@ -167,14 +167,15 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
   },
   'cwis-announce': {
     id: 'cwis-announce',
-    name: 'Weekly welcome',
-    type: 'still',
+    name: 'Weekly carousel (3 rheswm)',
+    type: 'carousel',
     editor: 'carousel',
     // Brand-specific (Cwis paint), seeded to the Cwis brand only (see
-    // BRANDED_KINDS in StoreProvider). A single announcement still with an
-    // app-image slot the user clicks to replace in the editor.
-    description: 'A single on-brand "new week, come and play" post: hook, welcome, an app-image slot and a call to action.',
-    supportedPlatforms: ['instagram-square', 'instagram-feed', 'instagram-story', 'facebook'],
+    // BRANDED_KINDS in StoreProvider). A five-slide FOMO carousel: cover ->
+    // three reason slides (each one huge word + emoji + a different bg) ->
+    // CTA with the app shot (swappable in the editor).
+    description: 'A five-slide curiosity-led carousel: "3 reasons to play", three pattern-interrupt reason slides, then a download CTA with the app screenshot.',
+    supportedPlatforms: ['instagram-carousel', 'instagram-square', 'instagram-feed', 'instagram-story', 'facebook'],
     dimensions: { width: 1080, height: 1080 },
     slides: ANNOUNCE_SLIDES,
     defaultCopy: ANNOUNCE_COPY.en,
