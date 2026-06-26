@@ -45,17 +45,20 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
   await ensureFonts();
   const images = await loadSlideImages(imageUrls);
 
-  // Render each slide once to its own offscreen bitmap (static).
+  // Pre-render static bitmaps for slides that DON'T self-animate. Self-animating
+  // slides are drawn live each frame (see the tick) so they move their own
+  // elements over a static background instead of fading the whole image.
   const bitmaps = slides.map((slide, i) => {
+    if (slide.selfAnimates) return null;
     const c = document.createElement('canvas');
     const r = new CanvasRenderer(c, ratio);
     slide.draw(r, { rows, copy, slideCount: slides.length, index: i, brand, images });
     return c;
   });
 
-  const W = bitmaps[0].width, H = bitmaps[0].height;
   const out = document.createElement('canvas');
-  out.width = W; out.height = H;
+  const outR = new CanvasRenderer(out, ratio); // live renderer for self-animating slides
+  const W = out.width, H = out.height;
   const ctx = out.getContext('2d')!;
   const stream = out.captureStream(fps);
   const rec = new MediaRecorder(stream, { mimeType: pickMime(), videoBitsPerSecond: 8_000_000 });
@@ -77,6 +80,15 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
       if (el >= total) { rec.stop(); resolve(); return; }
       const idx = Math.min(slides.length - 1, Math.floor(el / perSlideMs));
       const local = (el - idx * perSlideMs) / perSlideMs; // 0..1 within this slide
+      const slide = slides[idx];
+      // Self-animating slide: draw it LIVE with an entrance progress that settles
+      // by ~45% of the slide then holds. The slide keeps its background static
+      // and moves its own elements, so there is no whole-image fade / flicker.
+      if (slide.selfAnimates) {
+        slide.draw(outR, { rows, copy, slideCount: slides.length, index: idx, brand, images, anim: { t: easeOut(local / 0.45) } });
+        requestAnimationFrame(tick);
+        return;
+      }
       const isLast = idx === slides.length - 1;
       // Punchy entrance, not a fade: pop in (overshoot scale) + slide up from
       // an alternating side, snap the fade in fast, then whoosh out to the next
@@ -96,7 +108,7 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
       ctx.save();
       ctx.globalAlpha = alpha;
       ctx.translate(W / 2 + tx, H / 2 + ty); ctx.scale(scale, scale); ctx.translate(-W / 2, -H / 2);
-      ctx.drawImage(bitmaps[idx], 0, 0);
+      ctx.drawImage(bitmaps[idx]!, 0, 0);
       ctx.restore();
       requestAnimationFrame(tick);
     };

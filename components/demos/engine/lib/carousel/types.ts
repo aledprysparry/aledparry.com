@@ -56,6 +56,10 @@ export interface SlideProps {
   brand?: CarouselBrand;
   /** Optional, decoded user-uploaded images keyed by the kind's imageSlot key. */
   images?: Record<string, HTMLImageElement>;
+  /** Entrance progress 0..1 for self-animating slides (1 = settled). Absent
+   *  (-> treat as 1) for the still preview/export. Lets a slide animate its
+   *  own elements per frame instead of the export fading the whole image. */
+  anim?: { t: number };
 }
 
 export interface SlideDef {
@@ -63,5 +67,9 @@ export interface SlideDef {
   label: string;
   /** Inclusive [from,to] rank window for list slides. */
   range?: [number, number];
+  /** When true, the animated export renders this slide LIVE each frame (passing
+   *  props.anim) so it can animate its own elements over a static background,
+   *  instead of fading a pre-rendered bitmap (which flickers the background). */
+  selfAnimates?: boolean;
   draw: (r: CanvasRenderer, props: SlideProps) => void;
 }
