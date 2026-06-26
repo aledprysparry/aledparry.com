@@ -19,7 +19,7 @@ import { exportZip } from '@engine/lib/carousel/exportCarousel';
 import { voiceSummary } from '@engine/lib/coach/voice';
 import { newId, now } from '@engine/lib/store/persist';
 import { detectIntent, planIntent, learnCreative, AiError } from './client';
-import { upsertSession, addSignal, signalsForBrand, getCreativeProfile, upsertCreativeProfile } from './persist';
+import { upsertSession, addSignal, reconcileSignals, getCreativeProfile, upsertCreativeProfile } from './persist';
 import { creativeProfileSummary, packLearnRows, shouldLearn, hasPerformance } from '@engine/lib/creative/profile';
 import type {
   IntentSession, IntentResult, IntentCandidate, IntentPlan, IntentState, IntentLang, CreativeProfile,
@@ -219,7 +219,10 @@ export function useOrchestrator(brandId: string) {
   // feedback, never on mount), and can be forced from the UI. Offline or AI
   // error -> skips silently and the existing profile stays in use.
   const learn = useCallback(async (force = false) => {
-    const signals = signalsForBrand(brandId);
+    // Reconcile finalCopy against the live graphics first, so edits made in the
+    // editor after approval feed the rubric (captured without touching the editor).
+    const getCopy = (gid: string) => store.getGraphic?.(gid)?.inputs?.copyOverrides as Record<string, string> | undefined;
+    const signals = reconcileSignals(brandId, getCopy);
     const current = getCreativeProfile(brandId);
     if (!force && !shouldLearn(signals, current)) return;
     if (!signals.length) return;

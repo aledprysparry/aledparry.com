@@ -65,6 +65,36 @@ export function recordEngagement(graphicId: string, engagement: ApprovalSignal['
   if (touched) save('approvalSignals', all);
 }
 
+function copyDiffers(a?: Record<string, string>, b?: Record<string, string>): boolean {
+  if (!a || !b) return false;
+  const keys = Array.from(new Set([...Object.keys(a), ...Object.keys(b)]));
+  for (const k of keys) if ((a[k] ?? '') !== (b[k] ?? '')) return true;
+  return false;
+}
+
+// Refresh a brand's signals against the LIVE graphic copy just before learning,
+// so edits made in the editor AFTER approval are captured - and a draft the
+// human approved clean but then reworked is promoted approved -> edited. Reads
+// the store through the passed getter so this layer stays store-free and never
+// touches the editor (another session's files). Returns the brand's signals,
+// reconciled.
+export function reconcileSignals(
+  brandId: string,
+  getCopy: (graphicId: string) => Record<string, string> | undefined,
+): ApprovalSignal[] {
+  const all = loadSignals();
+  let touched = false;
+  for (const s of all) {
+    if (s.brandId !== brandId || !s.graphicId) continue;
+    const live = getCopy(s.graphicId);
+    if (!live || Object.keys(live).length === 0) continue; // graphic gone or empty: keep panel-time copy
+    if (copyDiffers(live, s.finalCopy)) { s.finalCopy = { ...live }; touched = true; }
+    if (s.decision === 'approved' && s.draftCopy && copyDiffers(s.draftCopy, live)) { s.decision = 'edited'; touched = true; }
+  }
+  if (touched) save('approvalSignals', all);
+  return all.filter((s) => s.brandId === brandId);
+}
+
 // ── learned creative profiles (one per brand) ──
 
 export function loadCreativeProfiles(): CreativeProfile[] {
