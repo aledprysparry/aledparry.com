@@ -16,6 +16,7 @@ import { QUIZ_SLIDES, QUIZ_COPY, QUIZ_FIELDS } from '@engine/lib/carousel/quiz';
 import { TOP_GROUPS_SLIDES, TOP_GROUPS_COPY, TOP_GROUPS_FIELDS, TOP_GROUPS_SAMPLE, parseTopGroups } from '@engine/lib/carousel/topGroups';
 import { POLL_SLIDES, POLL_COPY, POLL_FIELDS } from '@engine/lib/carousel/poll';
 import { ANNOUNCE_SLIDES, ANNOUNCE_COPY, ANNOUNCE_FIELDS } from '@engine/lib/carousel/announce';
+import { announceToFreeform } from '@engine/lib/freeform/freeformFromTemplate';
 import { ANIMATED_COPY, ANIMATED_COPY_FIELDS, UNIVERSAL_ANIMATED_COPY } from '@engine/lib/carousel/animated';
 import { defaultPostElements } from '@engine/lib/freeform/elements';
 import { STILL_BUILDERS, applyBrandPaint } from '@engine/lib/freeform/stillTemplates';
@@ -64,6 +65,13 @@ export interface TemplateKind {
   // freeform kinds. Brand paint: colours + language, plus the brand's fonts
   // (fonts[0] → display) and logo URL (small corner mark) where available.
   defaultElements?: (brandColours?: string[], lang?: Lang, fonts?: string[], logoUrl?: string) => GraphicElement[];
+  /** Locked carousel/still kinds may opt in to "Unlock / Customise": rebuild
+   *  this kind's fixed layout as freeform GraphicElement[] so the user can spin
+   *  off a fully editable copy (drag/resize/retype) without mutating the
+   *  original. When present, the editor shows an Unlock button; absent = the
+   *  kind stays copy-field-only. `copy` is the effective copy, `images` the
+   *  graphic's uploaded image slots (e.g. appShot). */
+  toFreeform?: (copy: Record<string, string | undefined>, images: Record<string, string>, lang: Lang) => GraphicElement[];
 }
 
 // Universal still platforms (every still adapts across these ratios).
@@ -181,6 +189,9 @@ export const TEMPLATE_KINDS: Record<string, TemplateKind> = {
     defaultCopyByLang: ANNOUNCE_COPY,
     copyFields: ANNOUNCE_FIELDS,
     imageSlots: [{ key: 'appShot', label: 'Llun yr ap' }],
+    // Opt in to "Unlock / Customise": rebuild the bold layout as freeform
+    // elements so the user can spin off a fully editable copy.
+    toFreeform: announceToFreeform,
   },
   'cwis-top-groups': {
     id: 'cwis-top-groups',

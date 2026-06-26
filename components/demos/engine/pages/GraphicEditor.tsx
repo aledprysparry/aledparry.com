@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, ShieldCheck, Pencil, Film, ImagePlus } from 'lucide-react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Download, ShieldCheck, Pencil, Film, ImagePlus, Unlock } from 'lucide-react';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { Button, Panel, EmptyState } from '@engine/components/ui';
@@ -27,6 +27,7 @@ const NO_IMAGES: Record<string, string> = {};
 
 export default function GraphicEditor() {
   const { graphicId = '' } = useParams();
+  const navigate = useNavigate();
   const store = useStore();
   const { t, lang } = useI18n();
   const graphic = store.getGraphic(graphicId);
@@ -113,6 +114,22 @@ export default function GraphicEditor() {
     finally { setBusy(null); }
   };
 
+  // ── Unlock / Customise ──
+  // Spin off a FULLY editable freeform copy of this locked layout (drag, resize
+  // and retype every element) WITHOUT mutating the original, which stays locked
+  // and animated. We bake the rebuilt elements into a freeform-post template's
+  // seedElements, then create a graphic on it (createGraphic clones the seed
+  // with fresh ids), and navigate to the new freeform editor. "Keep both."
+  const unlockToFreeform = () => {
+    if (!kind.toFreeform) return;
+    const els = kind.toFreeform(copy as unknown as Record<string, string | undefined>, imageUrls, lang);
+    const name = `${graphic.name} ${t('editor.unlockSuffix')}`;
+    const tpl = store.createTemplate(graphic.brandId, 'freeform-post', name, { seedElements: els });
+    if (!tpl) return;
+    const g = store.createGraphic(graphic.brandId, tpl.id, { name, platform, folderId: graphic.folderId });
+    if (g) navigate(`/graphics/${g.id}`);
+  };
+
   // safe-area inset as % of the preset canvas (visual guide only)
   const safe = {
     top: `${(preset.safeArea.top / preset.height) * 100}%`,
@@ -145,6 +162,9 @@ export default function GraphicEditor() {
           >
             {template.supportedPlatforms.map((p) => <option key={p} value={p}>{PLATFORM_PRESETS[p].name}</option>)}
           </select>
+          {kind.toFreeform && (
+            <Button variant="subtle" onClick={unlockToFreeform} title={t('editor.unlockHint')}><Unlock size={15} /> {t('editor.unlock')}</Button>
+          )}
           <Button onClick={() => setTab('export')} disabled={!!error}><Download size={15} /> {t('editor.exportImage')}</Button>
         </div>
       </header>
