@@ -73,12 +73,13 @@ const announceSlide: SlideDef = {
     // Stacked sub lines stagger in (the third one gold for a lift).
     setShadow(r, 'rgba(8,3,34,0.4)', 0, 0.005, 0.0012);
     const sub = (txt: string, col: string, wt: '800' | '900', baseY: number, i: number) => {
-      const ts = win(0.18 + i * 0.06, 0.5 + i * 0.06);
-      withA(ts, () => r.drawText(txt, { x: L, y: baseY - (1 - easeOut(ts)) * 0.03, size: 0.045, color: col, weight: wt, align: 'left', baseline: 'top', font: BODY }));
+      const ts = win(0.16 + i * 0.05, 0.48 + i * 0.05);
+      withA(ts, () => r.drawText(txt, { x: L, y: baseY - (1 - easeOut(ts)) * 0.03, size: 0.042, color: col, weight: wt, align: 'left', baseline: 'top', font: BODY }));
     };
-    sub(c.sub1 || 'Wythnos newydd', WHITE, '800', 0.475, 0);
-    sub(c.sub2 || 'Sgorfwrdd gwag', WHITE, '800', 0.535, 1);
-    sub(c.sub3 || 'Pob lwc!', GOLD, '900', 0.595, 2);
+    sub(c.sub1 || 'Wythnos newydd', WHITE, '800', 0.45, 0);
+    sub(c.sub2 || 'Sgorfwrdd gwag', WHITE, '800', 0.505, 1);
+    sub(c.sub3 || 'Cynnwys newydd', WHITE, '800', 0.56, 2);
+    sub(c.sub4 || 'Pob lwc!', GOLD, '900', 0.615, 3);
     clearShadow(r);
 
     // Warm welcome.
@@ -124,14 +125,14 @@ type Copy = Record<string, string>;
 export const ANNOUNCE_COPY: Record<Lang, Copy> = {
   cy: {
     hook: 'Barod i chwarae?',
-    sub1: 'Wythnos newydd', sub2: 'Sgorfwrdd gwag', sub3: 'Pob lwc!',
+    sub1: 'Wythnos newydd', sub2: 'Sgorfwrdd gwag', sub3: 'Cynnwys newydd', sub4: 'Pob lwc!',
     welcome: 'Croeso cynnes i bawb sy’n ymuno am y tro cyntaf yr wythnos hon.',
     cta: 'Chwarae nawr →',
     imageHint: 'Cliciwch i ychwanegu llun yr ap',
   },
   en: {
     hook: 'Ready to play?',
-    sub1: 'New week', sub2: 'Empty scoreboard', sub3: 'Good luck!',
+    sub1: 'New week', sub2: 'Empty scoreboard', sub3: 'New content', sub4: 'Good luck!',
     welcome: 'A warm welcome to everyone joining for the first time this week.',
     cta: 'Play now →',
     imageHint: 'Click to add your app image',
@@ -142,7 +143,8 @@ export const ANNOUNCE_FIELDS: CopyField[] = [
   { key: 'hook', label: 'Pennawd (bachyn)' },
   { key: 'sub1', label: 'Is-linell 1' },
   { key: 'sub2', label: 'Is-linell 2' },
-  { key: 'sub3', label: 'Is-linell 3 (aur)' },
+  { key: 'sub3', label: 'Is-linell 3' },
+  { key: 'sub4', label: 'Is-linell 4 (aur)' },
   { key: 'welcome', label: 'Neges groeso', multiline: true },
   { key: 'cta', label: 'Galwad i weithredu' },
 ];
