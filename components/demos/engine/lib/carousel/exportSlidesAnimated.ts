@@ -12,8 +12,14 @@ import { webmSupported } from './exportAnimated';
 import { loadSlideImages } from './slideImages';
 import type { SlideDef, LeaderboardRow, CarouselCopy, CarouselBrand } from './types';
 
+// Instagram (Feed/Reels/Stories) needs MP4/H.264, not WebM. MediaRecorder can
+// record MP4 directly in Safari and Chrome >= 130, so prefer it; fall back to
+// WebM only where MP4 recording is unsupported (e.g. Firefox).
 function pickMime(): string {
-  for (const m of ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']) {
+  for (const m of [
+    'video/mp4;codecs=h264,aac', 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4',
+    'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm',
+  ]) {
     if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) return m;
   }
   return 'video/webm';
@@ -61,7 +67,8 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
   const W = out.width, H = out.height;
   const ctx = out.getContext('2d')!;
   const stream = out.captureStream(fps);
-  const rec = new MediaRecorder(stream, { mimeType: pickMime(), videoBitsPerSecond: 8_000_000 });
+  const mime = pickMime();
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
   const chunks: BlobPart[] = [];
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
 
@@ -115,15 +122,19 @@ export async function renderSlidesAnimatedWebM(opts: SlidesAnimatedOpts): Promis
     requestAnimationFrame(tick);
   });
   await stopped;
-  return new Blob(chunks, { type: 'video/webm' });
+  return new Blob(chunks, { type: mime.split(';')[0] });
 }
 
 export async function downloadSlidesAnimatedWebM(filename: string, opts: SlidesAnimatedOpts): Promise<void> {
   const blob = await renderSlidesAnimatedWebM(opts);
+  // Name by the real recorded type: .mp4 where the browser recorded MP4
+  // (Instagram-ready), else .webm.
+  const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+  const base = filename.replace(/\.(mp4|webm)$/i, '');
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename.endsWith('.webm') ? filename : `${filename}.webm`;
+  a.download = `${base}.${ext}`;
   a.click();
   URL.revokeObjectURL(url);
 }
