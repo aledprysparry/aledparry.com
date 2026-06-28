@@ -36,6 +36,19 @@ export interface DemoEntry {
 
 export const demos: DemoEntry[] = [
   {
+    clientSlug: "aledparry",
+    clientName: "Aled Parry",
+    toolSlug: "pressuretest",
+    toolName: "Pressure Test",
+    description:
+      "A Paul Graham-style evaluator. Pressure-test a startup idea or an existing client business through seven chained steps, ending in a ready-to-paste Claude Code prompt. Reads the client's live website to ground the audit in real copy.",
+    descriptionCy:
+      "Gwerthuswr yn arddull Paul Graham. Profwch syniad busnes newydd neu fusnes cleient presennol drwy saith cam cysylltiedig, gan orffen gyda phrompt Claude Code parod. Mae'n darllen gwefan fyw'r cleient er mwyn seilio'r dadansoddiad ar gopi go iawn.",
+    componentPath: "",
+    href: "https://pressure-test-virid.vercel.app",
+    status: "live",
+  },
+  {
     clientSlug: "buan",
     clientName: "Buan",
     toolSlug: "buan",
