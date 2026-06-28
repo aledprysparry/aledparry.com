@@ -214,6 +214,19 @@ export const demos: DemoEntry[] = [
     href: "https://deft-alpaca-a1d2aa.netlify.app/",
     status: "live",
   },
+  {
+    clientSlug: "aledparry",
+    clientName: "Aled Parry",
+    toolSlug: "mentor",
+    toolName: "Mentor AI",
+    description:
+      "An AI-native Welsh tutor: voice-first micro-lessons that adapt to you. Follow a knowledge-graph map of topics, practise through café roleplay and listening quizzes, with spaced-repetition memory and an AI coach that encourages you rather than scoring you.",
+    descriptionCy:
+      "Tiwtor Cymraeg AI: gwersi byr sy'n addasu i chi, gyda'r llais yn ganolog. Dilynwch fap o'r pynciau, ymarfer drwy sgwrs mewn caffi a chwisiau gwrando, gyda chof sy'n ailadrodd ar yr adeg iawn a hyfforddwr AI sy'n eich annog yn hytrach na rhoi marc.",
+    componentPath: "",
+    href: "https://mentor-ai-nine-red.vercel.app",
+    status: "demo",
+  },
 ];
 
 /** Get all demos */
