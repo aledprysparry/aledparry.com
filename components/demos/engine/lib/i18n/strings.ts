@@ -317,7 +317,7 @@ export const STRINGS = {
     'editor.export': 'Export ZIP',
     'editor.building': 'Building…',
     'editor.animated': 'Animated',
-    'editor.animatedHint': 'Export the same design as motion (WebM)',
+    'editor.animatedHint': 'Export the same design as motion (MP4)',
     'editor.download': 'Download',
     'editor.exporting': 'Exporting…',
     'editor.safeAreas': 'Safe areas',
@@ -420,7 +420,7 @@ export const STRINGS = {
     'pipe.viewClips': 'View saved clips',
     'pipe.exportTitle': 'Export',
     'pipe.exportDesc': 'Export each asset for every platform.',
-    'pipe.exportNote': 'Assets export from the editor – still (PNG/JPG/ZIP) or animated (WebM). Saved clips export to MP4 from the Clips tab (beta).',
+    'pipe.exportNote': 'Assets export from the editor – still (PNG/JPG/ZIP) or animated (MP4). Saved clips export to MP4 from the Clips tab (beta).',
 
     // master template
     'master.title': 'Master template',
@@ -1174,7 +1174,7 @@ export const STRINGS = {
     'editor.export': 'Allforio ZIP',
     'editor.building': 'Paratoi…',
     'editor.animated': 'Animeiddiedig',
-    'editor.animatedHint': 'Allforio’r un dyluniad fel symudiad (WebM)',
+    'editor.animatedHint': 'Allforio’r un dyluniad fel symudiad (MP4)',
     'editor.tab.design': 'Dylunio',
     'editor.tab.animation': 'Animeiddio',
     'editor.tab.export': 'Allforio',
@@ -1276,7 +1276,7 @@ export const STRINGS = {
     'pipe.viewClips': 'Gweld clipiau wedi’u cadw',
     'pipe.exportTitle': 'Allforio',
     'pipe.exportDesc': 'Allforiwch bob ased ar gyfer pob platfform.',
-    'pipe.exportNote': 'Mae asedau’n allforio o’r golygydd – llonydd (PNG/JPG/ZIP) neu animeiddiedig (WebM). Mae clipiau wedi’u cadw’n allforio i MP4 o’r tab Clipiau (beta).',
+    'pipe.exportNote': 'Mae asedau’n allforio o’r golygydd – llonydd (PNG/JPG/ZIP) neu animeiddiedig (MP4). Mae clipiau wedi’u cadw’n allforio i MP4 o’r tab Clipiau (beta).',
     'clip.transcribe': 'Trawsgrifio',
     'clip.transcribing': 'Yn trawsgrifio…',
 
