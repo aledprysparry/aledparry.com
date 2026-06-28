@@ -224,7 +224,7 @@ export const demos: DemoEntry[] = [
     descriptionCy:
       "Tiwtor Cymraeg AI: gwersi byr sy'n addasu i chi, gyda'r llais yn ganolog. Dilynwch fap o'r pynciau, ymarfer drwy sgwrs mewn caffi a chwisiau gwrando, gyda chof sy'n ailadrodd ar yr adeg iawn a hyfforddwr AI sy'n eich annog yn hytrach na rhoi marc.",
     componentPath: "",
-    href: "https://mentor-ai-nine-red.vercel.app",
+    href: "https://mentor-ai-cymru.vercel.app",
     status: "demo",
   },
 ];
