@@ -5,17 +5,28 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Postio rename: the engine moved from /app/carousel to /app/postio.
-      // Keeps old links + Instagram OAuth callbacks (which reference the old
-      // path) working. :path* preserves nested routes (/brands/:id, etc).
+      // Postio is now its own standalone app. Bounce the in-site paths to the
+      // standalone deployment (both the current /app/postio and the older
+      // /app/carousel path). Temporary (permanent: false) so it can be
+      // repointed to a custom domain later. :path* preserves nested routes.
+      {
+        source: '/app/postio',
+        destination: 'https://postio-kappa.vercel.app',
+        permanent: false,
+      },
+      {
+        source: '/app/postio/:path*',
+        destination: 'https://postio-kappa.vercel.app/:path*',
+        permanent: false,
+      },
       {
         source: '/app/carousel',
-        destination: '/app/postio',
+        destination: 'https://postio-kappa.vercel.app',
         permanent: false,
       },
       {
         source: '/app/carousel/:path*',
-        destination: '/app/postio/:path*',
+        destination: 'https://postio-kappa.vercel.app/:path*',
         permanent: false,
       },
       {
