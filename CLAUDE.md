@@ -64,7 +64,7 @@ npm run add-demo     # Interactive CLI to register a new demo
 - Homepage hero uses TetrisBackground; primary CTA links to /work, not mailto
 - 9 anchor case studies (Capsiynau, Nodiadau, Cwis Bob Dydd, CPS Homes, Lean VFX, Celtic Routes, Plaid Cymru, Cwis-iau, Curiad) lead /work via the `displayOrder` frontmatter field (1-9); remaining ~36 case studies sort by year DESC below
 - `/admin` writes case-study edits via the GitHub Contents API when `GITHUB_CONTENTS_TOKEN` is set — each save lands as a commit on `main` and Vercel rebuilds in ~2 min. Falls back to local fs when the env var is absent (`npm run dev` workflow). Reads also use GitHub in token mode so concurrent edits don't get stale.
-- `/contact` form opens a `mailto:hello@aledparry.com` composer instead of POSTing — `/api/contact` (Resend) was never configured. The route is still in the tree for a future Resend wire-up.
+- `/contact` form POSTs to `/api/contact`, which sends via Resend to `aled@aledparry.com` (or `CONTACT_EMAIL` if set). Requires `RESEND_API_KEY` to be set in Vercel — without it the route fails and the form shows an error message instead of silently succeeding.
 - Card + HeroImage components render a stone gradient block for any heroImage path containing "placeholder" or that 404s; no broken-image icons.
 
 ## Conventions
@@ -79,6 +79,7 @@ npm run add-demo     # Interactive CLI to register a new demo
 ## Env vars (Vercel + .env.local)
 - `ADMIN_PASSWORD` — gates `/admin` (also expected as `x-admin-password` header on /api/admin/*)
 - `GITHUB_CONTENTS_TOKEN` — when set, admin saves commit to GitHub via Git Data API; reads use Contents API. Token needs `Contents: Read+Write` on this repo (fine-grained PAT) or `repo` scope (classic PAT)
-- `RESEND_API_KEY` + `CONTACT_EMAIL` — currently unset. Contact form uses mailto: instead.
+- `RESEND_API_KEY` — required for `/api/contact` to send. Must be set in Vercel for the contact form to work in production.
+- `CONTACT_EMAIL` — recipient for contact form submissions; defaults to `aled@aledparry.com` if unset.
 - `BLOB_READ_WRITE_TOKEN` — Vercel Blob (used by some demos)
 - `ANTHROPIC_API_KEY` — used by /api/ai routes

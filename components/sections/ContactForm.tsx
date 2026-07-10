@@ -5,8 +5,6 @@ import { useLanguage } from "@/lib/i18n/context";
 import { FormField } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
 
-const RECIPIENT = "hello@aledparry.com";
-
 export function ContactForm() {
   const { t } = useLanguage();
   const [form, setForm] = useState({
@@ -16,32 +14,26 @@ export function ContactForm() {
     budget: "",
     timeline: "",
   });
-  const [status, setStatus] = useState<"idle" | "sending" | "success">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setStatus("sending");
 
-    // Compose mailto: link from form values. We don't run a server-side mailer
-    // (Resend account / domain verification not set up); opening the user's mail
-    // client with everything pre-filled is reliable and works the same way on
-    // desktop and mobile.
-    const subject = `New enquiry from ${form.name}`;
-    const bodyLines = [
-      `Name: ${form.name}`,
-      `Email: ${form.email}`,
-      ``,
-      `Project:`,
-      form.project,
-      ``,
-      `Budget: ${form.budget || "Not specified"}`,
-      `Timeline: ${form.timeline || "Not specified"}`,
-    ];
-    const mailto = `mailto:${RECIPIENT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join("\n"))}`;
-    window.location.href = mailto;
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    setStatus("success");
-    setForm({ name: "", email: "", project: "", budget: "", timeline: "" });
+      if (!res.ok) throw new Error("Failed to send message");
+
+      setStatus("success");
+      setForm({ name: "", email: "", project: "", budget: "", timeline: "" });
+    } catch {
+      setStatus("error");
+    }
   };
 
   if (status === "success") {
@@ -97,6 +89,9 @@ export function ContactForm() {
           options={t.contact.form.timeline.options}
         />
       </div>
+      {status === "error" && (
+        <p className="text-sm text-red-600">{t.contact.error}</p>
+      )}
       <Button type="submit" disabled={status === "sending"}>
         {status === "sending" ? "..." : t.contact.form.submit}
       </Button>

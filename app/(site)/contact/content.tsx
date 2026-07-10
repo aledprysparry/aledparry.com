@@ -35,10 +35,10 @@ export function ContactContent() {
                   {t.contact.emailLabel}
                 </p>
                 <a
-                  href="mailto:hello@aledparry.com"
+                  href="mailto:aled@aledparry.com"
                   className="text-base text-stone-900 hover:text-accent-dark transition-colors"
                 >
-                  hello@aledparry.com
+                  aled@aledparry.com
                 </a>
               </div>
               <div>
