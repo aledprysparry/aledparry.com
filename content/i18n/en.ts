@@ -2,9 +2,9 @@ import { SiteContent } from "./types";
 
 export const en: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry – Creative Technologist & Founder",
+    siteTitle: "Aled Parry – Creative Technologist, Founder & Consultant",
     siteDescription:
-      "Creative technologist and founder working between media, AI and bilingual digital products. BAFTA-winning background in broadcast and interactive content. Builder of Nodiadau.com.",
+      "Creative technologist, founder and consultant helping broadcasters, brands and bilingual organisations solve complex media, product and workflow challenges. BAFTA-winning background in broadcast and interactive content. Builder of Nodiadau.com.",
   },
   nav: {
     home: "Home",
@@ -17,10 +17,10 @@ export const en: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Creative Technologist & Founder",
+      title: "Creative Technologist, Founder & Consultant",
       valueStatement:
-        "Hello & croeso! I work at the intersection of media formats, AI infrastructure and bilingual digital products. From scaling national daily gaming rituals like Cwis Bob Dydd to building bilingual AI tools like Nodiadau.com, I design and engineer products that solve complex media and workflow challenges. BAFTA winner. Bilingual in English and Welsh.",
-      cta: "Read the full story",
+        "Hello & croeso! I'm a creative technologist and consultant who helps broadcasters, brands and bilingual organisations work through complex media, product and workflow challenges – from scaling national daily gaming rituals like Cwis Bob Dydd to building bilingual AI tools like Nodiadau.com. If your team is facing a knotty problem, I'd love to help you solve it. BAFTA winner. Bilingual in English and Welsh.",
+      cta: "See how I can help",
     },
     credibility: {
       heading: "Worked with",
@@ -53,8 +53,8 @@ export const en: SiteContent = {
       ],
     },
     footerCta: {
-      heading: "Got a project in mind?",
-      body: "I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.",
+      heading: "Facing a challenge I could help with?",
+      body: "I'm always open to discussing new projects, tricky problems, or opportunities to support your team – however big or small the challenge.",
       cta: "Get in touch",
     },
   },
@@ -147,10 +147,11 @@ export const en: SiteContent = {
   },
   about: {
     heading: "About",
-    hero: "I\u2019m a creative technologist and founder working between media formats, AI infrastructure and bilingual digital products.",
+    hero: "I\u2019m a creative technologist, founder and consultant \u2013 I help broadcasters, brands and bilingual organisations navigate complex media, product and workflow challenges, drawing on twenty years spent building formats, tools and products from the inside.",
     bio: [
       "My background is broadcast and interactive media \u2013 over twenty years of producing programmes, apps, games and content for S4C, BBC, CBBC, ITV, Sesame Street and more. A BAFTA winner with a Graphic Communication grounding that still shapes how I approach storytelling, design and user experience.",
       "More recently I\u2019ve become much more interested in the technology behind the content. Nodiadau.com is the obvious example \u2013 a language tool I had to build because no one else was going to build it properly for Welsh.",
+      "These days, alongside building my own products, I work as a consultant \u2013 helping teams who are stuck on a specific challenge, whether that\u2019s a format that needs modernising, a workflow that\u2019s eating hours it shouldn\u2019t, or a bilingual product that needs to feel native in both languages. If that sounds like where you are, let\u2019s talk.",
     ],
     sections: [
       {
@@ -205,7 +206,7 @@ export const en: SiteContent = {
       ],
     },
     cta: {
-      heading: "Let\u2019s Work Together",
+      heading: "Got a Challenge to Solve?",
       button: "Get in touch \u2192",
     },
   },

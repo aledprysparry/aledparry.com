@@ -19,13 +19,15 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL("https://aledparry.com"),
   title: {
-    default: "Aled Parry – Creative Technologist & Founder",
-    template: "%s | Aled Parry – Creative Technologist & Founder",
+    default: "Aled Parry – Creative Technologist, Founder & Consultant",
+    template: "%s | Aled Parry – Creative Technologist, Founder & Consultant",
   },
   description:
-    "Creative technologist and founder working between media formats, AI infrastructure and bilingual digital products. BAFTA-winning background in broadcast and interactive content. Builder of Capsiynau.com and Nodiadau.com.",
+    "Creative technologist, founder and consultant helping broadcasters, brands and bilingual organisations solve complex media, product and workflow challenges. BAFTA-winning background in broadcast and interactive content. Builder of Capsiynau.com and Nodiadau.com.",
   keywords: [
     "creative technologist Wales",
+    "product consultant Wales",
+    "media consultant UK",
     "product founder Wales",
     "AI product builder UK",
     "bilingual digital products",
@@ -43,7 +45,7 @@ export const metadata: Metadata = {
     locale: "en_GB",
     url: "https://aledparry.com",
     siteName: "Aled Parry",
-    images: [{ url: "/og-image", width: 1200, height: 630, alt: "Aled Parry – Creative Technologist & Founder" }],
+    images: [{ url: "/og-image", width: 1200, height: 630, alt: "Aled Parry – Creative Technologist, Founder & Consultant" }],
   },
   twitter: {
     card: "summary_large_image",

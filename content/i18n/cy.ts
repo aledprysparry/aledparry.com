@@ -2,9 +2,9 @@ import { SiteContent } from "./types";
 
 export const cy: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry – Technolegydd Creadigol a Sylfaenydd",
+    siteTitle: "Aled Parry – Technolegydd Creadigol, Sylfaenydd ac Ymgynghorydd",
     siteDescription:
-      "Technolegydd creadigol a sylfaenydd sy'n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. Cefndir Enillydd BAFTA ym maes darlledu a chynnwys rhyngweithiol. Adeiladydd Nodiadau.com.",
+      "Technolegydd creadigol, sylfaenydd ac ymgynghorydd sy'n helpu darlledwyr, brandiau a sefydliadau dwyieithog i ddatrys heriau cymhleth ym maes cyfryngau, cynnyrch a llif-gwaith. Cefndir Enillydd BAFTA ym maes darlledu a chynnwys rhyngweithiol. Adeiladydd Nodiadau.com.",
   },
   nav: {
     home: "Hafan",
@@ -17,10 +17,10 @@ export const cy: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Technolegydd Creadigol a Sylfaenydd",
+      title: "Technolegydd Creadigol, Sylfaenydd ac Ymgynghorydd",
       valueStatement:
-        "Helo a chroeso! Rwy\u2019n gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog. O dyfu defodau gemau dyddiol cenedlaethol fel Cwis Bob Dydd i adeiladu offer AI dwyieithog fel Nodiadau.com, rwy\u2019n dylunio ac yn peiriannu cynhyrchion sy\u2019n datrys heriau cyfryngau a llif-gwaith cymhleth. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
-      cta: "Darllen y stori lawn",
+        "Helo a chroeso! Rwy\u2019n dechnolegydd creadigol ac ymgynghorydd sy\u2019n helpu darlledwyr, brandiau a sefydliadau dwyieithog i weithio drwy heriau cymhleth ym maes cyfryngau, cynnyrch a llif-gwaith \u2013 o dyfu defodau gemau dyddiol cenedlaethol fel Cwis Bob Dydd i adeiladu offer AI dwyieithog fel Nodiadau.com. Os yw eich t\u00eem yn wynebu problem ddyrys, hoffwn eich helpu i\u2019w datrys. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
+      cta: "Gweld sut y gallaf helpu",
     },
     credibility: {
       heading: "Wedi gweithio gyda",
@@ -53,8 +53,8 @@ export const cy: SiteContent = {
       ],
     },
     footerCta: {
-      heading: "Oes gennych chi brosiect mewn golwg?",
-      body: "Rwyf bob amser yn agored i drafod prosiectau newydd, syniadau creadigol, neu gyfleoedd i fod yn rhan o\u2019ch gweledigaeth.",
+      heading: "Her y gallwn i helpu gyda hi?",
+      body: "Rwyf bob amser yn agored i drafod prosiectau newydd, problemau dyrys, neu gyfleoedd i gefnogi\u2019ch t\u00eem \u2013 pa mor fawr neu fach bynnag yw\u2019r her.",
       cta: "Cysylltwch",
     },
   },
@@ -147,10 +147,11 @@ export const cy: SiteContent = {
   },
   about: {
     heading: "Amdanaf",
-    hero: "Technolegydd creadigol a sylfaenydd ydw i, yn gweithio rhwng fformatau cyfryngau, seilwaith AI a chynnyrch digidol dwyieithog.",
+    hero: "Technolegydd creadigol, sylfaenydd ac ymgynghorydd ydw i \u2013 rwy\u2019n helpu darlledwyr, brandiau a sefydliadau dwyieithog i lywio heriau cymhleth ym maes cyfryngau, cynnyrch a llif-gwaith, gan dynnu ar ugain mlynedd o adeiladu fformatau, offer a chynnyrch o\u2019r tu mewn.",
     bio: [
       "Mae fy nghefndir mewn darlledu a chyfryngau rhyngweithiol \u2013 dros ugain mlynedd o gynhyrchu rhaglenni, apiau, gemau a chynnwys ar gyfer S4C, BBC, CBBC, ITV, Sesame Street a mwy. Enillydd BAFTA gyda chefndir mewn Cyfathrebu Graffig sy\u2019n dal i lywio fy null o adrodd straeon, dylunio a phrofiad defnyddiwr.",
       "Yn fwy diweddar, mae gen i lawer mwy o ddiddordeb yn y dechnoleg y tu \u00f4l i\u2019r cynnwys. Mae Nodiadau.com yn enghraifft amlwg \u2013 offeryn iaith yr oedd rhaid i mi ei adeiladu am nad oedd neb arall yn mynd i\u2019w adeiladu\u2019n iawn ar gyfer y Gymraeg.",
+      "Y dyddiau hyn, ochr yn ochr ag adeiladu fy nghynnyrch fy hun, rwy\u2019n gweithio fel ymgynghorydd \u2013 yn helpu timau sy\u2019n sownd ar her benodol, boed hynny\u2019n fformat sydd angen ei foderneiddio, yn llif-gwaith sy\u2019n bwyta oriau na ddylai, neu\u2019n gynnyrch dwyieithog sydd angen teimlo\u2019n naturiol yn y ddwy iaith. Os yw hynny\u2019n canu cloch, gadewch i ni siarad.",
     ],
     sections: [
       {
@@ -205,7 +206,7 @@ export const cy: SiteContent = {
       ],
     },
     cta: {
-      heading: "Gadewch i ni Weithio Gyda\u2019n Gilydd",
+      heading: "Her i\u2019w Datrys?",
       button: "Cysylltwch \u2192",
     },
   },
