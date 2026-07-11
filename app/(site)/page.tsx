@@ -4,7 +4,7 @@ import { PersonJsonLd } from "@/components/seo/PersonJsonLd";
 
 export const metadata: Metadata = {
   description:
-    "Award-winning Welsh/English digital producer and creative director. I lead broadcast, interactive and bilingual content projects for commissioners, agencies and brands across the UK.",
+    "I'm a creative technologist who helps people and organisations figure out what's actually broken – sometimes the fix is AI, sometimes it isn't. Twenty years turning ideas into things that work.",
   alternates: {
     canonical: "https://aledparry.com",
   },

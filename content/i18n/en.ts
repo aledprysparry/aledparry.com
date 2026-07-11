@@ -2,13 +2,14 @@ import { SiteContent } from "./types";
 
 export const en: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry – Creative Technologist & Founder",
+    siteTitle: "Aled Parry – Creative Technologist & Consultant",
     siteDescription:
-      "Creative technologist and founder working between media, AI and bilingual digital products. BAFTA-winning background in broadcast and interactive content. Builder of Nodiadau.com.",
+      "I'm a creative technologist who helps people and organisations figure out what's actually broken – sometimes the fix is AI, sometimes it isn't. Twenty years turning ideas into things that work. Builder of Nodiadau.com.",
   },
   nav: {
     home: "Home",
     work: "Work",
+    howWeWork: "How We Work",
     services: "Services",
     about: "About",
     contact: "Contact",
@@ -17,10 +18,10 @@ export const en: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Creative Technologist & Founder",
+      title: "Creative Technologist & Consultant",
       valueStatement:
-        "Hello & croeso! I work at the intersection of media formats, AI infrastructure and bilingual digital products. From scaling national daily gaming rituals like Cwis Bob Dydd to building bilingual AI tools like Nodiadau.com, I design and engineer products that solve complex media and workflow challenges. BAFTA winner. Bilingual in English and Welsh.",
-      cta: "Read the full story",
+        "Hello & croeso! I'm a creative technologist – twenty years turning ideas into things that actually work, from BAFTA-winning telly formats to Nodiadau.com. These days that often means sitting down with people who know something isn't working and helping them figure out what would actually fix it – sometimes AI, sometimes not. Bilingual in English and Welsh.",
+      cta: "See how I can help",
     },
     credibility: {
       heading: "Worked with",
@@ -53,8 +54,8 @@ export const en: SiteContent = {
       ],
     },
     footerCta: {
-      heading: "Got a project in mind?",
-      body: "I'm always open to discussing new projects, creative ideas, or opportunities to be part of your vision.",
+      heading: "Got a project – or a problem?",
+      body: "I'm always up for a chat about a new idea, a tricky problem, or anything in between. However big or small.",
       cta: "Get in touch",
     },
   },
@@ -68,6 +69,45 @@ export const en: SiteContent = {
       digital: "Digital",
       content: "Content",
       format: "Format",
+    },
+  },
+  howWeWork: {
+    heading: "How We Work",
+    intro:
+      "Most consultancies arrive with an answer already picked out. I'd rather start with your problem, and stay honest about whether technology's actually part of the fix.",
+    steps: [
+      {
+        title: "Listen",
+        description:
+          "We start with a conversation, not a pitch. I want to know what's actually slowing you down – not what tech you think you need.",
+      },
+      {
+        title: "Understand",
+        description:
+          "I spend time with the people who'll actually use whatever we build – your team, your customers, your residents. Good ideas come from how work really happens, not how it's supposed to.",
+      },
+      {
+        title: "Prototype",
+        description:
+          "Instead of a long proposal, I build something you can see and react to, often within days. Sometimes that's a piece of software. Sometimes it's a workshop, or a different way of working with no new tech involved at all.",
+      },
+      {
+        title: "Test",
+        description:
+          "We test it against real use, not assumptions. If it doesn't work, we've learned that cheaply – before anyone's committed a big budget to it.",
+      },
+      {
+        title: "Scale",
+        description:
+          "If it proves itself, we grow it together. I'd rather be an invested partner than a consultant billing days – I want it to keep working, not the engagement to run long.",
+      },
+    ],
+    outro:
+      "So the first conversation isn't a sales pitch. It's the start of figuring out whether – and how – I can actually help.",
+    cta: {
+      heading: "Not sure where to start?",
+      body: "That's normal. Most people I work with didn't either.",
+      button: "Get in touch",
     },
   },
   caseStudy: {
@@ -147,10 +187,11 @@ export const en: SiteContent = {
   },
   about: {
     heading: "About",
-    hero: "I\u2019m a creative technologist and founder working between media formats, AI infrastructure and bilingual digital products.",
+    hero: "I\u2019m a creative technologist, founder and consultant. I\u2019m not selling AI, a website or a strategy deck \u2013 I like figuring out what\u2019s actually broken, then building whatever it takes to fix it.",
     bio: [
       "My background is broadcast and interactive media \u2013 over twenty years of producing programmes, apps, games and content for S4C, BBC, CBBC, ITV, Sesame Street and more. A BAFTA winner with a Graphic Communication grounding that still shapes how I approach storytelling, design and user experience.",
       "More recently I\u2019ve become much more interested in the technology behind the content. Nodiadau.com is the obvious example \u2013 a language tool I had to build because no one else was going to build it properly for Welsh.",
+      "These days I split my time between building my own products and working as a consultant \u2013 helping people who know something isn\u2019t working but aren\u2019t sure what to do about it. Sometimes the answer\u2019s AI. Sometimes it\u2019s automation, a different workflow, or leaving the technology alone entirely. I\u2019d rather figure that out with you than sell you an answer before I understand the question.",
     ],
     sections: [
       {
@@ -192,11 +233,14 @@ export const en: SiteContent = {
     skills: {
       heading: "Skills & Experience",
       items: [
+        "Problem Solving",
+        "Rapid Prototyping",
         "Product Strategy",
         "Creative Direction",
         "Digital Production",
         "Format Development",
         "AI Tooling & Workflow",
+        "Process Automation",
         "Bilingual (English & Welsh)",
         "UX & UI Design",
         "Frontend Engineering",
@@ -205,7 +249,7 @@ export const en: SiteContent = {
       ],
     },
     cta: {
-      heading: "Let\u2019s Work Together",
+      heading: "Got Something to Figure Out?",
       button: "Get in touch \u2192",
     },
   },

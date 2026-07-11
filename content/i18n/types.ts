@@ -20,6 +20,7 @@ export interface SiteContent {
   nav: {
     home: string;
     work: string;
+    howWeWork: string;
     services: string;
     about: string;
     contact: string;
@@ -54,6 +55,17 @@ export interface SiteContent {
     description: string;
     filterAll: string;
     types: Record<string, string>;
+  };
+  howWeWork: {
+    heading: string;
+    intro: string;
+    steps: { title: string; description: string }[];
+    outro: string;
+    cta: {
+      heading: string;
+      body: string;
+      button: string;
+    };
   };
   caseStudy: {
     briefLabel: string;

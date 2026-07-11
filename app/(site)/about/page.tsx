@@ -6,7 +6,7 @@ import { PersonJsonLd } from "@/components/seo/PersonJsonLd";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Aled Parry is a BAFTA-winning digital producer and creative director based in Wales. Bilingual in Welsh and English, specialising in broadcast, children's content and interactive formats.",
+    "Aled Parry is a creative technologist, founder and consultant who helps organisations solve difficult problems with technology, design and process – not just AI. BAFTA winner, bilingual in Welsh and English.",
   alternates: { canonical: "https://aledparry.com/about" },
 };
 
