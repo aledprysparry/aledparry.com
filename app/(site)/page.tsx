@@ -4,7 +4,7 @@ import { PersonJsonLd } from "@/components/seo/PersonJsonLd";
 
 export const metadata: Metadata = {
   description:
-    "I help business owners, public sector teams and organisations solve difficult problems – sometimes with AI, sometimes automation, sometimes neither. Twenty years turning ideas into working products.",
+    "I'm a creative technologist who helps people and organisations figure out what's actually broken – sometimes the fix is AI, sometimes it isn't. Twenty years turning ideas into things that work.",
   alternates: {
     canonical: "https://aledparry.com",
   },

@@ -2,9 +2,9 @@ import { SiteContent } from "./types";
 
 export const en: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry – Digital Innovation Consultant & Creative Technologist",
+    siteTitle: "Aled Parry – Creative Technologist & Consultant",
     siteDescription:
-      "I help business owners, public sector teams and organisations solve difficult problems – sometimes with AI, sometimes automation, sometimes neither. Twenty years turning ideas into working products. Builder of Nodiadau.com.",
+      "I'm a creative technologist who helps people and organisations figure out what's actually broken – sometimes the fix is AI, sometimes it isn't. Twenty years turning ideas into things that work. Builder of Nodiadau.com.",
   },
   nav: {
     home: "Home",
@@ -18,9 +18,9 @@ export const en: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Digital Innovation Consultant",
+      title: "Creative Technologist & Consultant",
       valueStatement:
-        "Hello & croeso! I help business owners, public sector teams and organisations work through problems they haven't quite solved yet – the process quietly costing hours, the idea that needs testing before anyone trusts it, the question of whether AI would actually help. I start with the problem, not the technology, then work out what would genuinely fix it. Twenty years turning ideas into working products. BAFTA winner. Bilingual in English and Welsh.",
+        "Hello & croeso! I'm a creative technologist – twenty years turning ideas into things that actually work, from BAFTA-winning telly formats to Nodiadau.com. These days that often means sitting down with people who know something isn't working and helping them figure out what would actually fix it – sometimes AI, sometimes not. Bilingual in English and Welsh.",
       cta: "See how I can help",
     },
     credibility: {
@@ -54,8 +54,8 @@ export const en: SiteContent = {
       ],
     },
     footerCta: {
-      heading: "Facing a challenge I could help with?",
-      body: "I'm always open to discussing new projects, tricky problems, or opportunities to support your team – however big or small the challenge.",
+      heading: "Got a project – or a problem?",
+      body: "I'm always up for a chat about a new idea, a tricky problem, or anything in between. However big or small.",
       cta: "Get in touch",
     },
   },
@@ -74,40 +74,40 @@ export const en: SiteContent = {
   howWeWork: {
     heading: "How We Work",
     intro:
-      "Most consultancies turn up with a solution already decided. I'd rather start with your problem – and stay honest about whether technology is actually the answer.",
+      "Most consultancies arrive with an answer already picked out. I'd rather start with your problem, and stay honest about whether technology's actually part of the fix.",
     steps: [
       {
         title: "Listen",
         description:
-          "We start with a conversation, not a pitch. I want to understand what's actually slowing you down – not what technology you think you need.",
+          "We start with a conversation, not a pitch. I want to know what's actually slowing you down – not what tech you think you need.",
       },
       {
         title: "Understand",
         description:
-          "I spend time with the people who'll actually use whatever we build – your team, your customers, your residents. Good solutions come from how work really happens, not how it's supposed to happen.",
+          "I spend time with the people who'll actually use whatever we build – your team, your customers, your residents. Good ideas come from how work really happens, not how it's supposed to.",
       },
       {
         title: "Prototype",
         description:
-          "Instead of a lengthy proposal, I build something you can see and react to, often within days. Sometimes that's a piece of software. Sometimes it's a workshop, or a redesigned process with no new technology at all.",
+          "Instead of a long proposal, I build something you can see and react to, often within days. Sometimes that's a piece of software. Sometimes it's a workshop, or a different way of working with no new tech involved at all.",
       },
       {
         title: "Test",
         description:
-          "We test the prototype against real use, not assumptions. If it doesn't work, we've learned that cheaply – before committing a large budget to it.",
+          "We test it against real use, not assumptions. If it doesn't work, we've learned that cheaply – before anyone's committed a big budget to it.",
       },
       {
         title: "Scale",
         description:
-          "When a prototype proves its value, we grow it together. I'd rather be an invested partner than a consultant billing days – my incentive is that it keeps working, not that the engagement runs long.",
+          "If it proves itself, we grow it together. I'd rather be an invested partner than a consultant billing days – I want it to keep working, not the engagement to run long.",
       },
     ],
     outro:
-      "This is why the first conversation isn't a sales call. It's the start of figuring out whether – and how – I can help.",
+      "So the first conversation isn't a sales pitch. It's the start of figuring out whether – and how – I can actually help.",
     cta: {
       heading: "Not sure where to start?",
-      body: "That's normal. Most of the organisations I work with didn't either.",
-      button: "Book a discovery session",
+      body: "That's normal. Most people I work with didn't either.",
+      button: "Get in touch",
     },
   },
   caseStudy: {
@@ -187,11 +187,11 @@ export const en: SiteContent = {
   },
   about: {
     heading: "About",
-    hero: "I\u2019m a creative technologist, founder and consultant \u2013 but I\u2019m not here to sell you AI, software or a website. I help organisations work out what\u2019s actually going wrong, then fix it with whatever combination of technology, design and process genuinely helps.",
+    hero: "I\u2019m a creative technologist, founder and consultant. I\u2019m not selling AI, a website or a strategy deck \u2013 I like figuring out what\u2019s actually broken, then building whatever it takes to fix it.",
     bio: [
       "My background is broadcast and interactive media \u2013 over twenty years of producing programmes, apps, games and content for S4C, BBC, CBBC, ITV, Sesame Street and more. A BAFTA winner with a Graphic Communication grounding that still shapes how I approach storytelling, design and user experience.",
       "More recently I\u2019ve become much more interested in the technology behind the content. Nodiadau.com is the obvious example \u2013 a language tool I had to build because no one else was going to build it properly for Welsh.",
-      "These days I split my time between building my own products and working as a consultant to organisations who know something isn\u2019t working but aren\u2019t sure what to do about it. Sometimes the answer is AI. Sometimes it\u2019s automation, a redesigned workflow, or leaving the technology alone entirely. I\u2019d rather find that out with you than sell you a solution before I understand the problem.",
+      "These days I split my time between building my own products and working as a consultant \u2013 helping people who know something isn\u2019t working but aren\u2019t sure what to do about it. Sometimes the answer\u2019s AI. Sometimes it\u2019s automation, a different workflow, or leaving the technology alone entirely. I\u2019d rather figure that out with you than sell you an answer before I understand the question.",
     ],
     sections: [
       {
@@ -233,8 +233,7 @@ export const en: SiteContent = {
     skills: {
       heading: "Skills & Experience",
       items: [
-        "Problem Discovery & Diagnosis",
-        "Digital Innovation Consulting",
+        "Problem Solving",
         "Rapid Prototyping",
         "Product Strategy",
         "Creative Direction",
@@ -250,7 +249,7 @@ export const en: SiteContent = {
       ],
     },
     cta: {
-      heading: "Got a Challenge to Solve?",
+      heading: "Got Something to Figure Out?",
       button: "Get in touch \u2192",
     },
   },

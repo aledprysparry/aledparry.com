@@ -19,11 +19,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL("https://aledparry.com"),
   title: {
-    default: "Aled Parry – Digital Innovation Consultant & Creative Technologist",
-    template: "%s | Aled Parry – Digital Innovation Consultant & Creative Technologist",
+    default: "Aled Parry – Creative Technologist & Consultant",
+    template: "%s | Aled Parry – Creative Technologist & Consultant",
   },
   description:
-    "I help business owners, public sector teams and organisations solve difficult problems – sometimes with AI, sometimes automation, sometimes neither. Twenty years turning ideas into working products. Based in Wales, working across the UK.",
+    "I'm a creative technologist who helps people and organisations figure out what's actually broken – sometimes the fix is AI, sometimes it isn't. Twenty years turning ideas into things that work. Based in Wales, working across the UK.",
   keywords: [
     "digital innovation consultant Wales",
     "AI consultant Wales",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     locale: "en_GB",
     url: "https://aledparry.com",
     siteName: "Aled Parry",
-    images: [{ url: "/og-image", width: 1200, height: 630, alt: "Aled Parry – Digital Innovation Consultant & Creative Technologist" }],
+    images: [{ url: "/og-image", width: 1200, height: 630, alt: "Aled Parry – Creative Technologist & Consultant" }],
   },
   twitter: {
     card: "summary_large_image",

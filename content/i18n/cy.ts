@@ -2,9 +2,9 @@ import { SiteContent } from "./types";
 
 export const cy: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry – Ymgynghorydd Arloesi Digidol a Thechnolegydd Creadigol",
+    siteTitle: "Aled Parry – Technolegydd Creadigol ac Ymgynghorydd",
     siteDescription:
-      "Rwy'n helpu perchnogion busnes, timau'r sector cyhoeddus a sefydliadau i ddatrys problemau anodd – weithiau gydag AI, weithiau awtomeiddio, weithiau dim un o'r ddau. Ugain mlynedd o droi syniadau'n gynnyrch go iawn. Adeiladydd Nodiadau.com.",
+      "Technolegydd creadigol ydw i sy'n helpu pobl a sefydliadau i ganfod beth sy'n mynd o'i le go iawn – weithiau AI yw'r ateb, weithiau nid dyna ydyw. Ugain mlynedd o droi syniadau'n bethau sy'n gweithio. Adeiladydd Nodiadau.com.",
   },
   nav: {
     home: "Hafan",
@@ -18,9 +18,9 @@ export const cy: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Ymgynghorydd Arloesi Digidol",
+      title: "Technolegydd Creadigol ac Ymgynghorydd",
       valueStatement:
-        "Helo a chroeso! Rwy\u2019n helpu perchnogion busnes, timau\u2019r sector cyhoeddus a sefydliadau i weithio drwy broblemau nad ydynt wedi\u2019u datrys yn iawn eto \u2013 y broses sy\u2019n dawel fach yn costio oriau, y syniad sydd angen ei brofi cyn i unrhyw un ymddiried ynddo, y cwestiwn a fyddai AI wir yn helpu. Rwy\u2019n dechrau gyda\u2019r broblem, nid y dechnoleg, ac yna\u2019n canfod beth fyddai wir yn ei datrys. Ugain mlynedd o droi syniadau\u2019n gynnyrch go iawn. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
+        "Helo a chroeso! Technolegydd creadigol ydw i \u2013 ugain mlynedd o droi syniadau\u2019n bethau sy\u2019n gweithio go iawn, o fformatau teledu arobryn BAFTA i Nodiadau.com. Y dyddiau hyn mae hynny\u2019n aml yn golygu eistedd i lawr gyda phobl sy\u2019n gwybod nad yw rhywbeth yn gweithio, a\u2019u helpu i ganfod beth fyddai wir yn ei drwsio \u2013 weithiau AI, weithiau ddim. Yn ddwyieithog yn Saesneg a Chymraeg.",
       cta: "Gweld sut y gallaf helpu",
     },
     credibility: {
@@ -54,8 +54,8 @@ export const cy: SiteContent = {
       ],
     },
     footerCta: {
-      heading: "Her y gallwn i helpu gyda hi?",
-      body: "Rwyf bob amser yn agored i drafod prosiectau newydd, problemau dyrys, neu gyfleoedd i gefnogi\u2019ch t\u00eem \u2013 pa mor fawr neu fach bynnag yw\u2019r her.",
+      heading: "Prosiect \u2013 neu broblem?",
+      body: "Rwyf bob amser yn barod am sgwrs am syniad newydd, problem ddyrys, neu unrhyw beth yn y canol. Pa mor fawr neu fach bynnag.",
       cta: "Cysylltwch",
     },
   },
@@ -74,40 +74,40 @@ export const cy: SiteContent = {
   howWeWork: {
     heading: "Ein Dull Gweithio",
     intro:
-      "Mae'r rhan fwyaf o ymgynghoriaethau'n cyrraedd gydag ateb wedi'i benderfynu eisoes. Byddai'n well gen i ddechrau gyda'ch problem chi – a bod yn onest ynghylch a yw technoleg wir yn ateb.",
+      "Mae'r rhan fwyaf o ymgynghoriaethau'n cyrraedd gydag ateb wedi'i ddewis eisoes. Byddai'n well gen i ddechrau gyda'ch problem chi, a bod yn onest ynghylch a yw technoleg wir yn rhan o'r ateb.",
     steps: [
       {
         title: "Gwrando",
         description:
-          "Rydym yn dechrau gyda sgwrs, nid pitsh. Rwyf am ddeall beth sydd wir yn eich arafu chi – nid pa dechnoleg rydych chi'n meddwl sydd ei angen arnoch.",
+          "Rydym yn dechrau gyda sgwrs, nid pitsh. Rwyf am wybod beth sydd wir yn eich arafu chi – nid pa dechnoleg rydych chi'n meddwl sydd ei angen arnoch.",
       },
       {
         title: "Deall",
         description:
-          "Rwy'n treulio amser gyda'r bobl fydd wir yn defnyddio beth bynnag rydym yn ei adeiladu – eich tîm, eich cwsmeriaid, eich trigolion. Daw'r atebion gorau o ddeall sut mae gwaith yn digwydd go iawn, nid sut y dylai ddigwydd.",
+          "Rwy'n treulio amser gyda'r bobl fydd wir yn defnyddio beth bynnag rydym yn ei adeiladu – eich tîm, eich cwsmeriaid, eich trigolion. Daw syniadau da o ddeall sut mae gwaith yn digwydd go iawn, nid sut y dylai ddigwydd.",
       },
       {
         title: "Prototeipio",
         description:
-          "Yn lle cynnig hir, rwy'n adeiladu rhywbeth y gallwch ei weld ac ymateb iddo, yn aml o fewn dyddiau. Weithiau mae hynny'n ddarn o feddalwedd. Weithiau mae'n weithdy, neu'n broses wedi'i hail-gynllunio heb unrhyw dechnoleg newydd o gwbl.",
+          "Yn lle cynnig hir, rwy'n adeiladu rhywbeth y gallwch ei weld ac ymateb iddo, yn aml o fewn dyddiau. Weithiau mae hynny'n ddarn o feddalwedd. Weithiau mae'n weithdy, neu'n ffordd wahanol o weithio heb unrhyw dechnoleg newydd o gwbl.",
       },
       {
         title: "Profi",
         description:
-          "Rydym yn profi'r prototeip yn erbyn defnydd go iawn, nid tybiaethau. Os nad yw'n gweithio, rydym wedi dysgu hynny'n rhad – cyn ymrwymo cyllideb fawr iddo.",
+          "Rydym yn ei brofi yn erbyn defnydd go iawn, nid tybiaethau. Os nad yw'n gweithio, rydym wedi dysgu hynny'n rhad – cyn i unrhyw un ymrwymo cyllideb fawr iddo.",
       },
       {
         title: "Graddio",
         description:
-          "Pan fydd prototeip yn profi ei werth, rydym yn ei dyfu gyda'n gilydd. Byddai'n well gen i fod yn bartner sydd â buddsoddiad na ymgynghorydd sy'n anfonebu diwrnodau – fy nghymhelliant yw ei fod yn parhau i weithio, nid bod y gwaith yn parhau'n hir.",
+          "Os yw'n profi ei werth, rydym yn ei dyfu gyda'n gilydd. Byddai'n well gen i fod yn bartner sydd â buddsoddiad na ymgynghorydd sy'n anfonebu diwrnodau – rwyf am iddo barhau i weithio, nid i'r gwaith barhau'n hir.",
       },
     ],
     outro:
-      "Dyna pam nad yw'r sgwrs gyntaf yn alwad werthu. Dyna ddechrau canfod a allaf helpu – a sut.",
+      "Felly dyw'r sgwrs gyntaf ddim yn bitsh werthu. Dyna ddechrau canfod a allaf wir helpu – a sut.",
     cta: {
       heading: "Ddim yn siŵr ble i ddechrau?",
-      body: "Mae hynny'n normal. Doedd y rhan fwyaf o'r sefydliadau rwy'n gweithio gyda nhw ddim chwaith.",
-      button: "Trefnu sesiwn ddarganfod",
+      body: "Mae hynny'n normal. Doedd y rhan fwyaf o'r bobl rwy'n gweithio gyda nhw ddim chwaith.",
+      button: "Cysylltwch",
     },
   },
   caseStudy: {
@@ -187,11 +187,11 @@ export const cy: SiteContent = {
   },
   about: {
     heading: "Amdanaf",
-    hero: "Technolegydd creadigol, sylfaenydd ac ymgynghorydd ydw i \u2013 ond dydw i ddim yma i werthu AI, meddalwedd na gwefan i chi. Rwy\u2019n helpu sefydliadau i ganfod beth sy\u2019n mynd o\u2019i le go iawn, ac yna ei drwsio gyda pha bynnag gyfuniad o dechnoleg, dylunio a phroses sy\u2019n wirioneddol helpu.",
+    hero: "Technolegydd creadigol, sylfaenydd ac ymgynghorydd ydw i. Dydw i ddim yn gwerthu AI, gwefan na strategaeth ffansi \u2013 rwy\u2019n hoffi canfod beth sy\u2019n mynd o\u2019i le go iawn, ac yna adeiladu beth bynnag sydd ei angen i\u2019w drwsio.",
     bio: [
       "Mae fy nghefndir mewn darlledu a chyfryngau rhyngweithiol \u2013 dros ugain mlynedd o gynhyrchu rhaglenni, apiau, gemau a chynnwys ar gyfer S4C, BBC, CBBC, ITV, Sesame Street a mwy. Enillydd BAFTA gyda chefndir mewn Cyfathrebu Graffig sy\u2019n dal i lywio fy null o adrodd straeon, dylunio a phrofiad defnyddiwr.",
       "Yn fwy diweddar, mae gen i lawer mwy o ddiddordeb yn y dechnoleg y tu \u00f4l i\u2019r cynnwys. Mae Nodiadau.com yn enghraifft amlwg \u2013 offeryn iaith yr oedd rhaid i mi ei adeiladu am nad oedd neb arall yn mynd i\u2019w adeiladu\u2019n iawn ar gyfer y Gymraeg.",
-      "Y dyddiau hyn rwy\u2019n rhannu fy amser rhwng adeiladu fy nghynnyrch fy hun a gweithio fel ymgynghorydd i sefydliadau sy\u2019n gwybod nad yw rhywbeth yn gweithio ond ddim yn si\u0175r beth i\u2019w wneud am y peth. Weithiau AI yw\u2019r ateb. Weithiau mae\u2019n awtomeiddio, yn llif-gwaith wedi\u2019i ail-gynllunio, neu\u2019n gadael llonydd i\u2019r dechnoleg yn gyfan gwbl. Byddai\u2019n well gen i ddarganfod hynny gyda chi na gwerthu ateb i chi cyn i mi ddeall y broblem.",
+      "Y dyddiau hyn rwy\u2019n rhannu fy amser rhwng adeiladu fy nghynnyrch fy hun a gweithio fel ymgynghorydd \u2013 yn helpu pobl sy\u2019n gwybod nad yw rhywbeth yn gweithio ond ddim yn si\u0175r beth i\u2019w wneud am y peth. Weithiau AI yw\u2019r ateb. Weithiau mae\u2019n awtomeiddio, yn llif-gwaith gwahanol, neu\u2019n gadael llonydd i\u2019r dechnoleg yn gyfan gwbl. Byddai\u2019n well gen i ganfod hynny gyda chi na gwerthu ateb i chi cyn i mi ddeall y cwestiwn.",
     ],
     sections: [
       {
@@ -233,8 +233,7 @@ export const cy: SiteContent = {
     skills: {
       heading: "Sgiliau a Phrofiad",
       items: [
-        "Canfod a Diagnosio Problemau",
-        "Ymgynghoriaeth Arloesi Digidol",
+        "Datrys Problemau",
         "Prototeipio Cyflym",
         "Strategaeth Cynnyrch",
         "Cyfarwyddo Creadigol",
@@ -250,7 +249,7 @@ export const cy: SiteContent = {
       ],
     },
     cta: {
-      heading: "Her i\u2019w Datrys?",
+      heading: "Rhywbeth i\u2019w Ganfod?",
       button: "Cysylltwch \u2192",
     },
   },
