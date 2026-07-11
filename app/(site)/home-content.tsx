@@ -29,7 +29,7 @@ export function HomeContent() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-4">
             <a
-              href="/about"
+              href="/how-we-work"
               className="bg-stone-900 text-white px-6 py-3 text-sm font-sans font-medium tracking-wide hover:bg-stone-800 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.97]"
             >
               {t.home.hero.cta}

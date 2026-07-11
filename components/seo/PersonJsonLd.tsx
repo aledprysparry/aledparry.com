@@ -3,12 +3,12 @@ export function PersonJsonLd() {
     "@context": "https://schema.org",
     "@type": "Person",
     name: "Aled Parry",
-    jobTitle: "Digital Producer & Creative Director",
+    jobTitle: "Digital Innovation Consultant & Creative Technologist",
     url: "https://aledparry.com",
     sameAs: ["https://linkedin.com/in/aledparry"],
     knowsLanguage: ["en", "cy"],
     description:
-      "Award-winning Welsh/English digital producer and creative director specialising in broadcast, interactive formats and bilingual content.",
+      "Digital innovation consultant and creative technologist helping business owners, public sector teams and organisations solve difficult problems with AI, automation and process design. BAFTA winner, bilingual in Welsh and English.",
     address: {
       "@type": "PostalAddress",
       addressCountry: "GB",

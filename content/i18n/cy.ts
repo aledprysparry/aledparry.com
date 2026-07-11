@@ -2,13 +2,14 @@ import { SiteContent } from "./types";
 
 export const cy: SiteContent = {
   meta: {
-    siteTitle: "Aled Parry – Technolegydd Creadigol, Sylfaenydd ac Ymgynghorydd",
+    siteTitle: "Aled Parry – Ymgynghorydd Arloesi Digidol a Thechnolegydd Creadigol",
     siteDescription:
-      "Technolegydd creadigol, sylfaenydd ac ymgynghorydd sy'n helpu darlledwyr, brandiau a sefydliadau dwyieithog i ddatrys heriau cymhleth ym maes cyfryngau, cynnyrch a llif-gwaith. Cefndir Enillydd BAFTA ym maes darlledu a chynnwys rhyngweithiol. Adeiladydd Nodiadau.com.",
+      "Rwy'n helpu perchnogion busnes, timau'r sector cyhoeddus a sefydliadau i ddatrys problemau anodd – weithiau gydag AI, weithiau awtomeiddio, weithiau dim un o'r ddau. Ugain mlynedd o droi syniadau'n gynnyrch go iawn. Adeiladydd Nodiadau.com.",
   },
   nav: {
     home: "Hafan",
     work: "Gwaith",
+    howWeWork: "Ein Dull",
     services: "Gwasanaethau",
     about: "Amdanaf",
     contact: "Cysylltu",
@@ -17,9 +18,9 @@ export const cy: SiteContent = {
   home: {
     hero: {
       name: "Aled Parry",
-      title: "Technolegydd Creadigol, Sylfaenydd ac Ymgynghorydd",
+      title: "Ymgynghorydd Arloesi Digidol",
       valueStatement:
-        "Helo a chroeso! Rwy\u2019n dechnolegydd creadigol ac ymgynghorydd sy\u2019n helpu darlledwyr, brandiau a sefydliadau dwyieithog i weithio drwy heriau cymhleth ym maes cyfryngau, cynnyrch a llif-gwaith \u2013 o dyfu defodau gemau dyddiol cenedlaethol fel Cwis Bob Dydd i adeiladu offer AI dwyieithog fel Nodiadau.com. Os yw eich t\u00eem yn wynebu problem ddyrys, hoffwn eich helpu i\u2019w datrys. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
+        "Helo a chroeso! Rwy\u2019n helpu perchnogion busnes, timau\u2019r sector cyhoeddus a sefydliadau i weithio drwy broblemau nad ydynt wedi\u2019u datrys yn iawn eto \u2013 y broses sy\u2019n dawel fach yn costio oriau, y syniad sydd angen ei brofi cyn i unrhyw un ymddiried ynddo, y cwestiwn a fyddai AI wir yn helpu. Rwy\u2019n dechrau gyda\u2019r broblem, nid y dechnoleg, ac yna\u2019n canfod beth fyddai wir yn ei datrys. Ugain mlynedd o droi syniadau\u2019n gynnyrch go iawn. Enillydd BAFTA. Yn ddwyieithog yn Saesneg a Chymraeg.",
       cta: "Gweld sut y gallaf helpu",
     },
     credibility: {
@@ -68,6 +69,45 @@ export const cy: SiteContent = {
       digital: "Digidol",
       content: "Cynnwys",
       format: "Fformat",
+    },
+  },
+  howWeWork: {
+    heading: "Ein Dull Gweithio",
+    intro:
+      "Mae'r rhan fwyaf o ymgynghoriaethau'n cyrraedd gydag ateb wedi'i benderfynu eisoes. Byddai'n well gen i ddechrau gyda'ch problem chi – a bod yn onest ynghylch a yw technoleg wir yn ateb.",
+    steps: [
+      {
+        title: "Gwrando",
+        description:
+          "Rydym yn dechrau gyda sgwrs, nid pitsh. Rwyf am ddeall beth sydd wir yn eich arafu chi – nid pa dechnoleg rydych chi'n meddwl sydd ei angen arnoch.",
+      },
+      {
+        title: "Deall",
+        description:
+          "Rwy'n treulio amser gyda'r bobl fydd wir yn defnyddio beth bynnag rydym yn ei adeiladu – eich tîm, eich cwsmeriaid, eich trigolion. Daw'r atebion gorau o ddeall sut mae gwaith yn digwydd go iawn, nid sut y dylai ddigwydd.",
+      },
+      {
+        title: "Prototeipio",
+        description:
+          "Yn lle cynnig hir, rwy'n adeiladu rhywbeth y gallwch ei weld ac ymateb iddo, yn aml o fewn dyddiau. Weithiau mae hynny'n ddarn o feddalwedd. Weithiau mae'n weithdy, neu'n broses wedi'i hail-gynllunio heb unrhyw dechnoleg newydd o gwbl.",
+      },
+      {
+        title: "Profi",
+        description:
+          "Rydym yn profi'r prototeip yn erbyn defnydd go iawn, nid tybiaethau. Os nad yw'n gweithio, rydym wedi dysgu hynny'n rhad – cyn ymrwymo cyllideb fawr iddo.",
+      },
+      {
+        title: "Graddio",
+        description:
+          "Pan fydd prototeip yn profi ei werth, rydym yn ei dyfu gyda'n gilydd. Byddai'n well gen i fod yn bartner sydd â buddsoddiad na ymgynghorydd sy'n anfonebu diwrnodau – fy nghymhelliant yw ei fod yn parhau i weithio, nid bod y gwaith yn parhau'n hir.",
+      },
+    ],
+    outro:
+      "Dyna pam nad yw'r sgwrs gyntaf yn alwad werthu. Dyna ddechrau canfod a allaf helpu – a sut.",
+    cta: {
+      heading: "Ddim yn siŵr ble i ddechrau?",
+      body: "Mae hynny'n normal. Doedd y rhan fwyaf o'r sefydliadau rwy'n gweithio gyda nhw ddim chwaith.",
+      button: "Trefnu sesiwn ddarganfod",
     },
   },
   caseStudy: {
@@ -147,11 +187,11 @@ export const cy: SiteContent = {
   },
   about: {
     heading: "Amdanaf",
-    hero: "Technolegydd creadigol, sylfaenydd ac ymgynghorydd ydw i \u2013 rwy\u2019n helpu darlledwyr, brandiau a sefydliadau dwyieithog i lywio heriau cymhleth ym maes cyfryngau, cynnyrch a llif-gwaith, gan dynnu ar ugain mlynedd o adeiladu fformatau, offer a chynnyrch o\u2019r tu mewn.",
+    hero: "Technolegydd creadigol, sylfaenydd ac ymgynghorydd ydw i \u2013 ond dydw i ddim yma i werthu AI, meddalwedd na gwefan i chi. Rwy\u2019n helpu sefydliadau i ganfod beth sy\u2019n mynd o\u2019i le go iawn, ac yna ei drwsio gyda pha bynnag gyfuniad o dechnoleg, dylunio a phroses sy\u2019n wirioneddol helpu.",
     bio: [
       "Mae fy nghefndir mewn darlledu a chyfryngau rhyngweithiol \u2013 dros ugain mlynedd o gynhyrchu rhaglenni, apiau, gemau a chynnwys ar gyfer S4C, BBC, CBBC, ITV, Sesame Street a mwy. Enillydd BAFTA gyda chefndir mewn Cyfathrebu Graffig sy\u2019n dal i lywio fy null o adrodd straeon, dylunio a phrofiad defnyddiwr.",
       "Yn fwy diweddar, mae gen i lawer mwy o ddiddordeb yn y dechnoleg y tu \u00f4l i\u2019r cynnwys. Mae Nodiadau.com yn enghraifft amlwg \u2013 offeryn iaith yr oedd rhaid i mi ei adeiladu am nad oedd neb arall yn mynd i\u2019w adeiladu\u2019n iawn ar gyfer y Gymraeg.",
-      "Y dyddiau hyn, ochr yn ochr ag adeiladu fy nghynnyrch fy hun, rwy\u2019n gweithio fel ymgynghorydd \u2013 yn helpu timau sy\u2019n sownd ar her benodol, boed hynny\u2019n fformat sydd angen ei foderneiddio, yn llif-gwaith sy\u2019n bwyta oriau na ddylai, neu\u2019n gynnyrch dwyieithog sydd angen teimlo\u2019n naturiol yn y ddwy iaith. Os yw hynny\u2019n canu cloch, gadewch i ni siarad.",
+      "Y dyddiau hyn rwy\u2019n rhannu fy amser rhwng adeiladu fy nghynnyrch fy hun a gweithio fel ymgynghorydd i sefydliadau sy\u2019n gwybod nad yw rhywbeth yn gweithio ond ddim yn si\u0175r beth i\u2019w wneud am y peth. Weithiau AI yw\u2019r ateb. Weithiau mae\u2019n awtomeiddio, yn llif-gwaith wedi\u2019i ail-gynllunio, neu\u2019n gadael llonydd i\u2019r dechnoleg yn gyfan gwbl. Byddai\u2019n well gen i ddarganfod hynny gyda chi na gwerthu ateb i chi cyn i mi ddeall y broblem.",
     ],
     sections: [
       {
@@ -193,11 +233,15 @@ export const cy: SiteContent = {
     skills: {
       heading: "Sgiliau a Phrofiad",
       items: [
+        "Canfod a Diagnosio Problemau",
+        "Ymgynghoriaeth Arloesi Digidol",
+        "Prototeipio Cyflym",
         "Strategaeth Cynnyrch",
         "Cyfarwyddo Creadigol",
         "Cynhyrchu Digidol",
         "Datblygu Fformatau",
         "Offer a Llif-Gwaith AI",
+        "Awtomeiddio Prosesau",
         "Dwyieithog (Cymraeg a Saesneg)",
         "Dylunio UX & UI",
         "Peirianneg Frontend",
