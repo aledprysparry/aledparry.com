@@ -20,7 +20,7 @@ export const cy: SiteContent = {
       name: "Aled Parry",
       title: "Technolegydd Creadigol ac Ymgynghorydd",
       valueStatement:
-        "Helo a chroeso! Technolegydd creadigol ydw i \u2013 ugain mlynedd o droi syniadau\u2019n bethau sy\u2019n gweithio go iawn, o fformatau teledu arobryn BAFTA i Nodiadau.com. Y dyddiau hyn mae hynny\u2019n aml yn golygu eistedd i lawr gyda phobl sy\u2019n gwybod nad yw rhywbeth yn gweithio, a\u2019u helpu i ganfod beth fyddai wir yn ei drwsio \u2013 weithiau AI, weithiau ddim. Yn ddwyieithog yn Saesneg a Chymraeg.",
+        "Helo a chroeso! Technolegydd creadigol ydw i \u2013 gyda dros ugain mlynedd o brofiad yn troi syniadau\u2019n bethau sy\u2019n gweithio go iawn, o fformatau teledu arobryn BAFTA i Nodiadau.com. Y dyddiau hyn mae hynny\u2019n aml yn golygu eistedd i lawr gyda phobl sy\u2019n gwybod nad yw rhywbeth yn gweithio, a\u2019u helpu i ganfod beth fyddai wir yn ei drwsio \u2013 weithiau AI, weithiau ddim. Yn ddwyieithog yn Saesneg a Chymraeg.",
       cta: "Gweld sut y gallaf helpu",
     },
     credibility: {
@@ -55,7 +55,7 @@ export const cy: SiteContent = {
     },
     footerCta: {
       heading: "Prosiect \u2013 neu broblem?",
-      body: "Rwyf bob amser yn barod am sgwrs am syniad newydd, problem ddyrys, neu unrhyw beth yn y canol. Pa mor fawr neu fach bynnag.",
+      body: "Dw i bob amser yn barod am sgwrs am syniad newydd, problem ddyrys, neu unrhyw beth yn y canol. Pa mor fawr neu fach bynnag.",
       cta: "Cysylltwch",
     },
   },
@@ -79,7 +79,7 @@ export const cy: SiteContent = {
       {
         title: "Gwrando",
         description:
-          "Rydym yn dechrau gyda sgwrs, nid pitsh. Rwyf am wybod beth sydd wir yn eich arafu chi – nid pa dechnoleg rydych chi'n meddwl sydd ei angen arnoch.",
+          "Dw i'n dechrau gyda sgwrs, nid pitsh. Rwyf am wybod beth sydd wir yn eich arafu chi – nid pa dechnoleg rydych chi'n meddwl sydd ei hangen arnoch.",
       },
       {
         title: "Deall",
@@ -94,12 +94,12 @@ export const cy: SiteContent = {
       {
         title: "Profi",
         description:
-          "Rydym yn ei brofi yn erbyn defnydd go iawn, nid tybiaethau. Os nad yw'n gweithio, rydym wedi dysgu hynny'n rhad – cyn i unrhyw un ymrwymo cyllideb fawr iddo.",
+          "Rwy'n ei brofi yn erbyn defnydd go iawn, nid tybiaethau. Os nad yw'n gweithio, rydym wedi dysgu hynny'n rhad – cyn i unrhyw un ymrwymo cyllideb fawr iddo.",
       },
       {
         title: "Graddio",
         description:
-          "Os yw'n profi ei werth, rydym yn ei dyfu gyda'n gilydd. Byddai'n well gen i fod yn bartner sydd â buddsoddiad na ymgynghorydd sy'n anfonebu diwrnodau – rwyf am iddo barhau i weithio, nid i'r gwaith barhau'n hir.",
+          "Os yw'n profi ei werth, rydym yn ei dyfu gyda'n gilydd. Byddai'n well gen i fod yn bartner sydd â buddsoddiad nag ymgynghorydd sy'n anfonebu diwrnodau – rwyf am iddo barhau i weithio, nid i'r gwaith barhau'n hir.",
       },
     ],
     outro:
@@ -127,20 +127,20 @@ export const cy: SiteContent = {
       {
         title: "Strategaeth Cynnyrch ac Addasu",
         description:
-          "Dod â fformatau yn fyw. Llywio cydymffurfio rheoliadol, strwythuro dolenni cadw defnyddwyr, a throi fformatau darlledu a chyfryngau traddodiadol yn gynhyrchion digidol-yn-gyntaf y mae cynulleidfaoedd yn dychwelyd atynt go iawn. Y gwaith y tu ôl i Cwis Bob Dydd a Cwis-iau.",
-        goodFor: "Darlledwyr, perchnogion fformat, timau addysg a sector cyhoeddus",
+          "Dod â fformatau yn fyw. Llywio cydymffurfiaeth reoliadol, strwythuro dolenni cadw defnyddwyr, a throi fformatau darlledu a chyfryngau traddodiadol yn gynhyrchion digidol-yn-gyntaf y mae cynulleidfaoedd yn dychwelyd atynt go iawn. Y gwaith y tu ôl i Cwis Bob Dydd a Cwis-iau.",
+        goodFor: "Darlledwyr, perchnogion fformat, timau addysg a'r sector cyhoeddus",
       },
       {
         title: "Llif-Gwaith Creadigol a Pheirianneg Piblinell",
         description:
-          "Gostwng tagfeydd cynhyrchu. Dylunio offer technegol ysgafn, pwrpasol – peiriannau graffeg byw porwr, piblinellau CGI/VFX wedi'u hoptimeiddio, systemau torri awtomatig ar gyfer cyfryngau cymdeithasol – sy'n galluogi timau ystwyth i gyflawni allbwn safon darlledu ar ffracsiwn o'r gyllideb.",
+          "Gostwng tagfeydd cynhyrchu. Dylunio offer technegol ysgafn, pwrpasol – peiriannau graffeg fyw sy'n rhedeg mewn porwr, piblinellau CGI/VFX wedi'u hoptimeiddio, a systemau torri awtomatig ar gyfer cyfryngau cymdeithasol – sy'n galluogi timau ystwyth i gyflawni allbwn safon darlledu ar ffracsiwn o'r gyllideb.",
         goodFor: "Cynhyrchwyr annibynnol, stiwdios mewnol, timau darlledu ystwyth",
       },
       {
         title: "Integreiddio AI Dwyieithog",
         description:
           "Diogelu cywirdeb ieithyddol. Peiriannu offer AI arbenigol a chymwysiadau iaith sy'n symleiddio llif-gwaith dwyieithog ac awtomeiddio heb wanhau ieithoedd lleiafrifoledig. Y gwaith y tu ôl i Nodiadau.com.",
-        goodFor: "Darlledwyr Cymraeg, sefydliadau dwyieithog, sector cyhoeddus",
+        goodFor: "Darlledwyr Cymraeg, sefydliadau dwyieithog, y sector cyhoeddus",
       },
     ],
     groups: [
@@ -174,7 +174,7 @@ export const cy: SiteContent = {
             title: "Technoleg Greadigol",
             description:
               "Adeiladu offer AI dwyieithog, systemau graffeg byw ac awtomeiddio llif-gwaith ar gyfer timau cyfryngau Cymraeg a Saesneg.",
-            goodFor: "Darlledwyr Cymraeg, sefydliadau dwyieithog, sector cyhoeddus",
+            goodFor: "Darlledwyr Cymraeg, sefydliadau dwyieithog, y sector cyhoeddus",
           },
         ],
       },
@@ -200,7 +200,7 @@ export const cy: SiteContent = {
         items: [
           "Prosiectau rhyngweithiol a digidol arobryn BAFTA",
           "Fformatau ymgysylltu dyddiol i S4C a darlledwyr",
-          "Cynnwys plant a theulu i CBBC, Sesame Street a CYW",
+          "Cynnwys plant a theulu i CBBC, Sesame Street a Cyw",
           "Cynyrchiadau dwyieithog Cymraeg / Saesneg ar deledu a digidol",
           "Datblygu fformatau, rheoli cynhyrchu a chyfarwyddo creadigol",
         ],
@@ -210,7 +210,7 @@ export const cy: SiteContent = {
         heading: "Y Rhwystrau",
         intro: "Dros amser, roedd yr un dyrnaid o broblemau systemig yn parhau i sefyll yn ffordd gwaith da:",
         items: [
-          "Deddfau cydymffurfio caeth yn rhwystro cynulleidfaoedd ifanc rhag ymuno \u00e2 fformatau cwis",
+          "Deddfau cydymffurfiaeth caeth yn rhwystro cynulleidfaoedd ifanc rhag ymuno \u00e2 fformatau cwis",
           "Gwneuthurwyr ffilm annibynnol yn cael eu prisio allan o VFX a chynhyrchu \u00f4l o safon",
           "Offer AI generig yn gwanhau naws yr iaith Gymraeg yn dawel",
           "Darlledwyr yn disgwyl i grewyr ariannu peilotiau cynyddol gaboledig eu hunain",
