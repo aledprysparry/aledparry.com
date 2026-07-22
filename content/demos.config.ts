@@ -207,7 +207,7 @@ export const demos: DemoEntry[] = [
     toolSlug: "garreg-las",
     toolName: "Creu Dy Antur AI",
     description:
-      "A Welsh-first platform game where AI turns a photo of the player into a friendly pixel hero. Pick a world, then run, jump, dash and collect as far as you can – a live demo of AI personalising an existing game rather than building one from scratch. Built for Eisteddfod y Garreg Las 2026.",
+      "A Welsh-first platform game where AI turns a photo of the player into a friendly pixel hero. Pick a world, then run, jump, dash and collect as far as you can. A live demo of AI personalising an existing game rather than building one from scratch. Built for Eisteddfod y Garreg Las 2026.",
     descriptionCy:
       "Gêm blatfform Gymraeg lle mae AI yn troi llun o'r chwaraewr yn arwr picsel cyfeillgar. Dewiswch fyd, yna rhedwch, neidiwch a chasglwch mor bell ag y gallwch - arddangosiad byw o AI yn personoli gêm sy'n bodoli'n barod yn hytrach na'i hadeiladu o'r dechrau. Adeiladwyd ar gyfer Eisteddfod y Garreg Las 2026.",
     href: "https://garreg-las-game.vercel.app",
