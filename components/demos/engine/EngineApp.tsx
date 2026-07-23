@@ -16,6 +16,7 @@ import MasterEditor from '@engine/pages/MasterEditor';
 import Pipeline from '@engine/pages/Pipeline';
 import PipelineLauncher, { BrandClipsRedirect } from '@engine/pages/PipelineLauncher';
 import Settings from '@engine/pages/Settings';
+import Campaigns from '@engine/pages/Campaigns';
 
 // The UI chrome is set in Geist (matching the marketing site). Canvas
 // templates still draw with real "Inter"/"Bitter" families, so all three are
@@ -126,6 +127,7 @@ export default function EngineApp() {
                 <Route path="templates/:templateId/master" element={<MasterEditor />} />
                 <Route path="graphics/:graphicId" element={<GraphicEditor />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="campaigns" element={<Campaigns />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>
