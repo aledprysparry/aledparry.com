@@ -6,6 +6,7 @@ import { useStore } from '@engine/lib/store/StoreProvider';
 import { Panel, Button, TextInput, Badge } from '@engine/components/ui';
 import { campaignsEnabled } from '@engine/lib/campaigns/flags';
 import { isValidSlug, evaluatePublishGate, type PublishReadiness } from '@engine/lib/campaigns/publishGate';
+import { checkPromoterTerms, type PromoterTermsFields } from '@engine/lib/campaigns/terms';
 import { newId, now } from '@engine/lib/store/persist';
 import type { Campaign, CampaignType, CampaignStatus, EntryFieldConfig } from '@engine/lib/campaigns/types';
 
@@ -25,6 +26,7 @@ const COPY = {
     none: 'No campaigns yet. Create one above.',
     edit: 'Edit', del: 'Delete', readiness: 'Publish readiness',
     entryFieldsLabel: 'Entry fields', required: 'Required', addField: 'Add field', noFields: 'No entry fields yet.',
+    termsSection: 'Terms & promoter details', termsHint: 'Opening and closing dates are taken from the campaign dates above.',
     noBrands: 'Create a brand first, then start a campaign.',
     errFields: 'Fill in a brand, name, valid slug and both dates.',
     errSlug: 'That slug is already used for this brand.',
@@ -38,6 +40,7 @@ const COPY = {
     none: 'Dim ymgyrchoedd eto. Crëwch un uchod.',
     edit: 'Golygu', del: 'Dileu', readiness: 'Parodrwydd cyhoeddi',
     entryFieldsLabel: 'Meysydd cystadlu', required: 'Gofynnol', addField: 'Ychwanegu maes', noFields: 'Dim meysydd cystadlu eto.',
+    termsSection: 'Telerau a manylion hyrwyddwr', termsHint: 'Cymerir y dyddiadau agor a chau o ddyddiadau’r ymgyrch uchod.',
     noBrands: 'Crëwch frand yn gyntaf, yna dechreuwch ymgyrch.',
     errFields: 'Llenwch frand, enw, slug dilys a’r ddau ddyddiad.',
     errSlug: 'Mae’r slug yna eisoes yn cael ei ddefnyddio ar gyfer y brand hwn.',
@@ -100,6 +103,52 @@ function fieldLabel(t: EntryFieldConfig['type']): { en: string; cy: string } {
   return found ? { en: found.en, cy: found.cy } : { en: t, cy: t };
 }
 
+// Promoter terms fields (spec §11.3). opensAt/closesAt are omitted here and
+// auto-filled from the campaign dates on save. (cy machine-draft, flag for review.)
+type TermsKind = 'text' | 'number' | 'bool' | 'localised' | 'list';
+const TERMS_FIELDS: { key: keyof PromoterTermsFields; kind: TermsKind; en: string; cy: string }[] = [
+  { key: 'promoterLegalName', kind: 'text', en: 'Promoter legal name', cy: 'Enw cyfreithiol yr hyrwyddwr' },
+  { key: 'promoterContact', kind: 'text', en: 'Promoter contact', cy: 'Cyswllt yr hyrwyddwr' },
+  { key: 'campaignName', kind: 'localised', en: 'Campaign name', cy: 'Enw’r ymgyrch' },
+  { key: 'territories', kind: 'list', en: 'Territories (comma-separated)', cy: 'Tiriogaethau (gwahanu â choma)' },
+  { key: 'minimumAge', kind: 'number', en: 'Minimum age', cy: 'Oedran isaf' },
+  { key: 'exclusions', kind: 'text', en: 'Excluded participants', cy: 'Cyfranogwyr wedi eu heithrio' },
+  { key: 'entryMethod', kind: 'text', en: 'Entry method', cy: 'Dull cystadlu' },
+  { key: 'entryLimits', kind: 'text', en: 'Entry limits', cy: 'Terfynau cystadlu' },
+  { key: 'purchaseRequired', kind: 'bool', en: 'Purchase required', cy: 'Angen prynu' },
+  { key: 'prizeDescription', kind: 'localised', en: 'Prize description', cy: 'Disgrifiad y wobr' },
+  { key: 'prizeCount', kind: 'number', en: 'Number of prizes', cy: 'Nifer y gwobrau' },
+  { key: 'prizeRestrictions', kind: 'text', en: 'Prize restrictions', cy: 'Cyfyngiadau’r wobr' },
+  { key: 'winnerSelectionMethod', kind: 'text', en: 'Winner selection method', cy: 'Dull dewis enillydd' },
+  { key: 'judgingCriteria', kind: 'text', en: 'Judging criteria (optional)', cy: 'Meini prawf beirniadu (dewisol)' },
+  { key: 'winnerNotificationProcess', kind: 'text', en: 'Winner notification', cy: 'Hysbysu enillydd' },
+  { key: 'claimPeriod', kind: 'text', en: 'Claim period', cy: 'Cyfnod hawlio' },
+  { key: 'redrawRules', kind: 'text', en: 'Redraw rules', cy: 'Rheolau ail-dynnu' },
+  { key: 'fulfilmentTimescale', kind: 'text', en: 'Fulfilment timescale', cy: 'Amserlen cyflawni' },
+  { key: 'invalidEntryTreatment', kind: 'text', en: 'Invalid entries', cy: 'Ceisiadau annilys' },
+  { key: 'contentOwnership', kind: 'text', en: 'Content ownership', cy: 'Perchnogaeth cynnwys' },
+  { key: 'contentLicence', kind: 'text', en: 'Content licence', cy: 'Trwydded cynnwys' },
+  { key: 'publicityRequirements', kind: 'text', en: 'Publicity requirements', cy: 'Gofynion cyhoeddusrwydd' },
+  { key: 'dataTreatment', kind: 'text', en: 'Data treatment', cy: 'Trin data' },
+  { key: 'cancellationConditions', kind: 'text', en: 'Cancellation conditions', cy: 'Amodau canslo' },
+  { key: 'governingLaw', kind: 'text', en: 'Governing law', cy: 'Cyfraith lywodraethol' },
+  { key: 'complaintRoute', kind: 'text', en: 'Complaint route', cy: 'Llwybr cwyno' },
+  { key: 'platformDisclaimer', kind: 'text', en: 'Platform disclaimer', cy: 'Ymwadiad platfform' },
+];
+
+function termsValueFilled(v: unknown): boolean {
+  if (v === undefined || v === null) return false;
+  if (typeof v === 'string') return v.trim().length > 0;
+  if (typeof v === 'number') return Number.isFinite(v);
+  if (typeof v === 'boolean') return true;
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v === 'object') {
+    const lc = v as { en?: string; cy?: string };
+    return (lc.en ?? '').trim().length > 0 && (lc.cy ?? '').trim().length > 0;
+  }
+  return false;
+}
+
 const SELECT_CLASS =
   'eng-control w-full rounded-lg bg-white border border-zinc-200 px-3 text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100';
 
@@ -123,6 +172,8 @@ export default function Campaigns() {
   const [status, setStatus] = useState<CampaignStatus>('draft');
   const [entryFields, setEntryFields] = useState<EntryFieldConfig[]>([]);
   const [newFieldType, setNewFieldType] = useState<EntryFieldConfig['type']>('name');
+  const [terms, setTerms] = useState<Record<string, unknown>>({});
+  const [showTerms, setShowTerms] = useState(false);
   const [startsAt, setStartsAt] = useState('');
   const [closesAt, setClosesAt] = useState('');
   const [error, setError] = useState('');
@@ -144,6 +195,8 @@ export default function Campaigns() {
     setStatus('draft');
     setEntryFields([]);
     setNewFieldType('name');
+    setTerms({});
+    setShowTerms(false);
     setStartsAt('');
     setClosesAt('');
     setError('');
@@ -158,6 +211,7 @@ export default function Campaigns() {
     setType(cam.type);
     setStatus(cam.status);
     setEntryFields(cam.entryFields.map((f) => ({ ...f })));
+    setTerms(cam.terms ? { ...cam.terms } : {});
     setStartsAt(cam.startsAt.slice(0, 10));
     setClosesAt(cam.closesAt.slice(0, 10));
     setError('');
@@ -189,6 +243,8 @@ export default function Campaigns() {
       moderationConfig: existing?.moderationConfig ?? {},
       winnerConfig: existing?.winnerConfig ?? {},
       retentionConfig: existing?.retentionConfig ?? {},
+      // opensAt/closesAt mirror the campaign dates so the terms stay consistent.
+      terms: { ...terms, opensAt: new Date(startsAt).toISOString(), closesAt: new Date(closesAt).toISOString() } as Partial<PromoterTermsFields>,
       captcha: existing?.captcha ?? 'invisible',
       createdAt: existing?.createdAt ?? now(),
       updatedAt: now(),
@@ -210,6 +266,8 @@ export default function Campaigns() {
     const required = newFieldType === 'terms-acceptance' || newFieldType === 'privacy-acknowledgement';
     setEntryFields((prev) => [...prev, { key, type: newFieldType, label: { en: meta.en, cy: meta.cy }, required }]);
   };
+  const setTermsField = (key: string, value: unknown) => setTerms((prev) => ({ ...prev, [key]: value }));
+  const termsFilled = TERMS_FIELDS.filter((f) => termsValueFilled(terms[f.key])).length;
   const removeField = (key: string) => setEntryFields((prev) => prev.filter((f) => f.key !== key));
   const toggleRequired = (key: string) =>
     setEntryFields((prev) => prev.map((f) => (f.key === key ? { ...f, required: !f.required } : f)));
@@ -348,6 +406,82 @@ export default function Campaigns() {
               </div>
             </div>
 
+            <div className="sm:col-span-2">
+              <button
+                type="button"
+                onClick={() => setShowTerms((v) => !v)}
+                className="inline-flex items-center gap-1 text-[12px] font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-300"
+              >
+                {c.termsSection}: {termsFilled}/{TERMS_FIELDS.length}
+                {showTerms ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+              <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">{c.termsHint}</p>
+              {showTerms && (
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  {TERMS_FIELDS.map((f) => {
+                    const label = lang === 'cy' ? f.cy : f.en;
+                    const v = terms[f.key];
+                    if (f.kind === 'bool') {
+                      return (
+                        <label key={f.key} className="flex items-center gap-2 text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
+                          <input type="checkbox" checked={v === true} onChange={(e) => setTermsField(f.key, e.target.checked)} />
+                          {label}
+                        </label>
+                      );
+                    }
+                    if (f.kind === 'localised') {
+                      const lc = (v as { en?: string; cy?: string }) ?? {};
+                      return (
+                        <div key={f.key} className="sm:col-span-2 grid gap-2 sm:grid-cols-2">
+                          <label className="block text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
+                            {label} (EN)
+                            <TextInput className="mt-1" value={lc.en ?? ''} onChange={(e) => setTermsField(f.key, { ...lc, en: e.target.value })} />
+                          </label>
+                          <label className="block text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
+                            {label} (CY)
+                            <TextInput className="mt-1" value={lc.cy ?? ''} onChange={(e) => setTermsField(f.key, { ...lc, cy: e.target.value })} />
+                          </label>
+                        </div>
+                      );
+                    }
+                    if (f.kind === 'list') {
+                      const arr = (v as string[]) ?? [];
+                      return (
+                        <label key={f.key} className="block text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
+                          {label}
+                          <TextInput
+                            className="mt-1"
+                            value={arr.join(', ')}
+                            placeholder="UK, IE"
+                            onChange={(e) => setTermsField(f.key, e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+                          />
+                        </label>
+                      );
+                    }
+                    if (f.kind === 'number') {
+                      return (
+                        <label key={f.key} className="block text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
+                          {label}
+                          <TextInput
+                            className="mt-1"
+                            type="number"
+                            value={v === undefined || v === null ? '' : String(v)}
+                            onChange={(e) => setTermsField(f.key, e.target.value === '' ? undefined : Number(e.target.value))}
+                          />
+                        </label>
+                      );
+                    }
+                    return (
+                      <label key={f.key} className="block text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
+                        {label}
+                        <TextInput className="mt-1" value={(v as string) ?? ''} onChange={(e) => setTermsField(f.key, e.target.value)} />
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <div className="sm:col-span-2 flex items-center gap-3">
               <Button onClick={submit} disabled={!canSave}>
                 <Plus size={14} /> {isEditing ? c.update : c.create}
@@ -367,7 +501,11 @@ export default function Campaigns() {
       {store.campaigns.length > 0 && (
         <div className="mt-4 space-y-2">
           {store.campaigns.map((cam) => {
-            const unmet = new Set(evaluatePublishGate(cam, POC_READINESS).unmet.map((u) => u.id as string));
+            const readiness: PublishReadiness = {
+              ...POC_READINESS,
+              termsComplete: checkPromoterTerms((cam.terms ?? {}) as Partial<PromoterTermsFields>).complete,
+            };
+            const unmet = new Set(evaluatePublishGate(cam, readiness).unmet.map((u) => u.id as string));
             const metCount = REQUIREMENTS.length - unmet.size;
             const open = openReadiness === cam.id;
             return (
