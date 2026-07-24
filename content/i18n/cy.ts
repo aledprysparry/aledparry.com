@@ -56,7 +56,7 @@ export const cy: SiteContent = {
     footerCta: {
       heading: "Prosiect \u2013 neu broblem?",
       body: "Dw i bob amser yn barod am sgwrs am syniad newydd, problem ddyrys, neu unrhyw beth yn y canol. Pa mor fawr neu fach bynnag.",
-      cta: "Cysylltwch",
+      cta: "Cysylltiwch â ni",
     },
   },
   work: {
@@ -107,7 +107,7 @@ export const cy: SiteContent = {
     cta: {
       heading: "Ddim yn siŵr ble i ddechrau?",
       body: "Mae hynny'n normal. Doedd y rhan fwyaf o'r bobl rwy'n gweithio gyda nhw ddim chwaith.",
-      button: "Cysylltwch",
+      button: "Cysylltiwch â ni",
     },
   },
   caseStudy: {
@@ -182,7 +182,7 @@ export const cy: SiteContent = {
     cta: {
       heading: "Ddim yn siŵr lle mae eich prosiect yn ffitio?",
       body: "Mae'r briffiau mwyaf diddorol yn croesi dau ohonynt. Awn drwyddo gyda'n gilydd.",
-      button: "Cysylltwch",
+      button: "Cysylltiwch â ni",
     },
   },
   about: {
@@ -250,7 +250,7 @@ export const cy: SiteContent = {
     },
     cta: {
       heading: "Rhywbeth i\u2019w Ganfod?",
-      button: "Cysylltwch \u2192",
+      button: "Cysylltiwch â ni \u2192",
     },
   },
   contact: {
