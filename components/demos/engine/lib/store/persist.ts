@@ -25,6 +25,11 @@ export const COLLECTIONS = [
   'coachBriefs',
   'strategyArtifacts',
   'voiceProfiles',
+  // ── Interactive Campaigns ──
+  'campaigns',
+  'campaignVersions',
+  'campaignEntries',
+  'consentReceipts',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];
