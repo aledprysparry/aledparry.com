@@ -74,6 +74,19 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key>
 - Every change mirrors to Supabase (local cache still kept for offline).
 - A `/graphics/:id` link now opens the saved session on any device.
 
+## Interactive Campaigns collections
+The campaign backend (issue #140, Phase 1 #142) adds five collections in the
+same `socialdesk` schema and shape. Run `lib/campaigns/schema.sql` (idempotent)
+in the SQL editor alongside the block above:
+`cg_campaigns`, `cg_campaign_versions`, `cg_campaign_entries`,
+`cg_consent_receipts`, `cg_moderation_results`.
+
+Security note: the entries / consent / moderation tables hold participant PII
+once the public experience is live. The POC `anon_all` policy is for internal
+prototyping only; before public launch replace it with insert-only-for-anon on
+those three (no anon SELECT) and put reads behind authenticated moderators
+(spec §28). This is called out in `schema.sql`.
+
 ## Honest limits / next steps
 - **Single shared workspace** (no auth yet): anyone with the password sees all brands. Add Supabase Auth + per-user RLS for true multi-user/accounts.
 - **Assets** are stored as data URLs inside `cg_assets.data` (jsonb). Fine for a POC; for scale, move binaries to **Supabase Storage** and keep only URLs in the row.
