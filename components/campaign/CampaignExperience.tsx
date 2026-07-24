@@ -82,6 +82,7 @@ export default function CampaignExperience({ campaign, brandName, accent, brandS
   const [marketing, setMarketing] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [parental, setParental] = useState(false);
+  const [hp, setHp] = useState(''); // honeypot; humans never fill this
   const [phase, setPhase] = useState<'form' | 'submitting' | 'done'>('form');
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -146,6 +147,7 @@ export default function CampaignExperience({ campaign, brandName, accent, brandS
           values,
           caption,
           photo,
+          hp,
           consent: { acceptTerms, acknowledgePrivacy: acceptPrivacy, marketingConsent: marketing, ageConfirmed, parental },
         }),
       });
@@ -237,6 +239,18 @@ export default function CampaignExperience({ campaign, brandName, accent, brandS
           {wantsParental && <Consent checked={parental} onChange={setParental} label={c.parental} />}
           {wantsMarketing && <Consent checked={marketing} onChange={setMarketing} label={c.marketing} />}
         </div>
+
+        {/* Honeypot: off-screen, not tab-reachable, ignored by humans. */}
+        <input
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          value={hp}
+          onChange={(e) => setHp(e.target.value)}
+          className="absolute left-[-9999px] h-0 w-0 opacity-0"
+        />
 
         {error && <p className="text-[13px] text-red-600">{error}</p>}
 
