@@ -7,7 +7,7 @@ import { Panel, Button, TextInput, Badge } from '@engine/components/ui';
 import { campaignsEnabled } from '@engine/lib/campaigns/flags';
 import { isValidSlug, evaluatePublishGate, type PublishReadiness } from '@engine/lib/campaigns/publishGate';
 import { newId, now } from '@engine/lib/store/persist';
-import type { Campaign, CampaignType, CampaignStatus } from '@engine/lib/campaigns/types';
+import type { Campaign, CampaignType, CampaignStatus, EntryFieldConfig } from '@engine/lib/campaigns/types';
 
 // Interactive Campaigns Builder (flag-gated). Create / edit / list campaigns,
 // persisted through the Store (localStorage + Supabase when configured).
@@ -23,7 +23,9 @@ const COPY = {
     starts: 'Opens', closes: 'Closes', create: 'Create campaign', update: 'Save changes', cancel: 'Cancel',
     slugHint: 'Lowercase letters, numbers and hyphens.',
     none: 'No campaigns yet. Create one above.',
-    edit: 'Edit', del: 'Delete', readiness: 'Publish readiness', noBrands: 'Create a brand first, then start a campaign.',
+    edit: 'Edit', del: 'Delete', readiness: 'Publish readiness',
+    entryFieldsLabel: 'Entry fields', required: 'Required', addField: 'Add field', noFields: 'No entry fields yet.',
+    noBrands: 'Create a brand first, then start a campaign.',
     errFields: 'Fill in a brand, name, valid slug and both dates.',
     errSlug: 'That slug is already used for this brand.',
   },
@@ -34,7 +36,9 @@ const COPY = {
     starts: 'Yn agor', closes: 'Yn cau', create: 'Creu ymgyrch', update: 'Cadw newidiadau', cancel: 'Canslo',
     slugHint: 'Llythrennau bach, rhifau a chysylltnodau.',
     none: 'Dim ymgyrchoedd eto. Crëwch un uchod.',
-    edit: 'Golygu', del: 'Dileu', readiness: 'Parodrwydd cyhoeddi', noBrands: 'Crëwch frand yn gyntaf, yna dechreuwch ymgyrch.',
+    edit: 'Golygu', del: 'Dileu', readiness: 'Parodrwydd cyhoeddi',
+    entryFieldsLabel: 'Meysydd cystadlu', required: 'Gofynnol', addField: 'Ychwanegu maes', noFields: 'Dim meysydd cystadlu eto.',
+    noBrands: 'Crëwch frand yn gyntaf, yna dechreuwch ymgyrch.',
     errFields: 'Llenwch frand, enw, slug dilys a’r ddau ddyddiad.',
     errSlug: 'Mae’r slug yna eisoes yn cael ei ddefnyddio ar gyfer y brand hwn.',
   },
@@ -71,6 +75,31 @@ const POC_READINESS: PublishReadiness = {
   entryMethodWorks: false, uploadScanningWorks: false, accessibilityPassed: false, ownerApprovedPreview: false,
 };
 
+// Entry-field types the Builder can add (single fields + consent toggles). Media
+// and multiple-choice need their own sub-editors, so they land in a later slice.
+// (cy machine-draft, flag for native review before the flag ships on.)
+const FIELD_TYPES: { type: EntryFieldConfig['type']; en: string; cy: string }[] = [
+  { type: 'name', en: 'Name', cy: 'Enw' },
+  { type: 'email', en: 'Email', cy: 'E-bost' },
+  { type: 'phone', en: 'Phone', cy: 'Ffôn' },
+  { type: 'dob', en: 'Date of birth', cy: 'Dyddiad geni' },
+  { type: 'age-confirm', en: 'Age confirmation', cy: 'Cadarnhau oedran' },
+  { type: 'postcode', en: 'Postcode', cy: 'Cod post' },
+  { type: 'country', en: 'Country', cy: 'Gwlad' },
+  { type: 'social-handle', en: 'Social handle', cy: 'Dolen gymdeithasol' },
+  { type: 'image', en: 'Image', cy: 'Llun' },
+  { type: 'free-text', en: 'Free text', cy: 'Testun rhydd' },
+  { type: 'marketing-opt-in', en: 'Marketing opt-in', cy: 'Optio i mewn i farchnata' },
+  { type: 'terms-acceptance', en: 'Accept terms', cy: 'Derbyn telerau' },
+  { type: 'privacy-acknowledgement', en: 'Privacy acknowledgement', cy: 'Cydnabod preifatrwydd' },
+  { type: 'parental-confirmation', en: 'Parental confirmation', cy: 'Cadarnhad rhiant' },
+];
+
+function fieldLabel(t: EntryFieldConfig['type']): { en: string; cy: string } {
+  const found = FIELD_TYPES.find((x) => x.type === t);
+  return found ? { en: found.en, cy: found.cy } : { en: t, cy: t };
+}
+
 const SELECT_CLASS =
   'eng-control w-full rounded-lg bg-white border border-zinc-200 px-3 text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100';
 
@@ -92,6 +121,8 @@ export default function Campaigns() {
   const [slug, setSlug] = useState('');
   const [type, setType] = useState<CampaignType>('photo');
   const [status, setStatus] = useState<CampaignStatus>('draft');
+  const [entryFields, setEntryFields] = useState<EntryFieldConfig[]>([]);
+  const [newFieldType, setNewFieldType] = useState<EntryFieldConfig['type']>('name');
   const [startsAt, setStartsAt] = useState('');
   const [closesAt, setClosesAt] = useState('');
   const [error, setError] = useState('');
@@ -111,6 +142,8 @@ export default function Campaigns() {
     setSlug('');
     setType('photo');
     setStatus('draft');
+    setEntryFields([]);
+    setNewFieldType('name');
     setStartsAt('');
     setClosesAt('');
     setError('');
@@ -124,6 +157,7 @@ export default function Campaigns() {
     setSlug(cam.slug);
     setType(cam.type);
     setStatus(cam.status);
+    setEntryFields(cam.entryFields.map((f) => ({ ...f })));
     setStartsAt(cam.startsAt.slice(0, 10));
     setClosesAt(cam.closesAt.slice(0, 10));
     setError('');
@@ -151,7 +185,7 @@ export default function Campaigns() {
       closesAt: new Date(closesAt).toISOString(),
       experienceConfig: existing?.experienceConfig ?? {},
       eligibilityConfig: existing?.eligibilityConfig ?? {},
-      entryFields: existing?.entryFields ?? [],
+      entryFields,
       moderationConfig: existing?.moderationConfig ?? {},
       winnerConfig: existing?.winnerConfig ?? {},
       retentionConfig: existing?.retentionConfig ?? {},
@@ -167,6 +201,18 @@ export default function Campaigns() {
     if (editingId === id) resetForm();
     store.deleteCampaign(id);
   };
+
+  const addField = () => {
+    const meta = fieldLabel(newFieldType);
+    let key: string = newFieldType;
+    let n = 2;
+    while (entryFields.some((f) => f.key === key)) key = `${newFieldType}-${n++}`;
+    const required = newFieldType === 'terms-acceptance' || newFieldType === 'privacy-acknowledgement';
+    setEntryFields((prev) => [...prev, { key, type: newFieldType, label: { en: meta.en, cy: meta.cy }, required }]);
+  };
+  const removeField = (key: string) => setEntryFields((prev) => prev.filter((f) => f.key !== key));
+  const toggleRequired = (key: string) =>
+    setEntryFields((prev) => prev.map((f) => (f.key === key ? { ...f, required: !f.required } : f)));
 
   const brandName = (id: string) => store.brands.find((b) => b.id === id)?.name ?? '?';
 
@@ -255,6 +301,53 @@ export default function Campaigns() {
               {c.closes}
               <TextInput className="mt-1" type="date" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} />
             </label>
+            <div className="sm:col-span-2">
+              <div className="text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">{c.entryFieldsLabel}</div>
+              {entryFields.length === 0 ? (
+                <p className="mt-1 text-[12px] text-zinc-400 dark:text-zinc-500">{c.noFields}</p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {entryFields.map((f) => (
+                    <li
+                      key={f.key}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-1.5 dark:border-zinc-700"
+                    >
+                      <span className="text-[12px] text-zinc-700 dark:text-zinc-200">
+                        {lang === 'cy' ? fieldLabel(f.type).cy : fieldLabel(f.type).en}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-1 text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                          <input type="checkbox" checked={f.required} onChange={() => toggleRequired(f.key)} /> {c.required}
+                        </label>
+                        <button
+                          type="button"
+                          aria-label={c.del}
+                          onClick={() => removeField(f.key)}
+                          className="text-zinc-400 hover:text-red-500"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-2 flex items-center gap-2">
+                <select
+                  className={SELECT_CLASS}
+                  value={newFieldType}
+                  onChange={(e) => setNewFieldType(e.target.value as EntryFieldConfig['type'])}
+                >
+                  {FIELD_TYPES.map((ft) => (
+                    <option key={ft.type} value={ft.type}>{lang === 'cy' ? ft.cy : ft.en}</option>
+                  ))}
+                </select>
+                <Button variant="subtle" onClick={addField}>
+                  <Plus size={14} /> {c.addField}
+                </Button>
+              </div>
+            </div>
+
             <div className="sm:col-span-2 flex items-center gap-3">
               <Button onClick={submit} disabled={!canSave}>
                 <Plus size={14} /> {isEditing ? c.update : c.create}
