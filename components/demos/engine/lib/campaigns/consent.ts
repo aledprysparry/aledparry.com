@@ -78,9 +78,20 @@ export interface ConsentReceiptInput {
  * Build an auditable ConsentReceipt. Marketing consent is recorded as an
  * explicit boolean (defaulting to false, never implied), and its wording
  * version is only attached when consent was actually given.
+ *
+ * Throws when marketing consent is given without the wording that was shown.
+ * A receipt that records "they agreed" but cannot evidence WHAT they agreed to
+ * is not a lawful record of consent (UK GDPR Art. 7(1)), and the gap only
+ * surfaces years later when someone asks the promoter to prove it. Failing at
+ * the point of minting is the only place it can still be fixed.
  */
 export function buildConsentReceipt(args: ConsentReceiptInput): ConsentReceipt {
   const marketingConsent = args.input.marketingConsent === true;
+  if (marketingConsent && (args.marketingConsentTextVersion ?? '').trim() === '') {
+    throw new Error(
+      'Refusing to record marketing consent without the wording version that was shown to the participant.',
+    );
+  }
   return {
     id: args.id,
     campaignId: args.campaignId,
