@@ -29,6 +29,7 @@ const COPY = {
     entryFieldsLabel: 'Entry fields', required: 'Required', addField: 'Add field', noFields: 'No entry fields yet.',
     termsSection: 'Terms & promoter details', termsHint: 'Opening and closing dates are taken from the campaign dates above.',
     privacySection: 'Privacy notice',
+    approvalsLabel: 'Approvals', promoterDeclared: 'I accept promoter responsibility and confirm the details are correct.', ownerPreview: 'The owner has approved the final preview.',
     noBrands: 'Create a brand first, then start a campaign.',
     errFields: 'Fill in a brand, name, valid slug and both dates.',
     errSlug: 'That slug is already used for this brand.',
@@ -45,6 +46,7 @@ const COPY = {
     entryFieldsLabel: 'Meysydd cystadlu', required: 'Gofynnol', addField: 'Ychwanegu maes', noFields: 'Dim meysydd cystadlu eto.',
     termsSection: 'Telerau a manylion hyrwyddwr', termsHint: 'Cymerir y dyddiadau agor a chau o ddyddiadau’r ymgyrch uchod.',
     privacySection: 'Hysbysiad preifatrwydd',
+    approvalsLabel: 'Cymeradwyaethau', promoterDeclared: 'Rwy’n derbyn cyfrifoldeb fel hyrwyddwr ac yn cadarnhau bod y manylion yn gywir.', ownerPreview: 'Mae’r perchennog wedi cymeradwyo’r rhagolwg terfynol.',
     noBrands: 'Crëwch frand yn gyntaf, yna dechreuwch ymgyrch.',
     errFields: 'Llenwch frand, enw, slug dilys a’r ddau ddyddiad.',
     errSlug: 'Mae’r slug yna eisoes yn cael ei ddefnyddio ar gyfer y brand hwn.',
@@ -191,6 +193,8 @@ export default function Campaigns() {
   const [showTerms, setShowTerms] = useState(false);
   const [privacy, setPrivacy] = useState<Record<string, string>>({});
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [promoterDeclared, setPromoterDeclared] = useState(false);
+  const [ownerApprovedPreview, setOwnerApprovedPreview] = useState(false);
   const [moderationMode, setModerationMode] = useState<'manual' | 'ai-assisted'>('manual');
   const [startsAt, setStartsAt] = useState('');
   const [closesAt, setClosesAt] = useState('');
@@ -217,6 +221,8 @@ export default function Campaigns() {
     setShowTerms(false);
     setPrivacy({});
     setShowPrivacy(false);
+    setPromoterDeclared(false);
+    setOwnerApprovedPreview(false);
     setModerationMode('manual');
     setStartsAt('');
     setClosesAt('');
@@ -234,6 +240,8 @@ export default function Campaigns() {
     setEntryFields(cam.entryFields.map((f) => ({ ...f })));
     setTerms(cam.terms ? { ...cam.terms } : {});
     setPrivacy(cam.privacy ? { ...cam.privacy } : {});
+    setPromoterDeclared(cam.approvals?.promoterDeclared === true);
+    setOwnerApprovedPreview(cam.approvals?.ownerApprovedPreview === true);
     setModerationMode(cam.moderationConfig?.mode === 'ai-assisted' ? 'ai-assisted' : 'manual');
     setStartsAt(cam.startsAt.slice(0, 10));
     setClosesAt(cam.closesAt.slice(0, 10));
@@ -269,6 +277,7 @@ export default function Campaigns() {
       // opensAt/closesAt mirror the campaign dates so the terms stay consistent.
       terms: { ...terms, opensAt: new Date(startsAt).toISOString(), closesAt: new Date(closesAt).toISOString() } as Partial<PromoterTermsFields>,
       privacy,
+      approvals: { promoterDeclared, ownerApprovedPreview },
       captcha: existing?.captcha ?? 'invisible',
       createdAt: existing?.createdAt ?? now(),
       updatedAt: now(),
@@ -540,6 +549,20 @@ export default function Campaigns() {
               )}
             </div>
 
+            {isEditing && (
+              <div className="sm:col-span-2">
+                <div className="text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">{c.approvalsLabel}</div>
+                <label className="mt-2 flex items-start gap-2 text-[12px] font-normal text-zinc-600 dark:text-zinc-300">
+                  <input type="checkbox" className="mt-0.5" checked={promoterDeclared} onChange={(e) => setPromoterDeclared(e.target.checked)} />
+                  {c.promoterDeclared}
+                </label>
+                <label className="mt-1 flex items-start gap-2 text-[12px] font-normal text-zinc-600 dark:text-zinc-300">
+                  <input type="checkbox" className="mt-0.5" checked={ownerApprovedPreview} onChange={(e) => setOwnerApprovedPreview(e.target.checked)} />
+                  {c.ownerPreview}
+                </label>
+              </div>
+            )}
+
             <div className="sm:col-span-2 flex items-center gap-3">
               <Button onClick={submit} disabled={!canSave}>
                 <Plus size={14} /> {isEditing ? c.update : c.create}
@@ -563,6 +586,8 @@ export default function Campaigns() {
               ...POC_READINESS,
               termsComplete: checkPromoterTerms((cam.terms ?? {}) as Partial<PromoterTermsFields>).complete,
               privacyComplete: PRIVACY_FIELDS.every((f) => (cam.privacy?.[f.key] ?? '').trim().length > 0),
+              promoterDeclarationRecorded: cam.approvals?.promoterDeclared === true,
+              ownerApprovedPreview: cam.approvals?.ownerApprovedPreview === true,
             };
             const unmet = new Set(evaluatePublishGate(cam, readiness).unmet.map((u) => u.id as string));
             const metCount = REQUIREMENTS.length - unmet.size;

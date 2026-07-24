@@ -149,6 +149,10 @@ export interface Campaign {
   /** Privacy-notice fields (spec §18.2), keyed by field id. Partial while a
    *  draft is filled in. */
   privacy?: Record<string, string>;
+  /** Pre-publish confirmations (spec §11 promoter declaration, §15 owner
+   *  preview). The full audit record (PromoterDeclaration) lands with the
+   *  publish flow; these are the recorded booleans the publish gate reads. */
+  approvals?: { promoterDeclared?: boolean; ownerApprovedPreview?: boolean };
   captcha: CaptchaMode;
   /** White-label host, e.g. campaigns.brand.co.uk. */
   domain?: string;
