@@ -13,6 +13,9 @@
 // restructuring.
 
 import type { ID, ISODate } from '../model/types';
+// Type-only import (erased at compile), so the types <-> terms cross-reference
+// carries no runtime cycle.
+import type { PromoterTermsFields } from './terms';
 
 /**
  * First-class bilingual content. EN + CY are variants, never a late
@@ -140,6 +143,9 @@ export interface Campaign {
   winnerConfig: Record<string, unknown>;
   /** Per-record retention (spec §11). */
   retentionConfig: Record<string, unknown>;
+  /** Promoter terms fields (spec §11.3). Partial while a draft is filled in;
+   *  checkPromoterTerms() reports completeness. */
+  terms?: Partial<PromoterTermsFields>;
   captcha: CaptchaMode;
   /** White-label host, e.g. campaigns.brand.co.uk. */
   domain?: string;
