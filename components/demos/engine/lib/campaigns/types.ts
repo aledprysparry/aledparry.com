@@ -146,6 +146,9 @@ export interface Campaign {
   /** Promoter terms fields (spec §11.3). Partial while a draft is filled in;
    *  checkPromoterTerms() reports completeness. */
   terms?: Partial<PromoterTermsFields>;
+  /** Privacy-notice fields (spec §18.2), keyed by field id. Partial while a
+   *  draft is filled in. */
+  privacy?: Record<string, string>;
   captcha: CaptchaMode;
   /** White-label host, e.g. campaigns.brand.co.uk. */
   domain?: string;
