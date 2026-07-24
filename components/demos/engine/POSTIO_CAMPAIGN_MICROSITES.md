@@ -531,3 +531,99 @@ of terms + campaign versions; public experience meets performance targets.
 > game runtime, entry/consent system and immutable versioning** – plus the one public, bot-exposed,
 > zero-auth surface. Start Phase 0's legal review in parallel with the M0 backend decision; build
 > the §18 photo-competition slice first.
+
+---
+
+## 20. User groups
+
+Five roles the system serves; each is a lens on the requirements above.
+
+- **Brand manager** – creates and manages campaigns for one organisation. Needs quick creation,
+  brand consistency, clear approval steps, analytics, safe terms/privacy defaults.
+- **Social media manager** – makes assets, schedules posts, monitors performance. Needs correct
+  output sizes, platform-specific captions, easy links/codes, clear status, mobile-first management.
+- **Agency user** – manages campaigns across multiple client workspaces. Needs client separation,
+  approval workflows, reusable templates, white-labelled reports, role-based access. (This is why
+  `Campaign.organisationId` exists in §8: agency multi-client tenancy.)
+- **Campaign moderator** – reviews entries and handles inappropriate content. Needs moderation
+  queues, filters/search, approve/reject controls, audit history, escalation (§7).
+- **Campaign participant** – arrives from a social post and completes the interaction. Needs fast
+  mobile loading, minimal steps, no mandatory account, clear prize/eligibility info, accessible +
+  bilingual interaction, and confidence the campaign is legitimate (the §2 public experience).
+
+---
+
+## 21. API outline
+
+Two trust zones (§2): the authenticated management API and the public, zero-auth experience API.
+Public routes are bot-exposed and never trust the client (server-side eligibility + closing-date
+enforcement, §15).
+
+**Management** (`api.postia.co.uk`, tenant-scoped):
+```
+POST   /api/campaigns                 GET  /api/campaigns/:id        PATCH /api/campaigns/:id
+POST   /api/campaigns/:id/generate    POST /api/campaigns/:id/validate
+POST   /api/campaigns/:id/approve     POST /api/campaigns/:id/publish
+POST   /api/campaigns/:id/pause       POST /api/campaigns/:id/close
+GET    /api/campaigns/:id/analytics   GET  /api/campaigns/:id/entries
+```
+**Public** (`play.postia.co.uk`, anonymous, signed uploads only):
+```
+GET    /public/campaigns/:slug                POST /public/campaigns/:slug/session
+POST   /public/campaigns/:slug/uploads        POST /public/campaigns/:slug/entries
+POST   /public/campaigns/:slug/scores         GET  /public/campaigns/:slug/results
+POST   /public/campaigns/:slug/consent
+```
+**Moderation** (management, moderator role):
+```
+GET    /api/campaigns/:id/moderation
+POST   /api/entries/:entryId/approve   POST /api/entries/:entryId/reject
+POST   /api/entries/:entryId/escalate  POST /api/entries/:entryId/disqualify
+```
+**Winner** (management, step-up confirmed, §15):
+```
+POST   /api/campaigns/:id/draw         POST /api/campaigns/:id/judging
+POST   /api/campaigns/:id/winners/:entryId/verify
+POST   /api/campaigns/:id/winners/:entryId/contact
+POST   /api/campaigns/:id/winners/:entryId/confirm
+POST   /api/campaigns/:id/redraw
+```
+In this repo the gated `app/api/ai/social` pattern is the model for the AI-backed routes
+(`/generate`, moderation scan); the public routes are new and belong to the §2 public surface.
+
+---
+
+## 22. Risks
+
+- **Platform dependency** – Meta capabilities/permissions/policies change. *Mitigation:* treat
+  social platforms as distribution only; keep the experience independently Postio-hosted (§2, §16).
+- **Legal exposure** – a poorly configured competition exposes the promoter (and potentially
+  Postio) to complaints. *Mitigation:* mandatory terms, structured fields, promoter declaration,
+  prohibited categories, external legal review (§11, §15).
+- **Data protection** – campaigns gather photos + contact details. *Mitigation:* data
+  minimisation, privacy-by-design, encryption, retention automation, processor agreements (§11).
+- **Harmful uploads** – participants may submit illegal/inappropriate content. *Mitigation:*
+  private-by-default uploads, automated scanning, human moderation, escalation (§7).
+- **Fraud** – automated/duplicate entries undermine competitions. *Mitigation:* rate limits,
+  verified contact, anomaly detection, audit logs, human review (§7).
+- **User misunderstanding of liability** – brands may believe Postio is the promoter.
+  *Mitigation:* clear promoter designation throughout setup, publication and terms; the §11
+  disclaimer on every campaign page.
+- **Same-device QR** – someone viewing a post on their phone cannot scan its QR. *Mitigation:*
+  always pair QR with a short URL, profile link, Story link and advert destination (§14).
+
+---
+
+## 23. Brand Brain guardrails and AI image generation
+
+**Brand Brain provides** tone, approved terminology, logo/asset selection, colours/typography,
+audience knowledge, bilingual terminology, claims + prohibited phrases, prior performance, approved
+CTAs, visual treatments, legal company info. **Brand Brain must NOT invent** prize details,
+eligibility conditions, legal identity, regulatory claims, closing dates, consent wording, or rights
+over participant content. Generated statements of fact must trace to an approved source or require
+human confirmation (spec §26). This constrains the ask-first generator in §5.
+
+**AI image generation** (where enabled): explicit disclosure where appropriate; user confirms they
+have rights to the source; prohibited-content filtering; brand-safety rules; human review before any
+public gallery inclusion; **no automatic use of participant images to train models**; clear
+image-retention rules; separate consent for additional promotional use (spec §13).
