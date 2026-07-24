@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronUp, ExternalLink, Sparkles } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Panel, Button, TextInput, Badge } from '@engine/components/ui';
@@ -8,6 +8,7 @@ import { campaignsEnabled } from '@engine/lib/campaigns/flags';
 import { isValidSlug, evaluatePublishGate, type PublishReadiness } from '@engine/lib/campaigns/publishGate';
 import { checkPromoterTerms, type PromoterTermsFields } from '@engine/lib/campaigns/terms';
 import { newId, now } from '@engine/lib/store/persist';
+import { slugify } from '@engine/lib/campaigns/slug';
 import type { Campaign, CampaignType, CampaignStatus, EntryFieldConfig } from '@engine/lib/campaigns/types';
 
 // Interactive Campaigns Builder (flag-gated). Create / edit / list campaigns,
@@ -608,6 +609,15 @@ export default function Campaigns() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <a
+                      href={`/c/${slugify(brandName(cam.brandId))}/${cam.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="Open public page"
+                      className="inline-flex items-center justify-center rounded-full p-2 text-zinc-400 hover:text-violet-600 dark:hover:text-violet-300"
+                    >
+                      <ExternalLink size={14} />
+                    </a>
                     <Button variant="ghost" aria-label={c.edit} onClick={() => startEdit(cam)}>
                       <Pencil size={14} />
                     </Button>
