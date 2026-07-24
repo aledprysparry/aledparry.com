@@ -30,6 +30,7 @@ import type {
   StrategyPlayId,
   VoiceProfile,
 } from '@engine/lib/model/types';
+import type { Campaign, CampaignVersion, CampaignEntry, ConsentReceipt } from '@engine/lib/campaigns/types';
 import { getKind } from '@engine/lib/templates/registry';
 import {
   loadCollection,
@@ -66,6 +67,11 @@ interface StoreState {
   coachBriefs: CoachBrief[];
   strategyArtifacts: StrategyArtifact[];
   voiceProfiles: VoiceProfile[];
+  // ── Interactive Campaigns ──
+  campaigns: Campaign[];
+  campaignVersions: CampaignVersion[];
+  campaignEntries: CampaignEntry[];
+  consentReceipts: ConsentReceipt[];
 }
 
 const MASTER_MIGRATION_KEY = 'cg.v1.masterMigrated';
@@ -272,7 +278,7 @@ function initialState(): StoreState {
     saveCollection('templates', templates);
     markSeeded();
     if (typeof localStorage !== 'undefined') localStorage.setItem(MASTER_MIGRATION_KEY, 'true');
-    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [], referenceAccounts: [], postAnalyses: [], aiRecommendations: [], performance: [], coachPresets: [], coachSettings: [], coachBriefs: [], strategyArtifacts: [], voiceProfiles: [] };
+    return { brands: seed.brands, templates, assets: [], socialAccounts: [], templateStyles: [], graphics: [], clips: [], folders: [], referenceAccounts: [], postAnalyses: [], aiRecommendations: [], performance: [], coachPresets: [], coachSettings: [], coachBriefs: [], strategyArtifacts: [], voiceProfiles: [], campaigns: [], campaignVersions: [], campaignEntries: [], consentReceipts: [] };
   }
   let templates = loadCollection<Template>('templates');
   let graphics = loadCollection<GeneratedGraphic>('graphics');
@@ -309,6 +315,10 @@ function initialState(): StoreState {
     coachBriefs: loadCollection('coachBriefs'),
     strategyArtifacts: loadCollection('strategyArtifacts'),
     voiceProfiles: loadCollection('voiceProfiles'),
+    campaigns: loadCollection('campaigns'),
+    campaignVersions: loadCollection('campaignVersions'),
+    campaignEntries: loadCollection('campaignEntries'),
+    consentReceipts: loadCollection('consentReceipts'),
   };
 }
 
@@ -408,6 +418,18 @@ export interface StoreApi extends StoreState {
   // brand voice profile (derived from past posts)
   getVoiceProfile: (brandId: string) => VoiceProfile | undefined;
   setVoiceProfile: (brandId: string, profile: Omit<VoiceProfile, 'id' | 'brandId' | 'updatedAt'>) => VoiceProfile;
+  // ── Interactive Campaigns (upsert-based; persists to localStorage + Supabase) ──
+  saveCampaign: (c: Campaign) => void;
+  deleteCampaign: (id: string) => void;
+  getCampaign: (id: string) => Campaign | undefined;
+  campaignsByBrand: (brandId: string) => Campaign[];
+  saveCampaignVersion: (v: CampaignVersion) => void;
+  campaignVersionsByCampaign: (campaignId: string) => CampaignVersion[];
+  saveCampaignEntry: (e: CampaignEntry) => void;
+  getCampaignEntry: (id: string) => CampaignEntry | undefined;
+  entriesByCampaign: (campaignId: string) => CampaignEntry[];
+  saveConsentReceipt: (r: ConsentReceipt) => void;
+  getConsentReceipt: (id: string) => ConsentReceipt | undefined;
   // backup
   exportAll: () => string;
 }
@@ -752,6 +774,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         update('voiceProfiles', (x) => (existing ? x.map((v) => (v.brandId === brandId ? next : v)) : [...x, next]));
         return next;
       },
+
+      // ── Interactive Campaigns (upsert-based; the builder + entry flow write here) ──
+      saveCampaign: (c) => update('campaigns', (x) => (x.some((y) => y.id === c.id) ? x.map((y) => (y.id === c.id ? c : y)) : [c, ...x])),
+      deleteCampaign: (id) => update('campaigns', (x) => x.filter((c) => c.id !== id)),
+      getCampaign: (id) => stateRef.current.campaigns.find((c) => c.id === id),
+      campaignsByBrand: (brandId) => stateRef.current.campaigns.filter((c) => c.brandId === brandId),
+      saveCampaignVersion: (v) => update('campaignVersions', (x) => (x.some((y) => y.id === v.id) ? x.map((y) => (y.id === v.id ? v : y)) : [v, ...x])),
+      campaignVersionsByCampaign: (campaignId) => stateRef.current.campaignVersions.filter((v) => v.campaignId === campaignId),
+      saveCampaignEntry: (e) => update('campaignEntries', (x) => (x.some((y) => y.id === e.id) ? x.map((y) => (y.id === e.id ? e : y)) : [e, ...x])),
+      getCampaignEntry: (id) => stateRef.current.campaignEntries.find((e) => e.id === id),
+      entriesByCampaign: (campaignId) => stateRef.current.campaignEntries.filter((e) => e.campaignId === campaignId),
+      saveConsentReceipt: (r) => update('consentReceipts', (x) => (x.some((y) => y.id === r.id) ? x.map((y) => (y.id === r.id ? r : y)) : [r, ...x])),
+      getConsentReceipt: (id) => stateRef.current.consentReceipts.find((r) => r.id === id),
 
       // ── backup ──
       exportAll: () => exportSnapshot({ assets: stateRef.current.assets }),

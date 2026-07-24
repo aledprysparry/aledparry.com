@@ -26,6 +26,11 @@ const TABLE: Record<CollectionName, string> = {
   coachBriefs: 'cg_coach_briefs',
   strategyArtifacts: 'cg_strategy_artifacts',
   voiceProfiles: 'cg_voice_profiles',
+  // ── Interactive Campaigns (tables created by lib/campaigns/schema.sql) ──
+  campaigns: 'cg_campaigns',
+  campaignVersions: 'cg_campaign_versions',
+  campaignEntries: 'cg_campaign_entries',
+  consentReceipts: 'cg_consent_receipts',
 };
 
 interface HasId { id: string }
