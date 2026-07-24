@@ -48,18 +48,33 @@ export interface Attribution {
   campaign?: string;
 }
 
-const PII_KEYS = new Set(['email', 'phone', 'name', 'dob', 'postcode']);
+/** The only keys that may reach a public URL (spec §12). An allowlist, not a
+ *  denylist: attribution links get printed on posters and encoded into QR
+ *  codes, so an unrecognised key is refused rather than guessed at. A denylist
+ *  only catches the spellings someone thought of, and misses `firstName`,
+ *  `emailAddress`, `mobile`, `entrantId` and every other variant. */
+const ALLOWED_ATTRIBUTION_KEYS = new Set(['src', 'placement', 'creative', 'campaign']);
 
-/** Append attribution query params to a URL. Rejects any key that looks like
- *  personal data, since attribution links are shared publicly. */
+/** An @-shaped value or a run of 7+ digits is treated as personal data
+ *  (an address or a phone number) regardless of which key carries it. */
+const EMAIL_SHAPED = /[^\s@]@[^\s@]+\.[^\s@]/;
+const PHONE_SHAPED = /\d{7,}/;
+
+/** Append attribution query params to a URL. Only the four attribution keys are
+ *  permitted, and their values are checked for personal data, since attribution
+ *  links are shared publicly and cannot be recalled once printed or scanned. */
 export function withAttribution(url: string, attribution: Attribution): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(attribution)) {
     if (value === undefined || value === '') continue;
-    if (PII_KEYS.has(key.toLowerCase())) {
+    if (!ALLOWED_ATTRIBUTION_KEYS.has(key)) {
+      throw new Error(`Refusing to put an unrecognised key in a public URL: ${key}`);
+    }
+    const text = String(value);
+    if (EMAIL_SHAPED.test(text) || PHONE_SHAPED.test(text)) {
       throw new Error(`Refusing to put personal data in a URL: ${key}`);
     }
-    params.set(key, value);
+    params.set(key, text);
   }
   const query = params.toString();
   if (!query) return url;

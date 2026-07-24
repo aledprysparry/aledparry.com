@@ -92,7 +92,10 @@ function isFilled(value: unknown): boolean {
   if (typeof value === 'string') return value.trim().length > 0;
   if (typeof value === 'number') return Number.isFinite(value);
   if (typeof value === 'boolean') return true; // an explicit choice counts
-  if (Array.isArray(value)) return value.length > 0;
+  // A list of blanks is not a filled list: `territories: ['']` is what an
+  // empty repeater row submits, and counting it would let a campaign through
+  // the publish gate with no territories actually declared.
+  if (Array.isArray(value)) return value.some((entry) => isFilled(entry));
   if (typeof value === 'object') {
     // LocalisedContent: both languages must be non-empty.
     const c = value as Partial<LocalisedContent>;
