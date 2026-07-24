@@ -28,6 +28,7 @@ const COPY = {
     moderationLabel: 'Moderation', modeManual: 'Manual review', modeAi: 'AI-assisted',
     entryFieldsLabel: 'Entry fields', required: 'Required', addField: 'Add field', noFields: 'No entry fields yet.',
     termsSection: 'Terms & promoter details', termsHint: 'Opening and closing dates are taken from the campaign dates above.',
+    privacySection: 'Privacy notice',
     noBrands: 'Create a brand first, then start a campaign.',
     errFields: 'Fill in a brand, name, valid slug and both dates.',
     errSlug: 'That slug is already used for this brand.',
@@ -43,6 +44,7 @@ const COPY = {
     moderationLabel: 'Cymedroli', modeManual: 'Adolygu â llaw', modeAi: 'Gyda chymorth AI',
     entryFieldsLabel: 'Meysydd cystadlu', required: 'Gofynnol', addField: 'Ychwanegu maes', noFields: 'Dim meysydd cystadlu eto.',
     termsSection: 'Telerau a manylion hyrwyddwr', termsHint: 'Cymerir y dyddiadau agor a chau o ddyddiadau’r ymgyrch uchod.',
+    privacySection: 'Hysbysiad preifatrwydd',
     noBrands: 'Crëwch frand yn gyntaf, yna dechreuwch ymgyrch.',
     errFields: 'Llenwch frand, enw, slug dilys a’r ddau ddyddiad.',
     errSlug: 'Mae’r slug yna eisoes yn cael ei ddefnyddio ar gyfer y brand hwn.',
@@ -151,6 +153,17 @@ function termsValueFilled(v: unknown): boolean {
   return false;
 }
 
+// Core privacy-notice fields (spec §18.2). Kept to the required text controls;
+// automated-decision / publication / marketing flags are a later slice.
+// (cy machine-draft, flag for native review before the flag ships on.)
+const PRIVACY_FIELDS: { key: string; en: string; cy: string }[] = [
+  { key: 'purpose', en: 'Purpose of collection', cy: 'Diben casglu' },
+  { key: 'lawfulBasis', en: 'Lawful basis', cy: 'Sail gyfreithlon' },
+  { key: 'retentionPeriod', en: 'Retention period', cy: 'Cyfnod cadw' },
+  { key: 'dataRecipients', en: 'Data recipients', cy: 'Derbynwyr data' },
+  { key: 'controllerContact', en: 'Controller contact', cy: 'Cyswllt rheolydd' },
+];
+
 const SELECT_CLASS =
   'eng-control w-full rounded-lg bg-white border border-zinc-200 px-3 text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 disabled:opacity-60 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100';
 
@@ -176,6 +189,8 @@ export default function Campaigns() {
   const [newFieldType, setNewFieldType] = useState<EntryFieldConfig['type']>('name');
   const [terms, setTerms] = useState<Record<string, unknown>>({});
   const [showTerms, setShowTerms] = useState(false);
+  const [privacy, setPrivacy] = useState<Record<string, string>>({});
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [moderationMode, setModerationMode] = useState<'manual' | 'ai-assisted'>('manual');
   const [startsAt, setStartsAt] = useState('');
   const [closesAt, setClosesAt] = useState('');
@@ -200,6 +215,8 @@ export default function Campaigns() {
     setNewFieldType('name');
     setTerms({});
     setShowTerms(false);
+    setPrivacy({});
+    setShowPrivacy(false);
     setModerationMode('manual');
     setStartsAt('');
     setClosesAt('');
@@ -216,6 +233,7 @@ export default function Campaigns() {
     setStatus(cam.status);
     setEntryFields(cam.entryFields.map((f) => ({ ...f })));
     setTerms(cam.terms ? { ...cam.terms } : {});
+    setPrivacy(cam.privacy ? { ...cam.privacy } : {});
     setModerationMode(cam.moderationConfig?.mode === 'ai-assisted' ? 'ai-assisted' : 'manual');
     setStartsAt(cam.startsAt.slice(0, 10));
     setClosesAt(cam.closesAt.slice(0, 10));
@@ -250,6 +268,7 @@ export default function Campaigns() {
       retentionConfig: existing?.retentionConfig ?? {},
       // opensAt/closesAt mirror the campaign dates so the terms stay consistent.
       terms: { ...terms, opensAt: new Date(startsAt).toISOString(), closesAt: new Date(closesAt).toISOString() } as Partial<PromoterTermsFields>,
+      privacy,
       captcha: existing?.captcha ?? 'invisible',
       createdAt: existing?.createdAt ?? now(),
       updatedAt: now(),
@@ -273,6 +292,8 @@ export default function Campaigns() {
   };
   const setTermsField = (key: string, value: unknown) => setTerms((prev) => ({ ...prev, [key]: value }));
   const termsFilled = TERMS_FIELDS.filter((f) => termsValueFilled(terms[f.key])).length;
+  const setPrivacyField = (key: string, value: string) => setPrivacy((prev) => ({ ...prev, [key]: value }));
+  const privacyFilled = PRIVACY_FIELDS.filter((f) => (privacy[f.key] ?? '').trim().length > 0).length;
   const removeField = (key: string) => setEntryFields((prev) => prev.filter((f) => f.key !== key));
   const toggleRequired = (key: string) =>
     setEntryFields((prev) => prev.map((f) => (f.key === key ? { ...f, required: !f.required } : f)));
@@ -498,6 +519,27 @@ export default function Campaigns() {
               )}
             </div>
 
+            <div className="sm:col-span-2">
+              <button
+                type="button"
+                onClick={() => setShowPrivacy((v) => !v)}
+                className="inline-flex items-center gap-1 text-[12px] font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-300"
+              >
+                {c.privacySection}: {privacyFilled}/{PRIVACY_FIELDS.length}
+                {showPrivacy ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+              {showPrivacy && (
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  {PRIVACY_FIELDS.map((f) => (
+                    <label key={f.key} className="block text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
+                      {lang === 'cy' ? f.cy : f.en}
+                      <TextInput className="mt-1" value={privacy[f.key] ?? ''} onChange={(e) => setPrivacyField(f.key, e.target.value)} />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="sm:col-span-2 flex items-center gap-3">
               <Button onClick={submit} disabled={!canSave}>
                 <Plus size={14} /> {isEditing ? c.update : c.create}
@@ -520,6 +562,7 @@ export default function Campaigns() {
             const readiness: PublishReadiness = {
               ...POC_READINESS,
               termsComplete: checkPromoterTerms((cam.terms ?? {}) as Partial<PromoterTermsFields>).complete,
+              privacyComplete: PRIVACY_FIELDS.every((f) => (cam.privacy?.[f.key] ?? '').trim().length > 0),
             };
             const unmet = new Set(evaluatePublishGate(cam, readiness).unmet.map((u) => u.id as string));
             const metCount = REQUIREMENTS.length - unmet.size;
