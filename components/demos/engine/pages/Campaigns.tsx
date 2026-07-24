@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronUp, ExternalLink, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronUp, ExternalLink, Inbox, Sparkles } from 'lucide-react';
 import { useI18n } from '@engine/lib/i18n/I18nProvider';
 import { useStore } from '@engine/lib/store/StoreProvider';
 import { Panel, Button, TextInput, Badge } from '@engine/components/ui';
@@ -609,6 +609,14 @@ export default function Campaigns() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <Link
+                      to={`/campaigns/${cam.id}/entries`}
+                      aria-label="Review entries"
+                      className="inline-flex items-center gap-0.5 rounded-full p-2 text-[11px] font-semibold text-zinc-400 hover:text-violet-600 dark:hover:text-violet-300"
+                    >
+                      <Inbox size={14} />
+                      {store.entriesByCampaign(cam.id).length > 0 && store.entriesByCampaign(cam.id).length}
+                    </Link>
                     <a
                       href={`/c/${slugify(brandName(cam.brandId))}/${cam.slug}`}
                       target="_blank"
