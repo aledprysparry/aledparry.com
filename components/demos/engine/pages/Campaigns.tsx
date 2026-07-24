@@ -25,6 +25,7 @@ const COPY = {
     slugHint: 'Lowercase letters, numbers and hyphens.',
     none: 'No campaigns yet. Create one above.',
     edit: 'Edit', del: 'Delete', readiness: 'Publish readiness',
+    moderationLabel: 'Moderation', modeManual: 'Manual review', modeAi: 'AI-assisted',
     entryFieldsLabel: 'Entry fields', required: 'Required', addField: 'Add field', noFields: 'No entry fields yet.',
     termsSection: 'Terms & promoter details', termsHint: 'Opening and closing dates are taken from the campaign dates above.',
     noBrands: 'Create a brand first, then start a campaign.',
@@ -39,6 +40,7 @@ const COPY = {
     slugHint: 'Llythrennau bach, rhifau a chysylltnodau.',
     none: 'Dim ymgyrchoedd eto. Crëwch un uchod.',
     edit: 'Golygu', del: 'Dileu', readiness: 'Parodrwydd cyhoeddi',
+    moderationLabel: 'Cymedroli', modeManual: 'Adolygu â llaw', modeAi: 'Gyda chymorth AI',
     entryFieldsLabel: 'Meysydd cystadlu', required: 'Gofynnol', addField: 'Ychwanegu maes', noFields: 'Dim meysydd cystadlu eto.',
     termsSection: 'Telerau a manylion hyrwyddwr', termsHint: 'Cymerir y dyddiadau agor a chau o ddyddiadau’r ymgyrch uchod.',
     noBrands: 'Crëwch frand yn gyntaf, yna dechreuwch ymgyrch.',
@@ -174,6 +176,7 @@ export default function Campaigns() {
   const [newFieldType, setNewFieldType] = useState<EntryFieldConfig['type']>('name');
   const [terms, setTerms] = useState<Record<string, unknown>>({});
   const [showTerms, setShowTerms] = useState(false);
+  const [moderationMode, setModerationMode] = useState<'manual' | 'ai-assisted'>('manual');
   const [startsAt, setStartsAt] = useState('');
   const [closesAt, setClosesAt] = useState('');
   const [error, setError] = useState('');
@@ -197,6 +200,7 @@ export default function Campaigns() {
     setNewFieldType('name');
     setTerms({});
     setShowTerms(false);
+    setModerationMode('manual');
     setStartsAt('');
     setClosesAt('');
     setError('');
@@ -212,6 +216,7 @@ export default function Campaigns() {
     setStatus(cam.status);
     setEntryFields(cam.entryFields.map((f) => ({ ...f })));
     setTerms(cam.terms ? { ...cam.terms } : {});
+    setModerationMode(cam.moderationConfig?.mode === 'ai-assisted' ? 'ai-assisted' : 'manual');
     setStartsAt(cam.startsAt.slice(0, 10));
     setClosesAt(cam.closesAt.slice(0, 10));
     setError('');
@@ -240,7 +245,7 @@ export default function Campaigns() {
       experienceConfig: existing?.experienceConfig ?? {},
       eligibilityConfig: existing?.eligibilityConfig ?? {},
       entryFields,
-      moderationConfig: existing?.moderationConfig ?? {},
+      moderationConfig: { ...(existing?.moderationConfig ?? {}), mode: moderationMode },
       winnerConfig: existing?.winnerConfig ?? {},
       retentionConfig: existing?.retentionConfig ?? {},
       // opensAt/closesAt mirror the campaign dates so the terms stay consistent.
@@ -339,6 +344,17 @@ export default function Campaigns() {
                 {TYPES.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
+              </select>
+            </label>
+            <label className="block text-[12px] font-semibold text-zinc-600 dark:text-zinc-300">
+              {c.moderationLabel}
+              <select
+                className={`mt-1 ${SELECT_CLASS}`}
+                value={moderationMode}
+                onChange={(e) => setModerationMode(e.target.value as 'manual' | 'ai-assisted')}
+              >
+                <option value="manual">{c.modeManual}</option>
+                <option value="ai-assisted">{c.modeAi}</option>
               </select>
             </label>
             {isEditing && (
